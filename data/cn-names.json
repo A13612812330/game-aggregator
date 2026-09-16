@@ -1,0 +1,454 @@
+{
+ "__meta": {
+  "builtAt": 1789020885179,
+  "total": 143,
+  "source": "steam-store-api",
+  "learnedFrom": 429,
+  "rejected": 19
+ },
+ "aliases": {
+  "120日元": [
+   "120yenstories"
+  ],
+  "9nine天色天歌天籁音": [
+   "9nineepisode2"
+  ],
+  "cookiecutteroverkilledition": [],
+  "dsdalsegno": [
+   "dalsegno"
+  ],
+  "ever17": [
+   "ever17theoutofinfinity"
+  ],
+  "flowers夏篇": [
+   "wyldeflowers"
+  ],
+  "fureraba": [
+   "furerabafriendtolover"
+  ],
+  "ixshetell": [],
+  "karakara": [],
+  "karakara2": [],
+  "nukitashi2": [],
+  "openbrushvr": [
+   "openbrush"
+  ],
+  "pixelgunpcedition": [
+   "pixelgun3dpcedition"
+  ],
+  "rewrite": [
+   "rewriteharvestfesta"
+  ],
+  "root茂林源记": [
+   "root"
+  ],
+  "shuffleepisode2被神与魔同时盯上的男人": [
+   "shuffleepisode2kaminimoakumanimonerawareteiruotoko"
+  ],
+  "sugarstyle": [],
+  "thelabvr": [
+   "thelab"
+  ],
+  "trinolinegenesis": [],
+  "ufo50": [],
+  "annalynn": [],
+  "eden": [
+   "tinyeden"
+  ],
+  "io": [
+   "yorgio"
+  ],
+  "一意孤行": [
+   "一意孤行thebloodsway"
+  ],
+  "下潜症": [
+   "divingdisorder下潜症"
+  ],
+  "东方妖精武踏会": [
+   "touhoufairyknockoutonefairytorulethemall"
+  ],
+  "东方梦零魂": [
+   "touhounilsoul"
+  ],
+  "修仙故事无尽剑域": [
+   "cultivationstoryinfiniteswordrealm"
+  ],
+  "候鸟": [],
+  "光之夜": [
+   "我的世界地下城发光之夜冒险通行证",
+   "minecraftdungeonsluminousnightadventurepass"
+  ],
+  "兰岛物语少女的约定复刻版": [
+   "lairlandstory"
+  ],
+  "凯瑞尔轮回": [
+   "kyvirrebirth"
+  ],
+  "创造自己的地下城": [
+   "superdungeondiy创造自己的地下城",
+   "superdungeonmaker"
+  ],
+  "刺猬索尼克谋杀案": [
+   "themurderofsonicthehedgehog"
+  ],
+  "功夫小子街头争斗thekaratekidstreetrumble": [
+   "thekaratekidstreetrumble"
+  ],
+  "十字的交差": [
+   "microsstep"
+  ],
+  "协律01新生活": [
+   "synchorus01thenewlife"
+  ],
+  "吞食骑士奢华盛宴": [
+   "buffetknightdecadentfullcourse"
+  ],
+  "哇芙哇女仆咖啡厅": [
+   "芙哇芙哇女仆咖啡厅",
+   "maidcafeonelectricstreet"
+  ],
+  "哞哩的长梦": [
+   "mooliisdreamland"
+  ],
+  "囧之国": [
+   "jumpkingdom"
+  ],
+  "圣徒": [
+   "sherlockholmeschapterone圣徒与罪人",
+   "sherlockholmeschapteronesaintsandsinners"
+  ],
+  "圣空": [
+   "theholysilence"
+  ],
+  "大江湖之苍龙与白鸟": [
+   "theworldofkungfudragonandeagle"
+  ],
+  "天空的蓝与白如梭夏日": [
+   "soranoaotoshiroto"
+  ],
+  "奥博oirbo": [
+   "oirbo"
+  ],
+  "女神异闻录4黄金版": [
+   "女神异闻录４黄金版",
+   "persona4golden"
+  ],
+  "她的圣域": [
+   "mygirlfriendsspecialplace"
+  ],
+  "妹的圣域": [
+   "mylittlesistersspecialplace"
+  ],
+  "孤狼otxo": [
+   "otxo"
+  ],
+  "宝藏山": [
+   "hololive宝藏山",
+   "hololivetreasuremountain"
+  ],
+  "小小勇士": [
+   "小小勇士littlewarrior",
+   "littlewarrior"
+  ],
+  "小岛": [
+   "舒舒服服小岛时光",
+   "cozyisland"
+  ],
+  "尼可梦": [
+   "尼可梦灭绝",
+   "nexomonextinction"
+  ],
+  "幻恋夜宴": [
+   "幻恋夜宴恋恋的支持者包",
+   "hallucisabbatofkoishikoishissupporterpack"
+  ],
+  "幻想生活i转圈圈的龙和偷取时间的少女": [
+   "幻想生活ｉ转圈圈的龙和偷取时间的少女",
+   "fantasylifeithegirlwhostealstime"
+  ],
+  "廖添丁绝代凶贼之末日": [
+   "thelegendoftianding"
+  ],
+  "彼方的她": [
+   "彼方的她aliya",
+   "aliyatimelink"
+  ],
+  "征服之歌支持者版": [
+   "征服之歌",
+   "songsofconquest"
+  ],
+  "徒花异谭": [
+   "徒花异谭originalsoundtrack",
+   "adabanaoddtalesoriginalsoundtrack"
+  ],
+  "心渊梦境": [
+   "afterimage"
+  ],
+  "恋爱推理社": [
+   "lovemysteryclub"
+  ],
+  "恶灵的诅咒鬼宅轶事": [
+   "curseofdisasterspiritanecdotesofmansion"
+  ],
+  "恶魔会社入职": [
+   "demoncorporationonboarding"
+  ],
+  "悟梦图": [
+   "悟梦图dreamingatlas",
+   "dreamingatlas"
+  ],
+  "惊奇剑士": [
+   "wonderblade"
+  ],
+  "懒人也江湖": [],
+  "我成为天使的理由": [
+   "bokutenwhyibecameanangel"
+  ],
+  "护者之魂": [
+   "守护者之魂",
+   "keeperstoll"
+  ],
+  "摇鼠灵™": [
+   "ratshaker™"
+  ],
+  "斗鱼2therumblefish": [
+   "therumblefish"
+  ],
+  "新世勇者传": [
+   "新世勇者传neweraheroeschronicle"
+  ],
+  "旅人战记": [
+   "cardapocalypse"
+  ],
+  "无尽虚空": [
+   "endlessvoid"
+  ],
+  "晶石守护者": [
+   "晶石守护者cubicdefender"
+  ],
+  "最后的防线": [
+   "laststanddefense"
+  ],
+  "月影守望": [
+   "moonwatch"
+  ],
+  "未命名穿越记录": [
+   "untitledcrossingrecord"
+  ],
+  "末日隧道": [
+   "末日隧道tunnelofdoom",
+   "tunnelofdoom"
+  ],
+  "机动战士高达seed激斗命运复刻版": [
+   "seed"
+  ],
+  "枪匠幸存者": [
+   "nimrods枪匠幸存者",
+   "nimrods"
+  ],
+  "树莓立方体": [
+   "raspberrycube"
+  ],
+  "桃花源物语建造小镇": [
+   "hexaromavillagebuilder"
+  ],
+  "梦中梦": [
+   "thedreamwithin"
+  ],
+  "樱之杜净梦者": [
+   "樱之杜†净梦者2",
+   "sakuranomori†dreamers2"
+  ],
+  "樱之杜净梦者2": [
+   "樱之杜†净梦者2",
+   "sakuranomori†dreamers2"
+  ],
+  "樱花裁决": [
+   "mastermagistrate"
+  ],
+  "武侠开宗立派": [
+   "武侠开宗立派wuxiasect"
+  ],
+  "武士少女": [
+   "samuraimaiden武士少女",
+   "samuraimaiden"
+  ],
+  "死亡日": [
+   "死亡日狂杀末路",
+   "deadlydaysroadtrip"
+  ],
+  "残世界的鸢尾花": [],
+  "永泉传说": [
+   "永泉传说fountains",
+   "fountains"
+  ],
+  "江湖余生": [
+   "江湖余生缘起"
+  ],
+  "泡泡幽灵": [
+   "泡泡幽灵remake",
+   "bubbleghostremake"
+  ],
+  "流星世界演绎者": [
+   "流星世界演绎者badgedagger",
+   "meteorworldactorbadgedagger"
+  ],
+  "浮生箓2九九行歌": [
+   "浮生箓2九九行歌floatinglife2",
+   "floatinglife2"
+  ],
+  "海上神枪手": [
+   "duelonboard"
+  ],
+  "游戏": [
+   "kards二战卡牌游戏",
+   "kardstheww2cardgame"
+  ],
+  "火山的女儿": [
+   "volcanoprincess"
+  ],
+  "火车防御特快": [
+   "allaboard火车防御特快",
+   "allaboardthetraindefenseexpress"
+  ],
+  "热血三国志": [
+   "rivercitysagathreekingdoms"
+  ],
+  "爱上火车lastrun": [
+   "maitetsulastrun"
+  ],
+  "猎源": [
+   "seedhunter猎源"
+  ],
+  "疑案追声": [
+   "unheardvoicesofcrime"
+  ],
+  "疯狂连杀ultraki": [
+   "ultrakill"
+  ],
+  "白昼": [],
+  "破坏神席德与空荡岛": [
+   "勇者斗恶龙创世小玩家2破坏神席德与空荡岛",
+   "dragonquestbuilders™2"
+  ],
+  "神明在上": [
+   "zengeon"
+  ],
+  "符文旅记": [
+   "journeyofrune"
+  ],
+  "精分医生": [
+   "splitpersonalitydoctor"
+  ],
+  "纯白交响曲": [
+   "纯白交响曲sanaedition",
+   "mashiroirosymphonyhdsanaedition"
+  ],
+  "绝影战士": [
+   "kageshadowoftheninja绝影战士",
+   "shadowoftheninjareborn"
+  ],
+  "罗格救世传说正式版": [
+   "罗格救世传说",
+   "roguegenesia"
+  ],
+  "育蛙模拟器": [
+   "mudborne育蛙模拟器",
+   "mudbornefrogmanagementsim"
+  ],
+  "背包乱斗": [
+   "背包乱斗福西法的宝藏backpackbattles",
+   "backpackbattles"
+  ],
+  "节奏魔女": [
+   "节奏魔女舞动的骷髅",
+   "rhythmwitchbeatdeath"
+  ],
+  "花之天使的夏日恋歌": [
+   "floralflowlove"
+  ],
+  "英雄黄昏": [
+   "英雄黄昏文字三国志曹贼模拟器"
+  ],
+  "茂伸奇谈happyend": [
+   "茂伸奇谈后传monobenohappyend"
+  ],
+  "莉迪＆苏瑞的炼金工房不可思议绘画的炼金术": [
+   "莉迪＆苏瑞的炼金工房不可思议绘画的炼金术士dx",
+   "atelierlydiesuellethealchemistsandthemysteriouspaintingsdx"
+  ],
+  "蔚蓝月下的回忆": [
+   "蔚蓝月下的回忆sapphiremoonforevermemories"
+  ],
+  "赫雷斯的角斗场": [
+   "赫雷斯的角斗场originalsoundtrack",
+   "jerezsarenaoriginalsoundtrack"
+  ],
+  "走亲戚大作战": [],
+  "超合金游侠": [
+   "superalloyranger"
+  ],
+  "边界过载": [
+   "borderoverload"
+  ],
+  "迷城之光hob": [
+   "hob"
+  ],
+  "追忆夏色年华": [
+   "natsunoirononostalgia"
+  ],
+  "醋意乱流": [
+   "yakimochistream"
+  ],
+  "闲置神话": [],
+  "阿西美女室友竟然…": [
+   "阿西美女室友竟然",
+   "fiveheartsunderoneroof"
+  ],
+  "降灵": [
+   "降灵evildrawsclose"
+  ],
+  "雪圏球": [
+   "planetarian雪圏球",
+   "planetariansnowglobe"
+  ],
+  "雪恋交融": [
+   "yukikoimelt"
+  ],
+  "青鸟": [
+   "theazureone"
+  ],
+  "静脉注射2支持者版": [
+   "静脉注射2",
+   "intravenous2"
+  ],
+  "风之少年克罗诺亚": [
+   "风之少年克罗诺亚１＆２乘风归来",
+   "klonoaphantasyreverieseries"
+  ],
+  "飞吧史莱姆": [
+   "flyingslime"
+  ],
+  "魅魔之恋": [
+   "succubusaffection"
+  ],
+  "魔界战记": [
+   "魔界战记disgaea7",
+   "disgaea7vowsofthevirtueless"
+  ],
+  "魔界边缘": [
+   "deviledge"
+  ],
+  "魔骨支持者版": [
+   "魔骨",
+   "morkullragastsrage"
+  ],
+  "黄昏沉眠街": [
+   "tasomachibehindthetwilight"
+  ],
+  "黎明": [
+   "黎明杀机",
+   "deadbydaylight"
+  ]
+ }
+}

@@ -1,0 +1,720 @@
+{
+ "__meta": {
+  "builtAt": 1789032040797,
+  "total": 344,
+  "learnedFrom": 1383,
+  "accepted": 324,
+  "rejected": 86,
+  "errors": 4,
+  "partial": false
+ },
+ "aliases": {
+  "needforspeedmostwanted": [
+   "needforspeed™mostwanted"
+  ],
+  "hitmanabsolution": [
+   "hitmanabsolution™"
+  ],
+  "mafiaiiclassic": [],
+  "batmanarkhamasylumgameoftheyearedition": [],
+  "callofdutyghosts": [
+   "callofduty®ghosts"
+  ],
+  "needforspeedrivals": [
+   "needforspeed™rivals"
+  ],
+  "fallout3": [],
+  "batmanarkhamorigins": [
+   "batman™arkhamorigins"
+  ],
+  "eurotrucksimulator2demo": [],
+  "motogp17": [
+   "motogp™17"
+  ],
+  "thesevendeadlysinsorigin": [
+   "七大罪origin"
+  ],
+  "blackmythwukong": [
+   "黑神话悟空"
+  ],
+  "karakara": [],
+  "yakuza0": [
+   "人中之龙０誓约的场所导演剪辑版",
+   "yakuza0directorscut"
+  ],
+  "deadoralive5lastroundcorefighters": [],
+  "legobatman2dcsuperheroes": [
+   "lego®batman™2dcsuperheroes"
+  ],
+  "wuchangfallenfeathers": [
+   "明末渊虚之羽"
+  ],
+  "bpathoftheteallotus": [
+   "波与月夜之青莲",
+   "bōpathoftheteallotus"
+  ],
+  "farmingsimulator15": [],
+  "stumbleguys": [],
+  "bombergroundsreborn": [],
+  "bulletstormfullclipedition": [],
+  "dragonballzkakarotdemo": [
+   "七龙珠z卡卡洛特体验版"
+  ],
+  "residentevil4chainsawdemo": [],
+  "thecrewmotorfest": [
+   "thecrewmotorfestyear2pass"
+  ],
+  "activation": [
+   "neuronactivation"
+  ],
+  "batmanarkhamvr": [
+   "batman™arkhamvr"
+  ],
+  "brawlhalla": [],
+  "disgaeapc": [],
+  "erisdysnomia": [
+   "厄里斯绝色讨灭传"
+  ],
+  "finalfantasyxx2hdremaster": [],
+  "inazumaelevenvictoryroad": [
+   "闪电十一人英雄们的胜利之路"
+  ],
+  "marvelrivals": [
+   "漫威争锋"
+  ],
+  "miniroyale": [],
+  "motogp15": [
+   "motogp™15"
+  ],
+  "mudrunner": [],
+  "neweraheroeschronicle": [
+   "新世勇者传neweraheroeschronicle"
+  ],
+  "onikurademo": [
+   "樱侍试玩版"
+  ],
+  "poppyplaytimechapter5": [],
+  "pubgbattlegrounds": [],
+  "residentevil2rpddemo": [],
+  "residentevil7teaserbeginninghour": [],
+  "skychildrenofthelight": [
+   "sky光遇"
+  ],
+  "sonicthehedgehog": [
+   "sonicthehedgehog4episodeii"
+  ],
+  "supertux": [],
+  "tattletail": [],
+  "tombraideranniversary": [],
+  "atomrpg": [
+   "核爆rpg2",
+   "atomrpg2"
+  ],
+  "bladesoftime": [],
+  "commandandconquer3tiberiumwars": [
+   "命令与征服3泰伯利亚战争",
+   "commandconquer3tiberiumwars™"
+  ],
+  "counterstrikesource": [],
+  "darwinparadox": [
+   "darwinsparadox"
+  ],
+  "dayofthetentacleremastered": [],
+  "dragonquestviireimagineddemo": [
+   "勇者斗恶龙viireimagined率先启程体验版"
+  ],
+  "fishingplanet": [],
+  "flatout2": [],
+  "grebelsdemo": [],
+  "helloneighboralpha15": [
+   "helloneighbor2alpha15"
+  ],
+  "heroesofmightandmagicv": [
+   "heroesofmightmagicv"
+  ],
+  "hoopland": [],
+  "justcause4reloaded": [],
+  "littlenightmaresiidemo": [],
+  "luminesremastered": [],
+  "magearena": [],
+  "manhunt": [],
+  "marvelcontestofchampions": [],
+  "metalslugdefense": [],
+  "misidedemo": [
+   "米塔misidedemo"
+  ],
+  "mortalkombatxl": [],
+  "mxbikes": [],
+  "narakabladepoint": [
+   "永劫无间"
+  ],
+  "nierreplicantver122474487139": [
+   "nierreplicant™ver122474487139"
+  ],
+  "ninjagaidenmastercollectionninjagaiden": [
+   "ninjagaidenmastercollection"
+  ],
+  "princeofpersiathesandsoftime": [
+   "princeofpersia®thesandsoftime"
+  ],
+  "projectplaytime": [],
+  "ridgeracerunbounded": [
+   "ridgeracerunboundeddemo"
+  ],
+  "riseracethefuture": [],
+  "saintsrowivreelected": [],
+  "shift2unleashed": [],
+  "sonicgenerations": [
+   "sonicgenerationscollection"
+  ],
+  "spyroreignitedtrilogy": [
+   "spyro™reignitedtrilogy"
+  ],
+  "starwarstheforceunleashed": [
+   "starwars™theforceunleashed™ii"
+  ],
+  "steplightly": [],
+  "thedarknessii": [],
+  "tombraiderlegend": [],
+  "trailsinthesky": [
+   "trailsinthesky1stchapter"
+  ],
+  "120日元": [
+   "120yenstories"
+  ],
+  "9nine天色天歌天籁音": [
+   "9nineepisode2"
+  ],
+  "白昼": [],
+  "边界过载": [
+   "borderoverload"
+  ],
+  "残世界的鸢尾花": [],
+  "超合金游侠": [
+   "superalloyranger"
+  ],
+  "刺猬索尼克谋杀案": [
+   "themurderofsonicthehedgehog"
+  ],
+  "醋意乱流": [
+   "yakimochistream"
+  ],
+  "大江湖之苍龙与白鸟": [
+   "theworldofkungfudragonandeagle"
+  ],
+  "东方梦零魂": [
+   "touhounilsoul"
+  ],
+  "东方妖精武踏会": [
+   "touhoufairyknockoutonefairytorulethemall"
+  ],
+  "恶灵的诅咒鬼宅轶事": [
+   "curseofdisasterspiritanecdotesofmansion"
+  ],
+  "恶魔会社入职": [
+   "demoncorporationonboarding"
+  ],
+  "飞吧史莱姆": [
+   "flyingslime"
+  ],
+  "浮生箓2九九行歌": [
+   "浮生箓2九九行歌floatinglife2",
+   "floatinglife2"
+  ],
+  "符文旅记": [
+   "journeyofrune"
+  ],
+  "功夫小子街头争斗thekaratekidstreetrumble": [
+   "thekaratekidstreetrumble"
+  ],
+  "光之夜": [
+   "我的世界地下城发光之夜冒险通行证",
+   "minecraftdungeonsluminousnightadventurepass"
+  ],
+  "海上神枪手": [
+   "duelonboard"
+  ],
+  "赫雷斯的角斗场": [
+   "赫雷斯的角斗场originalsoundtrack",
+   "jerezsarenaoriginalsoundtrack"
+  ],
+  "候鸟": [],
+  "幻恋夜宴": [
+   "幻恋夜宴恋恋的支持者包",
+   "hallucisabbatofkoishikoishissupporterpack"
+  ],
+  "黄昏沉眠街": [
+   "tasomachibehindthetwilight"
+  ],
+  "火山的女儿": [
+   "volcanoprincess"
+  ],
+  "交汇协奏曲": [
+   "crossconcerto"
+  ],
+  "惊奇剑士": [
+   "wonderblade"
+  ],
+  "晶石守护者": [
+   "晶石守护者cubicdefender"
+  ],
+  "精分医生": [
+   "splitpersonalitydoctor"
+  ],
+  "囧之国": [
+   "jumpkingdom"
+  ],
+  "凯瑞尔轮回": [
+   "kyvirrebirth"
+  ],
+  "兰岛物语少女的约定复刻版": [
+   "lairlandstory"
+  ],
+  "懒人也江湖": [],
+  "恋爱推理社": [
+   "lovemysteryclub"
+  ],
+  "廖添丁绝代凶贼之末日": [
+   "thelegendoftianding"
+  ],
+  "流星世界演绎者": [
+   "流星世界演绎者badgedagger",
+   "meteorworldactorbadgedagger"
+  ],
+  "旅人战记": [
+   "cardapocalypse"
+  ],
+  "妹的圣域": [
+   "mylittlesistersspecialplace"
+  ],
+  "魅魔之恋": [
+   "succubusaffection"
+  ],
+  "梦中梦": [
+   "thedreamwithin"
+  ],
+  "魔界边缘": [
+   "deviledge"
+  ],
+  "末日隧道": [
+   "末日隧道tunnelofdoom",
+   "tunnelofdoom"
+  ],
+  "哞哩的长梦": [
+   "mooliisdreamland"
+  ],
+  "青鸟": [
+   "theazureone"
+  ],
+  "神明在上": [
+   "zengeon"
+  ],
+  "圣空": [
+   "theholysilence"
+  ],
+  "圣徒": [
+   "sherlockholmeschapterone圣徒与罪人",
+   "sherlockholmeschapteronesaintsandsinners"
+  ],
+  "十字的交差": [
+   "microsstep"
+  ],
+  "树莓立方体": [
+   "raspberrycube"
+  ],
+  "桃花源物语建造小镇": [
+   "hexaromavillagebuilder"
+  ],
+  "徒花异谭": [
+   "徒花异谭originalsoundtrack",
+   "adabanaoddtalesoriginalsoundtrack"
+  ],
+  "吞食骑士奢华盛宴": [
+   "buffetknightdecadentfullcourse"
+  ],
+  "未命名穿越记录": [
+   "untitledcrossingrecord"
+  ],
+  "我成为天使的理由": [
+   "bokutenwhyibecameanangel"
+  ],
+  "无尽虚空": [
+   "endlessvoid"
+  ],
+  "悟梦图": [
+   "悟梦图dreamingatlas",
+   "dreamingatlas"
+  ],
+  "闲置神话": [],
+  "小小勇士": [
+   "小小勇士littlewarrior",
+   "littlewarrior"
+  ],
+  "协律01新生活": [
+   "synchorus01thenewlife"
+  ],
+  "心渊梦境": [
+   "afterimage"
+  ],
+  "修仙故事无尽剑域": [
+   "cultivationstoryinfiniteswordrealm"
+  ],
+  "雪恋交融": [
+   "yukikoimelt"
+  ],
+  "摇鼠灵™": [
+   "ratshaker™"
+  ],
+  "疑案追声": [
+   "unheardvoicesofcrime"
+  ],
+  "樱花裁决": [
+   "mastermagistrate"
+  ],
+  "樱之杜净梦者2": [
+   "樱之杜†净梦者2",
+   "sakuranomori†dreamers2"
+  ],
+  "游戏": [
+   "kards二战卡牌游戏",
+   "kardstheww2cardgame"
+  ],
+  "月影守望": [
+   "moonwatch"
+  ],
+  "追忆夏色年华": [
+   "natsunoirononostalgia"
+  ],
+  "最后的防线": [
+   "laststanddefense"
+  ],
+  "annalynn": [],
+  "cookiecutteroverkilledition": [],
+  "dsdalsegno": [
+   "dalsegno"
+  ],
+  "ixshetell": [],
+  "karakara2": [],
+  "openbrushvr": [
+   "openbrush"
+  ],
+  "sugarstyle": [],
+  "thelabvr": [
+   "thelab"
+  ],
+  "trinolinegenesis": [],
+  "1954alcatraz": [
+   "alcatraz"
+  ],
+  "aerogpx": [],
+  "afterburn": [],
+  "airmech": [],
+  "alekhinesgun": [],
+  "alienbreed2assault": [],
+  "alienbreed3descent": [],
+  "alienbreedimpact": [],
+  "aliensvspredator": [
+   "aliensvspredatorcollection"
+  ],
+  "americantrucksimulatordemo": [],
+  "areyousmarterthana5thgrader": [],
+  "arma2operationarrowhead": [],
+  "autorun": [],
+  "baladins": [],
+  "baldibasicsplus": [
+   "baldisbasicsplus"
+  ],
+  "battlefieldredsec": [
+   "战地风云™禁区冲突",
+   "battlefield™redsec"
+  ],
+  "beybladexxone": [],
+  "binarydomain": [],
+  "blazingchrome": [],
+  "bloodspear": [],
+  "bloodstainedcurseofthemoon": [],
+  "bloodstrike": [
+   "血战突袭"
+  ],
+  "bombsquad": [],
+  "bongocat": [],
+  "bruisers2dboxingdemo": [],
+  "busdrivingsim22": [],
+  "callofdutyblackopsiii": [
+   "callofduty®blackopsiii"
+  ],
+  "caseblindstolenroute": [],
+  "castleofillusion": [],
+  "casualtiesunknowndemo": [
+   "未知伤亡试玩版"
+  ],
+  "christmasmassacre": [],
+  "commandconquerredalert3": [
+   "命令与征服™红色警戒3",
+   "commandconquer™redalert™3"
+  ],
+  "conflictdesertstorm": [
+   "conflictdesertstorm™"
+  ],
+  "cossacks3": [],
+  "crabgame": [],
+  "creepyscary": [],
+  "crystalcaveshd": [],
+  "cyberdimensionneptunia4goddessesonline": [],
+  "danganronpatriggerhappyhavoc": [],
+  "deadfrontier2": [],
+  "deltaforce": [
+   "deltaforce1"
+  ],
+  "dementiumtheward": [],
+  "devilmaycry4original": [
+   "devilmaycry4originalsoundtrack"
+  ],
+  "disgaea5complete": [],
+  "distance": [],
+  "divinedivinity": [],
+  "dracuriot": [],
+  "dragonfield": [],
+  "dreamdaddyadaddatingsimulator": [],
+  "dreamtonedemo": [],
+  "driftlegends2": [],
+  "drivebeyondhorizonsdemo": [],
+  "dynastio": [],
+  "elementallis": [],
+  "fistforgedinshadowtorch": [
+   "暗影火炬城"
+  ],
+  "fatalframeprojectzeromaskofthelunareclipse": [
+   "零月蚀的假面"
+  ],
+  "felixthereaper": [],
+  "fivenightsatfreddysmimic": [
+   "fivenightsatfreddyssecretofthemimic"
+  ],
+  "fivenightsatfreddysecuritybreach": [
+   "fivenightsatfreddyssecuritybreach"
+  ],
+  "flatoutultimatecarnage": [
+   "flatoutultimatecarnagecollectorsedition"
+  ],
+  "footballlifesimulator": [
+   "footballrefereelifesimulator26"
+  ],
+  "footballmanager26demo": [
+   "足球经理26试玩版"
+  ],
+  "gartenofbanban0": [],
+  "geteven": [],
+  "goatofduty": [],
+  "godotengine": [],
+  "gorillatag": [],
+  "graalonlineera": [],
+  "grandtheftauto5": [
+   "grandtheftautov增强版",
+   "grandtheftautovenhanced"
+  ],
+  "grandtheftautolibertycity": [
+   "grandtheftautoepisodesfromlibertycity"
+  ],
+  "grandchase": [],
+  "grandmaleftmeabuildingdemo": [],
+  "gtlegends": [],
+  "gunfirereborn": [
+   "枪火重生"
+  ],
+  "hajwala": [
+   "hajwalaline"
+  ],
+  "heatwave": [],
+  "heavendust2": [
+   "秘馆疑踪2heavendust2"
+  ],
+  "helloneighboralpha1": [],
+  "helvetii": [],
+  "heroesofmightandmagic55": [
+   "heroesofmightmagicv"
+  ],
+  "hitman2silentassassin": [],
+  "houseofnecrosis": [],
+  "hyperechelon": [],
+  "insidedemo": [],
+  "interiorworlds": [],
+  "ironmeatdemo": [],
+  "ironsnout": [],
+  "juicegalaxy": [],
+  "kartkraft": [
+   "kartkraft™"
+  ],
+  "kelipot": [
+   "形骸骑士"
+  ],
+  "kindergarten3": [],
+  "kingdomclassic": [],
+  "kuronokiseki": [
+   "英雄传说黎之轨迹",
+   "thelegendofheroeskuronokiseki"
+  ],
+  "kusancityofwolvesdemo": [],
+  "lastvanguard": [],
+  "legothelordoftherings": [
+   "lego®thelordoftherings™"
+  ],
+  "liberated": [],
+  "lilhorrorstoriesthecampfiredemo": [],
+  "linesxfree": [],
+  "livingdeadhouse": [],
+  "madomonogatarifiaandthewondrousacademy": [
+   "魔导物语菲娅与奇妙的学校"
+  ],
+  "magicalgirlwitchtrials": [
+   "魔法少女的魔女审判"
+  ],
+  "manhunt2": [
+   "全网公敌2新世界",
+   "cybermanhunt2newworldthehackingsimulator"
+  ],
+  "mauimallardincoldshadow": [],
+  "militarytanks": [
+   "战争坦克军用坦克游戏wartanks"
+  ],
+  "morningdewfarms": [
+   "morningdewfarmscheatmap"
+  ],
+  "motogp13": [
+   "motogp™13"
+  ],
+  "motogp14": [
+   "motogp™14"
+  ],
+  "mycarmylifedemo": [],
+  "myeyesdeceive": [],
+  "narutostorm": [
+   "火影忍者疾风传终极风暴4慕留人传「nextgenerations」更新包",
+   "narutostorm4roadtoborutoexpansion"
+  ],
+  "narutostorm4": [
+   "火影忍者疾风传终极风暴4慕留人传「nextgenerations」更新包",
+   "narutostorm4roadtoborutoexpansion"
+  ],
+  "newsuperluckystale": [],
+  "ninjagaidenmastercollectionninjagaiden2": [
+   "ninjagaidenσ2ninjagaidenmastercollection"
+  ],
+  "oforcsandmen": [],
+  "offthegrid": [],
+  "onegunguy": [],
+  "onepieceburningblood": [],
+  "oneshot": [],
+  "outcastsecondcontact": [],
+  "partyanimals": [
+   "猛兽派对"
+  ],
+  "polyarisdemo": [],
+  "princeofpersiawarriorwithin": [
+   "princeofpersiawarriorwithin™"
+  ],
+  "propsumo": [],
+  "pubencounter": [],
+  "raymanorigins": [
+   "rayman®origins"
+  ],
+  "residentevil3raccooncitydemo": [],
+  "residentevilvillagegoldeditiongameplaydemo": [],
+  "residenteevil5": [
+   "residentevil5"
+  ],
+  "rfactor": [],
+  "roboticsnoteselite": [],
+  "samuraiwarriors2": [
+   "samuraiwarriors4ii"
+  ],
+  "secretagenthd": [],
+  "shavestuff": [],
+  "shiftatmidnightdemo": [
+   "shiftatmidnightmultiplayerdemo"
+  ],
+  "sniperatwork": [],
+  "snk40thanniversarycollection": [],
+  "snookerblitz": [
+   "斯诺克极速对战"
+  ],
+  "speakdemo": [],
+  "spiritvale": [],
+  "splintercellblacklist": [
+   "细胞分裂黑名单",
+   "tomclancyssplintercellblacklist"
+  ],
+  "splitsecond": [
+   "splitsecondvolley"
+  ],
+  "spookysjumpscaremansionhdrenovation": [],
+  "starshiptroopersultimatebugwardemo": [],
+  "starward": [
+   "星之翼starward"
+  ],
+  "steamworlddig": [],
+  "stellarbladedemo": [
+   "剑星体验版",
+   "stellarblade™demo"
+  ],
+  "stilllife": [],
+  "strikersclub": [],
+  "tagthepowerofpaint": [],
+  "tankionline": [],
+  "teamfortress2": [],
+  "tempustriaddemo": [],
+  "thatsnotmyneighbor": [],
+  "thecloudberryabyss": [],
+  "thekingoffighters98ultimatematchfinaledition": [],
+  "thelegendofheroestrailsfromzero": [],
+  "thelegendoftianding": [
+   "thelegendoftiandingsoundtrack"
+  ],
+  "thesaboteur": [
+   "破坏者",
+   "thesaboteur™"
+  ],
+  "thecensor": [
+   "社群审查dxsoundtrack",
+   "thecensordxeditionsoundtrack"
+  ],
+  "tokyoxanadu": [
+   "tokyoxanaduex"
+  ],
+  "torquedrift": [],
+  "trailsinthesky2ndchapterdemo": [
+   "空之轨迹the2nd体验版"
+  ],
+  "trainmanager": [],
+  "transformice": [],
+  "tropicoreloaded": [],
+  "univers": [],
+  "victoriaii": [],
+  "virtualdrivingschooldemo": [],
+  "voxelproject": [
+   "voxelprojectvr"
+  ],
+  "worldoftanksblitz": [
+   "worldoftanksblitzwelcomebundle"
+  ],
+  "wrc5fiaworldrallychampionship": [],
+  "yanpaisimulator": [],
+  "zefyrprologue": [
+   "如风序章"
+  ],
+  "花之天使的夏日恋歌": [
+   "floralflowlove"
+  ],
+  "她的圣域": [
+   "mygirlfriendsspecialplace"
+  ],
+  "走亲戚大作战": [],
+  "nukitashi2": [],
+  "pixelgunpcedition": [
+   "pixelgun3dpcedition"
+  ],
+  "shuffleepisode2被神与魔同时盯上的男人": [
+   "shuffleepisode2kaminimoakumanimonerawareteiruotoko"
+  ]
+ }
+}

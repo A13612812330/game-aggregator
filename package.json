@@ -1,0 +1,1 @@
+{"name":"game-hub","version":"1.0.0","private":true,"type":"commonjs","description":"机地 + XDGAME 聚合站(详情+更新,无下载)","scripts":{"start":"node server.js","probe":"node probe.js"},"dependencies":{"cheerio":"^1.0.0","express":"^4.19.2","js-yaml":"^5.4.1"},"devDependencies":{"jsdom":"^30.0.1","puppeteer-core":"^25.10.0"}}
