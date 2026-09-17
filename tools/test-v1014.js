@@ -138,17 +138,24 @@ console.log('\n=== ① 跨源按钮不再指向站点首页 ===');
   const h = read('public/index.html');
   ok('已无「写死站点根」的旧按钮',
     !/class="go \$\{s\.cls === 'jidi' \? 'xd' : 'jidi'\}" href="\$\{s\.cls === 'jidi' \? 'https:\/\/www\.xdgame\.com\/' : 'https:\/\/jidiyouxi\.com\/'\}"/.test(h));
-  ok('新增了站内搜索 URL 构造器', /function JIDI_SEARCH/.test(h) && /function XD_SEARCH/.test(h));
   ok('跨源按钮带 id="crossGo"', /id="crossGo"/.test(h));
   ok('linkCounterpart 会改写 href 到该游戏详情页', /go\.setAttribute\('href', hit\.url/.test(h));
-  ok('查不到时退到站内搜索（不是首页）', /JIDI_SEARCH\(zh\)/.test(h) && /XD_SEARCH\(zh\)/.test(h));
-  ok('XD 搜索用 xdgamer.com（xdgame.com/search 会 404）',
-    /xdgamer\.com\/search\//.test(h), (h.match(/xdgamer\.com\/search\/[^']*/) || [])[0]);
+  /* ★ v10.15 需求变更：查不到另一源详情页时**不再退到站内搜索页**，改为整个按钮不显示。
+     所以 v10.14 在这里断言的「退到站内搜索」已被新需求取代，断言同步改（不是退化）。 */
+  ok('[v10.15 变更] 查不到时按钮保持隐藏（不再退站内搜索）',
+    /go\.hidden = true;[\s\S]{0,40}?syncDActions\(\)/.test(h) || /if \(go\) go\.hidden = true;/.test(h));
+  ok('[v10.15 变更] 已删掉没人用的站内搜索 URL 构造器',
+    !/function JIDI_SEARCH/.test(h) && !/function XD_SEARCH/.test(h));
+  ok('跨源按钮默认 hidden（渲染时就不露出）', /id="crossGo" hidden/.test(h));
   /* ★ v10.14 补：检索词必须剥掉标点 —— 否则「生化危机4：重制版」剥版本词后留下
      尾随冒号（`生化危机4：`），检索不到机地的「生化危机4重置版」，两源都有却仍退到站内搜索。 */
   ok('检索词剥标点（PUNCT 常量）', /const PUNCT = \/\[/.test(h) && /\.replace\(PUNCT, ''\)/.test(h));
+  /* ★ v10.15：v10.14 里这句是 `cand.find(...)`，现在先过一道 hasDetailUrl 过滤（只留能跳的），
+     再在同款候选里优先取「归一后完全相等」的那条 —— 意图没变，只是候选集多了一层筛。 */
   ok('命中优先取「归一后完全相等」的那条',
-    /const want = normGameTitle\(zh\)/.test(h) && /cand\.find\(\(it\) => normGameTitle\(splitName\(it\.title\)\.zh\) === want\)/.test(h));
+    /const want = normGameTitle\(zh\)/.test(h)
+    && /const ok = cand\.filter\(hasDetailUrl\);/.test(h)
+    && /return ok\.find\(\(it\) => normGameTitle\(splitName\(it\.title\)\.zh\) === want\) \|\| ok\[0\] \|\| null;/.test(h));
 }
 
 /* ★ 行为级：检索词三轮推导（正则与 index.html 内的 PUNCT 一致，这里锁住不变量） */

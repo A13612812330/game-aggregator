@@ -17,6 +17,9 @@ const fs = require('fs');
 const path = require('path');
 
 const BASE = process.env.BASE || 'http://127.0.0.1:8123/';
+/* ★ v10.15：浏览器获取交给 tools/browser.js —— Edge 在本机沙箱会话里启动即被拦
+   （连 --version 都没输出），那里会自动改用「外部拉起 Chrome + 连 CDP」这条可行路径。 */
+const { launchBrowser, findBrowser } = require('./browser');
 const EDGE_CANDIDATES = [
   'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
   'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
@@ -49,7 +52,7 @@ function loadPuppeteer() {
     console.log('SKIP：未安装 puppeteer-core（npm i -D puppeteer-core）');
     process.exit(0);
   }
-  const exe = EDGE_CANDIDATES.find((p) => fs.existsSync(p));
+  const exe = findBrowser();
   if (!exe) {
     console.log('SKIP：未找到 Edge 可执行文件');
     process.exit(0);
@@ -64,7 +67,7 @@ function loadPuppeteer() {
     process.exit(0);
   }
 
-  const b = await puppeteer.launch({ executablePath: exe, headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+  const b = await launchBrowser(exe);
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   for (const { w, h, tag } of SHOTS) {

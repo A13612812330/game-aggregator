@@ -126,9 +126,24 @@
   .sm-top .clear{width:26px;height:26px;border-radius:8px;color:var(--c-t3);display:grid;place-items:center;font-size:13px;flex:none;transition:.14s}
   .sm-top .clear:hover{background:#F1F3F8;color:var(--c-danger)}
   .sm-top .esc{font-family:var(--font-num);font-size:10.5px;color:var(--c-t3);background:#F1F3F8;border-radius:5px;padding:2px 6px;flex:none}
-  .sm-hint{display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:11px;color:var(--c-t3);border-bottom:1px solid #F1F3F8;flex:none;flex-wrap:wrap}
+  /* ★ v10.15：顶部那一行「库量 + 5 个 kbd + 行为说明」拆成两块。
+   *   旧版把 11px 灰字挤成一句话（`本地库 15,324 款（…）· ↑↓ 选择 · Enter … · Esc … · 点结果…`），
+   *   既扫不动、又像调试信息；而且它把「这个搜索框能搜什么」这个**真正有用的前提**埋在了末尾。
+   *   现在：状态条只讲口径（能搜什么、多少款），按键提示下沉到弹窗底部 ——
+   *   那是命令面板里 kbd 的常规位置，视线不用来回跳。 */
+  .sm-hint{display:flex;align-items:center;gap:8px;padding:7px 16px;font-size:11px;color:var(--c-t3);
+    background:#FAFBFE;border-bottom:1px solid #F1F3F8;flex:none;flex-wrap:wrap}
+  .sm-hint .dot{width:6px;height:6px;border-radius:99px;background:#22C55E;flex:none;
+    box-shadow:0 0 0 3px rgba(34,197,94,.16)}
   .sm-hint b{color:var(--c-t1);font-family:var(--font-num)}
-  .sm-hint kbd{font-family:var(--font-num);font-size:10px;background:#EFF1F8;border:1px solid var(--c-border);border-radius:4px;padding:0 4px;color:var(--c-t2)}
+  .sm-hint .sep{width:1px;height:11px;background:var(--c-border);flex:none}
+  .sm-hint .live{margin-left:auto;font-size:10.5px;font-weight:700;color:var(--c-primary);white-space:nowrap}
+  .sm-foot{display:flex;align-items:center;gap:14px;padding:8px 16px;border-top:1px solid #F1F3F8;
+    background:#FAFBFE;font-size:10.5px;color:var(--c-t3);flex:none;flex-wrap:wrap}
+  .sm-foot span{display:inline-flex;align-items:center;gap:2px}
+  .sm-foot kbd{font-family:var(--font-num);font-size:10px;background:#fff;border:1px solid var(--c-border);
+    border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--c-t2);line-height:15px}
+  .sm-foot .rt{margin-left:auto;color:var(--c-t3)}
   .sm-body{overflow-y:auto;padding:10px 12px 14px;flex:1;min-height:140px}
   /* ★ v10.7：行密度收紧 —— 行高 70px→约 58px。
    *   原来 86×50 的缩略图 + 9px 内边距，结果区 690px 只放得下 ~9 行，
@@ -184,11 +199,28 @@
   .sm-sec .tag.real{color:var(--c-xd);background:rgba(11,123,255,.1)}
   .sm-sec .tag.match{color:var(--c-jidi);background:rgba(230,65,93,.1)}
   .sm-sec .cnt{margin-left:auto;font-size:10.5px;color:var(--c-t3);font-family:var(--font-num)}
-  .sm-empty{text-align:center;padding:30px 16px;color:var(--c-t3);font-size:13px;line-height:1.85}
-  .sm-empty .big{font-size:30px;margin-bottom:9px}
+  /* ★ v10.15：空态不再是一个 30px 放大镜 + 两行居中小字**漂在 271px 空白中间**。
+   *   初始态改为「热门搜索 + 四库速览」两块实信息 —— 空白区有了内容，
+   *   顺带回答了「这个框能搜什么」（端游库 / 手游中心 / 修改器 / 云存档 四个口径）。
+   *   .sm-empty 保留给「搜不到 / 出错」这类真正的空结果，尺寸也收紧一档。 */
+  .sm-empty{text-align:center;padding:22px 16px;color:var(--c-t3);font-size:12.5px;line-height:1.75}
+  .sm-empty .big{font-size:24px;margin-bottom:6px;opacity:.92}
+  .sm-home{padding-bottom:2px}
+  .sm-stat{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;padding:2px 11px 8px}
+  .sm-stat .st{border:1px solid var(--c-border);background:#FBFCFE;border-radius:10px;padding:7px 9px;min-width:0}
+  .sm-stat .st b{display:block;font:800 15px/1.25 var(--font-num);color:var(--c-t1)}
+  .sm-stat .st span{display:block;margin-top:1px;font-size:10.5px;color:var(--c-t3);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sm-stat .st.pc b{color:#1D4ED8}
+  .sm-stat .st.mob b{color:#C2410C}
+  .sm-stat .st.tr b{color:#0F766E}
+  .sm-stat .st.sv b{color:#0369A1}
+  .sm-tip{display:flex;align-items:center;gap:7px;margin:0 11px 8px;padding:8px 10px;border-radius:9px;
+    background:var(--c-primary-soft);color:#2E4A9E;font-size:11px;line-height:1.5}
+  .sm-tip b{color:#1D4ED8;font-weight:800}
   .sm-quick{display:flex;flex-wrap:wrap;gap:7px;padding:2px 11px 10px}
-  .sm-quick button{font-size:12.5px;font-weight:650;color:var(--c-t2);background:#F3F5F9;border:1px solid transparent;border-radius:99px;padding:5px 13px;transition:.14s}
-  .sm-quick button:hover{background:var(--c-primary);color:#fff}
+  .sm-quick button{font-size:12.5px;font-weight:650;color:var(--c-t2);background:#fff;border:1px solid var(--c-border);border-radius:99px;padding:5px 13px;transition:.14s}
+  .sm-quick button:hover{background:var(--c-primary);border-color:var(--c-primary);color:#fff;box-shadow:0 4px 12px rgba(46,107,255,.22)}
   .sm-acts{display:flex;gap:10px;padding:2px 11px 4px}
   .sm-acts .mini-btn{margin-top:0}
 
@@ -492,16 +524,21 @@
   /* ============ ★ v10.13「逐条游玩参数」表（抽屉 / 配置面板共用） ============
    *   把社区配置 JSON 里真正要抄的那几项（驱动 / DXVK / 容器 / 翻译层 / 内存）铺开。
    *   以前只给一个「下载 JSON」，用户得下下来才知道内容 —— 这是本次补的重点。 */
-  .d-param{margin-top:7px;border:1px solid var(--c-border);border-radius:10px;overflow:hidden}
-  .d-param .ph{display:flex;align-items:center;gap:8px;padding:6px 9px;background:#F4F6FB;
-    font-size:10.5px;font-weight:750;color:var(--c-t2);flex-wrap:wrap}
-  .d-param .ph .gpu{color:#0F766E}
-  .d-param .ph .dt{margin-left:auto;color:var(--c-t3);font-family:var(--font-num);font-weight:650}
-  .d-param .pb{display:flex;flex-wrap:wrap;gap:5px;padding:7px 9px;border-top:1px dashed var(--c-border)}
-  .d-param .pb .kv{font-size:10px;color:var(--c-t3);background:#F6F7FB;border:1px solid #E8EBF3;
-    border-radius:5px;padding:1.5px 6px;font-family:var(--font-num)}
+  /* ★ v10.15 视觉分层：
+   *   卡片头 = 机型（深色 11px）+ GPU（青色胶囊）；参数区把「驱动 / DXVK / 翻译层」
+   *   这三个**照着抄时最先要对的**做成带底色的胶囊，其余保持中性灰 —— 一屏里先看到重点。 */
+  .d-param{margin-top:7px;border:1px solid var(--c-border);border-radius:10px;overflow:hidden;background:#fff}
+  .d-param .ph{display:flex;align-items:center;gap:7px;padding:7px 9px;background:#F4F6FB;
+    font-size:11px;font-weight:750;color:var(--c-t1);flex-wrap:wrap}
+  .d-param .ph .gpu{font-size:10px;font-weight:750;color:#0F766E;background:#CCFBF1;border-radius:5px;padding:1.5px 6px}
+  .d-param .ph .dt{margin-left:auto;color:var(--c-t3);font-family:var(--font-num);font-weight:650;font-size:10px}
+  .d-param .pb{display:flex;flex-wrap:wrap;gap:5px;padding:8px 9px;border-top:1px dashed var(--c-border)}
+  .d-param .pb .kv{font-size:10.5px;color:var(--c-t3);background:#F6F7FB;border:1px solid #E8EBF3;
+    border-radius:6px;padding:2px 7px;font-family:var(--font-num)}
   .d-param .pb .kv b{color:#334155;font-weight:750}
+  .d-param .pb .kv.hot{background:#F5F3FF;border-color:#E9E4FB}
   .d-param .pb .kv.hot b{color:#6D28D9}
+  .d-param .pb .kv.ok{background:#ECFDF5;border-color:#D1FAE5}
   .d-param .pb .kv.ok b{color:#0F766E}
   /* ★ v10.14：机型 → 芯片规格行。把 Xiaomi 24095PCADG 这类**内部代号**译成可读配置
      （SoC / CPU 核簇 / 性能分）。系统本来就会译（device-match 覆盖 1,021/1,039 = 98.3%），
@@ -512,13 +549,44 @@
   .d-param .spec .sp.soc b{color:#0F766E}
   .d-param .spec .sp.cpu{font-family:var(--font-num);color:var(--c-t3);background:#F6F7FB;border-color:#E8EBF3}
   .d-param .spec .sp.none{color:var(--c-t3);background:#F6F7FB;border-color:#E8EBF3}
-  /* 机型清单（去重后横向铺开，带 SoC） */
-  .d-devlist{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
-  .d-devlist .dv{display:inline-flex;align-items:center;gap:4px;font-size:10px;border:1px solid #E3E8F2;
-    background:#F8FAFD;border-radius:6px;padding:2px 6px;color:var(--c-t2);font-family:var(--font-num)}
-  .d-devlist .dv b{color:#334155;font-weight:750;font-family:var(--font-ui)}
-  .d-devlist .dv i{font-style:normal;color:#0F766E;font-weight:700;font-family:var(--font-ui)}
+  /* ============ 机型清单（★ v10.15 改版） ============
+   *   旧版是一堆 flex-wrap 的小胶囊（「机型 + SoC」），一多就糊成一片、也看不出强弱。
+   *   现在改成两列网格：每行「机型 … 芯片 … 性能分」，机型左对齐、分数右对齐，
+   *   扫一列就能比出谁强谁弱（跨品牌 Adreno / Mali / PowerVR 也能直接比数字）。 */
+  .d-devlist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-top:7px}
+  .d-devlist .dv{display:flex;align-items:center;gap:6px;min-width:0;font-size:10.5px;
+    border:1px solid #E3E8F2;background:#F8FAFD;border-radius:7px;padding:4px 7px;color:var(--c-t2)}
+  .d-devlist .dv b{color:#334155;font-weight:750;min-width:0;max-width:56%;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .d-devlist .dv i{font-style:normal;color:#0F766E;font-weight:700;min-width:0;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .d-devlist .dv i.dim{color:var(--c-t3);font-weight:600}
+  .d-devlist .dv em{margin-left:auto;flex:none;font-style:normal;font-family:var(--font-num);font-size:9.5px;
+    font-weight:800;color:#64748B;background:#EEF2F8;border-radius:5px;padding:1px 5px}
+  /* 门槛机型：实测跑通过的最弱一台 —— 比它强的机型基本也能跑 */
+  .d-devlist .dv.gate{background:#FFF7ED;border-color:#FED7AA}
+  .d-devlist .dv.gate i{color:#B45309}
+  .d-devlist .dv.gate em{color:#B45309;background:#FFEDD5}
+  .d-devlist .dv.more{grid-column:1/-1;justify-content:center;background:transparent;
+    border-style:dashed;color:var(--c-t3);font-size:10px}
+  /* 门槛小结行 */
+  .bh-gate{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:8px;padding:7px 9px;
+    border:1px solid #FED7AA;background:#FFFBF5;border-radius:9px;font-size:11px;color:var(--c-t2)}
+  .bh-gate .lb{flex:none;font-size:9.5px;font-weight:800;color:#B45309;background:#FFEDD5;
+    border-radius:5px;padding:1.5px 6px;letter-spacing:.3px}
+  .bh-gate b{color:#7C2D12;font-weight:800}
+  .bh-gate i{font-style:normal;color:#0F766E;font-weight:700}
+  .bh-gate .s{flex:none;font-family:var(--font-num);font-size:9.5px;font-weight:800;
+    color:#B45309;background:#FFEDD5;border-radius:5px;padding:1px 5px}
+  .bh-gate .tip{color:var(--c-t3);font-size:10.5px}
+  /* 详情页里的小节标题（本站实测记录） */
+  .bh-sub{display:flex;align-items:center;gap:7px;margin-top:9px;font-size:11.5px;font-weight:750;color:var(--c-t2)}
+  .bh-sub .n{margin-left:auto;font-size:10.5px;font-weight:650;color:var(--c-t3);font-family:var(--font-num)}
+  .bh-sub a{font-size:10.5px;font-weight:700;color:var(--c-primary);text-decoration:none}
+  /* 实测记录里的「可玩 / 不可玩」胶囊（.pc-rec 原本只在手游专区的实测面板里用，缺这两个态） */
+  .pc-rec .r .hd .pill{font-size:9.5px;font-weight:800;border-radius:5px;padding:1.5px 6px}
+  .pc-rec .r .hd .pill.ok{color:#15803D;background:#DCFCE7}
+  .pc-rec .r .hd .pill.no{color:#B91C1C;background:#FEE2E2}
   /* 详情页来源徽标（这条是机地还是 XD 收录的） */
   .d-bdg{display:inline-flex;align-items:center;height:17px;padding:0 7px;border-radius:5px;
     font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:7px}
@@ -829,6 +897,11 @@
   .d-hint{display:flex;gap:9px;align-items:flex-start;background:#FFF8E6;border:1px solid #F5DE9C;color:#8A5B00;border-radius:11px;padding:10px 12px;font-size:12.5px;line-height:1.55;margin-bottom:14px}
   .score-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
   .score-big{font-family:var(--font-num);font-weight:800;font-size:26px;background:#fff;border:1px solid var(--c-border);padding:4px 14px;border-radius:10px;box-shadow:var(--shadow)}
+  /* v10.15：评分说明列 + Steam 好评率（原先在下面 .kv 表里跟着「玩家评分」一行，现已并到这里，
+     避免同一页出现两次评分）。好评率做成一颗小胶囊，跟分数区分开。 */
+  .score-meta{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--c-t3);line-height:1.3}
+  .score-meta i{font-style:normal;align-self:flex-start;font-size:10.5px;font-weight:750;color:#0369A1;
+    background:#E0F2FE;border-radius:5px;padding:1.5px 7px}
   /* ★ v10.7：抽屉加宽后 KV 由 2 列改 3 列 —— 单列仍约 209px（≥680px 抽屉时），
    *   数值不会被压窄，但整块纵向高度少约 1/3。移动端另有 .kv{1fr} 覆盖。 */
   .kv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
@@ -849,6 +922,8 @@
   .no-dl{margin:16px 0 4px;text-align:center;font-size:12px;color:var(--c-t3);border-top:1px dashed var(--c-border);padding-top:14px}
   .no-dl b{color:var(--c-danger)}
   .d-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+  /* v10.15：只剩一个按钮时铺满整行（跨源按钮默认隐藏，查到另一源详情页才显形） */
+  .d-actions.one{grid-template-columns:1fr}
   .go{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px;font-weight:700;padding:12px;border-radius:12px;transition:.15s}
   .go svg{width:15px;height:15px}
   .go.jidi{background:linear-gradient(135deg,#E6415D,#F26D4F);color:#fff;box-shadow:0 6px 16px rgba(230,65,93,.3)}
@@ -988,6 +1063,11 @@
     .rk-champ .sc2{font-size:26px}
     .sm-row .en{display:none}
     .sm-quick button{font-size:12px;padding:4px 11px}
+    /* v10.15：窄屏下四库速览改两列、底部按键条收起「自动回到这里」（窄屏本就靠手势返回） */
+    .sm-stat{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .sm-foot{gap:10px}
+    .sm-foot .rt{display:none}
+    .d-devlist{grid-template-columns:1fr}
   }
 </style>
 </head>
@@ -1073,8 +1153,18 @@
     <button class="clear hidden" id="smClear" type="button" title="清空">✕</button>
     <span class="esc">ESC</span>
   </div>
-  <div class="sm-hint">本地库 <b id="smTotal">…</b> 款（XDGAME 全量 + 机地话题） · <kbd>↑</kbd><kbd>↓</kbd> 选择 · <kbd>Enter</kbd> 搜索 / 直达 · <kbd>Esc</kbd> 关闭 · 点结果看详情后<b>自动回到这里</b></div>
+  <div class="sm-hint">
+    <span class="dot"></span>本地库秒搜<span class="sep"></span>
+    <span>端游 · 手游 · 修改器 · 云存档 一次搜完</span>
+    <span class="live">库内未收录 → 实时查源站 ↗</span>
+  </div>
   <div class="sm-body" id="smBody"></div>
+  <div class="sm-foot">
+    <span><kbd>↑</kbd><kbd>↓</kbd>选择</span>
+    <span><kbd>Enter</kbd>打开 / 搜索</span>
+    <span><kbd>Esc</kbd>关闭</span>
+    <span class="rt">看完详情自动回到这里</span>
+  </div>
 </div>
 
 <div class="mask" id="mask"></div>
@@ -1646,11 +1736,46 @@ function closeSearch() {
   sugIdx = -1;
   unlockBody();
 }
-/* 弹窗初始态：热门关键词 + 用法提示 */
+/* 弹窗初始态（★ v10.15 重做）
+ *   旧版是「试试这些 chips + 一个 30px 放大镜漂在 271px 空白中间」，主体一片空。
+ *   现补上「库内速览」—— 四个库的口径与规模一次讲清，空白区也有了实信息。
+ *   数字全部取自各库的**内存统计端点**（都不查盘），取一次缓存住；
+ *   任一失败就整块不渲染 —— 宁可少一块，也不给用户看四个 0。 */
+let smStatCache = null;
+async function loadSmStats() {
+  if (smStatCache) return smStatCache;
+  try {
+    const [pc, mob, tr, sv] = await Promise.all([
+      fetch(api('/api/library/stats')).then(r => r.json()),
+      fetch(api('/api/mobilehub/stats')).then(r => r.json()),
+      fetch(api('/api/trainers/stats')).then(r => r.json()),
+      fetch(api('/api/saves/stats')).then(r => r.json()),
+    ]);
+    smStatCache = [
+      { cls: 'pc', n: pc.total, lb: '端游库', id: 'smTotal' },
+      { cls: 'mob', n: mob.total, lb: '手游中心' },
+      { cls: 'tr', n: tr.total, lb: '修改器' },
+      { cls: 'sv', n: sv.total, lb: '云存档' },
+    ];
+    return smStatCache;
+  } catch (e) { return null; }
+}
 function paintSearchHome() {
   const q = QUICK_WORDS.map(k => `<button type="button" onclick="quickSearch('${esc(k)}')">${esc(k)}</button>`).join('');
-  $('#smBody').innerHTML = `<div class="sm-sec">试试这些<span class="cnt">本地库秒搜</span></div><div class="sm-quick">${q}</div>
-    <div class="sm-empty"><div class="big">🔍</div>输入关键词搜索本地合并库<br><span style="font-size:11.5px">库内未收录时可一键实时查源站（XDGAME / 机地）</span></div>`;
+  const skeleton = '<div class="st"><b>…</b><span>读取中</span></div>'.repeat(4);
+  $('#smBody').innerHTML = `<div class="sm-home">
+    <div class="sm-sec">热门搜索<span class="cnt">点击即搜</span></div>
+    <div class="sm-quick">${q}</div>
+    <div class="sm-sec">库内速览<span class="cnt">本地秒搜 · 不走网络</span></div>
+    <div class="sm-stat" id="smStat">${skeleton}</div>
+    <div class="sm-tip">四个库一起搜：<b>端游库</b>点得进完整详情，<b>手游中心</b>给手机配置与实测，<b>修改器 / 云存档</b>直接给下载与存档路径。</div>
+  </div>`;
+  loadSmStats().then((rows) => {
+    const el = $('#smStat');
+    if (!el) return;                                   // 用户已经打字走了，别回填
+    if (!rows) { el.innerHTML = ''; return; }
+    el.innerHTML = rows.map(r => `<div class="st ${r.cls}"><b${r.id ? ` id="${r.id}"` : ''}>${(r.n || 0).toLocaleString()}</b><span>${r.lb}</span></div>`).join('');
+  });
 }
 function quickSearch(k) { const inp = $('#searchInput'); inp.value = k; $('#smClear').classList.remove('hidden'); doSearch(); }
 /* 弹窗内统一结果行（联想 / 本地命中 / 源站实时共用同一渲染） */
@@ -2194,7 +2319,10 @@ function paintDetail(d, fb) {
   if (size) kv.push(['游戏大小', size]);
   if (genres.length) kv.push(['游戏类型', genres.join(' / ')]);
   if ((d.tags || []).length) kv.push(['游戏标签', d.tags.slice(0, 8).join(' / ')]);
-  if (score) kv.push(['玩家评分', score + ' / 10' + (d.steamRate ? '（Steam 好评率 ' + d.steamRate + '）' : '')]);
+  /* ★ v10.15：原先这里还有一行 `kv.push(['玩家评分', score + ' / 10（Steam 好评率 …）'])`。
+   *   同一页里评分因此出现两次（上方 .score-line 的大号分 + 这张表里的「玩家评分 8.6 / 10」），
+   *   用户口径「评分重复了，可以减少一个」→ 删掉这里，保留上方那个视觉锚点。
+   *   ⚠️ Steam 好评率是**另一条信息**，不跟着删，挪到大号分旁边（见下面 .score-line）。 */
   /* ★ v10.13：不再在这里内联「最低配置要求」。
    *   原因：源站自带的 requirements **只有机地有**，XD 详情页改版后完全没有；
    *   内联写法是「没有就不渲染」→ XD 的 15,302 款游戏那块信息永久空白，
@@ -2218,7 +2346,7 @@ function paintDetail(d, fb) {
       <div id="trBlock"></div>
       <div id="svBlock"></div>
       <div id="crossSrc"></div>
-      ${score ? `<div class="score-line"><span class="score-big">${score}</span><span style="font-size:12px;color:var(--c-t3)">玩家评分 · 满分 10</span></div>` : ''}
+      ${score ? `<div class="score-line"><span class="score-big">${score}</span><span class="score-meta">玩家评分 · 满分 10${d.steamRate ? `<i>Steam 好评率 ${esc(String(d.steamRate))}</i>` : ''}</span></div>` : ''}
       <div class="kv">${kv.map(([k, v]) => `<div class="it"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>
       ${descHtml}${versionHtml}${shotsHtml}
       <!-- ★ v10.7：「同分类更多」挪到本块信息之后。
@@ -2231,18 +2359,19 @@ function paintDetail(d, fb) {
       <div id="dlSlot"></div>
       <div class="no-dl">🚫 仅聚合 <b>详情页与更新内容</b>，不含任何下载资源</div>
       <div class="d-actions">
-        <a class="go ${s.cls}" href="${esc(d.url)}" target="_blank" rel="noopener">前往${s.nm}详情 ↗</a>
-        <!-- ★ v10.14：原来这里写死成另一源的**站点首页**（XD 源游戏 → jidiyouxi.com/），
-             用户口径「机地是跳转到首页，而不是详情页」。现在先给一个**站内搜索**落点兜底，
-             随后 linkCounterpart() 若查到同名收录，会把它换成那条的**详情页**。
-             搜索页实测有效（jidiyouxi.com/search?keyword= 返回结果列表，不是首页）。 -->
-        <a class="go ${s.cls === 'jidi' ? 'xd' : 'jidi'}" id="crossGo"
-           data-search="${esc(s.cls === 'jidi' ? XD_SEARCH('') : JIDI_SEARCH(''))}"
-           href="${esc(s.cls === 'jidi' ? XD_SEARCH(String(d.title || '').split('/')[0]) : JIDI_SEARCH(String(d.title || '').split('/')[0]))}"
+        ${d.url ? `<a class="go ${s.cls}" href="${esc(d.url)}" target="_blank" rel="noopener">前往${s.nm}详情 ↗</a>` : ''}
+        <!-- ★ v10.15：跨源按钮**默认隐藏**，只有 linkCounterpart() 查到「这款游戏在另一源的详情页」
+             时才显形；查不到就保持不显示。
+             用户口径：「详情页中，机地无详情页链接跳转，则不显示」——
+             v10.14 那版是「查不到就退到站内搜索结果页」，但一个只能跳到搜索列表的按钮
+             和一个跳首页的按钮，对用户来说差别不大（都到不了这款游戏）——不如不显示。
+             注意：这里连 href 都不再预置搜索页，避免任何「看起来能点、点过去找不到」的中间态。 -->
+        <a class="go ${s.cls === 'jidi' ? 'xd' : 'jidi'}" id="crossGo" hidden
            target="_blank" rel="noopener">${s.cls === 'jidi' ? 'XDGAME' : '机地'}找同名 ↗</a>
       </div>
     </div>`;
-  linkCounterpart(d);        // 异步检测另一源同名收录 → 一键互跳 + 修正底部跨源落点
+  linkCounterpart(d);        // 异步检测另一源同名收录 → 一键互跳 + 决定底部跨源按钮显不显示
+  syncDActions();            // ★ v10.15：先按「当前可见按钮数」定列数（跨源按钮默认隐藏，查到详情页才显形）
   loadBhBlock(d, title);     // 📱 手机模拟器配置（命中则给逐条参数，未命中给入口）
   loadReqBlock(d, fb);       // 🖥 PC 配置要求（源站优先，缺则 Steam 官方接口补）★ v10.13
   loadTrBlock(d, title);     // 🛠 修改器（v10.1）
@@ -2319,26 +2448,49 @@ function bhParamCard(p) {
   </div>`;
 }
 
+/** 一条「本站实测记录」→ 抽屉里的紧凑卡片（★ v10.15 新增）
+ *  与手游专区「实测配置」面板（openPcPanel）同源同义，这里只是压到抽屉的宽度。
+ *  信息优先级按用户抄参数的习惯排：能不能跑 → 什么芯片 → 什么帧率 → 怎么配的。 */
+function bhRecRow(x) {
+  const kv = [];
+  const add = (k, v) => { if (v) kv.push(`<span class="kv-i"><b>${esc(k)}</b>${esc(String(v))}</span>`); };
+  add('兼容层', x.layer);
+  add('运行模式', x.mode);
+  add('驱动', x.gpu);
+  add('DXVK', x.dxvk);
+  add('vkd3d', x.vkd3d);
+  add('运行库', x.runtime);
+  add('主程序', x.exe);
+  const fps = [x.fpsTier, x.fpsLabel].filter(Boolean).join(' · ');
+  return `<div class="r">
+    <div class="hd"><span class="pill ${x.ok ? 'ok' : 'no'}">${x.ok ? '可玩' : '不可玩'}</span>
+      <span class="dev">${esc(x.chipName || x.chip || '—')}</span>
+      ${fps ? `<span class="fps">${esc(fps)}</span>` : ''}</div>
+    <div class="kv">${kv.join('') || '<span class="kv-i">这条记录没留下可解析参数</span>'}</div>
+    ${x.note ? `<div class="nt">💡 ${esc(x.note)}</div>` : ''}
+  </div>`;
+}
+
 /* ================= 🔗 跨源解析（★ v10.14 新增） =================
- *
  *  用户口径：「机地是跳转到首页，而不是详情页」。
  *  现场：抽屉底部第二个按钮是 `href="https://jidiyouxi.com/"`（**写死的站点根**），
  *        XD 源的游戏点过去就是机地首页，跟这款游戏毫无关系。
  *
- *  修法：跨源要跳「这款游戏在另一源的页面」——
- *    ① 另一源有同名收录 → 直接跳到那条的详情页；
- *    ② 没有 → 跳到该站的**站内搜索结果页**（jidiyouxi.com/search?keyword= / xdgamer.com/search/<名>.html），
- *       实测两个搜索页都有效（都能列出该游戏的相关条目），而不是甩到首页。
+ *  修法：跨源要跳「这款游戏在另一源的**详情页**」——
+ *    ① 另一源有同名收录（且那条带详情页 url）→ 直接跳该详情页；
+ *    ② 没有 → **不显示这个按钮**。
+ *
+ *  ★ v10.15 补：②原本是「退到该站站内搜索结果页」（jidiyouxi.com/search?keyword=…）。
+ *    用户口径变成「机地无详情页链接跳转，则不显示」—— 想通了也对：
+ *    一个只能落到搜索列表的按钮，和 v10.14 之前那个落首页的按钮，对用户是同一件事
+ *    （都到不了这款游戏），只是体面一点。所以现在查不到就不显示，连带那两个
+ *    搜索 URL 构造器（JIDI_SEARCH / XD_SEARCH）也一并删掉，不留没人用的出口。
  *
  *  「另一源是否收录了同款」这件事同时被两个区块需要，所以只查一次（cpCache 按抽屉条目缓存）：
- *    · linkCounterpart() → 渲染「另一源也有收录」卡片 + 决定底部跨源按钮的落点
+ *    · linkCounterpart() → 渲染「另一源也有收录」卡片 + 决定底部跨源按钮显不显示
  *    · loadBhBlock()     → 把另一源的 libId / 标题（常含英文名）传给 /api/mobilehub/match 做跨中英桥接
  */
 let cpCache = { key: '', p: null };
-/* 另一源的**站内搜索**落点（实测有效：机地返回结果列表页、XDGAME 返回搜索结果页）。
-   注意 XD 的搜索域名是 `xdgamer.com`（`xdgame.com/search/...` 会 404，详情页则相反用 xdgame.com）。 */
-function JIDI_SEARCH(q) { return 'https://jidiyouxi.com/search?keyword=' + encodeURIComponent(String(q || '').trim()); }
-function XD_SEARCH(q) { return 'https://www.xdgamer.com/search/' + encodeURIComponent(String(q || '').trim()) + '.html'; }
 
 function resolveCounterpart(d) {
   const key = String((d && (d.url || d.id || d.title)) || '');
@@ -2379,10 +2531,21 @@ function resolveCounterpart(d) {
      *   若只取 find() 首条，结果会随检索返回顺序漂移。 */
     const want = normGameTitle(zh);
     const cand = pool.filter((it) => sameGame(d.title, it.title));
-    return cand.find((it) => normGameTitle(splitName(it.title).zh) === want) || cand[0] || null;
+    /* ★ v10.15：命中里还要**带详情页**才作数。
+     *   库内两个源的详情页形态固定（机地 /topic/detail/<id>、XD /game/<id>.html），
+     *   实测 15,354 条**无一缺 url**；这里做一次形态校验是为了兜住源站改版后
+     *   可能混进来的列表页 / 首页地址 —— 那种地址点过去到不了这款游戏，
+     *   按用户口径「无详情页链接则不显示」，不如让按钮不出现。 */
+    const ok = cand.filter(hasDetailUrl);
+    return ok.find((it) => normGameTitle(splitName(it.title).zh) === want) || ok[0] || null;
   })();
   cpCache = { key, p };
   return p;
+}
+
+/** 该条目是否有「可跳的详情页」（两个源的详情页 URL 里都带数字 id） */
+function hasDetailUrl(it) {
+  return !!(it && it.url) && /\/(topic\/detail|game)\/\d+/i.test(String(it.url));
 }
 
 /** 标题归一化：版本词收敛 + 去标点空白（两源命名习惯不同，直接比原文匹配率极低） */
@@ -2452,12 +2615,19 @@ async function loadBhBlock(d, title) {
     const cntTxt = [devCnt ? `${devCnt} 款机型` : '', gpuCnt ? `${gpuCnt} 种 GPU` : ''].filter(Boolean).join(' · ');
     slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>手机模拟器配置<span class="cnt">${cntTxt}</span></h4>
       <div class="d-tg-row">${tags.join('')}</div>
+      <div id="bhGate"></div>
       <div id="bhDevSlot"></div>
+      <div id="bhRecSlot"></div>
       <div id="bhParamSlot"><div class="d-hint2" style="border:0;padding-top:4px">正在读取逐条游玩参数…</div></div>
       <div class="d-hint2">参数为玩家在安卓机上跑通本作后导出的实际配置（驱动 / DXVK / 容器 / 翻译层）。
         完整清单见 <a href="${BH_EMU_URL}">手机专区 · 手游中心</a>。</div></div>`;
 
-    /* ---- ① 机型清单：把「跑过这款的机型」去重铺开，并译出各自的芯片规格 ---- */
+    /* ---- ① 机型清单：按「性能分」从弱到强排，并标出**门槛机型** ----
+     *   ★ v10.15：看这一块的人真正的问题是「我的手机能不能跑」。
+     *   旧的平铺 chips 只回答「谁跑过」，还得自己一台台去认型号。现在：
+     *     · 有性能分的按分**升序**排（同分保持原顺序，V8 稳定排序）—— 门槛低的排前面
+     *     · 最弱那台标「门槛」：它跑通过，比它强的机型基本也能跑
+     *     · 每台补一个性能分数字，跨品牌（Adreno / Mali / PowerVR）可以直接比大小 */
     const devs = (h.devices || []).slice(0, 24);
     const ds = $('#bhDevSlot');
     if (devs.length && ds) {
@@ -2466,14 +2636,45 @@ async function loadBhBlock(d, title) {
         const sr = await fetch(api('/api/device/specs?models=' + encodeURIComponent(devs.join('|')))).then((r) => r.json());
         specs = (sr && sr.specs) || {};
       } catch (e) { specs = {}; }
-      ds.innerHTML = `<div class="d-devlist">${devs.map((m) => {
-        const s = specs[m];
-        const chip = s ? (s.soc || s.gpu || '') : '';
-        return `<span class="dv"><b>${esc(m)}</b>${chip ? `<i>${s.approx ? '≈' : ''}${esc(chip)}</i>` : '<i class="dim">未收录芯片</i>'}</span>`;
-      }).join('')}${h.configs > devCnt ? `<span class="dv"><i class="dim">…上游汇总了 ${devCnt} 款机型，共 ${h.configs} 套配置</i></span>` : ''}</div>`;
+      const arr = devs.map((m) => {
+        const s = specs[m] || null;
+        return { m, chip: (s && (s.soc || s.gpu)) || '', score: (s && s.score) || 0, approx: !!(s && s.approx) };
+      });
+      const sorted = arr.slice().sort((a, b) => (a.score || 1e9) - (b.score || 1e9));
+      const gate = sorted.find((x) => x.score > 0) || null;   // 有性能分的最弱一台 = 门槛
+      const gh = $('#bhGate');
+      if (gh && gate) {
+        gh.innerHTML = `<div class="bh-gate"><span class="lb">门槛</span>
+          <b>${esc(gate.m)}</b>${gate.chip ? `<i>${gate.approx ? '≈' : ''}${esc(gate.chip)}</i>` : ''}
+          <span class="s">${esc(String(Math.round(gate.score)))}</span>
+          <span class="tip">这台实测跑通了 → 性能更强的机型基本也能跑</span></div>`;
+      }
+      const more = h.configs > devCnt
+        ? `<span class="dv more">上游共汇总 ${devCnt} 款机型 / ${h.configs} 套配置</span>` : '';
+      ds.innerHTML = `<div class="d-devlist">${sorted.map((x) => `<span class="dv${gate && x.m === gate.m ? ' gate' : ''}">
+        <b>${esc(x.m)}</b>${x.chip ? `<i>${x.approx ? '≈' : ''}${esc(x.chip)}</i>` : '<i class="dim">未收录芯片</i>'}${x.score ? `<em>${esc(String(Math.round(x.score)))}</em>` : ''}</span>`).join('')}${more}</div>`;
     }
 
-    /* ---- ② 铺开逐条参数：把该游戏的所有候选仓库键一起传（服务端挑份数最多的那个） ---- */
+    /* ---- ② 本站实测记录（★ v10.15 新增） ----
+     *   旧版这一块**只有一个「本站实测 N 条」标签**，一条内容都看不到 ——
+     *   用户口径「我需要看到手游专区里游戏详情页能看到对应手机配置（实测 / 社区库）」。
+     *   社区那半边（逐条参数）本来就有，缺的正是**实测**这半边：
+     *   表格里的 兼容层 / 运行模式 / 驱动 / DXVK / 帧率 全在 /api/pc/records 里，只是抽屉从没调过。
+     *   版式直接用 `.pc-rec`（这套 CSS 早就在，一直只在手游专区的实测面板里用）。 */
+    const rec = $('#bhRecSlot');
+    if (rec && h.records > 0) {
+      try {
+        const rj = await fetch(api('/api/pc/records?k=' + encodeURIComponent(t))).then((r) => r.json());
+        const recs = (rj && rj.items) || [];
+        rec.innerHTML = recs.length
+          ? `<div class="bh-sub">本站实测记录<span class="n">${recs.length} 条</span>
+               <a href="${BH_EMU_URL}">看全部实测 ↗</a></div>
+             <div class="pc-rec">${recs.map(bhRecRow).join('')}</div>`
+          : '';
+      } catch (e) { rec.innerHTML = ''; }
+    }
+
+    /* ---- ③ 铺开逐条参数（社区库）：把该游戏的所有候选仓库键一起传（服务端挑份数最多的那个） ---- */
     const keys = (h.bhKeys || []).join(',');
     const ps = $('#bhParamSlot');
     if (!keys || !ps) {
@@ -2619,23 +2820,24 @@ async function linkCounterpart(d) {
   const go = $('#crossGo');
   try {
     slot.innerHTML = '<div class="x-none">正在检查另一源收录…</div>';
+    /* ★ v10.15：resolveCounterpart 现在只认「另一源**有详情页**」的命中（见那里的注释），
+       所以这里不必再区分「详情页 / 搜索页」—— 有 hit 就是详情页，没有就保持按钮隐藏。 */
     const hit = await resolveCounterpart(d);
-    if (!hit) {
+    if (!hit || !hit.url) {
       slot.innerHTML = '';
-      /* 没查到同名：底部按钮留在「站内搜」——把搜索词换成更准的中文名 */
-      if (go) {
-        const zh = (splitName(d.title).zh || d.title).trim();
-        go.setAttribute('href', d.source === 'jidi' ? XD_SEARCH(zh) : JIDI_SEARCH(zh));
-      }
+      if (go) go.hidden = true;          // 无详情页可跳 → 不显示（用户口径）
+      syncDActions();
       return;
     }
     const otherSrc = d.source === 'jidi' ? 'xdgamer' : 'jidi';
     const s = SRC[otherSrc] || { nm: 'XDGAME', cls: 'xd' };
     /* 底部按钮改指「这款游戏在另一源的详情页」 */
     if (go) {
-      go.setAttribute('href', hit.url || go.getAttribute('href'));
+      go.setAttribute('href', hit.url);
       go.textContent = `前往${s.nm}详情 ↗`;
+      go.hidden = false;
     }
+    syncDActions();
     const fb = encodeURIComponent(JSON.stringify({
       id: hit.id || '', title: hit.title, cover: hit.cover || '', score: okScoreV(hit.score) ? hit.score : null,
       size: hit.size || '', genres: (hit.genres || []).slice(0, 4), dateLabel: hit.dateLabel || '',
@@ -2646,7 +2848,19 @@ async function linkCounterpart(d) {
         <span class="src-badge ${s.cls}">${s.nm}</span><span class="bd"><span class="t">${esc(hit.title)}</span></span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </button></div></div>`;
-  } catch (e) { slot.innerHTML = ''; }
+  } catch (e) { slot.innerHTML = ''; if (go) go.hidden = true; syncDActions(); }
+}
+/** 底部动作区：列数与显隐跟着「实际可见的按钮数」走。
+ *  ★ v10.15 为什么必须有它：跨源按钮要等另一源查完才知道显不显示，
+ *    而 .d-actions 是 2 列网格 —— 只剩一个按钮时会空掉右半边。
+ *    同时兜住「本条目没有 d.url」的情况：两个按钮都不可见时整块收起，
+ *    不留一条空的分隔线。 */
+function syncDActions() {
+  const box = $('.d-actions');
+  if (!box) return;
+  const n = $$('.d-actions > a.go').filter((a) => !a.hasAttribute('hidden')).length;
+  box.classList.toggle('one', n <= 1);
+  box.style.display = n ? '' : 'none';
 }
 /* 同分类推荐 ★ v10.11：改走后端多因子打分（类型 IDF + 系列名 + 评分接近度 + 容量接近度）
  *

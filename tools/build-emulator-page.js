@@ -684,10 +684,14 @@ const out = [
   .cf-param .spec .sp b{color:#1d4ed8;font-weight:800}
   .cf-param .spec .sp.soc b{color:#0f766e}
   .cf-param .spec .sp.cpu{font-family:var(--font-num);color:var(--c-t3);background:#f6f7fb;border-color:#e8ebf3}
+  /* ★ v10.15：与详情抽屉同款分层 —— 驱动 / DXVK 带底色，其余中性灰；
+     分辨率 / 内存这类「跟机型强相关」的也提亮一档，扫一眼就能定位重点。 */
   .cf-param .kvs .kv{font-size:10.5px;color:var(--c-t3);background:#f6f7fb;border:1px solid #e8ebf3;
     border-radius:6px;padding:2px 7px;font-family:var(--font-num)}
   .cf-param .kvs .kv b{color:#334155;font-weight:750;margin-right:1px}
+  .cf-param .kvs .kv.hot{background:#f5f3ff;border-color:#e9e4fb}
   .cf-param .kvs .kv.hot b{color:#6D28D9}
+  .cf-param .kvs .kv.ok{background:#ecfdf5;border-color:#d1fae5}
   .cf-param .kvs .kv.ok b{color:#0F766E}
   .cf-rec{padding:12px 13px;border-bottom:1px solid #eef1f6}
   .cf-rec:last-child{border-bottom:0}

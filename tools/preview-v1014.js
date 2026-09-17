@@ -19,6 +19,7 @@ const EDGE_CANDIDATES = [
 const BASE = process.env.BASE || 'http://127.0.0.1:8123/';
 const OUT = path.join(__dirname, '..', '_preview');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const { connectBrowser } = require('./browser');
 
 function loadPuppeteer() {
   try { return require(path.join(__dirname, '..', 'node_modules', 'puppeteer-core')); }
@@ -53,13 +54,13 @@ const ROOTS = ['https://jidiyouxi.com/', 'https://jidiyouxi.com', 'https://www.x
 const DIRTY_RX = /turnip|vkpipe|8Elite-\d|ANGLE |兼容模式|GPU驱动|^\d{4}[A-Z0-9]{4,}$/i;
 
 (async () => {
-  const puppeteer = loadPuppeteer();
-  if (!puppeteer) { console.error('缺少 puppeteer-core'); process.exit(1); }
-  const EDGE = EDGE_CANDIDATES.find((p) => fs.existsSync(p));
-  if (!EDGE) { console.error('未找到 Edge'); process.exit(1); }
   if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
 
-  const b = await puppeteer.launch({ executablePath: EDGE, headless: true, args: ['--no-sandbox', '--window-size=1440,1100'] });
+  /* ★ v10.15：浏览器获取统一交给 tools/browser.js —— Edge 在本机沙箱会话里启动即被拦
+     （连 --version 都没输出、退出码还是 0），那里会自动改用
+     「外部拉起 Chrome + 连 CDP 端口」这条实测可行的路径。 */
+  const H = await connectBrowser();
+  const b = H.browser;
   const p = await b.newPage();
   await p.setViewport({ width: 1440, height: 1100, deviceScaleFactor: 1 });
   const errs = [];
@@ -92,6 +93,7 @@ const DIRTY_RX = /turnip|vkpipe|8Elite-\d|ANGLE |兼容模式|GPU驱动|^\d{4}[A
     const chipTexts = [...document.querySelectorAll('#bhDevSlot .d-devlist .dv')].map((x) => x.innerText.trim());
     return {
       href: g ? g.getAttribute('href') : '',
+      crossHidden: g ? g.hasAttribute('hidden') : null,
       text: g ? (g.textContent || '').trim() : '',
       srcHtml: s ? (s.textContent || '').trim() : '',
       cnt: cntEl ? (cntEl.textContent || '').trim() : '',
@@ -116,8 +118,10 @@ const DIRTY_RX = /turnip|vkpipe|8Elite-\d|ANGLE |兼容模式|GPU驱动|^\d{4}[A
   for (const c of CROSS_NEG) {
     await openAndSettle(c.id);
     const s = await snap();
-    chk(`[${c.name}] 无同名收录时不是站点首页`, !ROOTS.includes(s.href), s.href);
-    chk(`[${c.name}] 退到站内搜索页（带搜索词）`, /\/search/.test(s.href), s.href);
+    chk(`[${c.name}] 无同名收录时不是站点首页`, !ROOTS.includes(s.href), s.href || '(无 href)');
+    /* ★ v10.15 需求变更：查不到另一源详情页时不再退站内搜索，改为**按钮不显示**。
+       这条断言同步改成新口径（旧口径「退到站内搜索页」已作废）。 */
+    chk(`[${c.name}] 跨源按钮不显示（无详情页可跳）`, s.crossHidden === true);
     chk(`[${c.name}] 无收录时不渲染「另一源也有收录」`, !/另一源也有收录/.test(s.srcHtml), '');
     await p.screenshot({ path: path.join(OUT, `v1014-cross-${c.id}.png`) });
   }
@@ -168,7 +172,7 @@ const DIRTY_RX = /turnip|vkpipe|8Elite-\d|ANGLE |兼容模式|GPU驱动|^\d{4}[A
 
   chk('页面无 JS 报错', errs.length === 0, errs.slice(0, 2).join(' | '));
 
-  await b.close();
+  await H.close();          // spawned 时顺手收掉自己拉起的浏览器
   console.log(`\n${'='.repeat(60)}\n实拍结果：${pass} / ${pass + fail} 通过${fail ? `，${fail} 失败` : ''}\n截图目录：${OUT}\n`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error('实拍脚本异常：', e); process.exit(1); });

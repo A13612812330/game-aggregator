@@ -19,6 +19,9 @@ const fs = require('fs');
 const path = require('path');
 
 const BASE = process.env.BASE || 'http://127.0.0.1:8123/';
+/* ★ v10.15：浏览器获取交给 tools/browser.js —— Edge 在本机沙箱会话里启动即被拦，
+   那里会自动改用「外部拉起 Chrome + 连 CDP 端口」。 */
+const { launchBrowser, findBrowser } = require('./browser');
 const EDGE_CANDIDATES = [
   'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
   'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
@@ -44,10 +47,10 @@ const DEFAULT_ORDER = ['📱', '🛠', '💾', '🖥️'];
 (async () => {
   const puppeteer = loadPuppeteer();
   if (!puppeteer) { console.error('缺少 puppeteer-core'); process.exit(1); }
-  const EDGE = EDGE_CANDIDATES.find((p) => fs.existsSync(p));
-  if (!EDGE) { console.error('未找到 Edge'); process.exit(1); }
+  const EDGE = findBrowser();
+  if (!EDGE) { console.error('未找到可用的 Chromium 内核浏览器'); process.exit(1); }
 
-  const b = await puppeteer.launch({ executablePath: EDGE, headless: true, args: ['--no-sandbox'] });
+  const b = await launchBrowser();
   const p = await b.newPage();
   await p.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
   await p.goto(BASE, { waitUntil: 'networkidle2', timeout: 60000 });
