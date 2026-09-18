@@ -11,6 +11,9 @@ const { execFileSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
 const SRC = fs.readFileSync(path.join(ROOT, 'tools/report.js'), 'utf8');
+/* 剥掉注释后再查源码：注释里**特意**写了一些坑的说明，不剥会误报（注释里提到 ≠ 代码里用了）。
+   ⚠️ 必须在这里就定义 —— 下面多个小节都要用它，放到后面会 ReferenceError。 */
+const CODE = SRC.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
 let pass = 0, fail = 0;
 const ok = (cond, name, detail) => {
@@ -45,9 +48,22 @@ ok(/synced/.test(SRC), '给出「远端 = 本地」的同步结论字段');
 ok(/CODEX-INDEX\.md/.test(SRC) && /README\.md/.test(SRC), '更新日志同时检查 README 与 CODEX-INDEX');
 ok(/CODEX-DONE-v10/.test(SRC), '更新日志统计 CODEX-DONE-v*.md 份数');
 
+console.log('\n=== ③-b 线上版本判定不许「报反」（2026-09-18 新增）===');
+/* 旧实现：md5 不同时用 `/.chip\.ol/` 猜，结果「线上还没发布 v10.20」被说成「新于本地？」。
+   这类错误比不说更危险 —— 用户会以为线上已经是最新。 */
+ok(/const FEATURES = \[/.test(CODE), '★ 用特征指纹判定线上版本，不用单一样式类猜');
+ok(/id="navUnpack"/.test(CODE), '指纹含 v10.20 的顶栏入口 navUnpack');
+ok(/function versionLabel/.test(CODE), '抽成 versionLabel 纯函数（可单测/可回归）');
+ok(!/新于本地\？/.test(CODE), '★ 已删掉「新于本地？」这种猜法');
+ok(/旧于本地（线上尚未发布 /.test(CODE), '★ 线上落后时明确写「尚未发布 vX」（而不是含糊的「不同版本」）');
+/* ⚠️ 别写成 `/!re\.test\(/` —— 源码是 `f.re.test(...)`，`!` 后面跟的是 `f.`，会测不出来 */
+ok(/test\(localTxt\)\s*&&\s*![\w.]*\.test\(remoteTxt\)/.test(CODE),
+  '方向正确：本地有、线上没有 ⇒ 线上旧（别写反）');
+ok(/同代但内容有差异/.test(CODE), '指纹全中但字节不同 → 如实说「需人工核对」，不硬下结论');
+ok(/probeLink\(LINKS\.LIVE, localMd5, idxLocal\)/.test(CODE), 'probeLink 改传本地全部文本（判定要用指纹）');
+
 console.log('\n=== ④ 已知坑：不能设 GIT_TERMINAL_PROMPT=0 ===');
-/* 先剥掉注释再查源码：注释里**特意**写了这个坑的说明，不剥会误报（注释里提到 ≠ 代码里用了） */
-const CODE = SRC.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+/* CODE 已在文件顶部剥好注释（见那里的说明） */
 ok(!/GIT_TERMINAL_PROMPT/.test(CODE), '★ 代码里没有 GIT_TERMINAL_PROMPT=0（会让代理取不到凭据 → CONNECT tunnel failed）');
 ok(/'git log -4[^']*--pretty="format:/.test(CODE), 'git log 的 --pretty 整体加引号（否则 %h|%ad|%s 的竖线被 shell 当管道）');
 

@@ -74,9 +74,37 @@ function dirty() {
 }
 
 /* ============ ② 分享链接（线上）============ */
-async function probeLink(url, localMd5, localLen) {
+/**
+ * 版本指纹：线上与本地 md5 不同时，**不能只说「不同版本」**——
+ * 必须说清是「线上旧（还没发布）」还是「线上新（本地落后）」，否则汇报等于没结论。
+ *
+ * ⚠️ 旧实现在这里写的是 `/.chip\.ol/.test(txt) ? '新于本地？' : '旧版'` —— 实测会**报反**：
+ *    v10.20 本地新增顶栏入口后线上仍是 v10.19，而两边都有 `.chip.ol`，
+ *    于是判成「新于本地？」，把「还没发布」说成了「线上更新」。
+ *    ⇒ 改为**特征指纹逐条比对**：本地有、线上没有 ⇒ 线上旧；反之 ⇒ 线上新。
+ *    新增版本时往 FEATURES 顶部加一条即可（`since` 只用于文案，不参与判定）。
+ */
+const FEATURES = [
+  { re: /id="navUnpack"/, name: '顶栏「📦 解包匹配」入口', since: 'v10.20' },
+  { re: /eg-nav/, name: '指南模块导航', since: 'v10.19' },
+  { re: /id="navEmu"/, name: '顶栏「手机专区」入口', since: 'v10.18' },
+];
+
+function versionLabel(remoteTxt, localTxt, same) {
+  if (same) return { ver: '与本地同版', detail: '' };
+  const missing = FEATURES.filter((f) => f.re.test(localTxt) && !f.re.test(remoteTxt));
+  if (missing.length) {
+    const f = missing[missing.length - 1];   // 取最早缺的那个 = 线上实际停在哪一版
+    return { ver: '旧于本地（线上尚未发布 ' + f.since + '）', detail: '缺：' + f.name };
+  }
+  const extra = FEATURES.filter((f) => !f.re.test(localTxt) && f.re.test(remoteTxt));
+  if (extra.length) return { ver: '新于本地（本地落后于线上）', detail: '线上多出：' + extra[0].name };
+  return { ver: '同代但内容有差异（需人工核对）', detail: '特征指纹全中，但字节不同' };
+}
+
+async function probeLink(url, localMd5, localTxt) {
   const base = url.replace(/\/$/, '');
-  const out = { url, http: null, md5: null, same: false, ver: '?', err: null };
+  const out = { url, http: null, md5: null, same: false, ver: '?', detail: '', err: null };
   try {
     const c = new AbortController();
     const t = setTimeout(() => c.abort(), 20000);
@@ -90,7 +118,9 @@ async function probeLink(url, localMd5, localLen) {
     out.len = txt.length;
     out.md5 = md5(txt);
     out.same = out.md5 === localMd5;
-    out.ver = out.same ? '与本地同版' : (/.chip\.ol/.test(txt) ? '新于本地？' : '旧版');
+    const vl = versionLabel(txt, localTxt, out.same);
+    out.ver = vl.ver;
+    out.detail = vl.detail;
   } catch (e) {
     out.err = e.message.slice(0, 70);
   }
@@ -222,14 +252,14 @@ function changelog() {
   if (NO_NET) {
     p('（--no-net，跳过联网探测）');
   } else {
-    const live = await probeLink(LINKS.LIVE, localMd5, idxLocal.length);
+    const live = await probeLink(LINKS.LIVE, localMd5, idxLocal);
     p('| 项 | 实测 |');
     p('|---|---|');
     p('| HTTP | ' + (live.http || live.err) + ' |');
     p('| index.html md5 | ' + (live.md5 || '—') + '（本地 ' + localMd5 + '） |');
-    p('| 判定 | ' + (live.same ? '✅ 与本地逐字节一致 = 已是最新' : '⚠️ ' + live.ver) + ' |');
+    p('| 判定 | ' + (live.same ? '✅ 与本地逐字节一致 = 已是最新' : '⚠️ ' + live.ver + (live.detail ? ' · ' + live.detail : '')) + ' |');
     for (const d of LINKS.DEPRECATED) {
-      const x = await probeLink(d.url, localMd5, idxLocal.length);
+      const x = await probeLink(d.url, localMd5, idxLocal);
       p('| 弃用：' + d.url.replace('https://', '').replace(/\/$/, '') + ' | ' + (x.err ? x.err : 'HTTP ' + x.http + ' · ' + (x.same ? '⚠️ 内容竟与最新一致，但仍不用' : '旧版（符合预期）')) + ' |');
     }
   }
