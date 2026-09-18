@@ -26,12 +26,36 @@ const liveMatch = SRC.match(/LIVE:\s*'([^']+)'/);
 const LIVE = liveMatch ? liveMatch[1] : '';
 ok(!!LIVE, '声明了正式链接 LIVE', LIVE);
 ok(/^https:\/\/[a-z0-9-]+\.app\.workbuddy\.host\/$/.test(LIVE), 'LIVE 是规范的 workbuddy.host 域名（带尾斜杠）', LIVE);
+/* ★ 切片边界不能用 `'DEPRECATED'` 这个词来定位 —— 它在**文件顶部注释**里也出现过
+   （「旧链接降级到 DEPRECATED」），于是 `indexOf` 命中的是**注释**而不是清单本身，
+   1400 字只够到第 2 条 ⇒ join 被漏掉、那条「仍登记 join」的断言**假红**（v10.22 实测踩到）。
+   改用真实结构地标：`const LINKS = {` → `const GITHUB`。 */
+const LINKS_BLOCK = SRC.slice(SRC.indexOf('const LINKS = {'), SRC.indexOf('const GITHUB'));
+ok(LINKS_BLOCK.length > 200, '★ LINKS 块切片拿到内容（地标变了会让下面几条断言恒真/恒假）', LINKS_BLOCK.length + 'B');
+/* 从 report.js 的 DEPRECATED 清单里**直接抠出域名**，不在这里手写第二份枚举 ——
+   手写清单漏一行不像报错、没人会发现（本项目踩过这个坑）。
+   紧跟一条「抠到了几条」的断言：抠不到 ⇒ depAny 恒为 false ⇒ 后面「LIVE 不许是弃用域名」恒真 = 假绿。 */
+const DEP_HOSTS = [...LINKS_BLOCK.slice(LINKS_BLOCK.indexOf('DEPRECATED'))
+  .matchAll(/url:\s*'(https:\/\/[^']+)'/g)]
+  .map((m) => m[1].replace(/^https:\/\//, '').replace(/\/$/, ''));
+const depAny = (h) => DEP_HOSTS.includes(h);
+ok(DEP_HOSTS.length >= 3, '★ 从 DEPRECATED 清单抠出域名（抠不到会让下一条断言恒真 = 假绿）', DEP_HOSTS.join(', '));
 ok(!/gamehub-agg-join\./.test(LIVE), '★ 已弃用的 gamehub-agg-join 不再是 LIVE（它停在 v10.17）');
 ok(!/gamehub-agg-v2\./.test(LIVE), '★ 已弃用的 gamehub-agg-v2 不再是 LIVE（它停在 v10.19 之前）');
-ok(/gamehub-agg-v3/.test(LIVE), 'LIVE 指向 gamehub-agg-v3（本次新建的正式入口）');
-const depSec = SRC.slice(SRC.indexOf('DEPRECATED'), SRC.indexOf('DEPRECATED') + 900);
+ok(!/gamehub-agg-v3\./.test(LIVE), '★ 已弃用的 gamehub-agg-v3 不再是 LIVE（发布环境失效，停在 v10.21）');
+/* ★ 2026-09-18（v10.22）换域名，判据**不能只看 HTTP 200** ——
+   v2 / join / v3 三个域名**全部返回 200 却都是旧版**，只看状态码会把三个尸体都判成 LIVE。
+   所以下面钉的是「主机名规范 + 换域名这件事必须留下原因 + 记着它是快照不是自动同步」。 */
+const LIVE_HOST = LIVE.replace(/^https:\/\//, '').replace(/\/$/, '');
+ok(/^[a-z0-9-]+\.app\.workbuddy\.host$/.test(LIVE_HOST), 'LIVE 主机名规范', LIVE_HOST);
+ok(!depAny(LIVE_HOST), '★ LIVE 不许是任何一个已弃用域名（200 尸体也算）');
+ok(/不跟随本地改动|快照/.test(SRC),
+  '★ 记着「LIVE 不跟随本地改动 = 快照」这个实测事实（否则以为改完本地就自动上线）');
+ok(/未绑定到本次发布环境/.test(SRC), '★ 记着 v3 被拒的原文（下版再遇到就一眼认出是同一个原因）');
+const depSec = LINKS_BLOCK.slice(LINKS_BLOCK.indexOf('DEPRECATED'));
 ok(/gamehub-agg-join/.test(depSec), '弃用清单里仍登记 gamehub-agg-join（避免下次又被捡回来）');
 ok(/gamehub-agg-v2/.test(depSec), '★ 弃用清单里也登记 gamehub-agg-v2（域名绑不上新环境，只读尸体）');
+ok(/gamehub-agg-v3/.test(depSec), '★ 弃用清单里登记 gamehub-agg-v3（发布环境失效，工具拒绝覆盖）');
 
 console.log('\n=== ② 五项结构齐备 ===');
 for (const [k, re] of [
@@ -120,15 +144,17 @@ console.log('\n=== ⑤-b 滞后文档不许自称「最新」（2026-09-18 新�
    而 HANDOFF.md 里给的是**已弃用的分享链接**（200 但内容很旧）。
    错误文档比没有文档更危险 —— 照它干活会直接干错。 */
 const doc = (f) => { try { return fs.readFileSync(path.join(ROOT, f), 'utf8'); } catch { return ''; } };
+/* 正则从 LIVE 现算，不在这里写死域名 —— 换域名时只需改 report.js 一处，这两份文档的断言自动跟上 */
+const liveHostRe = new RegExp(LIVE_HOST.replace(/\./g, '\\.'));
 for (const f of ['HANDOFF.md', 'CODEX-HANDOFF.md']) {
   const s = doc(f);
   ok(/已归档/.test(s), '★ ' + f + ' 顶部有「已归档」说明（不再冒充最新）');
   ok(!/最新\s*——\s*先看这段/.test(s), '★ ' + f + ' 已删掉「最新 —— 先看这段」的旧claim');
   ok(/CODEX-INDEX\.md/.test(s), f + ' 指向 CODEX-INDEX.md（当前状态以它为准）');
-  ok(/gamehub-agg-v3\.app\.workbuddy\.host/.test(s), f + ' 给出**当前**分享链接');
+  ok(liveHostRe.test(s), f + ' 给出**当前**分享链接（' + LIVE_HOST + '）');
 }
 const handoff = doc('HANDOFF.md');
-ok(/已弃用/.test(handoff) && /36aa37e911e6447eb86eb187240daff2/.test(handoff),
+ok(/已弃用/.test(handoff) && /gamehub-agg-v3/.test(handoff),
   '★ HANDOFF.md 明确把旧链接标成「已弃用」（它 200 但内容很旧，是最容易骗人的那种）');
 const design = doc('DESIGN.md');
 ok(/第 4 节|筛选条/.test(design) && /已不是当前实现/.test(design),
@@ -157,7 +183,7 @@ for (const [kw, why] of [
    看着像代码坏了。这条「先 curl 再怀疑代码」的判断必须写进流程，否则每次都要重查一遍。 */
 ok(/000/.test(wf) && /服务挂了/.test(wf), '★ 记着「000 = 服务挂了，不是代码坏了」');
 ok(/core\.autocrlf|入库字节/.test(wf), '★ 记着 autocrlf 坑（读磁盘建 blob 会推错内容）');
-ok(wf.includes('36aa37e9') ? /已弃用/.test(wf) : true, '若提到旧链接必须标「已弃用」');
+ok(wf.includes('gamehub-agg-v3') ? /已弃用/.test(wf) : true, '若提到旧链接 v3 必须标「已弃用」');
 ok(!/最新\s*——\s*先看这段/.test(wf), '不许出现「最新 —— 先看这段」这种会在下版崩塌的措辞');
 ok(/PITFALLS\.md/.test(wf), '★ WORKFLOW 指向 PITFALLS.md（不然 13KB 的踩坑全集没人找得到）');
 

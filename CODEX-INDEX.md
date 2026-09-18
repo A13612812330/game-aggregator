@@ -59,7 +59,7 @@
 > 短名（`xdgame`）⇒ 静默兜底到 **xdgamer.com**（两套内容独立的平行站）⇒ 只报一句 `HTTP 404`。
 > 修法 `normHost()`，★ **先砍路径再砍 `.com`**（顺序反了 `…/game/1.html` 不满足 `/\.com$/`）。
 >
-> 防线：静态 **20 套 1309 条**全绿 · 浏览器实拍 `tools/preview-v1022.js` **44/44** ·
+> 防线：静态 **20 套 1319 条**全绿 · 浏览器实拍 `tools/preview-v1022.js` **44/44** ·
 > 反证 `tools/_counterproof-v1022.js` **8/8「打坏即变红」**。
 >
 > ---
@@ -355,7 +355,10 @@
 > `/api/device/fill-stats` 404、HTML 无 v10.18 特征），v10.18 起改为
 > **`https://gamehub-agg-v2.app.workbuddy.host/`** —— 详见顶部 v10.18 块。
 > ⚠️ **再后补（v10.21）**：`gamehub-agg-v2` **也已停更**（域名绑不上新发布环境），
-> **当前正式入口是 `https://gamehub-agg-v3.app.workbuddy.host/`** —— 详见顶部 v10.21 块。
+> **v10.21 的正式入口曾是 `https://gamehub-agg-v3.app.workbuddy.host/`** —— 详见顶部 v10.21 块。
+> ⚠️ **再再后补（v10.22）**：**v3 也已失效**（工具拒绝覆盖：预留域名未绑定到本次发布环境），
+> 当前 LIVE 改为 `https://36aa37e911e6447eb86eb187240daff2.app.workbuddy.host/`
+> —— **已弃用**清单现为 v3 / v2 / join 三个，详见顶部 v10.22 块。
 > 新增 **`tools/verify-online.js`**：真浏览器打开线上链接 → 点详情页 → 量面板高度，产出 `_preview/live-*.png`。
 > 线上验收 **13/13 通过**（9 台机型 / `Honor Magic8 Lite` / `Xiaomi POCO F7` / 硬件面板 844px 高含
 > Snapdragon 8s Gen 4 + Adreno 825 / 无 JS 报错）。`curl | grep 特征串` 只能证明代码里有，

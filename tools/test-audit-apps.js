@@ -93,10 +93,21 @@ console.log('\n=== G. 与 report.js 同源（LIVE 只能有一个真源）===');
 }
 
 console.log('\n=== H. 弃用链接的 why 必须与实测一致（防旧说法漂移）===');
-/* 旧 why 写着 36aa「碰巧含 v10.18」，复测其实是**与本地逐字节一致**。
-   这类文案漂移会让下一个人判断错「哪个域名还能用」。 */
-ok(/未登记的别名域名/.test(REPORT), '★ 36aa 的 why 已改成「未登记的别名域名」（不再是旧版描述）');
-ok(/停在 v10\.18/.test(REPORT) && /停在 v10\.17/.test(REPORT), 'v2 / join 的 why 写明实测停点');
+/* 这类文案漂移会让下一个人判断错「哪个域名还能用」。36aa 的 why 变过三次，每次都是实测推翻旧说法：
+   ① 「碰巧含 v10.18」→ ② 「未登记的别名域名」→ ③ ★ v10.22 它**被选为 LIVE**
+   （缘由：v3 的发布环境失效、工具拒绝覆盖），于是它**不该再留在弃用清单里**，
+   而 v3 必须带着「发布环境失效」这个**实测**原因进来。
+   ★ 切片地标别用 `'DEPRECATED'` 这个词 —— 它在 report.js **顶部注释**里也出现，
+     indexOf 会命中注释而不是清单 ⇒ 后面几条断言可能恒真（v10.22 在 test-report.js 上踩过同一个坑）。 */
+const LINKS_BLOCK = REPORT.slice(REPORT.indexOf('const LINKS = {'), REPORT.indexOf('const GITHUB'));
+ok(LINKS_BLOCK.length > 200, '★ 切到 LINKS 块本身（地标变了会让下面几条断言恒真/恒假）', LINKS_BLOCK.length + 'B');
+const DEP = LINKS_BLOCK.slice(LINKS_BLOCK.indexOf('DEPRECATED'));
+ok(!/36aa37e911e6447eb86eb187240daff2/.test(DEP),
+  '★ 36aa 已升为 LIVE，不许再留在弃用清单里（留着会让人以为它还能被「捡回来」）');
+ok(/gamehub-agg-v3/.test(DEP) && /未绑定到本次发布环境|发布环境已失效/.test(DEP),
+  '★ v3 进了弃用清单，且 why 写明「发布环境失效 / 预留域名未绑定」（不是含糊的「停更」）');
+ok(/停在 v10\.21/.test(DEP), 'v3 的 why 写明实测停点 v10.21');
+ok(/停在 v10\.18/.test(DEP) && /停在 v10\.17/.test(DEP), 'v2 / join 的 why 写明实测停点');
 ok(!/碰巧含 v10\.18/.test(REPORT), '★ 已删掉「碰巧含 v10.18」的过时说法');
 
 console.log('\n通过 ' + pass + ' / ' + (pass + fail));

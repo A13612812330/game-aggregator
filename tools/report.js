@@ -24,15 +24,26 @@ const NO_NET = argv.includes('--no-net');
 const MD_ONLY = argv.includes('--md');
 
 /* ============ 链接登记（发布后改这里） ============ */
+/* ★ 2026-09-18（v10.22）：LIVE 从 v3 切到 36aa37e9，原因与判据都留在这里 ——
+   ① v3 无法覆盖：发布工具**硬拒绝**，原文「应用预留域名 gamehub-agg-v3.app.workbuddy.host
+      未绑定到本次发布环境，为避免返回仍指向旧内容的链接，本次发布已停止」。
+      这与 v10.17 / v10.18 / v10.21 三次同因（旧 sandbox 过期 ⇒ 只能新建 app，链接会变）。
+   ② 走不了「新建 app」：用户本轮明确选择**先用已能访问的旧链接**，不新建。
+   ③ 于是把 LIVE 切到 36aa37e9 —— 它是实测**当前确实在跑 v10.22** 的那个域名：
+      三页（/ · /unpack.html · /emulator.html）与本地**逐字节一致**，
+      且 v10.22 独有的 /api/jiditopics/stats（17,220 条）与 /api/download 都通。
+      ✗ 判据不是 HTTP 200 —— v2 / join / v3 三个域名**全部返回 200 却都是旧版**。
+   ④ ★ 已用「放临时文件看远端是否跟随」的探针验过：**它不跟随本地改动**（远端 404）。
+      所以它是**一份快照**，不是自动同步环境 —— 下次发布仍必须走发布流程，
+      别以为「改完本地就自动上线」（这正是本项目踩过的那个坑）。
+   ⑤ ⚠️ 它不在 `.workbuddy/applications.yaml` 的正式登记里。**v10.23 若要发布，
+      优先选「新建 app」拿一个已登记的新链接**，别再指望这个域名能跟着更新。 */
 const LINKS = {
-  LIVE: 'https://gamehub-agg-v3.app.workbuddy.host/',
+  LIVE: 'https://36aa37e911e6447eb86eb187240daff2.app.workbuddy.host/',
   DEPRECATED: [
+    { url: 'https://gamehub-agg-v3.app.workbuddy.host/', why: '停在 v10.21（发布环境已失效：工具拒绝覆盖，报「预留域名未绑定到本次发布环境」）' },
     { url: 'https://gamehub-agg-v2.app.workbuddy.host/', why: '停在 v10.18（实测无 eg-nav；域名无法重绑到新发布环境）' },
     { url: 'https://gamehub-agg-join.app.workbuddy.host/', why: '停在 v10.17（实测 /api/device/fill-stats 404）' },
-    /* ⚠️ 2026-09-18 复测：这条**竟然与本地逐字节一致、数据层也是最新**（不再是「碰巧 v10.18」）。
-       但它不在 applications.yaml 的正式登记里、更新不保证跟随 ⇒ 只当别名，对外仍用 LIVE。
-       ★ 别因为「它俩内容一样」就把它当入口 —— 一旦它哪天不再跟随，用户会看到旧界面。 */
-    { url: 'https://36aa37e911e6447eb86eb187240daff2.app.workbuddy.host/', why: '未登记的别名域名（当前恰好与 LIVE 同内容，但更新不保证跟随）' },
   ],
 };
 const GITHUB = {

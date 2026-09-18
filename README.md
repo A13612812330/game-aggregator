@@ -86,7 +86,7 @@
 ### 验证
 
 ```
-node tools/run-all.js                → 20 套 / 1309 条 / 0 失败
+node tools/run-all.js                → 20 套 / 1319 条 / 0 失败
 node tools/preview-v1022.js          → 44 / 44（含 5 张实拍截图）
 node tools/_counterproof-v1022.js    → 8 / 8「打坏即变红」
 ```
@@ -149,20 +149,28 @@ Celebration、`Command & Conquer Red Alert`→红色警戒2）—— 这些是**
 · `tools/audit-apps.js`（应用登记 × 域名实测**对账**）、`tools/test-audit-apps.js`（**28 条**）。
 静态防线 **19 套**。
 
-**发布**：新链接 **`https://gamehub-agg-v3.app.workbuddy.host/`**（旧 `gamehub-agg-v2` 域名
-绑不上新发布环境 ⇒ 按既有先例新建 app，**链接变了**，`tools/report.js` 的 LIVE 已同步）。
+**发布（v10.22）**：⚠️ **v3 无法覆盖更新** —— 发布工具**硬拒绝**：
+「应用预留域名 `gamehub-agg-v3.app.workbuddy.host` 未绑定到本次发布环境，
+为避免返回仍指向旧内容的链接，本次发布已停止」（与 v10.17 / v10.18 / v10.21 三次同因）。
+按用户本轮选择**不新建 app**，把 LIVE 切到 `https://36aa37e911e6447eb86eb187240daff2.app.workbuddy.host/`
+—— 它是实测**当前确实在跑 v10.22** 的那个域名（三页逐字节一致 + `jiditopics` 17,220 条 + 下载接口通）。
 
-**★ 发布后做了一次「链接对账」，结果推翻了一条旧结论**：
+★ **判据不是 HTTP 200**：v2 / join / v3 **三个域名全部返回 200 却都是旧版**。
+★ **已验「它不跟随本地改动」**（放临时文件探远端 → 404）⇒ 它是**快照**不是自动同步环境，
+下次发布仍必须走发布流程，别以为「改完本地就自动上线」。
+⚠️ 该域名**未登记**在 `.workbuddy/applications.yaml` —— **v10.23 发布优先「新建 app」拿已登记的新链接**。
 
-| 域名 | 实际停点 |
-|---|---|
-| **`gamehub-agg-v3`** | ✅ 与本地同版（含数据层）← 正式入口 |
-| `gamehub-agg-v2` | 停在 v10.18 |
-| `gamehub-agg-join` | 停在 v10.17 |
-| `36aa37e9…` | ⚠️ **也已是最新**（旧记忆说它停在 v10.18，实测不成立）——但**未正式登记、更新不保证跟随**，仍不当入口 |
+**★ 链接对账（2026-09-18 实测，跑 `node tools/audit-apps.js`）**：
+
+| 域名 | index.md5 | 实际停点 |
+|---|---|---|
+| **`36aa37e9…`** | `66fa1bf2fb` | ✅ 与本地 **v10.22** 逐字节一致 ← **LIVE**（未登记，见上） |
+| `gamehub-agg-v3` | `cb2c07b3b4` | 停在 **v10.21**（发布环境已失效，工具拒绝覆盖） |
+| `gamehub-agg-v2` | `73a715a1a4` | 停在 **v10.18** |
+| `gamehub-agg-join` | `55dcb8f7ff` | 停在 **v10.17** |
 
 ⚠️ **别用 `unpublish` 清旧链接**：三个 app 的 `localDir` 是同一个目录，它取「同目录最新一次发布」
-⇒ **会把 v3 一起下掉**。旧 app 只能在「设置—数据管理—应用」里手工删。
+⇒ **会把 LIVE 一起下掉**。旧 app 只能在「设置—数据管理—应用」里手工删。
 
 **遗留**：① 60% 匹配率**必须靠扩端游库**（P0，未开工）② 解包 JSON 样本仍未到
 （`data/spec-dict.js` 待校准）③ B 类 473 条假阳性说明**朴素子串匹配仍在用**，是下一版值得单独攻的点。
@@ -287,12 +295,15 @@ Celebration、`Command & Conquer Red Alert`→红色警戒2）—— 这些是**
 ### 当前线上链接
 
 ```
-https://gamehub-agg-v3.app.workbuddy.host/
+https://36aa37e911e6447eb86eb187240daff2.app.workbuddy.host/
 ```
 
-（sandbox `0a588ae0f9804365957be18fce404dad`，HTTP 服务形态：`npm install` + `node server.js`，
-注入 `PORT=8123`；重新发布同一目录复用 sandbox，链接不变、内容被覆盖。
-⚠️ 2026-09-18 从 `gamehub-agg-v2` 迁到 `v3`：**旧域名绑不上新发布环境**，只能新建 app。）
+（**v10.22 起改用这条**。⚠️ 它是**平台自动域名**，未登记在 `.workbuddy/applications.yaml`；
+实测**不跟随本地改动**（放临时文件探远端 → 404）⇒ **是快照**，改完本地不会自动上线。
+**已弃用**：`gamehub-agg-v3`（停 v10.21，发布环境失效、工具拒绝覆盖）·
+`gamehub-agg-v2`（停 v10.18）· `gamehub-agg-join`（停 v10.17）。
+⚠️ **四个域名全部返回 HTTP 200** —— 判版本一律比 `index.html` 的 md5。
+**v10.23 发布时优先「新建 app」拿一个已登记的新链接**。）
 
 ⚠️ **判断「线上是不是新版」必须比 md5，不能只看 HTTP 200**：`gamehub-agg-v2…` 与
 `gamehub-agg-join…` 至今仍返回 **200**，但内容分别停在 v10.19 之前 / v10.17；

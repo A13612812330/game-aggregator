@@ -173,7 +173,7 @@ async function probe(url, localMd5, localTxt) {
 
   console.log('\n## ③ 清理须知\n');
   console.log('- **别用 sites 的 `unpublish` 去清旧链接**：它取的是「同一本地目录的最新一次发布」,');
-  console.log('  而所有旧 app 的 localDir 全是同一个 `game-aggregator` ⇒ **会把 v3 一起下掉**。');
+  console.log('  而所有 app 的 localDir 全是同一个 `game-aggregator` ⇒ **会把 LIVE 一起下掉**。');
   console.log('- 旧 app 只能在「设置—数据管理—应用」里手工删；删前先确认它绑的不是 LIVE 那个域名。');
   console.log('- 判断「删哪个」用上表：`未登记` / `弃用` 且版本旧的那些才可清。');
 
