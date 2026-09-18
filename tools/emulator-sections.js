@@ -402,10 +402,13 @@ async function dmQuery(model) {
          旧实现的 GPU 是 `gps[0]`（该游戏第一个 GPU），与本机型无关，配错很多。 */
       const dv = r.device || {};
       const socTxt = dv.soc ? (dv.socVendor ? dv.socVendor + ' ' + dv.soc : dv.soc) : '';
+      /* ★ v10.16：抬头优先显示译出的「品牌 + 型号」；内部代号退到小字（对得上原输入）。
+         译不出（disp 为空）就照旧显示 model，不编造。 */
       info.innerHTML = `
         <div class="dm-info-h">
-          <b>${esc(dv.model)}</b>
+          <b>${esc(dv.disp || dv.model)}</b>
           <span class="dm-brand">${esc(dv.brand || '')}</span>
+          ${dv.disp && dv.disp !== dv.model ? `<span class="dm-code">${esc(dv.model)}</span>` : ''}
         </div>
         <div class="dm-info-r">
           ${socTxt
@@ -486,11 +489,17 @@ async function initDm() {
         try {
           const r = await fetch(api('/api/device/models?limit=12&q=' + encodeURIComponent(q))).then((x) => x.json());
           if (!r.ok || !r.models.length) { if (box) box.style.display = 'none'; return; }
-          box.innerHTML = r.models.map((m) =>
-            `<button type="button" class="dm-sug-i" data-m="${esc(m.model)}">
-              <b>${esc(m.model)}</b>
-              <span>${esc(m.brand)}${m.gpu ? ' · ' + esc(m.gpu) : ''}</span>
-            </button>`).join('');
+          /* ★ v10.16：与下面「品牌切换」那段**必须同款**——两处都是机型建议列表。
+             这里原先漏了 `disp`，于是「输入即查」铺出来的还是内部代号（`Xiaomi 2412DPC0AG`），
+             同一个下拉两副面孔。改动时两处一起改。 */
+          box.innerHTML = r.models.map((m) => {
+            const title = m.disp || m.model;
+            const sub = (m.disp && m.disp !== m.model ? m.model + ' · ' : '') + m.brand;
+            return `<button type="button" class="dm-sug-i" data-m="${esc(m.model)}">
+              <b>${esc(title)}</b>
+              <span>${esc(sub)}${m.gpu ? ' · ' + esc(m.gpu) : ''}</span>
+            </button>`;
+          }).join('');
           box.style.display = '';
           box.querySelectorAll('[data-m]').forEach((el) => {
             el.addEventListener('click', () => {
@@ -531,9 +540,11 @@ async function initDm() {
         const r = await fetch(api('/api/device/models?limit=200&brand=' + encodeURIComponent(bv))).then((x) => x.json());
         if (!r.ok) return;
         if (box) {
+          /* ★ v10.16：`m.model` 常是内部代号（`Xiaomi 2412DPC0AG`），列表里直接铺出来认不出是哪台手机。
+             服务端顺带返回 `disp`（品牌 + 型号），有就显示它；回填与查询仍用 `m.model`。 */
           box.innerHTML = r.models.map((m) =>
             `<button type="button" class="dm-sug-i" data-m="${esc(m.model)}">
-              <b>${esc(m.model)}</b>
+              <b>${esc(m.disp || m.model)}</b>
               <span>${m.gpu ? esc(m.gpu) : ''}${m.games ? ' · ' + m.games + ' 款可玩' : ''}</span>
             </button>`).join('');
           box.style.display = '';

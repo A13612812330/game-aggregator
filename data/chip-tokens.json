@@ -1,0 +1,5 @@
+{
+  "_note": "机型串里直接出现的『芯片号』→ 芯片。只在现有数据里查不到时才用这张表，逐条都能交叉印证：T606 / MALEOON920C 分别由 gpu-soc.json 的 unisoc-t606 与 soc-db.json 的 kirin8020 印证；QCS8550 / S5E8825 是厂商官方 part number（Qualcomm Snapdragon 8 Gen 2 / Samsung Exynos 1380），机型串（如 `Odin2 QCS8550`、`A266M s5e8825`）本身就是这么写的。",
+  "QCS8550": { "soc": "Snapdragon 8 Gen 2", "gpu": "Adreno 740", "vendor": "Qualcomm" },
+  "S5E8825": { "soc": "Exynos 1380", "gpu": "Mali-G68 MP5", "vendor": "Samsung" }
+}

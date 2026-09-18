@@ -112,13 +112,20 @@ console.log('\n=== ③ 搜索弹窗版式重构 ===');
 console.log('\n=== ④ 手机配置展示效果 ===');
 {
   ok('机型清单改两列网格', /\.d-devlist\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/.test(IDX));
-  ok('每台机型带性能分胶囊 .dv em', /\.d-devlist \.dv em\{/.test(IDX));
+  /* ★ v10.16：性能分胶囊从 `.dv em`（.dv 的直接子元素）挪进了 `.dv .hd em` ——
+     因为整行改成两段式（主行「品牌+型号」/ 副行「代号 + 芯片」），em 要跟主行对齐。
+     这是**预期的结构变更**，不是退化：断言跟着新结构改。 */
+  ok('每台机型带性能分胶囊 .dv .hd em', /\.d-devlist \.dv \.hd em\{/.test(IDX));
   ok('门槛机型有专属配色 .dv.gate', /\.d-devlist \.dv\.gate\{/.test(IDX));
   ok('汇总行铺满整行 .dv.more', /\.d-devlist \.dv\.more\{grid-column:1\/-1/.test(IDX));
-  ok('门槛小结行 .bh-gate 存在', /\.bh-gate\{display:flex/.test(IDX) && /<div id="bhGate"><\/div>/.test(IDX));
+  /* ★ v10.18：门槛**并入清单行内**（用户确认「门槛合并成徽标」）。旧版那条独立的小结行
+     与清单首行是同一台，读起来像重复，已删除。这是**预期变更**，断言跟着改。 */
+  ok('★ v10.18 门槛改为行内橙色徽标 .gtag，旧小结行已取消',
+    /\.d-devlist \.dv \.gtag\{/.test(IDX) && !/\.bh-gate\{display:flex/.test(IDX) && !/<div id="bhGate"><\/div>/.test(IDX));
   ok('机型按性能分升序排序', /sort\(\(a, b\) => \(a\.score \|\| 1e9\) - \(b\.score \|\| 1e9\)\)/.test(IDX));
   ok('门槛 = 有分数的最弱一台', /const gate = sorted\.find\(\(x\) => x\.score > 0\)/.test(IDX));
-  ok('门槛行文案讲清「更强的也能跑」', /这台实测跑通了 → 性能更强的机型基本也能跑/.test(IDX));
+  ok('★ 门槛含义由徽标 title + 表头图例讲清「更强的也能跑」',
+    /比它强的机型基本也能跑/.test(IDX) && /class="d-devlist-lg"/.test(IDX) && /门槛机型/.test(IDX));
   ok('参数卡重点项（驱动/DXVK）带底色', /\.d-param \.pb \.kv\.hot\{background:#F5F3FF/.test(IDX));
   ok('参数卡翻译层带底色', /\.d-param \.pb \.kv\.ok\{background:#ECFDF5/.test(IDX));
   ok('派生页面板同步了重点项底色',

@@ -252,10 +252,40 @@ async function params(keyOrKeys, limit = 4) {
   return { ok: true, key, picked: key, candidates: sizes, items, total: list.length, cached: false, fetchedAt: c[key].ts };
 }
 
+/**
+ * 从**本地缓存**里取「该游戏逐条配置里出现过的机型」（同步、绝不打网络）
+ *
+ * ★ v10.17 新增，修「机型清单列不全」：
+ *   详情页机型清单原先只读社区库聚合摘要 `bannerhub.json` 的 `dv`，
+ *   而那个字段是**上游的 6 格摘要**（全库最大长度就是 6）→ 结构性最多 6 台。
+ *   逐条配置（本缓存）里的 `device` 才是全量、且写法规范（`HONOR MTN-NX3`）。
+ *   两边并起来，实测 6 台 → 11 台。
+ *
+ * ⚠️ 只读缓存不打网络：这个函数会被 `/api/mobilehub/match` 同步调用，
+ *   拿不到（缓存未预热）就返回空数组，由调用方与摘要取并集 —— 不许在这里 await。
+ *
+ * @param {string|string[]} keyOrKeys 仓库键（数组或逗号分隔）
+ * @returns {string[]} 出现过的机型原始串（未去重、未归一，交给 deviceset 处理）
+ */
+function cachedDevices(keyOrKeys) {
+  const c = ensureCache();
+  const cands = (Array.isArray(keyOrKeys) ? keyOrKeys : String(keyOrKeys || '').split(','))
+    .map((x) => String(x || '').trim()).filter(Boolean);
+  const out = [];
+  for (const k of cands) {
+    const hit = c[k];
+    for (const it of (hit && hit.items) || []) {
+      const d = it && it.device ? String(it.device).trim() : '';
+      if (d) out.push(d);
+    }
+  }
+  return out;
+}
+
 function stats() {
   const c = ensureCache();
   const keys = Object.keys(c);
   return { ok: true, keys: keys.length, items: keys.reduce((a, k) => a + ((c[k].items || []).length), 0) };
 }
 
-module.exports = { params, parseConfig, parseTranslator, parseResolution, compName, stats, _cache: CACHE };
+module.exports = { params, cachedDevices, parseConfig, parseTranslator, parseResolution, compName, stats, _cache: CACHE };

@@ -547,36 +547,105 @@
   .d-param .spec .sp.soc b{color:#0F766E}
   .d-param .spec .sp.cpu{font-family:var(--font-num);color:var(--c-t3);background:#F6F7FB;border-color:#E8EBF3}
   .d-param .spec .sp.none{color:var(--c-t3);background:#F6F7FB;border-color:#E8EBF3}
-  /* ============ 机型清单（★ v10.15 改版） ============
-   *   旧版是一堆 flex-wrap 的小胶囊（「机型 + SoC」），一多就糊成一片、也看不出强弱。
-   *   现在改成两列网格：每行「机型 … 芯片 … 性能分」，机型左对齐、分数右对齐，
-   *   扫一列就能比出谁强谁弱（跨品牌 Adreno / Mali / PowerVR 也能直接比数字）。 */
-  .d-devlist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-top:7px}
-  .d-devlist .dv{display:flex;align-items:center;gap:6px;min-width:0;font-size:10.5px;
-    border:1px solid #E3E8F2;background:#F8FAFD;border-radius:7px;padding:4px 7px;color:var(--c-t2)}
-  .d-devlist .dv b{color:#334155;font-weight:750;min-width:0;max-width:56%;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .d-devlist .dv i{font-style:normal;color:#0F766E;font-weight:700;min-width:0;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .d-devlist .dv i.dim{color:var(--c-t3);font-weight:600}
-  .d-devlist .dv em{margin-left:auto;flex:none;font-style:normal;font-family:var(--font-num);font-size:9.5px;
-    font-weight:800;color:#64748B;background:#EEF2F8;border-radius:5px;padding:1px 5px}
-  /* 门槛机型：实测跑通过的最弱一台 —— 比它强的机型基本也能跑 */
+  /* ============ 机型清单（★ v10.15 改版 / v10.16 可点开 / v10.18 三要素齐全） ============
+   *   用户口径（v10.18）：「要求是全整显示（品牌+型号+芯片）」。旧版把芯片做成次行小字，
+   *   且有 1.7% 的机型芯片位直接写「未收录」，整块看起来像没做完。
+   *   （v10.18 起：未收录的机型会**自动联网补全**，仍查不到才保留这个灰标签）
+   *
+   *   现在每台**三要素必到**：
+   *     主行「品牌 + 型号」（**允许折行，不截断** —— 「全整显示」就是不能打省略号）+ 性能分
+   *     次行「芯片徽标」+ 原始代号（灰字，可省略号；代号不丢是为了对得上社区原始记录）
+   *   芯片徽标按**来源**分色，一眼看得出可信度：
+   *     青绿 = 本地（配对索引 / 串内芯片号）
+   *     靛蓝 = 联网补全（kalvo）
+   *     灰虚线 = 真没收录 —— **如实显示，不编造**
+   *
+   *   ★ 「门槛」不再单起一行（旧版那行与清单首行是同一台，看着像重复）：改成行内橙色徽标，
+   *   表头补一格图例说明含义。
+   *   整块可点：点开就地展开该机型完整硬件参数（来自 kalvo），不用跳走。 */
+  .d-devlist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:7px;
+    align-items:stretch}
+  .d-devlist .dv{display:flex;flex-direction:column;gap:4px;width:100%;text-align:left;min-width:0;
+    font:inherit;font-size:10.5px;border:1px solid #E3E8F2;background:#F8FAFD;border-radius:8px;
+    padding:6px 8px;color:var(--c-t2);cursor:pointer;
+    transition:border-color .12s,background .12s,box-shadow .12s}
+  .d-devlist .dv:hover{border-color:#BFD3F5;background:#F3F7FE}
+  .d-devlist .dv.on{border-color:#93B4F0;background:#EEF4FE;box-shadow:0 0 0 2px #E3EDFC}
+  /* ---- 主行：品牌 + 型号（折行不截断） ---- */
+  .d-devlist .dv .hd{display:flex;align-items:flex-start;gap:6px;min-width:0}
+  .d-devlist .dv .hd b{color:#1E293B;font-weight:800;font-size:11.5px;line-height:1.25;
+    min-width:0;flex:1;word-break:break-word}
+  .d-devlist .dv .hd em{margin-left:auto;flex:none;font-style:normal;font-family:var(--font-num);
+    font-size:9.5px;font-weight:800;color:#64748B;background:#EEF2F8;border-radius:5px;padding:1px 5px}
+  .d-devlist .dv .hd .chev{flex:none;font-size:8px;color:#9AA7B8;transition:transform .15s;
+    margin-top:3px}
+  .d-devlist .dv.on .hd .chev{transform:rotate(180deg)}
+  /* ---- 次行：芯片徽标 + 原始代号 ---- */
+  .d-devlist .dv .sub{display:flex;align-items:center;gap:5px;min-width:0;
+    font-size:9.5px;color:var(--c-t3)}
+  .d-devlist .dv .sub .chip{display:inline-flex;align-items:center;gap:3px;min-width:0;
+    font-style:normal;font-weight:800;font-size:9.5px;color:#0F766E;background:#E4F5F2;
+    border:1px solid #C7E9E3;border-radius:5px;padding:1px 5px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+  /* 芯片来源标记（只标「非默认路径」的两种：串内解析 / 联网补全） */
+  .d-devlist .dv .sub .chip u{flex:none;text-decoration:none;font-size:8.5px;font-weight:800;
+    color:#0F766E;background:#CDEDE8;border-radius:3px;padding:0 3px;cursor:help}
+  /* 联网补全：靛蓝，与本地来源一眼区分 */
+  .d-devlist .dv .sub .chip.ol{color:#1D4ED8;background:#E4EBFF;border-color:#C6D5FA}
+  .d-devlist .dv .sub .chip.ol u{color:#1D4ED8;background:#D2DEFA}
+  /* 查过了确实没有：灰虚线（**不编造**，也不假装在加载） */
+  .d-devlist .dv .sub .chip.none{color:#94A3B8;background:#F1F5F9;border:1px dashed #D8E0EA;
+    font-weight:600}
+  /* 正在联网补全 */
+  .d-devlist .dv .sub .chip.wait{color:#1D4ED8;background:#EEF3FF;border-color:#D5E0FA;font-weight:700}
+  .d-devlist .dv .sub .chip.wait::after{content:'';width:5px;height:5px;border-radius:50%;
+    background:#93B4F0;animation:hwPulse .9s ease-in-out infinite}
+  @keyframes hwPulse{0%,100%{opacity:.25}50%{opacity:1}}
+  .d-devlist .dv .sub s{text-decoration:none;margin-left:auto;flex:none;max-width:52%;
+    font-family:var(--font-num);letter-spacing:.2px;background:#EEF2F8;border-radius:4px;padding:0 4px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* ---- 门槛机型：实测跑通过的最弱一台 —— 比它强的机型基本也能跑 ---- */
   .d-devlist .dv.gate{background:#FFF7ED;border-color:#FED7AA}
-  .d-devlist .dv.gate i{color:#B45309}
-  .d-devlist .dv.gate em{color:#B45309;background:#FFEDD5}
-  .d-devlist .dv.more{grid-column:1/-1;justify-content:center;background:transparent;
-    border-style:dashed;color:var(--c-t3);font-size:10px}
-  /* 门槛小结行 */
-  .bh-gate{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:8px;padding:7px 9px;
-    border:1px solid #FED7AA;background:#FFFBF5;border-radius:9px;font-size:11px;color:var(--c-t2)}
-  .bh-gate .lb{flex:none;font-size:9.5px;font-weight:800;color:#B45309;background:#FFEDD5;
-    border-radius:5px;padding:1.5px 6px;letter-spacing:.3px}
-  .bh-gate b{color:#7C2D12;font-weight:800}
-  .bh-gate i{font-style:normal;color:#0F766E;font-weight:700}
-  .bh-gate .s{flex:none;font-family:var(--font-num);font-size:9.5px;font-weight:800;
-    color:#B45309;background:#FFEDD5;border-radius:5px;padding:1px 5px}
-  .bh-gate .tip{color:var(--c-t3);font-size:10.5px}
+  .d-devlist .dv.gate:hover{background:#FFF3E4}
+  .d-devlist .dv.gate .hd em{color:#B45309;background:#FFEDD5}
+  .d-devlist .dv .gtag{flex:none;font-style:normal;font-size:9px;font-weight:800;color:#B45309;
+    background:#FFEDD5;border:1px solid #FDD9A9;border-radius:4px;padding:0 4px;margin-top:1px;
+    cursor:help}
+  /* 表头图例：替代原来那条独立的「门槛 …」摘要行 */
+  .d-devlist-lg{display:inline-flex;align-items:center;gap:3px;margin-left:6px;font-size:9px;
+    font-weight:700;color:#B45309;background:#FFF3E4;border:1px solid #FDD9A9;border-radius:4px;
+    padding:0 5px}
+  .d-devlist .dv.more{grid-column:1/-1;text-align:center;background:transparent;cursor:default;
+    border-style:dashed;color:var(--c-t3);font-size:10px;padding:4px 7px}
+  /* ---- 点开后的硬件参数面板 ---- */
+  .d-hw{margin-top:8px;border:1px solid #DCE6F7;background:#FBFDFF;border-radius:10px;padding:9px 10px}
+  .d-hw .hw-hd{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:7px}
+  .d-hw .hw-hd b{font-size:12.5px;font-weight:800;color:#0F172A}
+  .d-hw .hw-hd .tag{font-size:9.5px;font-weight:800;color:#0369A1;background:#E0F2FE;
+    border-radius:5px;padding:1px 6px}
+  .d-hw .hw-hd .tag.more-tag{color:#B45309;background:#FFEDD5}
+  /* 默认只开 4 节，其余收在这里（全量展开 1800+px，抽屉里滚不完） */
+  .d-hw .hw-more{display:block;width:100%;margin-top:8px;padding:5px 8px;font:inherit;font-size:10.5px;
+    font-weight:700;color:#0369A1;background:#F1F7FE;border:1px dashed #BFD8F5;border-radius:8px;cursor:pointer}
+  .d-hw .hw-more:hover{background:#E7F1FD;border-color:#93B4F0}
+  .d-hw .hw-hd .src{margin-left:auto;font-size:10px;color:var(--c-t3)}
+  .d-hw .dg{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+  .d-hw .dg span{font-size:10px;background:#EEF4FE;border:1px solid #DCE6F7;border-radius:6px;
+    padding:2px 6px;color:#1E3A8A}
+  .d-hw .dg span i{font-style:normal;color:#64748B;margin-right:4px}
+  .d-hw .grp{margin-top:8px}
+  .d-hw .grp h4{font-size:10.5px;font-weight:800;color:#475569;margin:0 0 4px}
+  .d-hw .kvs2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 12px}
+  .d-hw .kvs2 div{display:flex;gap:6px;min-width:0;font-size:10.5px;
+    border-bottom:1px dashed #EEF2F8;padding:2px 0}
+  .d-hw .kvs2 div span{flex:none;width:78px;color:var(--c-t3);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .d-hw .kvs2 div b{font-weight:600;color:#334155;min-width:0}
+  .d-hw .load{padding:5px 0;font-size:10.5px;color:var(--c-t3)}
+  .d-hw .load a{color:#0369A1}
+  /* 门槛小结行 —— ★ v10.18 已取消：那行与机型清单首行是同一台，读起来像重复。
+     现在门槛并入清单行内（橙色徽标 `.gtag`）+ 表头图例 `.d-devlist-lg`。
+     这块 CSS 留着只会让人以为功能还在，所以删掉；`#bhGate` 容器也一并清空。 */
   /* 详情页里的小节标题（本站实测记录） */
   .bh-sub{display:flex;align-items:center;gap:7px;margin-top:9px;font-size:11.5px;font-weight:750;color:var(--c-t2)}
   .bh-sub .n{margin-left:auto;font-size:10.5px;font-weight:650;color:var(--c-t3);font-family:var(--font-num)}
@@ -727,6 +796,10 @@
   .dm-info-h{display:flex;align-items:center;gap:8px;margin-bottom:5px}
   .dm-info-h b{font-size:14px;font-weight:800;color:#78350F}
   .dm-brand{font-size:10.5px;font-weight:800;color:#B45309;background:rgba(255,255,255,.75);border-radius:6px;padding:2px 7px}
+  /* v10.16：译出品牌型号后，把内部代号降级到右侧小字（对得上用户原输入，但不抢视线） */
+  .dm-code{font-family:var(--font-num);font-size:10px;color:#A16207;background:rgba(255,255,255,.6);
+    border-radius:5px;padding:1px 6px;margin-left:auto;max-width:46%;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .dm-info-r{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:#92400E;margin-bottom:8px}
   .dm-info-r code{font-family:var(--font-num);font-weight:800;color:#78350F;background:rgba(255,255,255,.7);
     border-radius:5px;padding:1px 6px}
@@ -1066,6 +1139,9 @@
     .sm-foot{gap:10px}
     .sm-foot .rt{display:none}
     .d-devlist{grid-template-columns:1fr}
+    /* v10.16：窄屏下硬件参数改单列（两列会把值挤到换行，反而更难读） */
+    .d-hw .kvs2{grid-template-columns:1fr}
+    .d-hw .kvs2 div span{width:70px}
   }
   /* ===== 独立页专属：一条 5 页签切换条 =====
    *  v10.2：这一行原本左边还有个「← 返回聚合首页」按钮（.page-back a / .crumb 是它的样式）。
@@ -2919,10 +2995,13 @@ async function dmQuery(model) {
          旧实现的 GPU 是 `gps[0]`（该游戏第一个 GPU），与本机型无关，配错很多。 */
       const dv = r.device || {};
       const socTxt = dv.soc ? (dv.socVendor ? dv.socVendor + ' ' + dv.soc : dv.soc) : '';
+      /* ★ v10.16：抬头优先显示译出的「品牌 + 型号」；内部代号退到小字（对得上原输入）。
+         译不出（disp 为空）就照旧显示 model，不编造。 */
       info.innerHTML = `
         <div class="dm-info-h">
-          <b>${esc(dv.model)}</b>
+          <b>${esc(dv.disp || dv.model)}</b>
           <span class="dm-brand">${esc(dv.brand || '')}</span>
+          ${dv.disp && dv.disp !== dv.model ? `<span class="dm-code">${esc(dv.model)}</span>` : ''}
         </div>
         <div class="dm-info-r">
           ${socTxt
@@ -3003,11 +3082,17 @@ async function initDm() {
         try {
           const r = await fetch(api('/api/device/models?limit=12&q=' + encodeURIComponent(q))).then((x) => x.json());
           if (!r.ok || !r.models.length) { if (box) box.style.display = 'none'; return; }
-          box.innerHTML = r.models.map((m) =>
-            `<button type="button" class="dm-sug-i" data-m="${esc(m.model)}">
-              <b>${esc(m.model)}</b>
-              <span>${esc(m.brand)}${m.gpu ? ' · ' + esc(m.gpu) : ''}</span>
-            </button>`).join('');
+          /* ★ v10.16：与下面「品牌切换」那段**必须同款**——两处都是机型建议列表。
+             这里原先漏了 `disp`，于是「输入即查」铺出来的还是内部代号（`Xiaomi 2412DPC0AG`），
+             同一个下拉两副面孔。改动时两处一起改。 */
+          box.innerHTML = r.models.map((m) => {
+            const title = m.disp || m.model;
+            const sub = (m.disp && m.disp !== m.model ? m.model + ' · ' : '') + m.brand;
+            return `<button type="button" class="dm-sug-i" data-m="${esc(m.model)}">
+              <b>${esc(title)}</b>
+              <span>${esc(sub)}${m.gpu ? ' · ' + esc(m.gpu) : ''}</span>
+            </button>`;
+          }).join('');
           box.style.display = '';
           box.querySelectorAll('[data-m]').forEach((el) => {
             el.addEventListener('click', () => {
@@ -3048,9 +3133,11 @@ async function initDm() {
         const r = await fetch(api('/api/device/models?limit=200&brand=' + encodeURIComponent(bv))).then((x) => x.json());
         if (!r.ok) return;
         if (box) {
+          /* ★ v10.16：`m.model` 常是内部代号（`Xiaomi 2412DPC0AG`），列表里直接铺出来认不出是哪台手机。
+             服务端顺带返回 `disp`（品牌 + 型号），有就显示它；回填与查询仍用 `m.model`。 */
           box.innerHTML = r.models.map((m) =>
             `<button type="button" class="dm-sug-i" data-m="${esc(m.model)}">
-              <b>${esc(m.model)}</b>
+              <b>${esc(m.disp || m.model)}</b>
               <span>${m.gpu ? esc(m.gpu) : ''}${m.games ? ' · ' + m.games + ' 款可玩' : ''}</span>
             </button>`).join('');
           box.style.display = '';
@@ -3915,7 +4002,7 @@ function bhParamCard(p) {
         ${sp.score ? `<span class="sp">性能分 <b>${esc(String(Math.round(sp.score)))}</b></span>` : ''}
         ${!sp.soc && sp.gpu ? `<span class="sp">GPU <b>${esc(sp.gpu)}</b></span>` : ''}
       </div>`
-    : `<div class="spec"><span class="sp none">该机型代号未收录芯片规格</span></div>`;
+    : `<div class="spec"><span class="sp none">该机型代号暂无芯片规格</span></div>`;
   return `<div class="d-param">
     <div class="ph"><span>${esc(p.device || '未知机型')}</span><span class="gpu">${esc(p.gpu || '')}</span>
       <span class="dt">${esc(p.date || '')}</span></div>
@@ -3945,6 +4032,88 @@ function bhRecRow(x) {
     <div class="kv">${kv.join('') || '<span class="kv-i">这条记录没留下可解析参数</span>'}</div>
     ${x.note ? `<div class="nt">💡 ${esc(x.note)}</div>` : ''}
   </div>`;
+}
+
+/* ================= 📱 机型硬件参数面板（★ v10.16 新增） =================
+ *  用户口径：「前端显示品牌+型号 如 Xiaomi 25053PC47G → xiaomi Poco F7，
+ *            点击可以查看对应手机的硬件配置参数」。
+ *
+ *  两条数据源分工（实测确认，别搞混）：
+ *    · 「内部代号 → 品牌 + 型号」= `data/device-market.json`（MobileModels，离线）
+ *    · 「型号名 → 硬件参数」      = `/api/device/hardware`（kalvo，未命中时实时抓 + 落盘）
+ *  ⚠️ kalvo 只按**营销名**搜（`POCO F7` 命中、`25053PC47G` 搜不到），
+ *     所以按钮上带的是 `data-hw`（译出的型号名），不是 `data-m`（原始代号）。
+ *
+ *  交互：再点同一台 = 收起；点另一台 = 换成那一台。一次只开一个，避免抽屉越撑越长。 */
+let _hwOpen = '';                         // 当前展开的机型（原始名），用于「再点收起」与互斥
+/* 默认只展开这几节（按优先级排前面）—— 全量 12 节展开有 1800+px，
+   在本来就长的抽屉里等于逼人一直滚。剩下的收进「展开全部」。 */
+const HW_KEEP = ['基本信息', '硬件配置', '屏幕', '电池'];
+function hwPanelHtml(r) {
+  const short = esc(String(r.name || '').split(' - ')[0]);
+  const src = r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">kalvo ↗</a>` : '';
+  const dg = (r.digest || []).map((d) => `<span><i>${esc(d.label)}</i>${esc(d.value)}</span>`).join('');
+  const all = r.groups || [];
+  const head = all.filter((g) => HW_KEEP.some((k) => g.name.indexOf(k) >= 0));
+  const rest = all.filter((g) => !HW_KEEP.some((k) => g.name.indexOf(k) >= 0));
+  const grpOf = (g) => `<div class="grp"><h4>${esc(g.name)}</h4>
+      <div class="kvs2">${g.items.map((it) => `<div><span title="${esc(it.k)}">${esc(it.k)}</span><b>${esc(it.v)}</b></div>`).join('')}</div>
+    </div>`;
+  return `<div class="d-hw"><div class="hw-hd"><b>${short}</b>
+      <span class="tag">硬件参数</span>
+      ${r.cached ? '' : '<span class="tag more-tag">刚抓取</span>'}
+      <span class="src">${src}</span></div>
+    ${dg ? `<div class="dg">${dg}</div>` : ''}
+    ${head.map(grpOf).join('')}
+    ${rest.length ? `<div class="hw-rest" hidden>${rest.map(grpOf).join('')}</div>
+      <button type="button" class="hw-more" data-lb="展开全部参数（还有 ${rest.length} 节：${esc(rest.map((g) => g.name).join(' / '))}）"
+        onclick="hwToggleRest(this)">展开全部参数（还有 ${rest.length} 节：${esc(rest.map((g) => g.name).join(' / '))}）</button>` : ''}
+    </div>`;
+}
+/** 「展开全部 / 收起」开关 */
+function hwToggleRest(btn) {
+  const box = btn.parentNode.querySelector('.hw-rest');
+  if (!box) return;
+  const open = box.hasAttribute('hidden');
+  if (open) box.removeAttribute('hidden'); else box.setAttribute('hidden', '');
+  btn.textContent = open ? '收起其余参数' : (btn.getAttribute('data-lb') || '展开全部参数');
+}
+async function toggleDevHardware(btn) {
+  const slot = $('#bhHwSlot');
+  if (!slot) return;
+  const raw = btn.getAttribute('data-m') || '';
+  const q = btn.getAttribute('data-hw') || raw;
+  const list = btn.closest('.d-devlist');
+
+  /* 再点同一台 → 收起 */
+  if (_hwOpen === raw && slot.innerHTML) {
+    _hwOpen = ''; slot.innerHTML = '';
+    btn.classList.remove('on'); btn.setAttribute('aria-expanded', 'false');
+    return;
+  }
+  if (list) list.querySelectorAll('.dv.on').forEach((b) => { b.classList.remove('on'); b.setAttribute('aria-expanded', 'false'); });
+  btn.classList.add('on'); btn.setAttribute('aria-expanded', 'true');
+  _hwOpen = raw;
+
+  slot.innerHTML = `<div class="d-hw"><div class="hw-hd"><b>${esc(btn.querySelector('.hd b') ? btn.querySelector('.hd b').textContent : q)}</b>
+      <span class="tag">硬件参数</span><span class="src">正在读取…</span></div>
+    <div class="load">正在从 kalvo 读取该机型参数…</div></div>`;
+
+  let r = null;
+  try {
+    r = await fetch(api('/api/device/hardware?m=' + encodeURIComponent(q))).then((x) => x.json());
+  } catch (e) { r = null; }
+  if (_hwOpen !== raw) return;                    // 期间用户点了别的机型，丢弃这次结果
+  if (!r || !r.ok) {
+    /* 未收录就如实说「没查到」，不去猜、也不显示空壳面板 */
+    slot.innerHTML = `<div class="d-hw"><div class="hw-hd">
+        <b>${esc(btn.querySelector('.hd b') ? btn.querySelector('.hd b').textContent : q)}</b>
+        <span class="tag">硬件参数</span></div>
+      <div class="load">没查到这台机型的参数（kalvo 只按营销名收录，内部代号搜不到）。
+        ${r && r.reason === 'not-found' ? '' : '可到 '}<a href="https://zh.kalvo.com/" target="_blank" rel="noopener">kalvo</a> 自行搜索核对。</div></div>`;
+    return;
+  }
+  slot.innerHTML = hwPanelHtml(r);
 }
 
 /* ================= 🔗 跨源解析（★ v10.14 新增） =================
@@ -4089,10 +4258,11 @@ async function loadBhBlock(d, title) {
     const devCnt = (h.devices || []).length;
     const gpuCnt = (h.gpus || []).length;
     const cntTxt = [devCnt ? `${devCnt} 款机型` : '', gpuCnt ? `${gpuCnt} 种 GPU` : ''].filter(Boolean).join(' · ');
+    _hwOpen = '';                     // 换了一款游戏 → 硬件面板的「已展开」状态一并作废
     slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>手机模拟器配置<span class="cnt">${cntTxt}</span></h4>
       <div class="d-tg-row">${tags.join('')}</div>
-      <div id="bhGate"></div>
       <div id="bhDevSlot"></div>
+      <div id="bhHwSlot"></div>
       <div id="bhRecSlot"></div>
       <div id="bhParamSlot"><div class="d-hint2" style="border:0;padding-top:4px">正在读取逐条游玩参数…</div></div>
       <div class="d-hint2">参数为玩家在安卓机上跑通本作后导出的实际配置（驱动 / DXVK / 容器 / 翻译层）。
@@ -4104,7 +4274,10 @@ async function loadBhBlock(d, title) {
      *     · 有性能分的按分**升序**排（同分保持原顺序，V8 稳定排序）—— 门槛低的排前面
      *     · 最弱那台标「门槛」：它跑通过，比它强的机型基本也能跑
      *     · 每台补一个性能分数字，跨品牌（Adreno / Mali / PowerVR）可以直接比大小 */
-    const devs = (h.devices || []).slice(0, 24);
+    /* ★ v10.17：`h.devices` 现在是「社区库聚合摘要（上游只有 6 格）+ 逐条配置里的机型」合并后的全量，
+       服务端已去重并对齐了写法（`MTN NX3` 与 `HONOR MTN-NX3` 视为同一台）。这里只负责截断展示。 */
+    const allDevs = h.devices || [];
+    const devs = allDevs.slice(0, 24);
     const ds = $('#bhDevSlot');
     if (devs.length && ds) {
       let specs = {};
@@ -4114,21 +4287,103 @@ async function loadBhBlock(d, title) {
       } catch (e) { specs = {}; }
       const arr = devs.map((m) => {
         const s = specs[m] || null;
-        return { m, chip: (s && (s.soc || s.gpu)) || '', score: (s && s.score) || 0, approx: !!(s && s.approx) };
+        const mk = (s && s.mkt) || null;
+        const disp = (mk && mk.display) || '';
+        const w0 = disp.split(' ')[0] || '';
+        const codeShort = (w0 && m.toLowerCase().startsWith(w0.toLowerCase() + ' ')) ? m.slice(w0.length + 1).trim() : m;
+        return {
+          m,
+          name: disp || m,
+          code: (mk && mk.resolved && disp && disp.toLowerCase() !== m.toLowerCase()) ? codeShort : '',
+          hwq: (mk && (mk.market || mk.display)) || m,
+          /* ★ v10.18：芯片由服务端三级降级的**本地两级**给出（配对索引 → 串内芯片号），
+             拿不到就是空 —— 空的那批下面会自动联网补（fillMissingDevChips）。 */
+          chip: (s && s.chip) || '',
+          chipSrc: (s && s.chipSrc) || '',
+          score: (s && s.score) || 0,
+          approx: !!(s && s.approx),
+        };
       });
       const sorted = arr.slice().sort((a, b) => (a.score || 1e9) - (b.score || 1e9));
       const gate = sorted.find((x) => x.score > 0) || null;   // 有性能分的最弱一台 = 门槛
-      const gh = $('#bhGate');
-      if (gh && gate) {
-        gh.innerHTML = `<div class="bh-gate"><span class="lb">门槛</span>
-          <b>${esc(gate.m)}</b>${gate.chip ? `<i>${gate.approx ? '≈' : ''}${esc(gate.chip)}</i>` : ''}
-          <span class="s">${esc(String(Math.round(gate.score)))}</span>
-          <span class="tip">这台实测跑通了 → 性能更强的机型基本也能跑</span></div>`;
+      /* ★ v10.18：门槛不再单起一行摘要（那行与清单首行是同一台，读起来像重复）。
+         改成两条：① 那台机型上加橙色「门槛」徽标 ② 表头补一格图例说明含义。 */
+      const cntEl = slot.querySelector('.d-blk .cnt');
+      if (cntEl && gate) {
+        cntEl.innerHTML = esc(cntTxt)
+          + `<span class="d-devlist-lg" title="橙色那台是实测跑通过的最弱机型 —— 比它强的机型基本也能跑">门槛机型</span>`;
       }
-      const more = h.configs > devCnt
-        ? `<span class="dv more">上游共汇总 ${devCnt} 款机型 / ${h.configs} 套配置</span>` : '';
-      ds.innerHTML = `<div class="d-devlist">${sorted.map((x) => `<span class="dv${gate && x.m === gate.m ? ' gate' : ''}">
-        <b>${esc(x.m)}</b>${x.chip ? `<i>${x.approx ? '≈' : ''}${esc(x.chip)}</i>` : '<i class="dim">未收录芯片</i>'}${x.score ? `<em>${esc(String(Math.round(x.score)))}</em>` : ''}</span>`).join('')}${more}</div>`;
+      const hiddenDev = allDevs.length - devs.length;
+      const more = hiddenDev > 0
+        ? `<span class="dv more">还有 ${hiddenDev} 台机型未展开（上游共汇总 ${h.configs} 套配置）</span>` : '';
+      /* 芯片名太长（如 `Dimensity 8350 (MT6897 MT6897Z_B/ZA MT8792Z/NA)`、
+         `Samsung Exynos 2200 (国际版本) / Qualcomm Snapdragon 8 Gen 1 (美国)`）徽标里放不下，
+         只留**主名**（第一个 `(` 或第一个 ` / ` 之前），完整值挂在 title 上、详情面板里也有。 */
+      const chipFull = (s) => String(s || '').trim();
+      const chipShort = (s) => {
+        const t = chipFull(s);
+        const cut = [t.indexOf('（'), t.indexOf('('), t.indexOf(' / '), t.indexOf('/')]
+          .filter((i) => i > 0).sort((a, b) => a - b)[0];
+        return (cut ? t.slice(0, cut) : t).trim() || t;
+      };
+      /* 芯片来源标记：只标「非默认路径」的两种，默认（本地配对）不加标记降低噪音 */
+      const chipTag = (src) => (src === 'kalvo'
+        ? '<u title="本地库没有 → 已联网（kalvo）自动补全">网</u>'
+        : (src === 'token' ? '<u title="芯片号直接写在机型串里，本地解析得到">串</u>' : ''));
+      const chipHtml = (x, extraCls) => {
+        if (!x.chip) return `<i class="chip none${extraCls || ''}" title="本地库与联网都查不到 —— 如实标注，未编造">未收录</i>`;
+        const cls = 'chip' + (x.chipSrc === 'kalvo' ? ' ol' : '') + (extraCls || '');
+        const full = chipFull(x.chip);
+        const t = (x.approx ? '≈' : '') + chipShort(x.chip);
+        return `<i class="${cls}" title="${esc(full)}">${chipTag(x.chipSrc)}${esc(t)}</i>`;
+      };
+      const devRow = (x) => {
+        const isGate = !!(gate && x.m === gate.m);
+        return `<button type="button" class="dv${isGate ? ' gate' : ''}"
+          data-m="${esc(x.m)}" data-hw="${esc(x.hwq)}" aria-expanded="false">
+          <span class="hd"><b>${esc(x.name)}</b>${isGate ? '<u class="gtag" title="橙色：实测跑通过的最弱机型 —— 比它强的机型基本也能跑">门槛</u>' : ''}${x.score ? `<em>${esc(String(Math.round(x.score)))}</em>` : ''}<u class="chev">▼</u></span>
+          <span class="sub">${chipHtml(x)}${x.code ? `<s>${esc(x.code)}</s>` : ''}</span>
+        </button>`;
+      };
+      ds.innerHTML = `<div class="d-devlist">${sorted.map(devRow).join('')}${more}</div>`;
+      ds.onclick = (ev) => {
+        const b = ev.target.closest && ev.target.closest('.dv[data-hw]');
+        if (b) toggleDevHardware(b);
+      };
+
+      /* ---- ★ v10.18 ③：未收录的机型**自动联网补全** ----
+       *   本地两级解决不了的（如 `Honor MTN-NX3` → 本地无芯片，但 kalvo 有 `Honor Magic8 Lite`），
+       *   这里异步补：先把待补的标成「联网查询中…」，回来后**原地替换**那枚徽标 ——
+       *   不重渲染整个清单（重渲染会把用户已经展开的硬件面板一起收掉）。
+       *   补不到就保持「未收录」，联网失败也不假装成功。 */
+      const pending = sorted.filter((x) => !x.chip).map((x) => x.m);
+      if (pending.length) {
+        const btnOf = (m) => {
+          for (const el of ds.querySelectorAll('.dv[data-m]')) if (el.getAttribute('data-m') === m) return el;
+          return null;
+        };
+        const paint = (m, html) => {
+          const el = btnOf(m);
+          const box = el && el.querySelector('.sub .chip');
+          if (box) box.outerHTML = html;
+        };
+        for (const m of pending) paint(m, '<i class="chip wait">联网查询中…</i>');
+        (async () => {
+          let fills = {};
+          try {
+            const fr = await fetch(api('/api/device/fill?models=' + encodeURIComponent(pending.join('|')))).then((r) => r.json());
+            fills = (fr && fr.fills) || {};
+          } catch (e) { fills = {}; }
+          for (const m of pending) {
+            const f = fills[m] || null;
+            if (f && f.chip) {
+              paint(m, chipHtml({ chip: f.chip, chipSrc: f.chipSrc, approx: false }));
+            } else {
+              paint(m, chipHtml({ chip: '', chipSrc: '' }));
+            }
+          }
+        })();
+      }
     }
 
     /* ---- ② 本站实测记录（★ v10.15 新增） ----

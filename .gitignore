@@ -29,9 +29,17 @@ data/*.bak-*
 #   data/_gcm-raw.json  (~0.8MB) 修改器采集原始缓存
 data/_*-raw.json
 data/*.progress.json
+#   data/_mm-raw/     (~0.4MB)  MobileModels 的原始 brands/*.md 缓存
+#   data/_kalvo-raw/  (~0.1MB)  kalvo 设备页 HTML 样本（解析器回归用，缺了不影响）
+data/_mm-raw/
+data/_kalvo-raw/
 
 # ---------- 本地验收产物（浏览器实拍截图等，体积大）----------
 _preview/
+
+# ---------- 临时工作目录（线上页面抓取比对 / 测试日志，可重跑）----------
+_online/
+_test-out/
 
 # ---------- AI 工作台本地目录（记忆 / 产物 / 技能）----------
 .workbuddy/

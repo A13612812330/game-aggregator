@@ -261,6 +261,10 @@ const pcreq = require('./data/pcreq');
 const bhparams = require('./data/bhparams');
 const emuguide = require('./data/emuguide');
 const deviceMatch = require('./data/device-match');
+const devicemarket = require('./data/devicemarket');
+const devicespec = require('./data/devicespec');
+const deviceset = require('./data/deviceset');
+const devicefill = require('./data/devicefill');
 const related = require('./data/related');
 const indexer = require('./fetchers/indexer');
 const xdrank = require('./fetchers/xdrank');
@@ -440,10 +444,27 @@ app.get('/api/mobilehub/match', (req, res) => {
   const libId = String(req.query.id || '').trim();
   const alts = String(req.query.alts || '').split(/[,，|｜]/).map((s) => s.trim()).filter(Boolean);
   const hit = (t || libId || alts.length) ? mobilehub.lookup(t, { libId, alts }) : null;
+  /* ★ v10.17：机型清单的「列不全」根因 —— 索引里的 `devices` 取自社区库**聚合摘要**
+   *   （`bannerhub.json` 的 `dv`），而那个字段是上游的 **6 格摘要**（全库最大长度就是 6，
+   *   255 款游戏正好卡在 6 格）→ 详情页结构性最多只能显示 6 台，多出来的机型被上游丢掉了。
+   *   全量在**逐条配置**里（`data/bhparams.json` 的 `device`，写法也更规范：
+   *   摘要 `MTN NX3` vs 逐条 `HONOR MTN-NX3`）。
+   *   这里把两边并起来（按「剥品牌前缀 + 去分隔符」对齐同一台手机，取信息更全的写法）。
+   *   实测（终极漫画英雄vs卡普空3）：6 台 → 11 台。 */
+  let devices = [], devMerge = null;
+  if (hit) {
+    devMerge = deviceset.mergeReport(hit.devices || [], bhparams.cachedDevices(hit.bhKeys || []));
+    devices = devMerge.merged;
+  }
   res.json({ ok: true, t, hit: hit ? {
     name: hit.name, alt: hit.alt, configs: hit.configs, records: hit.records,
     tier: hit.tier, tiers: hit.tiers, gpus: hit.gpus, chips: hit.chips,
-    devices: hit.devices, devicesCnt: (hit.devices || []).length,
+    devices,
+    devicesCnt: devices.length,
+    /* 诊断用：摘要里有几台、合并后又多出哪几台（前端可据此如实说明） */
+    devicesSummary: devMerge ? devMerge.summary : [],
+    devicesSummaryCnt: devMerge ? devMerge.summaryCnt : 0,
+    devicesAdded: devMerge ? devMerge.added : [],
     bestLabel: hit.bestLabel, bestMid: hit.bestMid,
     libId: hit.libId, libTitle: hit.libTitle,
     /* ★ v10.13：把社区仓库键与来源一起带出来 —— 抽屉要按 key 拉「逐条游玩参数」
@@ -781,18 +802,29 @@ app.get('/api/device/brands', (_req, res) => {
 });
 
 // GET /api/device/models?brand=小米 / Redmi&q=2412&limit=100 — 机型列表
+//   ★ v10.16：顺带给每条补 `disp`（品牌 + 型号）。这里的 `model` 一半是内部代号
+//   （`Xiaomi 2412DPC0AG`），列表里直接铺出来玩家认不出 —— 前端显示 `disp`、
+//   回填/查询仍用 `model`（后者才是 /api/device/match 认的键）。
 app.get('/api/device/models', (req, res) => {
   try {
     const brand = String(req.query.brand || '').trim();
     const q = String(req.query.q || '').trim();
     const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
-    res.json({ ok: true, models: deviceMatch.models({ brand, q, limit }) });
+    const models = deviceMatch.models({ brand, q, limit });
+    const out = models.map((m) => {
+      let disp = '';
+      try { const r = devicemarket.resolve(m.model); disp = (r && r.resolved) ? r.display : ''; } catch (e) { disp = ''; }
+      return disp ? { ...m, disp } : m;
+    });
+    res.json({ ok: true, models: out });
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
 
 // GET /api/device/match?model=Xiaomi 2412DPC0AG&limit=300 — 能跑的游戏
+//   ★ v10.16：`device` 上补 `disp`（品牌 + 型号）。用户输进去的常是内部代号，
+//   结果卡抬头显示 `Xiaomi Poco X7 Pro` 比回显 `Xiaomi 2412DPC0AG` 有用得多。
 app.get('/api/device/match', (req, res) => {
   try {
     const model = String(req.query.model || req.query.m || '').trim();
@@ -800,32 +832,136 @@ app.get('/api/device/match', (req, res) => {
     const limit = Math.min(parseInt(req.query.limit, 10) || 300, 1000);
     const r = deviceMatch.matchGames(model, { limit });
     if (!r.ok) return res.status(404).json(r);
+    if (r.device) {
+      try {
+        const mm = devicemarket.resolve(model);
+        if (mm && mm.resolved) r.device = { ...r.device, disp: mm.display, codename: mm.codename || '', variant: mm.variant || '' };
+      } catch (e) { /* 译不出就照原样返回，不编造 */ }
+    }
     res.json(r);
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
 
-// GET /api/device/specs?models=a|b|c — 批量取机型规格（★ v10.14）
+// GET /api/device/specs?models=a|b|c — 批量取机型规格（★ v10.14 / v10.16 加品牌型号）
 //   详情页要一次铺出「这款游戏跑过的机型清单」（GTA5 有 7 台），
 //   若逐台调 /api/device/match 就是 N+1 —— 这里一次算完。
 //   单台失败不影响其他（返回 spec:null，前端显示代号即可），不编造。
+//
+//   ★ v10.16：同时带回 `mkt`（品牌 + 型号）。社区库里的机型名一半是内部代号
+//   （`Xiaomi 2412DPC0AG`），玩家认不出是哪台手机 —— 用 MobileModels 的映射译成
+//   `Xiaomi POCO X7 Pro`。这里**顺带返回而不是另开端点**，同样是为了躲 N+1。
 app.get('/api/device/specs', (req, res) => {
   try {
     const list = String(req.query.models || '').split(/[|,，]/).map((s) => s.trim()).filter(Boolean).slice(0, 40);
     const out = {};
     for (const m of list) {
+      let spec = null;
       try {
         const r = deviceMatch.findDevice(m);
-        out[m] = (r && (r.gpu || r.soc))
+        spec = (r && (r.gpu || r.soc))
           ? { soc: r.soc || '', socVendor: r.socVendor || '', gpu: r.gpu || '', cpu: r.cpu || '', score: r.score || 0, brand: r.brand || '', approx: !!r.approx }
           : null;
-      } catch (e) { out[m] = null; }
+      } catch (e) { spec = null; }
+      let mkt = null;
+      try {
+        const mm = devicemarket.resolve(m);
+        if (mm && mm.display) {
+          mkt = { display: mm.display, brand: mm.brand || '', market: mm.short || mm.market || '', codename: mm.codename || '', variant: mm.variant || '', resolved: !!mm.resolved, via: mm.via };
+        }
+      } catch (e) { mkt = null; }
+      /* ★ v10.18：芯片三级降级的**本地两级**（配对索引 → 串内芯片号），同步、0 网络。
+         列表首屏要「品牌 + 型号 + 芯片」一次到位，而 `deviceMatch` 只做配对索引，
+         像 `Odin2 QCS8550`（芯片号就写在机型串里）会返回空 —— devicefill 补上这一层。 */
+      let chip = '', chipSrc = '';
+      try {
+        const fl = devicefill.fillLocal(m);
+        chip = fl.chip || '';
+        chipSrc = fl.chipSrc || '';
+      } catch (e) { chip = ''; }
+      if (!chip && spec) { chip = spec.soc || spec.gpu || ''; chipSrc = 'pair'; }
+      out[m] = Object.assign(spec ? { ...spec, mkt } : (mkt ? { mkt } : {}),
+        { chip, chipSrc, needFill: !chip });
+      if (!spec && !mkt && !chip) out[m] = null;
     }
     res.json({ ok: true, specs: out });
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
+});
+
+// GET /api/device/market?models=a|b|c — 只取「品牌 + 型号」（不带芯片规格，体积更小）
+app.get('/api/device/market', (req, res) => {
+  try {
+    const list = String(req.query.models || '').split(/[|,，]/).map((s) => s.trim()).filter(Boolean).slice(0, 60);
+    res.json({ ok: true, markets: devicemarket.resolveMany(list) });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e.message || e) });
+  }
+});
+
+// GET /api/device/hardware?m=<型号名> — 该手机的完整硬件参数（★ v10.16）
+//   数据源 zh.kalvo.com：先按**营销名**搜 slug，再抓设备页解析「章节 → 键值表」。
+//   ⚠️ 只认营销名，不认内部代号（`X6873` 搜不到）—— 所以调用方应传 devicemarket 译出的名字。
+//   缓存 data/device-specs.json：命中 30 天、未命中 3 天（未命中也要缓存，免得每次空跑）。
+//   本端点是**允许联网**的少数端点之一（同 /api/pcreq）：未命中时才实时抓 + 落盘，命中即离线。
+app.get('/api/device/hardware', async (req, res) => {
+  try {
+    const m = String(req.query.m || req.query.model || req.query.q || '').trim();
+    if (!m) return res.status(400).json({ ok: false, error: '缺少参数 m（型号名）' });
+    const force = String(req.query.force || '') === '1';
+    const r = await devicespec.hardware(m, { force });
+    if (!r || !r.ok) {
+      return res.json({ ok: false, model: m, reason: (r && r.reason) || 'not-found' });
+    }
+    res.json({
+      ok: true, model: m,
+      name: r.name, url: r.url || '',
+      groups: r.groups || [], digest: r.digest || [],
+      cached: !!r.cached,
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e.message || e) });
+  }
+});
+
+// GET /api/device/hardware-stats — 硬件参数缓存规模（自查用）
+app.get('/api/device/hardware-stats', (_req, res) => {
+  try { res.json({ ok: true, ...devicespec.stats() }); }
+  catch (e) { res.status(500).json({ ok: false, error: String(e.message || e) }); }
+});
+
+// GET /api/device/fill?models=a|b|c&online=0|1 — 缺芯片机型的**补全**（★ v10.18）
+//   三级降级：① 配对索引 ② 串内芯片号（`Odin2 QCS8555`）③ 联网 kalvo（仅当 ①②都空）
+//   默认 online=1；`online=0` 只做本地（同步、秒回），给不想联网的场景用。
+//   结果落盘 data/device-fill.json：命中 30 天、未命中 3 天。
+//   ⚠️ 补不到就返回空 chip —— **前端显示「未收录」，绝不编造**。
+app.get('/api/device/fill', async (req, res) => {
+  try {
+    const list = String(req.query.models || req.query.m || '').split(/[|,，]/).map((s) => s.trim()).filter(Boolean).slice(0, 60);
+    if (!list.length) return res.status(400).json({ ok: false, error: '缺少参数 models' });
+    const online = String(req.query.online == null ? '1' : req.query.online) !== '0';
+    const force = String(req.query.force || '') === '1';
+    const fills = online
+      ? await devicefill.batch(list, { online: true, force, limit: 60, concurrency: 3 })
+      : devicefill.localBatch(list);
+    res.json({ ok: true, online, count: list.length, fills });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e.message || e) });
+  }
+});
+
+// GET /api/device/fill-stats — 补全缓存规模（自查用：联网命中率）
+app.get('/api/device/fill-stats', (_req, res) => {
+  try { res.json({ ok: true, ...devicefill.stats() }); }
+  catch (e) { res.status(500).json({ ok: false, error: String(e.message || e) }); }
+});
+
+// GET /api/device/market-stats — 品牌型号映射表规模
+app.get('/api/device/market-stats', (_req, res) => {
+  try { res.json({ ok: true, ...devicemarket.stats() }); }
+  catch (e) { res.status(500).json({ ok: false, error: String(e.message || e) }); }
 });
 
 // GET /api/device/chip?q=8gen3 — 芯片规格（来自 soc-db）
