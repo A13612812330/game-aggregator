@@ -30,9 +30,13 @@ const SECTIONS = `
     <div class="tx">
       <b>手里这份配置，能跑哪些游戏？</b>
       把从游戏包 / 兼容层工具里导出的 JSON 贴进来，这里会<b>自动认出</b>内存、架构、
-      兼容层（DXVK / Box64 / Wine）等关键项，再对撞 <b>Steam 官方配置要求</b>，给出可适配清单 ——
+      兼容层（DXVK / Box64 / Wine）等关键项，再对撞<b>真实游戏要求库</b>，给出可适配清单 ——
       每个判定都摊开理由。
-      <span class="dim">字段名不认识也能认：键名看不出来时会按<b>值的形态</b>推断，并标注「推断」。</span>
+      <span class="dim">游戏一侧的要求全部来自<b>抓取落盘的实测数据</b>：机地 17,220 条话题
+      ∪ Steam 官方，按 <b>Steam appid 精确合并</b>（不做名称模糊匹配），<b>没有任何推断值</b>；
+      每条还会标注要求来自哪个源。默认<b>热门优先</b>（机地话题浏览量），只推真实有人在玩的。</span>
+      <span class="dim">只有<b>你贴进来的那份 JSON</b>是未知格式的：键名读不出来时会按值的形态兜底，
+      并在明细里标注「推断」—— 那是识别输入，不是编造游戏数据。</span>
     </div>
   </div>
 
@@ -67,7 +71,7 @@ const SECTIONS = `
     </div>
 
     <div class="up-blk">
-      <div class="up-blk-h"><b>④ 可适配游戏</b><span>默认「规模优先」：先看能跑的<b>最吃配置</b>的游戏</span></div>
+      <div class="up-blk-h"><b>④ 可适配游戏</b><span>默认<b>热门优先</b>（机地浏览量）· 卡片与手机专区同版式，可直接下载</span></div>
       <div id="upMatch" class="up-match"><div class="up-empty">匹配中…</div></div>
     </div>
   </section>
@@ -195,15 +199,27 @@ const CSS_EXTRA = `
   .up-only{padding:7px 12px;border-radius:9px;border:1px solid var(--c-border2);background:#fff;
     font:650 12px/1 var(--font);color:var(--c-t2)}
   .up-only.on{background:var(--c-primary-soft);border-color:var(--c-primary);color:var(--c-primary)}
-  .up-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(292px,1fr));gap:10px;padding:2px 0 4px}
-  .up-card{border:1px solid var(--c-border);border-left:3px solid var(--c-t3);border-radius:var(--r-md);
-    padding:10px 12px;background:#fff;display:flex;flex-direction:column;gap:6px;min-width:0}
-  .up-card.sm{border-left-color:#16A34A}.up-card.ok{border-left-color:#2E6BFF}
-  .up-card.mb{border-left-color:#D97706}.up-card.un{border-left-color:#9AA3B5}
-  .up-card.no{border-left-color:#DC2626;opacity:.72}
-  .up-card-h{display:flex;align-items:center;gap:8px;min-width:0}
-  .up-card-h b{font-size:13px;color:var(--c-t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .up-mg{margin-left:auto;font:600 10.5px/1 var(--font-num);color:var(--c-t3);flex:none}
+  .up-list{margin:2px 0 4px}
+  /* ★ v10.22：结果卡片改成**手机专区同款版式**（用户口径：「解包匹配的游戏能够跟
+     手机专区的前端展示效果一样」）—— 直接复用主源的 .emu-card / .emu-grid，
+     这里只补解包页多出来的三样东西：判定徽标行、要求来源标注、下载/源站按钮行。
+     ★ 复用而不是另写一套：另写必然与手机专区漂移（本项目在「同一语义只留一份」上踩过多次）。 */
+  .up-mc .cnt span{font-size:9.5px;color:var(--c-t3)}
+  .up-mc .nm{font-size:13.5px}
+  .up-mc-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .up-mc-src{font-size:10.5px;font-weight:650;color:var(--c-t3)}
+  .up-mc-src.dim{opacity:.75}
+  .up-mc .up-badge{font-size:10.5px;font-weight:750;border-radius:5px;padding:2.5px 7px}
+  .up-mc .up-badge-wrap{text-align:right}
+  .up-tg-score{background:#FFF4D6!important;color:#B45309!important}
+  .up-mc-btns{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:1px;
+    border-top:1px dashed var(--c-border);padding-top:8px}
+  .up-mc-btns .cov-btn{margin-top:0}
+  .up-mc-go{font-size:11px;font-weight:700;color:var(--c-primary);text-decoration:none}
+  .up-mc-go:hover{text-decoration:underline}
+  .up-mc .up-min{font-size:11px}
+  .up-mc .up-why{font-size:11px}
+  /* 判定徽标：卡片主版式复用手机专区，只有徽标是解包页自己的（手机专区没有「可跑性」概念） */
   .up-badge{flex:none;font-size:10.5px;font-weight:750;border-radius:5px;padding:2.5px 7px}
   .up-badge.sm{background:#DCFCE7;color:#15803D}
   .up-badge.ok{background:#DBEAFE;color:#1D4ED8}

@@ -54,3 +54,8 @@ desktop.ini
 
 # ---------- 临时探针（一次性调试用，非项目组成）----------
 tools/_*
+#   ★ 根级 `_*` 有**已入库**的历史产物（`_preview-cards.html/.js`），所以不能一刀切忽略 `_*`，
+#     只能点名。v10.22 漏过两个（`_dlcheck.js` / `_syntax-index.js` 一度出现在未跟踪列表里）。
+/_dlcheck.js
+/_syntax-*.js
+/_probe*.js

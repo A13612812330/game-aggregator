@@ -1,12 +1,23 @@
 /**
- * spec-match.js — 「一份配置」对撞「游戏库要求」（v10.20 新增）
+ * spec-match.js — 「一份配置」对撞「游戏库要求」（v10.20 新增 · v10.22 换数据源）
  *
  * 输入：spec-dict.extract() 产出的 profile（一份环境/设备配置）
  * 输出：可适配游戏清单，**每个判定都带可解释理由**（前端直接铺出来）。
  *
+ * ★ v10.22 换源说明（这一版最大的变化）：
+ *   原来源是 `steam-req.json`，只有 **653 款** Steam 游戏 ——
+ *   于是「我这份配置能跑什么」的天花板就是 653 款，
+ *   库里另外 3 万条 XD / 机地游戏因为**没有配置要求**被整批判成「无法判定」。
+ *   现改为读 `spec-req.json`（由 tools/build-spec-req.js 合成）：
+ *   按 **Steam appid** 把「机地 17,220 条话题（自带 pc_requirement / game_sys_reqs）」
+ *   与「Steam 官方 653 条」精确对齐合并，得到 **16,575 款**带真实要求的游戏。
+ *   ⇒ 判定依据从「猜」变成「读已有数据」；覆盖 653 → 16,575（25×）。
+ *   同时每条都带上 `cover` / `hot`（机地浏览量）/ `jidiTid` / `libId`，
+ *   前端的封面展示、热门排序、下载弹窗都靠这几个字段。
+ *
  * 为什么不用 GPU 分直接比：
  *   data/gpu-tier.js 的 gpuScore() 是**移动 GPU 量纲**（Adreno 280-840 / Mali 映射），
- *   而 Steam 配置要求里的显卡是 PC 卡自由文本（"NVidia 6600"、"GTX 1060"），
+ *   而配置要求里的显卡是 PC 卡自由文本（"NVidia 6600"、"GTX 1060"），
  *   落进去只会得到 fam:'other' → 固定 400 分，**比出来的是假精度**。
  *   所以这里只在「两边都是移动 GPU」时才比 GPU，否则 GPU 只作为展示信息。
  *
@@ -23,7 +34,7 @@ const path = require('path');
 const { gpuScore } = require('./gpu-tier');
 const { toGB, dxOf } = require('./spec-dict');
 
-const REQ_FILE = path.join(__dirname, 'steam-req.json');
+const REQ_FILE = path.join(__dirname, 'spec-req.json');
 
 /* ── 兼容层 → 图形接口能力上限 ──
    DXVK 把 DX9/10/11 转成 Vulkan（不含 12）；VKD3D-Proton 才管 DX12。 */
@@ -41,12 +52,14 @@ let _mtime = 0;
 /** 载入并**预解析**游戏要求库（带 mtime 失效，改文件不必重启） */
 function index() {
   let st;
-  try { st = fs.statSync(REQ_FILE); } catch (e) { return { map: {}, built: 0, error: 'steam-req.json 读取失败' }; }
+  try { st = fs.statSync(REQ_FILE); } catch (e) {
+    return { map: {}, built: 0, error: 'spec-req.json 读取失败（先跑 node tools/build-spec-req.js）' };
+  }
   if (_cache && st.mtimeMs === _mtime) return _cache;
 
   let raw;
   try { raw = JSON.parse(fs.readFileSync(REQ_FILE, 'utf8')); } catch (e) {
-    return { map: {}, built: 0, error: 'steam-req.json 解析失败：' + e.message };
+    return { map: {}, built: 0, error: 'spec-req.json 解析失败：' + e.message };
   }
   const src = raw.map || {};
   const map = {};
@@ -54,27 +67,57 @@ function index() {
     if (!v) continue;
     const min = parseSpec(v.min);
     const rec = parseSpec(v.rec);
-    if (!min && !rec) continue;
-    map[appid] = { appid, name: v.name || ('appid ' + appid), min, rec };
+    if (!min && !rec) continue;                 // 两条要求都没有 → 判不了，不进索引
+    map[appid] = {
+      appid,
+      name: v.name || ('appid ' + appid),
+      nameEn: v.nameEn || null,
+      /* ★ v10.22 新增：封面 / 热度 / 两侧 id / 要求来源 */
+      cover: v.cover || null,
+      genres: Array.isArray(v.genres) ? v.genres : null,
+      size: v.size || null,
+      score: v.score != null ? v.score : null,
+      hot: Number(v.hot) || 0,
+      releaseDate: v.releaseDate || null,
+      jidiTid: v.jidiTid || null,
+      libId: v.libId || null,
+      libUrl: v.libUrl || null,
+      reqFrom: v.reqFrom || null,
+      min, rec,
+    };
   }
   _mtime = st.mtimeMs;
-  _cache = { map, built: Object.keys(map).length, at: raw.builtAt || null };
+  _cache = {
+    map,
+    built: Object.keys(map).length,
+    at: raw.builtAt || null,
+    stats: raw.stats || null,
+    joinKey: raw.joinKey || null,
+  };
   return _cache;
 }
 
-/** 把一条 Steam 配置文本结构化：{ramGb, storageGb, dx, os, gpuRaw} */
+/**
+ * 把一条配置要求结构化：{ramGb, storageGb, dx, os, gpuRaw, cpuRaw}
+ * ★ 要能吃**两种来源的形态**：
+ *   · spec-req.json 里已是数值（`ramGb` / `storageGb` / `dx`）
+ *   · 原始文本（`ram:"8 GB RAM"` / `dx:"9.0c"`）—— 留作兜底，便于直接喂 steam 原文调试
+ */
 function parseSpec(o) {
   if (!o || typeof o !== 'object') return null;
   const out = { raw: o };
-  const ram = toGB(o.ram);
+  const ram = o.ramGb != null ? { gb: o.ramGb } : toGB(o.ram);
   if (ram) out.ramGb = ram.gb;
-  const st = toGB(o.storage);
+  const st = o.storageGb != null ? { gb: o.storageGb } : toGB(o.storage);
   if (st) out.storageGb = st.gb;
-  const dx = dxOf(o.dx);
+  const dx = typeof o.dx === 'number' ? o.dx : dxOf(o.dx);
   if (dx != null) out.dx = dx;
-  if (o.os) out.os = String(o.os).trim();
-  if (o.gpu) { out.gpuRaw = String(o.gpu).trim(); out.gpuScore = gpuScore(o.gpu); }
-  out.cpuRaw = o.cpu ? String(o.cpu).trim() : '';
+  const os = o.os;
+  if (os) out.os = String(os).trim();
+  const gpu = o.gpuRaw != null ? o.gpuRaw : o.gpu;
+  if (gpu) { out.gpuRaw = String(gpu).trim(); out.gpuScore = gpuScore(out.gpuRaw); }
+  const cpu = o.cpuRaw != null ? o.cpuRaw : o.cpu;
+  out.cpuRaw = cpu ? String(cpu).trim() : '';
   return out;
 }
 
@@ -172,9 +215,22 @@ function judge(profile, spec) {
   else if (!oks.length) verdict = 'unknown';        /* 连一个能站住的维度都没有 → 不下结论 */
   else if (keyUnknown.length) verdict = 'maybe';    /* 关键维度缺 → 确实只能待确认 */
   else {
+    /* ★★ v10.22 校准：「流畅」只由**内存余量**决定。
+     *
+     *  旧规则是 `ramM >= 2 || stM >= 3`（内存或存储任一宽裕就算流畅）。
+     *  在只有 608 款游戏带容量数据时看不出问题；换成 spec-req（15,439 款带容量）后
+     *  这个 `||` 立刻失控 —— 实测同一份「4GB 内存 / 16GB 空间」的配置：
+     *      **8,385 款被判「流畅」**，因为「可用空间 ÷ 单款所需空间」几乎恒大于 3
+     *      （16GB ÷ 1GB = 16），**一个存储余量就把整张榜刷成流畅**。
+     *
+     *  语义上也说不通：**硬盘空不空，不会让游戏跑得更顺**。
+     *  机器的可用空间只决定「装不装得下」（是闸门），不决定「跑得顺不顺」（是余量）。
+     *
+     *  ⇒ 流畅 = 设备内存 ≥ 游戏最低内存的 2 倍。
+     *     存储 / 图形接口只当通过·不通过的闸门，不再参与「流畅」判定。
+     */
     const ramM = profile.ram && profile.ram.gb && spec.ramGb ? profile.ram.gb / spec.ramGb : 0;
-    const stM = profile.storage && profile.storage.gb && spec.storageGb ? profile.storage.gb / spec.storageGb : 0;
-    verdict = ramM >= 2 || stM >= 3 ? 'smooth' : 'ok';
+    verdict = ramM >= 2 ? 'smooth' : 'ok';
   }
   return { verdict, dims, unjudged, keyUnknown, reasons: dims.filter((d) => d.state !== 'skip') };
 }
@@ -195,39 +251,63 @@ function abbrOf(name) {
 /**
  * 主入口
  * @param {object} profile spec-dict 产出的画像
- * @param {object} [opts] {limit, q, only}
+ * @param {object} [opts] {limit, q, only, sort}
  */
 function analyze(profile, opts = {}) {
   const ix = index();
-  if (ix.error) return { ok: false, error: ix.error, matches: [], stats: {} };
+  if (ix.error) return { ok: false, error: ix.error, items: [], stats: {} };
 
   const rows = [];
   for (const g of Object.values(ix.map)) {
     if (!g.min) continue;
     const j = judge(profile, g.min);
     rows.push({
-      appid: g.appid, name: g.name, verdict: j.verdict,
+      appid: g.appid, name: g.name, nameEn: g.nameEn, verdict: j.verdict,
       abbr: abbrOf(g.name),
       dims: j.dims,
       unjudged: j.unjudged,
-      min: { ram: g.min.raw && g.min.raw.ram, storage: g.min.raw && g.min.raw.storage, dx: g.min.raw && g.min.raw.dx, gpu: g.min.gpuRaw, cpu: g.min.cpuRaw, os: g.min.os },
-      rec: g.rec ? { ram: g.rec.raw && g.rec.raw.ram, gpu: g.rec.gpuRaw, dx: g.rec.raw && g.rec.raw.dx } : null,
+      /* ★ 展示用：把数值拼成人读串，并保留数值给前端算「够不够」 */
+      min: {
+        ram: g.min.ramGb != null ? g.min.ramGb + ' GB' : null,
+        storage: g.min.storageGb != null ? g.min.storageGb + ' GB' : null,
+        dx: g.min.dx != null ? g.min.dx : null,
+        gpu: g.min.gpuRaw || null,
+        cpu: g.min.cpuRaw || null,
+        os: g.min.os || null,
+      },
+      rec: g.rec ? { ram: g.rec.ramGb != null ? g.rec.ramGb + ' GB' : null, gpu: g.rec.gpuRaw || null, dx: g.rec.dx != null ? g.rec.dx : null } : null,
+      /* ★ v10.22：手机专区同款展示所需的字段 */
+      cover: g.cover,
+      genres: g.genres,
+      size: g.size,
+      score: g.score,
+      hot: g.hot,
+      releaseDate: g.releaseDate,
+      jidiTid: g.jidiTid,
+      libId: g.libId,
+      libUrl: g.libUrl,
+      reqFrom: g.reqFrom,
       margin: (() => { const m = j.dims.filter((d) => d.margin != null).map((d) => d.margin); return m.length ? Math.min.apply(null, m) : null; })(),
-      /* 「游戏规模」：内存为主、存储为辅。用来把吃配置的大作排到前面 ——
-         只按余量排的话，榜上全是几百 MB 的小品，看不出「我这配置能跑什么大作」。 */
+      /* 「游戏规模」：内存为主、存储为辅。用来把吃配置的大作排到前面 */
       scale: Math.round(((g.min.ramGb || 0) + (g.min.storageGb || 0) / 8) * 100) / 100,
     });
   }
 
   const q = String(opts.q || '').trim().toLowerCase();
   /* 搜索同时匹配「全名」与「首字母缩写」：用户会搜 GTA，而库里叫 Grand Theft Auto V */
-  const filtered = q ? rows.filter((r) => r.name.toLowerCase().includes(q) || r.abbr.includes(q)) : rows;
-  const mode = opts.sort === 'margin' || opts.sort === 'name' ? opts.sort : 'scale';
+  const filtered = q
+    ? rows.filter((r) => r.name.toLowerCase().includes(q) || (r.nameEn || '').toLowerCase().includes(q) || r.abbr.includes(q))
+    : rows;
+  const mode = ['hot', 'margin', 'name', 'scale'].indexOf(opts.sort) >= 0 ? opts.sort : 'hot';
   filtered.sort((a, b) => {
     if (ORDER[a.verdict] !== ORDER[b.verdict]) return ORDER[a.verdict] - ORDER[b.verdict];
     if (mode === 'margin') return (b.margin || 0) - (a.margin || 0) || a.name.localeCompare(b.name);
     if (mode === 'name') return a.name.localeCompare(b.name);
-    return (b.scale || 0) - (a.scale || 0) || a.name.localeCompare(b.name);
+    if (mode === 'scale') return (b.scale || 0) - (a.scale || 0) || a.name.localeCompare(b.name);
+    /* ★ 默认：热门优先（机地浏览量 dpv）。
+       用户要的是「我这配置能跑什么**好玩/有名的**」，而不是一串没人听过的小品。
+       热度并列时，再按规模排（大作优先），最后按名字保证稳定。 */
+    return (b.hot || 0) - (a.hot || 0) || (b.scale || 0) - (a.scale || 0) || a.name.localeCompare(b.name);
   });
 
   const total = filtered.length;
@@ -245,8 +325,16 @@ function analyze(profile, opts = {}) {
       scanned: Object.keys(ix.map).length,
       total, shown: items.length,
       playable: filtered.filter((r) => r.verdict === 'smooth' || r.verdict === 'ok').length,
+      hot: filtered.filter((r) => (r.hot || 0) > 0).length,
       dist, distLabel: Object.keys(dist).reduce((a, k) => (a[LABEL[k] || k] = dist[k], a), {}),
-      source: 'Steam 官方配置要求（' + ix.built + ' 款）',
+      /* ★ 如实报出依据：不再是「Steam 官方 653 款」，而是两源合并后的真实口径 */
+      source: (ix.stats && ix.stats.bySource)
+        ? ('机地 ' + (ix.stats.jidiCandidates || 0) + ' 条 + Steam 官方 ' + (ix.stats.steamCandidates || 0) + ' 条，按 appid 合并为 ' + ix.built + ' 款')
+        : ('游戏要求库 ' + ix.built + ' 款'),
+      built: ix.built,
+      builtAt: ix.at,
+      joinKey: ix.joinKey,
+      sort: mode,
     },
   };
 }
@@ -259,6 +347,9 @@ function dictInfo() {
     dict: require('./spec-dict').DICT_VERSION,
     built: ix.built,
     error: ix.error || null,
+    builtAt: ix.at,
+    joinKey: ix.joinKey,
+    stats: ix.stats,
     dims: [
       { dim: 'arch', label: '指令集架构', why: 'ARM 跑 x86 游戏必须有转译层，缺了结构上不可行' },
       { dim: 'dx', label: '图形接口', why: '兼容层决定 DX 上限：DXVK→11，VKD3D→12' },

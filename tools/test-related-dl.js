@@ -41,8 +41,17 @@ const ALL = gamesDb.all();
  * ============================================================ */
 console.log('\n=== A. 多因子打分（data/related.js）===');
 
-/* A1. 数据前提：把「每款只有 1 个标签 / 动作冒险占三分之一」钉住。
-      哪天源站补了标签，会先在这里亮灯，提醒重新评估权重。 */
+/* A1. 数据前提：把「标签极度集中」钉住。
+      哪天源站补了标签，会先在这里亮灯，提醒重新评估权重。
+   ★ v10.22 重新校准（**不是放宽，是数据真的变了**）：
+     机地全量话题入库（66 → 17,220 条，库 15,385 → 18,928）后，
+     机地侧的 `genres` 是**多标签**的（XD 侧几乎只有一个），于是实测：
+       · 单标签占比    90%+ → **83.9%**（1 个 15,878 / 2 个 2,862 / 3 个 84 / 4+ 71）
+       · 「动作冒险」占比 36.8% → **29.8%**（5,634 / 18,928）
+     结论**没变**：单一分类仍是绝对主流，且「动作冒险」依旧是个超大桶 ——
+     所以「按 `genres[0]` 取候选池 + 随机洗牌」仍然是错的（旧算法失效的原因还成立）。
+     阈值按新实测下调到 0.80 / 0.25，并且**顺手加一条**：多标签游戏必须走「标签交集」
+     而不是只看 `genres[0]`（见下面 A1-b）。 */
 {
   const byGenre = new Map();
   const lenHist = new Map();
@@ -53,8 +62,24 @@ console.log('\n=== A. 多因子打分（data/related.js）===');
   }
   const one = lenHist.get(1) || 0;
   const top = [...byGenre.entries()].sort((a, b) => b[1] - a[1])[0];
-  t(one / ALL.length > 0.9, '前提：绝大多数游戏只有 1 个类型标签', `${one}/${ALL.length} = ${(one / ALL.length * 100).toFixed(1)}%`);
-  t(top[0] === '动作冒险' && top[1] / ALL.length > 0.3, '前提：「动作冒险」是超大类（旧算法因此失效）', `${top[0]} ${top[1]} 条 = ${(top[1] / ALL.length * 100).toFixed(1)}%`);
+  t(one / ALL.length >= 0.8, '前提：八成以上游戏只有一个类型标签（多标签不足以救 genres[0] 过滤）',
+    `${one}/${ALL.length} = ${(one / ALL.length * 100).toFixed(1)}%`);
+  t(top[0] === '动作冒险' && top[1] / ALL.length > 0.25, '前提：「动作冒险」仍是超大桶（旧算法 genres[0] 过滤必然扎堆）',
+    `${top[0]} ${top[1]} 条 = ${(top[1] / ALL.length * 100).toFixed(1)}%`);
+}
+
+/* A1-b. ★ v10.22 新增：多标签游戏（2,862+ 条）必须按**标签交集**取候选池。
+        只取 genres[0] 的话，一款「动作 + 角色扮演」的游戏只会召回动作类，
+        另一半个标签白丢 —— 而它在数据里占 16%，已经不是可以忽略的噪声。 */
+{
+  const multi = ALL.filter((g) => (g.genres || []).filter((x) => !related.OP_TAGS.has(x)).length >= 2 && g.url);
+  t(multi.length > 1000, '库里有两千条量级的多标签游戏（v10.22 机地入库带来的）', String(multi.length));
+  const cur = multi[0];
+  const r = related.related({ id: cur.id, t: cur.title, limit: 8 });
+  const share = r.items.filter((x) => (x.genres || []).some((gg) => (cur.genres || []).includes(gg)));
+  t(r.items.length > 0 && share.length === r.items.length,
+    '多标签游戏的推荐结果**每一条**都与其共享至少一个标签（交集逻辑，不是只看 genres[0]）',
+    `${share.length}/${r.items.length}｜当前 ${cur.genres.join('+')}`);
 }
 
 /* A2. 运营标签必须被识别出来，且不参与推荐 */

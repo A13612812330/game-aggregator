@@ -357,5 +357,10 @@ function nameOf(node) {
 module.exports = {
   extract, buildProfile, classify, toGB, dxOf, tierOf, normKey,
   GROUPS, KEY_RULES, VAL_RULES, LAYER_KWS,
+  /* ★ 这是**词典自己的版本**（= 建词典那一版），不是站点版本号 —— 不要跟着发版一起 +1。
+     它只在「字典内容真的改了」时才动（识别双通道的键名表 / 值形态表 / 判定阈值），
+     `/api/spec/match` 会把它回传给前端，用来判断「这份结果是用哪版规则算的」。
+     实测 `test-spec.js` 只断言「接口回传的版本 == 这里的版本」，所以跟发版号解耦是安全的。
+     当前状态：v10.22 没有改词典内容（那版改的是结果页版式 + 数据来源），保持 v10.20 不动。 */
   DICT_VERSION: 'v10.20',
 };

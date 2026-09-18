@@ -125,16 +125,21 @@ function chk(name, ok, extra) {
   /* ============ D. 匹配结果 ============ */
   console.log('\n=== D. 可适配游戏清单 ===');
   const m = await page.evaluate(() => {
-    const cards = [...document.querySelectorAll('#upMatch .up-card')];
+    const cards = [...document.querySelectorAll('#upMatch .emu-card.up-mc')];
     const stats = document.querySelector('#upMatch .up-ms b');
     const first = cards[0];
+    const sortOn = document.querySelector('#upSorts .up-sort.on');
     return {
       n: cards.length,
+      sortOn: sortOn ? sortOn.dataset.s : '',
       playable: stats ? stats.textContent.trim() : '',
       firstVerdict: first ? first.dataset.verdict : '',
-      firstName: first ? first.querySelector('.up-card-h b').textContent.trim() : '',
+      firstName: first ? first.querySelector('.top .nm').textContent.trim() : '',
+      firstHot: first && first.querySelector('.cnt b') ? first.querySelector('.cnt b').textContent.trim() : '',
+      firstCover: first && first.querySelector('.cov img') ? first.querySelector('.cov img').getAttribute('src') : '',
       badges: cards.filter((c) => c.querySelector('.up-badge')).length,
       chips: first ? first.querySelectorAll('.up-ch').length : 0,
+      dlBtn: first ? first.querySelectorAll('[data-dl-open]').length : 0,
       h: cards.length ? Math.round(cards[0].getBoundingClientRect().height) : 0,
       foot: (document.querySelector('#upMatch .up-foot') || {}).textContent || '',
     };
@@ -142,7 +147,14 @@ function chk(name, ok, extra) {
   chk('★ 匹配到游戏（条数 > 0）', m.n > 0, m.n + ' 条');
   chk('★ 卡片真占版面', m.h > 60, '首卡高 ' + m.h + 'px');
   chk('★ 可跑数量已统计', /^\d+$/.test(m.playable) && Number(m.playable) > 0, '可跑 ' + m.playable + ' 款');
-  chk('★ 榜首是「流畅」档（规模优先排序）', m.firstVerdict === 'smooth', m.firstVerdict + ' · ' + m.firstName);
+  /* ★ v10.22 同步：默认排序由「规模优先」改为「热门优先」（用户口径：
+     可适配游戏优先推热门游戏），所以这里不再断言榜首是「流畅」档，
+     改为断言「热门优先按钮高亮」+「榜首带真实热度」+「卡片有封面」。 */
+  chk('★ 默认排序是「热门优先」（hot 按钮高亮）', m.sortOn === 'hot', 'on=' + m.sortOn);
+  chk('★ 榜首带真实热度（机地浏览量，不是占位 0）', /万|k|\d/.test(m.firstHot) && m.firstHot !== '0', m.firstHot + ' · ' + m.firstName);
+  chk('★ 卡片有封面（手机专区同版式的前提）', /^https?:/.test(m.firstCover), String(m.firstCover).slice(0, 56));
+  chk('★ 卡片可直接唤起下载弹窗', m.dlBtn >= 1, m.dlBtn + ' 个下载入口');
+  chk('榜首是可跑档（不是不可跑）', m.firstVerdict === 'smooth' || m.firstVerdict === 'ok', m.firstVerdict);
   chk('每张卡都有判定徽章', m.badges === m.n, m.badges + '/' + m.n);
   chk('★ 卡片带判定维度标签', m.chips >= 1, m.chips + ' 个');
   chk('★ 明示「不含显卡跑分」（不夸大结论）', /不含显卡跑分/.test(m.foot));
@@ -157,8 +169,8 @@ function chk(name, ok, extra) {
   });
   await wait(1800);
   const byName = await page.evaluate(() => {
-    const c = document.querySelector('#upMatch .up-card');
-    return { first: c ? c.querySelector('.up-card-h b').textContent.trim() : '', n: document.querySelectorAll('#upMatch .up-card').length };
+    const c = document.querySelector('#upMatch .emu-card.up-mc');
+    return { first: c ? c.querySelector('.top .nm').textContent.trim() : '', n: document.querySelectorAll('#upMatch .emu-card.up-mc').length };
   });
   chk('★ 切换「名称」排序后列表重排', byName.first !== m.firstName && byName.n > 0, m.firstName + ' → ' + byName.first);
 
@@ -169,8 +181,8 @@ function chk(name, ok, extra) {
   });
   await wait(1900);
   const searched = await page.evaluate(() => {
-    const cards = [...document.querySelectorAll('#upMatch .up-card')];
-    return { n: cards.length, names: cards.slice(0, 3).map((c) => c.querySelector('.up-card-h b').textContent.trim()) };
+    const cards = [...document.querySelectorAll('#upMatch .emu-card.up-mc')];
+    return { n: cards.length, names: cards.slice(0, 3).map((c) => c.querySelector('.top .nm').textContent.trim()) };
   });
   chk('★ 搜索「GTA」命中且被过滤', searched.n > 0 && searched.n < byName.n, searched.n + ' 条 · ' + searched.names.join(' / '));
 
@@ -186,7 +198,7 @@ function chk(name, ok, extra) {
   });
   await wait(1800);
   const only = await page.evaluate(() => {
-    const cards = [...document.querySelectorAll('#upMatch .up-card')];
+    const cards = [...document.querySelectorAll('#upMatch .emu-card.up-mc')];
     return { n: cards.length, noCount: cards.filter((c) => c.dataset.verdict === 'no').length, on: document.getElementById('upOnly').classList.contains('on') };
   });
   chk('★「只看可跑」生效（不可跑被滤掉）', only.on && only.noCount === 0 && only.n > 0, '剩 ' + only.n + ' 条，不可跑 ' + only.noCount);
@@ -229,7 +241,7 @@ function chk(name, ok, extra) {
     const tb = document.getElementById('tabbar');
     const items = tb ? tb.querySelectorAll('a').length : 0;
     const on = tb && tb.querySelector('a.on') ? tb.querySelector('a.on').getAttribute('aria-label') : '';
-    const cards = document.querySelectorAll('#upMatch .up-card').length;
+    const cards = document.querySelectorAll('#upMatch .emu-card.up-mc').length;
     return {
       overflow: document.documentElement.scrollWidth - window.innerWidth,
       items, on, cards,

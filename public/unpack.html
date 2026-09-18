@@ -1024,6 +1024,13 @@
   .d-actions.one{grid-template-columns:1fr}
   .go{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px;font-weight:700;padding:12px;border-radius:12px;transition:.15s}
   .go svg{width:15px;height:15px}
+  /* v10.22：⬇ 网盘下载 —— 详情页的**主操作**（取回真实网盘地址，弹窗展示）。
+     独占一整行：它和「前往源站详情」不是同一类动作（一个拿资源、一个看信息），
+     并排会让人以为二者等价。syncDActions() 只数 `a.go`，所以这个 <button> 不参与列数计算。 */
+  .go.dl{grid-column:1/-1;width:100%;background:linear-gradient(135deg,#0F9D58,#22C55E);
+    color:#fff;box-shadow:0 6px 16px rgba(15,157,88,.28)}
+  .go.dl:hover{filter:brightness(1.07)}
+  .go.dl:disabled{opacity:.6;filter:none;cursor:default}
   .go.jidi{background:linear-gradient(135deg,#E6415D,#F26D4F);color:#fff;box-shadow:0 6px 16px rgba(230,65,93,.3)}
   .go.jidi:hover{filter:brightness(1.07)}
   .go.xd{background:linear-gradient(135deg,#0B7BFF,#38BDF8);color:#fff;box-shadow:0 6px 16px rgba(11,123,255,.3)}
@@ -1170,7 +1177,94 @@
     /* v10.16：窄屏下硬件参数改单列（两列会把值挤到换行，反而更难读） */
     .d-hw .kvs2{grid-template-columns:1fr}
     .d-hw .kvs2 div span{width:70px}
+    /* v10.22：窄屏下下载弹窗铺满、列表改单列 */
+    .dlpop{padding:10px}
+    .dlpop-box{max-height:86vh}
+    .dl-grp .l{grid-template-columns:1fr}
   }
+
+  /* ============ 📥 网盘下载弹窗（v10.22） ============
+     用户口径：「把详情页的跳转链接变成获取到对应游戏的下载链接（弹窗展示）」。
+     ★ 为什么单独一层弹窗、不复用详情抽屉：抽屉里已经堆了配置 / 修改器 / 云存档 /
+       下载入口等五六个区块，而「下载链接」是点一下就要立刻拿走的东西，
+       塞在长抽屉里得滚半天。且从**解包匹配页**也要能直接唤起它。
+     ★ z-index 必须**高于详情抽屉**（抽屉 100 / 遮罩 90）—— 否则从抽屉里点开会被抽屉整个盖住，
+       而「元素存在、占版面、可点」都还成立，属于最难发现的那类假绿。
+       定 110：压在抽屉之上，但仍低于搜索弹层(130)与 toast(150)。 */
+  .dlpop{position:fixed;inset:0;z-index:110;display:flex;align-items:center;justify-content:center;padding:22px}
+  .dlpop[hidden]{display:none!important}
+  .dlpop-bg{position:absolute;inset:0;background:rgba(12,18,38,.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+    opacity:0;transition:.18s}
+  .dlpop.on .dlpop-bg{opacity:1}
+  .dlpop-box{position:relative;width:min(580px,100%);max-height:min(80vh,760px);display:flex;flex-direction:column;
+    background:var(--c-surface);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);overflow:hidden;
+    transform:translateY(12px) scale(.985);opacity:0;transition:.2s cubic-bezier(.2,.8,.3,1)}
+  .dlpop.on .dlpop-box{transform:none;opacity:1}
+  .dlpop-h{display:flex;align-items:flex-start;gap:10px;padding:14px 15px 12px;border-bottom:1px solid var(--c-border);flex:none}
+  .dlpop-h .ic{font-size:19px;line-height:1.2;flex:none}
+  .dlpop-h .tx{flex:1;min-width:0}
+  .dlpop-h .tx b{display:block;font-size:15px;font-weight:800;line-height:1.35;color:var(--c-t1);
+    overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .dlpop-h .tx span{display:block;margin-top:3px;font-size:11.5px;font-weight:600;color:var(--c-t3);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dlpop-x{flex:none;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-size:14px;color:var(--c-t3);
+    background:#F3F5F9;transition:.14s}
+  .dlpop-x:hover{background:#E6E9F0;color:var(--c-t1)}
+  .dlpop-b{padding:12px 15px;overflow:auto;flex:1}
+  .dlpop-f{padding:10px 15px 13px;border-top:1px solid var(--c-border);flex:none;font-size:11px;line-height:1.7;color:var(--c-t3)}
+  .dlpop-f b{color:var(--c-t2)}
+  .dlpop-load{display:flex;align-items:center;gap:9px;padding:22px 4px;font-size:12.5px;color:var(--c-t2)}
+  .dlpop-load i{width:15px;height:15px;flex:none;border:2px solid var(--c-border2);border-top-color:var(--c-primary);
+    border-radius:50%;animation:dlspin .7s linear infinite}
+  @keyframes dlspin{to{transform:rotate(360deg)}}
+  .dlpop-empty{padding:20px 4px;text-align:center;font-size:12.5px;line-height:1.8;color:var(--c-t3)}
+  .dl-grp{margin-bottom:14px}
+  .dl-grp:last-child{margin-bottom:2px}
+  .dl-grp>.h{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+  .dl-grp>.h b{font-size:12.5px;font-weight:800;color:var(--c-t1)}
+  .dl-grp>.h .src{font-size:10px;font-weight:800;border-radius:5px;padding:2px 6px}
+  .dl-grp>.h .src.xd{background:rgba(11,123,255,.1);color:var(--c-xd)}
+  .dl-grp>.h .src.jidi{background:rgba(230,65,93,.1);color:var(--c-jidi)}
+  .dl-grp>.h .n{margin-left:auto;font:700 11px/1 var(--font-num);color:var(--c-t3)}
+  .dl-grp .l{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:8px}
+  .dl-it{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--c-border);border-radius:var(--r-md);
+    background:#fff;transition:.14s;min-width:0}
+  .dl-it:hover{border-color:var(--c-primary);background:var(--c-primary-soft)}
+  .dl-it .bd{width:26px;height:26px;flex:none;border-radius:8px;display:grid;place-items:center;font-size:11px;font-weight:800;
+    color:#fff;background:#8892A6}
+  .dl-it .bd.bd-baidu{background:#2B6DE5}
+  .dl-it .bd.bd-xunlei{background:#2A6FD6}
+  .dl-it .bd.bd-quark{background:#5A6BF5}
+  .dl-it .bd.bd-189{background:#1A73E8}
+  .dl-it .bd.bd-139{background:#0FA968}
+  .dl-it .bd.bd-ali{background:#5B6BF0}
+  .dl-it .bd.bd-123{background:#3C7DF5}
+  .dl-it .bd.bd-lanzou{background:#4C8BF5}
+  .dl-it .bd.bd-steam{background:#1B2838}
+  .dl-it .bd.bd-pikpak{background:#3D5AFE}
+  .dl-it .bd.bd-other{background:#9AA3B5}
+  .dl-it .tx{flex:1;min-width:0}
+  .dl-it .tx b{display:block;font-size:12.5px;font-weight:750;color:var(--c-t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dl-it .tx span{display:block;font-size:10.5px;color:var(--c-t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dl-it .tx .pw{color:#8A6100;font-weight:700}
+  .dl-it .act{flex:none;font-size:11px;font-weight:750;color:var(--c-primary);border:1px solid rgba(46,107,255,.3);
+    background:var(--c-primary-soft);border-radius:7px;padding:5px 9px;white-space:nowrap}
+  .dl-it .act:hover{background:var(--c-primary);color:#fff;border-color:transparent}
+  .dl-it.done .act{color:var(--c-ok);border-color:rgba(22,163,74,.35);background:#EDF7F0}
+  .dl-note{font-size:11px;line-height:1.7;color:var(--c-t3);margin:-2px 0 11px}
+  .dl-note b{color:var(--c-t2)}
+  .dl-posts{margin-top:3px}
+  /* ★ v10.22：整组都取不到地址时的说明块（实测 XD 部分游戏返回「你没有权限下载」）。
+     视觉上必须是「有内容的说明」，不能长得像加载失败的空壳 —— 否则用户会一直重试。
+     配色取 warn 档（琥珀），跟真正出错的红色区分开：这不是 bug，是源站策略。 */
+  .dl-blocked{display:flex;gap:8px;align-items:flex-start;font-size:11.5px;line-height:1.75;color:#8A6100;
+    background:#FFF8E6;border:1px solid rgba(217,166,33,.34);border-radius:var(--r-md);padding:10px 11px}
+  .dl-blocked::before{content:'⚠';flex:none;font-size:12px;line-height:1.6}
+  .dl-blocked b{color:#6B4A00}
+  .dl-go{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:11.5px;font-weight:750;
+    color:var(--c-xd);background:rgba(11,123,255,.08);border:1px solid rgba(11,123,255,.28);
+    border-radius:8px;padding:6px 11px;transition:.14s}
+  .dl-go:hover{background:var(--c-xd);color:#fff;border-color:transparent}
 
   /* ===== 📦 解包配置匹配（独立页专属） ===== */
   .bar.up{background:linear-gradient(180deg,#7C3AED,#4F46E5)}
@@ -1289,15 +1383,27 @@
   .up-only{padding:7px 12px;border-radius:9px;border:1px solid var(--c-border2);background:#fff;
     font:650 12px/1 var(--font);color:var(--c-t2)}
   .up-only.on{background:var(--c-primary-soft);border-color:var(--c-primary);color:var(--c-primary)}
-  .up-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(292px,1fr));gap:10px;padding:2px 0 4px}
-  .up-card{border:1px solid var(--c-border);border-left:3px solid var(--c-t3);border-radius:var(--r-md);
-    padding:10px 12px;background:#fff;display:flex;flex-direction:column;gap:6px;min-width:0}
-  .up-card.sm{border-left-color:#16A34A}.up-card.ok{border-left-color:#2E6BFF}
-  .up-card.mb{border-left-color:#D97706}.up-card.un{border-left-color:#9AA3B5}
-  .up-card.no{border-left-color:#DC2626;opacity:.72}
-  .up-card-h{display:flex;align-items:center;gap:8px;min-width:0}
-  .up-card-h b{font-size:13px;color:var(--c-t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .up-mg{margin-left:auto;font:600 10.5px/1 var(--font-num);color:var(--c-t3);flex:none}
+  .up-list{margin:2px 0 4px}
+  /* ★ v10.22：结果卡片改成**手机专区同款版式**（用户口径：「解包匹配的游戏能够跟
+     手机专区的前端展示效果一样」）—— 直接复用主源的 .emu-card / .emu-grid，
+     这里只补解包页多出来的三样东西：判定徽标行、要求来源标注、下载/源站按钮行。
+     ★ 复用而不是另写一套：另写必然与手机专区漂移（本项目在「同一语义只留一份」上踩过多次）。 */
+  .up-mc .cnt span{font-size:9.5px;color:var(--c-t3)}
+  .up-mc .nm{font-size:13.5px}
+  .up-mc-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .up-mc-src{font-size:10.5px;font-weight:650;color:var(--c-t3)}
+  .up-mc-src.dim{opacity:.75}
+  .up-mc .up-badge{font-size:10.5px;font-weight:750;border-radius:5px;padding:2.5px 7px}
+  .up-mc .up-badge-wrap{text-align:right}
+  .up-tg-score{background:#FFF4D6!important;color:#B45309!important}
+  .up-mc-btns{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:1px;
+    border-top:1px dashed var(--c-border);padding-top:8px}
+  .up-mc-btns .cov-btn{margin-top:0}
+  .up-mc-go{font-size:11px;font-weight:700;color:var(--c-primary);text-decoration:none}
+  .up-mc-go:hover{text-decoration:underline}
+  .up-mc .up-min{font-size:11px}
+  .up-mc .up-why{font-size:11px}
+  /* 判定徽标：卡片主版式复用手机专区，只有徽标是解包页自己的（手机专区没有「可跑性」概念） */
   .up-badge{flex:none;font-size:10.5px;font-weight:750;border-radius:5px;padding:2.5px 7px}
   .up-badge.sm{background:#DCFCE7;color:#15803D}
   .up-badge.ok{background:#DBEAFE;color:#1D4ED8}
@@ -1373,9 +1479,13 @@
     <div class="tx">
       <b>手里这份配置，能跑哪些游戏？</b>
       把从游戏包 / 兼容层工具里导出的 JSON 贴进来，这里会<b>自动认出</b>内存、架构、
-      兼容层（DXVK / Box64 / Wine）等关键项，再对撞 <b>Steam 官方配置要求</b>，给出可适配清单 ——
+      兼容层（DXVK / Box64 / Wine）等关键项，再对撞<b>真实游戏要求库</b>，给出可适配清单 ——
       每个判定都摊开理由。
-      <span class="dim">字段名不认识也能认：键名看不出来时会按<b>值的形态</b>推断，并标注「推断」。</span>
+      <span class="dim">游戏一侧的要求全部来自<b>抓取落盘的实测数据</b>：机地 17,220 条话题
+      ∪ Steam 官方，按 <b>Steam appid 精确合并</b>（不做名称模糊匹配），<b>没有任何推断值</b>；
+      每条还会标注要求来自哪个源。默认<b>热门优先</b>（机地话题浏览量），只推真实有人在玩的。</span>
+      <span class="dim">只有<b>你贴进来的那份 JSON</b>是未知格式的：键名读不出来时会按值的形态兜底，
+      并在明细里标注「推断」—— 那是识别输入，不是编造游戏数据。</span>
     </div>
   </div>
 
@@ -1410,7 +1520,7 @@
     </div>
 
     <div class="up-blk">
-      <div class="up-blk-h"><b>④ 可适配游戏</b><span>默认「规模优先」：先看能跑的<b>最吃配置</b>的游戏</span></div>
+      <div class="up-blk-h"><b>④ 可适配游戏</b><span>默认<b>热门优先</b>（机地浏览量）· 卡片与手机专区同版式，可直接下载</span></div>
       <div id="upMatch" class="up-match"><div class="up-empty">匹配中…</div></div>
     </div>
   </section>
@@ -1447,6 +1557,25 @@
 <div class="mask" id="mask"></div>
 <aside class="drawer" id="drawer" aria-label="游戏详情"><div id="drawerBody"></div></aside>
 <div class="toast" id="toast"></div>
+
+<!-- ===== 📥 网盘下载弹窗（v10.22 新增 · 三页共享资产，勿在派生页单独改） =====
+     数据来自 GET /api/download（服务端把 XD 的 download.php 302 与机地详情页 SSR 都解析好了）。
+     ★ 为什么不前端直连源站：XD 的 download.php 与机地详情页都没有 CORS 头，
+       前端 fetch 必被浏览器拦；且这两站对浏览器指纹敏感（见项目抓取经验）。
+     弹层放在 #mask 之后、.tabbar 之前 —— 这一段正是 tools/page-assets.js 抽取的 OVERLAY，
+       所以 /emulator.html 与 /unpack.html 会自动带上同一个弹窗。 -->
+<div class="dlpop" id="dlPop" hidden>
+  <div class="dlpop-bg" data-dl="close"></div>
+  <div class="dlpop-box" role="dialog" aria-modal="true" aria-label="网盘下载链接">
+    <div class="dlpop-h">
+      <span class="ic">📥</span>
+      <div class="tx"><b id="dlTitle">网盘下载</b><span id="dlSub"></span></div>
+      <button class="dlpop-x" type="button" data-dl="close" aria-label="关闭">✕</button>
+    </div>
+    <div class="dlpop-b" id="dlBody"></div>
+    <div class="dlpop-f" id="dlFoot"></div>
+  </div>
+</div>
 
 <!-- 移动端底部 Tab（<=760px 显示，桌面隐藏） -->
 <nav class="tabbar" id="tabbar" aria-label="移动端导航">
@@ -1623,7 +1752,10 @@ function rowCard(it) {
   if (it.bh) meta.push(`<span class="bh-badge" title="BannerHub 社区已上传 ${it.bh.c} 份手机模拟器配置">📱 可玩 <b>${it.bh.c}</b></span>`);
   if (it.pc) meta.push(`<span class="bh-badge pc-badge" title="本站实测库有 ${it.pc.c} 条记录，最佳帧率 ${it.pc.best || '未标'}">🎮 实测 <b>${it.pc.c}</b></span>`);
   // 库内兜底字段(data-fb)：详情源站解析缺字段时用库内值补全
-  const fb = { id: it.id || '', title: it.title || '', cover: it.cover || '', score: okScore ? it.score : null, size: it.size || '', genres: (it.genres || []).slice(0, 4), dateLabel: it.dateLabel || '' };
+  /* ★ v10.22 加 jidiUrl：详情页「⬇ 网盘下载」要能**一次把两源的链接都取回来**。
+     库内 XD 条目若已合并进机地同款（13,448 条），就带上机地详情页 URL ——
+     弹窗里分成「XD 官方盘口」「机地社区分享」两组展示，比只给一边完整。 */
+  const fb = { id: it.id || '', title: it.title || '', cover: it.cover || '', score: okScore ? it.score : null, size: it.size || '', genres: (it.genres || []).slice(0, 4), dateLabel: it.dateLabel || '', jidiUrl: it.jidiUrl || '' };
   const fbJson = encodeURIComponent(JSON.stringify(fb));
   return `<article class="row-card" data-url="${esc(it.url)}" data-fb="${fbJson}">
     <div class="th">${coverHtml({ ...it, zh: n.zh })}</div>
@@ -1749,6 +1881,7 @@ function rankFb(it) {
   return encodeURIComponent(JSON.stringify({
     id: it.id || '', title: it.title, cover: it.cover || '', score: okScoreV(it.score) ? it.score : null,
     size: it.size || '', genres: (it.genres || []).slice(0, 4), dateLabel: it.dateLabel || '',
+    jidiUrl: it.jidiUrl || '',      /* v10.22：热榜/搜索结果进详情时也要能取双源下载链接 */
   }));
 }
 function hhmm(ts) { return new Date(ts).toTimeString().slice(0, 5); }
@@ -2531,6 +2664,7 @@ async function openDetailById(id, fallbackTitle) {
     size: it.size || '',
     genres: it.genres || [],
     dateLabel: it.dateLabel || '',
+    jidiUrl: it.jidiUrl || '',    /* v10.22：手机专区卡片直达详情后，下载弹窗也能取双源 */
   };
   openDetail(it.url, encodeURIComponent(JSON.stringify(fb)), false);
 }
@@ -2634,6 +2768,18 @@ function paintDetail(d, fb) {
       <div id="dlSlot"></div>
       <div class="no-dl">🚫 仅聚合 <b>详情页与更新内容</b>，不含任何下载资源</div>
       <div class="d-actions">
+        <!-- ★ v10.22：把「跳转到源站」升级成**取回下载链接**。
+             用户口径：「将游戏详情页的跳转链接变成获取到对应游戏的下载链接（弹窗展示，
+             大部分 XD 都是有多个下载链接，最好是获取到完整的标题）」。
+             ⇒ 下载升为主操作（独占一行），源站详情退为次操作 —— 但**仍然保留**：
+               更新日志 / 版本介绍 / 评论只在源站有，删掉会丢信息。
+             ★ 双源一起取：data-dl-url 给当前源详情页，data-dl-jidi 给机地详情页 URL
+               （XD 库里合并进来的 13,448 条都带 jidiUrl）。
+               两个都给 → 弹窗里分「XD 官方盘口」「机地社区分享」两组展示，
+               比只给一边更接近「把这个游戏的下载链接都拿到」。 -->
+        ${(d.url || fb.jidiUrl) ? `<button class="go dl" type="button" id="dlBtn"
+           data-dl-open data-dl-title="${esc(n.zh)}" data-dl-sub="${esc(n.en || '')}"
+           data-dl-url="${esc(d.url || '')}" data-dl-jidi="${esc(fb.jidiUrl || '')}">⬇ 网盘下载</button>` : ''}
         ${d.url ? `<a class="go ${s.cls}" href="${esc(d.url)}" target="_blank" rel="noopener">前往${s.nm}详情 ↗</a>` : ''}
         <!-- ★ v10.15：跨源按钮**默认隐藏**，只有 linkCounterpart() 查到「这款游戏在另一源的详情页」
              时才显形；查不到就保持不显示。
@@ -3284,6 +3430,7 @@ async function linkCounterpart(d) {
     const fb = encodeURIComponent(JSON.stringify({
       id: hit.id || '', title: hit.title, cover: hit.cover || '', score: okScoreV(hit.score) ? hit.score : null,
       size: hit.size || '', genres: (hit.genres || []).slice(0, 4), dateLabel: hit.dateLabel || '',
+      jidiUrl: hit.jidiUrl || '',    /* v10.22：跨源跳转进详情后，下载弹窗也能取双源 */
     }));
     slot.innerHTML = `<div class="block" style="margin-bottom:12px"><h4><span class="ic" style="background:linear-gradient(135deg,#E6415D,#0B7BFF)"></span>另一源也有收录
         <a href="${esc(hit.url || '#')}" target="_blank" rel="noopener" style="margin-left:auto;font-size:11px;font-weight:700;color:var(--c-t3);text-decoration:none">去源站 ↗</a></h4>
@@ -3426,6 +3573,224 @@ async function init() {  /* bindRankUI：派生页无榜单 UI，跳过 */  /*
   const sp2 = sp.get('sort'); if (sp2 && SORTS.some(s => s.k === sp2)) { curSort = sp2; renderCats(); renderList(true); }
   document.documentElement.setAttribute('data-ready', '1');
 }
+/* ================= 📥 网盘下载弹窗（v10.22 新增） =================
+ * 用户口径：「将游戏详情页的跳转链接变成获取到对应游戏的下载链接（弹窗展示，
+ *            大部分 XD 都是有多个下载链接，最好是获取到完整的标题）」。
+ *
+ * 链路：前端 → GET /api/download → fetchers/download.js
+ *   · XD   解析详情页 .article-down 的 a.downbtn，再跟随 /plus/download.php 的 302
+ *          拿真实网盘地址（实测 6 个盘口全部可解）
+ *   · 机地 解析详情页 SSR 的 ssrData.postsMap，抽社区帖正文里的网盘直链
+ *   ★ 必须走服务端：这两个源站都没有 CORS 头，前端直连必被浏览器拦；
+ *     而且它们对浏览器指纹敏感（见项目抓取经验，node fetch 正常、浏览器会被 403）。
+ *
+ * ★ 为什么允许「一次取两源」：
+ *   同一款游戏在 XD 与机地**不是同一批链接**（XD 是官方盘口，机地是社区分享帖）。
+ *   库里 13,448 条 XD 条目已与机地同款合并（带 jidiUrl），所以「⬇ 网盘下载」能
+ *   把两侧一起取回来、分两组展示。两个 URL 相同时自动去重，不会重复请求。
+ *
+ * ★ 不用 Promise.all 直接并发两源也无所谓，但**单个源失败不能拖垮另一个**：
+ *   用 allSettled 语义（.catch 成 {ok:false}），一个挂掉另一个照常显示。
+ */
+const DL_BRAND = [
+  [/百度/, 'baidu', '度'], [/天翼|189/, '189', '翼'], [/迅雷/, 'xunlei', '雷'],
+  [/夸克|quark/i, 'quark', '夸'], [/移动|139/, '139', '移'], [/阿里|ali/i, 'ali', '阿'],
+  [/123/, '123', '12'], [/蓝奏|lanzou/i, 'lanzou', '蓝'], [/pikpak/i, 'pikpak', 'P'],
+  [/steam|正版/i, 'steam', '正'], [/uc/i, 'other', 'U'],
+];
+function dlBrand(s) {
+  const t = String(s == null ? '' : s);
+  for (const [re, cls, ab] of DL_BRAND) if (re.test(t)) return { cls, ab };
+  return { cls: 'other', ab: t.slice(0, 1) || '?' };
+}
+function dlHost(u) {
+  try { return new URL(u).host.replace(/^www\./, ''); } catch (e) { return ''; }
+}
+/** 单条链接行。★ `real` 为空的一律显式标「不可用」——不要把中间页当结果给用户点。 */
+function dlRow(it) {
+  const real = it.real || '';
+  const b = dlBrand(it.server);
+  const bits = [];
+  const h = real ? dlHost(real) : '';
+  if (h) bits.push(h);
+  if (it.pwd) bits.push('提取码 ' + String(it.pwd).replace(/^访问码[：:]\s*/, ''));
+  if (!real && it.error) bits.push('解析失败：' + it.error);
+  const name = it.postTitle || it.server || '下载';
+  const sub = [it.server, bits.join(' · ')].filter(Boolean).join(' · ');
+  const act = real
+    ? '<a class="act" href="' + esc(real) + '" target="_blank" rel="noopener">打开 ↗</a>' +
+      '<button class="act" type="button" data-dl-copy="' + esc(real) + '">复制</button>'
+    : '<span class="act" style="color:var(--c-t3);border-color:var(--c-border);background:#F3F5F9">不可用</span>';
+  return '<div class="dl-it' + (real ? '' : ' bad') + '">' +
+    '<span class="bd bd-' + b.cls + '">' + esc(b.ab) + '</span>' +
+    '<div class="tx"><b title="' + esc(name) + '">' + esc(name) + '</b>' +
+    '<span title="' + esc(real) + '">' + esc(sub) + '</span></div>' + act + '</div>';
+}
+function dlSection(title, srcCls, srcName, items, cap) {
+  const n = items.filter((x) => x.real).length;
+  const shown = cap && items.length > cap ? items.slice(0, cap) : items;
+  const more = items.length > shown.length
+    ? '<div class="dl-note" style="margin:8px 0 0">另有 ' + (items.length - shown.length) + ' 条未展示（同一款游戏的重复分享帖）</div>' : '';
+  return '<div class="dl-grp"><div class="h"><b>' + esc(title) + '</b>' +
+    '<span class="src ' + srcCls + '">' + esc(srcName) + '</span>' +
+    '<span class="n">' + n + ' / ' + items.length + ' 条可用</span></div>' +
+    '<div class="l">' + shown.map(dlRow).join('') + '</div>' + more + '</div>';
+}
+/**
+ * 一整组都取不到地址时的说明块。
+ * ★ 为什么必须区分「源站要权限」与「解析失败」：前者是源站策略，重试一万次也没用 ——
+ *   用户看到的如果是「稍后重试」，他会一直重试；告诉他「去源站登录后获取」才是对的。
+ *   实测样本：XD `钢铁雄心4`（id=3967）的 10 个盘口全部返回
+ *   `HTTP 200 + 你没有权限下载：钢铁雄心4！`（没有 Location、也没有跳转脚本）。
+ */
+function dlBlocked(title, srcCls, srcName, d) {
+  const n = (d.items || []).length;
+  const why = d.needAuth
+    ? '源站对这款游戏要求<b>登录 / 权限</b>才能取到网盘地址（返回「你没有权限下载」）。' +
+      '这不是本站抓取失败 —— <b>去源站页面登录后即可获取</b>。'
+    : '源站这次没有返回可用的跳转地址（可能是改版或临时故障）。可以稍后重试，或直接去源站页面取。';
+  const go = d.url
+    ? '<a class="dl-go" href="' + esc(d.url) + '" target="_blank" rel="noopener">前往源站页面 ↗</a>' : '';
+  return '<div class="dl-grp"><div class="h"><b>' + esc(title) + '</b>' +
+    '<span class="src ' + srcCls + '">' + esc(srcName) + '</span>' +
+    '<span class="n">0 / ' + n + ' 条可用</span></div>' +
+    '<div class="dl-blocked">' + why + '</div>' + go + '</div>';
+}
+function dlCopy(el) {
+  const txt = el.dataset.dlCopy || '';
+  const back = el.textContent;
+  const done = () => {
+    el.textContent = '已复制 ✓';
+    el.classList.add('done');
+    setTimeout(() => { el.textContent = back; el.classList.remove('done'); }, 1400);
+  };
+  const fallback = () => {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = txt;
+      ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta); done();
+    } catch (e) { toast('复制失败，请手动选中链接'); }
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, fallback);
+  else fallback();
+}
+function closeDownload() {
+  const pop = $('#dlPop');
+  if (!pop || pop.hidden) return;
+  pop.classList.remove('on');
+  setTimeout(() => { pop.hidden = true; const b = $('#dlBody'); if (b) b.innerHTML = ''; }, 180);
+}
+/**
+ * 打开下载弹窗。
+ * @param {{title?:string, sub?:string, url?:string, jidi?:string}} ctx
+ *   url  —— 当前源详情页（XD 或机地，服务端 parseDetailUrl 兼容两者）
+ *   jidi —— 另一侧的机地详情页（库里合并进来的 XD 条目才有）
+ */
+async function openDownload(ctx) {
+  const pop = $('#dlPop');
+  if (!pop) return;
+  const o = ctx || {};
+  /* 去重：url 本身就是机地详情页时，jidi 不再重复请求 */
+  const isJidi = (u) => /jidiyouxi\.com/.test(String(u || ''));
+  const jobs = [];
+  if (o.url) jobs.push({ tag: isJidi(o.url) ? 'jidi' : 'xd', u: o.url });
+  if (o.jidi && o.jidi !== o.url && !jobs.some((j) => j.u === o.jidi)) jobs.push({ tag: 'jidi', u: o.jidi });
+
+  $('#dlTitle').textContent = o.title || '网盘下载';
+  $('#dlSub').textContent = o.sub || '';
+  $('#dlFoot').innerHTML = '';
+  pop.hidden = false;
+  requestAnimationFrame(() => pop.classList.add('on'));
+
+  if (!jobs.length) {
+    $('#dlBody').innerHTML = '<div class="dlpop-empty">这款游戏没有可解析的下载来源<br>' +
+      '<span style="font-size:11.5px">库里既没有 XD 详情页，也没有合并的机地话题</span></div>';
+    return;
+  }
+  $('#dlBody').innerHTML = '<div class="dlpop-load"><i></i><span>正在解析网盘地址（XD 需逐个跟随跳转，约 3-8 秒）…</span></div>';
+
+  const res = await Promise.all(jobs.map((j) =>
+    fetch(api('/api/download?url=' + encodeURIComponent(j.u)))
+      .then((r) => r.json())
+      .then((d) => ({ tag: j.tag, d }))
+      /* ★ 单个源失败不能拖垮另一个 —— 兜成同一个返回形状，下面统一渲染 */
+      .catch((e) => ({ tag: j.tag, d: { ok: false, error: e.message } }))));
+
+  /* 标题优先用源站返回的**完整标题**（用户要的就是「完整的标题」，别用库里的短名盖掉） */
+  const good = res.filter((x) => x.d && x.d.ok);
+  const head = good.map((x) => x.d.title).filter(Boolean)[0];
+  if (head) $('#dlTitle').textContent = head;
+  const subs = [];
+  for (const x of good) { if (x.d.version) subs.push(x.d.version); else if (x.d.subtitle) subs.push(x.d.subtitle); }
+  if (subs.length) $('#dlSub').textContent = subs.join(' · ');
+
+  if (!good.length) {
+    const errs = res.map((x) => (x.d && x.d.error) || '未知错误').join('；');
+    $('#dlBody').innerHTML = '<div class="dlpop-empty">没有取到可用的下载链接<br>' +
+      '<span style="font-size:11.5px">' + esc(errs) + '</span></div>';
+    $('#dlFoot').innerHTML = '<b>说明</b>：链接由源站实时解析，可能因为源站改版 / 网络抖动失败，稍后重试即可。';
+    return;
+  }
+
+  const secs = [];
+  let usable = 0;
+  const xd = good.find((x) => x.tag === 'xd');
+  const ji = good.find((x) => x.tag === 'jidi');
+  if (xd) {
+    const items = (xd.d.items || []).filter((i) => i.real);
+    if (items.length) { usable += items.length; secs.push(dlSection('XDGAME 官方盘口', 'xd', 'XD', items, 0)); }
+    else secs.push(dlBlocked('XDGAME 官方盘口', 'xd', 'XD', xd.d));
+  }
+  if (ji) {
+    /* 机地同一款游戏常有多份分享帖，全铺出来会很长 —— 取前 12 条，
+       按帖子热度（服务端已排序）优先，并如实告知还有多少条未展示。 */
+    const items = (ji.d.items || []).filter((i) => i.real);
+    if (items.length) { usable += items.length; secs.push(dlSection('机地社区分享（按帖子热度）', 'jidi', '机地', items, 12)); }
+    else secs.push(dlBlocked('机地社区分享', 'jidi', '机地', ji.d));
+  }
+  $('#dlBody').innerHTML = secs.length
+    ? (usable
+      ? '<div class="dl-note">共 <b>' + usable + '</b> 条可直接打开的网盘地址 · 链接均为源站实时解析</div>' + secs.join('')
+      : '<div class="dl-note">这款游戏暂时<b>没有可直接打开的网盘地址</b>，下面是原因与出口</div>' + secs.join(''))
+    : '<div class="dlpop-empty">没有取到可用的下载链接<br><span style="font-size:11.5px">这些条目在源站也可能只是话题、尚无资源帖</span></div>';
+  $('#dlFoot').innerHTML = '<b>链接来自源站</b>：XD 的地址由 <code>/plus/download.php</code> 跳转解析，' +
+    '机地的来自社区帖正文。本站只做聚合与解析，<b>不转存、不提供文件</b>；下载前请自行核对文件安全。';
+}
+/* 绑定一次（弹层与 Toggle 都是共享资产的常驻节点）。
+   ★ 用**事件委托**而不是给每个按钮绑：解包匹配页的卡片是动态重绘的，
+     逐个绑定会在重绘后全部失效（本项目在机型清单上踩过同类坑）。 */
+(function bindDownloadPopup() {
+  const pop = $('#dlPop');
+  if (!pop) return;
+  pop.addEventListener('click', (e) => {
+    if (e.target.closest('[data-dl="close"]')) { closeDownload(); return; }
+    const cp = e.target.closest('[data-dl-copy]');
+    if (cp) dlCopy(cp);
+  });
+  /* ESC 关弹窗：用捕获阶段并截断 —— 搜索弹窗也监听 ESC，
+     不截断会出现「一下 ESC 把两个都关掉」。只在弹窗真的开着时才抢。 */
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || pop.hidden) return;
+    e.stopPropagation();
+    closeDownload();
+  }, true);
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-dl-open]');
+    if (!b) return;
+    e.preventDefault();
+    e.stopPropagation();
+    openDownload({
+      title: b.dataset.dlTitle || '',
+      sub: b.dataset.dlSub || '',
+      url: b.dataset.dlUrl || '',
+      jidi: b.dataset.dlJidi || '',
+    });
+  });
+})();
+
 init();
 
 /* ================= 📦 解包配置匹配 · 页面逻辑（独立页专属） =================
@@ -3445,7 +3810,7 @@ init();
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  const st = { data: null, idx: 0, q: '', sort: 'scale', only: '', raw: '', busy: false };
+  const st = { data: null, idx: 0, q: '', sort: 'hot', only: '', raw: '', busy: false };
 
   /* 示例：刻意写成「设备配置 + 最低要求」混在一起，
      用来演示两层语义被正确分开（内存 16 GB 是设备，8 GB 是要求）。 */
@@ -3647,24 +4012,45 @@ init();
     box.innerHTML =
       '<div class="up-mstats">' +
         '<div class="up-ms"><b>' + s.playable + '</b><span>可跑 / 共 ' + s.total + ' 款</span></div>' +
-        '<div class="up-ms"><b>' + s.scanned + '</b><span>扫描游戏数</span></div>' +
+        '<div class="up-ms"><b>' + s.scanned + '</b><span>有配置要求的游戏</span></div>' +
+        '<div class="up-ms"><b>' + (s.hot || 0) + '</b><span>其中带热度数据</span></div>' +
         '<div class="up-dist">' + dist + '</div>' +
       '</div>' +
       '<div class="up-mbar">' +
         '<input class="up-search" id="upq" type="search" placeholder="在可跑清单里搜游戏名…" value="' + esc(st.q) + '" autocomplete="off">' +
         '<div class="up-sorts" id="upSorts">' +
-          btn('scale', '规模优先', st.sort) + btn('margin', '余量优先', st.sort) + btn('name', '名称', st.sort) +
+          btn('hot', '🔥 热门优先', st.sort) + btn('scale', '规模优先', st.sort) +
+          btn('margin', '余量优先', st.sort) + btn('name', '名称', st.sort) +
         '</div>' +
         '<button type="button" class="up-only' + (st.only === 'playable' ? ' on' : '') + '" id="upOnly">只看可跑</button>' +
       '</div>' +
-      '<div class="up-list" id="upList">' + (m.items.length ? m.items.map(card).join('') : '<div class="up-empty">没有匹配到游戏（试试放宽搜索词）</div>') + '</div>' +
-      '<div class="up-foot">判定依据：' + esc(s.source) + ' · 只看「架构 / 图形接口 / 内存 / 存储」四项，<b>不含显卡跑分</b></div>';
+      '<div class="emu-grid up-list" id="upList">' + (m.items.length ? m.items.map(card).join('') : '<div class="up-empty">没有匹配到游戏（试试放宽搜索词）</div>') + '</div>' +
+      '<div class="up-foot">判定依据：' + esc(s.source) + ' · 只用「架构 / 图形接口 / 内存 / 存储」四项，<b>不含显卡跑分</b>' +
+      '（配置要求里的显卡是 PC 卡自由文本，和本机 GPU 不是同一量纲，比出来是假精度）<br>' +
+      '热度 = 机地话题浏览量（dpv）· 封面 / 评分 / 容量均为源站真实字段，<b>未做任何推断</b></div>';
   }
 
   function btn(key, label, cur) {
     return '<button type="button" class="up-sort' + (cur === key ? ' on' : '') + '" data-s="' + key + '">' + label + '</button>';
   }
 
+  /** 热度：机地浏览量。过万折成「12.3万」，避免长数字把卡片撑破 */
+  function fmtHot(n) {
+    const v = Number(n) || 0;
+    if (!v) return null;
+    if (v >= 10000) return (Math.round(v / 1000) / 10) + ' 万';
+    if (v >= 1000) return (Math.round(v / 100) / 10) + 'k';
+    return String(v);
+  }
+
+  /**
+   * 结果卡片 —— **沿用手机专区的 .emu-card 版式**（用户口径：
+   * 「解包匹配的游戏能够跟手机专区的前端展示效果一样」）。
+   * ★ 直接复用主源已有的 .emu-card / .emu-grid 类，不另起一套样式：
+   *   另写一套必然与手机专区漂移（本项目在「同一语义只留一份」上踩过多次）。
+   * ★ 数据全部来自 spec-req.json（机地 17,220 话题 ∪ Steam 官方，按 Steam appid 精确合并）：
+   *   封面 / 分类 / 容量 / 评分 / 热度都是源站字段，不是推断出来的。
+   */
   function card(it) {
     const v = VERDICT[it.verdict] || VERDICT.unknown;
     const chips = it.dims.filter((d) => d.state !== 'skip' && DIM_STATE[d.state]).map((d) =>
@@ -3673,15 +4059,48 @@ init();
       ? '<span class="up-ch uj" title="配置里没有这项，无法判定">未判定：' + it.unjudged.map((d) => DIM_NAME[d] || d).join('、') + '</span>' : '';
     const min = [];
     if (it.min.ram) min.push('内存 ' + it.min.ram);
-    if (it.min.storage) min.push(it.min.storage.replace(/^需要\s*/, '空间 '));
+    if (it.min.storage) min.push('空间 ' + it.min.storage);
     if (it.min.dx) min.push('DX ' + it.min.dx);
     if (it.min.gpu) min.push(it.min.gpu);
-    return '<article class="up-card ' + v.c + '" data-verdict="' + it.verdict + '" data-name="' + esc(it.name) + '">' +
-      '<div class="up-card-h"><span class="up-badge ' + v.c + '">' + v.t + '</span><b>' + esc(it.name) + '</b>' +
-        (it.margin != null ? '<span class="up-mg">余量 ' + it.margin + ' GB</span>' : '') + '</div>' +
+
+    /* 容量：库里是 "50GB"/"220MB" 这类串，原样显示；顺带标注它是不是源站给的 */
+    const tags = [];
+    (it.genres || []).slice(0, 3).forEach((g) => tags.push('<span class="tg">' + esc(g) + '</span>'));
+    if (it.size) tags.push('<span class="tg">' + esc(it.size) + '</span>');
+    if (it.score) tags.push('<span class="tg up-tg-score">★ ' + esc(String(it.score)) + '</span>');
+    /* ★ 要求来源如实标注：机地 / Steam 官方 / 两者都有。用户口径「不要推断」——
+       这三个标签就是「这条要求是从哪读到的」，不是猜的。 */
+    const fromMap = { jidi: '机地', steam: 'Steam 官方', 'jidi+steam': '机地 · Steam' };
+    const from = fromMap[it.reqFrom] || null;
+
+    const hot = fmtHot(it.hot);
+    const dl = it.libUrl
+      ? '<button class="cov-btn" type="button" data-dl-open data-dl-title="' + esc(it.name) +
+        '" data-dl-url="' + esc(it.libUrl) + '">⬇ 网盘下载</button>'
+      : (it.jidiTid
+        ? '<button class="cov-btn" type="button" data-dl-open data-dl-title="' + esc(it.name) +
+          '" data-dl-url="' + esc('https://jidiyouxi.com/topic/detail/' + it.jidiTid) + '">⬇ 网盘下载</button>'
+        : '');
+
+    return '<article class="emu-card' + (it.cover ? ' has-cov' : '') + ' up-mc" data-verdict="' + it.verdict + '" data-name="' + esc(it.name) + '">' +
+      (it.cover
+        ? '<div class="cov"><img src="' + esc(it.cover) + '" alt="" loading="lazy" onerror="this.parentNode.classList.add(\'noimg\');this.remove()"></div>'
+        : '') +
+      '<div class="top">' +
+        '<div class="nm">' + esc(it.name) + '</div>' +
+        (hot ? '<div class="cnt"><b>' + esc(hot) + '</b><span>热度</span></div>' : '<div class="cnt up-badge-wrap"><span class="up-badge ' + v.c + '">' + v.t + '</span></div>') +
+      '</div>' +
+      (hot ? '<div class="up-mc-row"><span class="up-badge ' + v.c + '">' + v.t + '</span>' +
+        (from ? '<span class="up-mc-src">要求来自 ' + esc(from) + '</span>' : '<span class="up-mc-src dim">要求来源未标注</span>') + '</div>'
+        : (from ? '<div class="up-mc-row"><span class="up-mc-src">要求来自 ' + esc(from) + '</span></div>' : '')) +
+      (tags.length ? '<div class="tags">' + tags.join('') + '</div>' : '') +
       '<div class="up-chips">' + chips + uj + '</div>' +
-      '<div class="up-min">最低配置：' + esc(min.join(' · ') || '未标注') + '</div>' +
-      (it.dims.some((d) => d.state === 'fail') ? '<div class="up-why">' + esc(it.dims.filter((d) => d.state === 'fail').map((d) => d.note).join('；')) + '</div>' : '') +
+      '<div class="up-min">最低：' + esc(min.join(' · ') || '未标注') + '</div>' +
+      (it.dims.some((d) => d.state === 'fail')
+        ? '<div class="up-why">' + esc(it.dims.filter((d) => d.state === 'fail').map((d) => d.note).join('；')) + '</div>' : '') +
+      '<div class="up-mc-btns">' + dl +
+        (it.libUrl ? '<a class="up-mc-go" href="' + esc(it.libUrl) + '" target="_blank" rel="noopener">源站详情 ↗</a>' : '') +
+      '</div>' +
       '</article>';
   }
 
@@ -3690,6 +4109,19 @@ init();
     try {
       const d = await fetch(api('/api/spec/dict')).then((r) => r.json());
       if (!d.ok) return;
+      /* ★ 对照库口径必须如实写：v10.22 起不再是「Steam 官方 653 款」，
+         而是「机地话题 ∪ Steam 官方，按 Steam appid 精确合并」得到的 1.6 万款。
+         这里直接读服务端回传的 stats，**不在前端写死数字**（写死了必然过期）。 */
+      const s = d.stats || {};
+      const by = s.bySource || {};
+      const srcLine = (s.jidiCandidates || s.steamCandidates)
+        ? '对照库：机地 <b>' + (s.jidiCandidates || 0).toLocaleString() + '</b> 条话题 + Steam 官方 <b>' +
+          (s.steamCandidates || 0).toLocaleString() + '</b> 条，按 <b>Steam appid 精确合并</b>为 <b>' +
+          d.built.toLocaleString() + '</b> 款（不再做名称模糊匹配）。<br>' +
+          '要求来源分布：机地 <b>' + (by.jidi || 0).toLocaleString() + '</b> · Steam 官方 <b>' +
+          (by.steam || 0).toLocaleString() + '</b> · 两源都有 <b>' + (by['jidi+steam'] || 0).toLocaleString() +
+          '</b> 款 —— 卡片上的「要求来自」标签就是读的这里，不是猜的。'
+        : '对照库：<b>' + d.built.toLocaleString() + '</b> 款。';
       $('upDict').innerHTML =
         '<div class="up-dict">' +
         '<div class="up-dict-h">凭什么这么判</div>' +
@@ -3697,7 +4129,7 @@ init();
           '<div class="up-dim"><b>' + esc(x.label) + '</b><span>' + esc(x.why) + '</span></div>').join('') + '</div>' +
         '<div class="up-dict-n">兼容层 → 图形接口能力：' + d.layers.map((l) => esc(l.note)).join('；') + '。<br>' +
         '能在 ARM 上执行 x86 指令的转译层：' + d.translators.map(esc).join(' / ') + '。<br>' +
-        '对照库：Steam 官方配置要求 <b>' + d.built + '</b> 款。</div>' +
+        srcLine + '</div>' +
         '</div>';
     } catch (e) { /* 判定依据是锦上添花，拿不到不影响主流程 */ }
   }

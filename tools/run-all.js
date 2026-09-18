@@ -15,7 +15,7 @@
  * 退出码：0 = 全绿；1 = 有失败或套件异常退出。
  *
  * ★ 为什么要有这个脚本（2026-09-19 新增）：
- *   静态套件已有 15 套，手敲 `node tools/test-*.js` 容易漏跑（漏跑的那套往往就是
+ *   静态套件已有 20 套，手敲 `node tools/test-*.js` 容易漏跑（漏跑的那套往往就是
  *   被改坏的那套）。这里把清单固化，避免"以为跑全了"。
  *   ⚠️ 新增静态套件时**必须**加进下面的 SUITES，否则它会永远不被防线覆盖。
  */
@@ -47,11 +47,16 @@ const SUITES = [
   'test-v1017.js',
   'test-v1018.js',
   'test-spec.js',
+  'test-download.js',
   'test-pages-sync.js',
   'test-report.js',
   'test-match-release.js',
   'test-audit-apps.js',
 ];
+/* 刻意**不登记**的：
+ *   · test-search-ui.js  —— 用 puppeteer，属第二层「浏览器实拍」，本脚本跑不了
+ *   · test-emuhub.js     —— 已废弃的兼容壳，内部 require('./test-emulator-page.js')，
+ *                           登记它只会把同一批断言算两遍（不是漏登记） */
 
 let pass = 0, fail = 0;
 const crashed = [];

@@ -90,4 +90,62 @@ function fmtDateTime(tsMs) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-module.exports = { UA, HOST_JIDI, HOST_XD, abs, getHtml, ts2label, fmtDateTime, normDate, dateTs };
+/* ================= 网盘链接抽取（全项目唯一定义） =================
+ * ★ 为什么放这里：机地的 MOD 帖正文与「游戏话题」帖正文是**同一件事**
+ *   （从一大段人写文本里挖网盘直链），曾经在 `jidiModify.js` 与
+ *   `jidiTopics.js` 各写了一份 —— 上限一个 12 一个 20、一个不过滤站内链接
+ *   一个过滤。同一份正文在两个功能下抽出不同结果，正是本项目记录过的
+ *   「同一语义的清洗规则只能有一份」那条坑。
+ *   现统一到此处，两处都从这里取。
+ */
+const NETDISK = [
+  [/pan\.quark\.cn/i, '夸克网盘'],
+  [/pan\.baidu\.com/i, '百度网盘'],
+  [/pan\.xunlei\.com/i, '迅雷网盘'],
+  [/cloud\.189\.cn/i, '天翼云盘'],
+  [/caiyun\.139\.com|yun\.139\.com/i, '移动云盘'],
+  [/www\.aliyundrive\.com|alipan\.com/i, '阿里云盘'],
+  [/123pan\.com/i, '123 网盘'],
+  [/lanzou[a-z]?\.com/i, '蓝奏云'],
+  [/mypikpak\.com/i, 'PikPak'],
+  [/drive\.uc\.cn/i, 'UC 网盘'],
+];
+
+/** 站内链接**不是下载**：正文里常夹 `jidiyouxi.com/problemTutorial`（帮助中心）、
+ *  `/post/detail/xxx`（另一篇帖）—— 实测它们会混进下载清单，
+ *  让「6 个盘口」变成「7 条里有一条是废话」。默认只认站外链接。 */
+const INTERNAL_HOST_RE = /(^|\.)(jidiyouxi\.com|52jidi\.com|xgamer?\.[a-z]+)$/i;
+
+/**
+ * 从一段自由文本里抽网盘链接。
+ * @param {string} text
+ * @param {object} [o]
+ * @param {number} [o.max=20]      最多返回几条（防正文爆炸）
+ * @param {boolean} [o.dropInternal=true] 是否丢掉站内链接
+ * @returns {Array<{url:string, kind:string}>}
+ */
+function extractLinks(text, { max = 20, dropInternal = true } = {}) {
+  const out = [];
+  const seen = new Set();
+  const re = /https?:\/\/[^\s"'<>）)】\]，,。；;]+/g;
+  let m;
+  while ((m = re.exec(String(text == null ? '' : text)))) {
+    const u = m[0].replace(/[.,;。，、]+$/, '');
+    if (seen.has(u)) continue;
+    seen.add(u);
+    if (dropInternal) {
+      let host = '';
+      try { host = new URL(u).hostname; } catch { continue; }
+      if (INTERNAL_HOST_RE.test(host)) continue;
+    }
+    const hit = NETDISK.find(([re2]) => re2.test(u));
+    out.push({ url: u, kind: hit ? hit[1] : '其他链接' });
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+module.exports = {
+  UA, HOST_JIDI, HOST_XD, abs, getHtml, ts2label, fmtDateTime, normDate, dateTs,
+  NETDISK, INTERNAL_HOST_RE, extractLinks,
+};

@@ -146,10 +146,35 @@ function search(q, limit = 20, opts) {
   return { q, count: pool.length, items };
 }
 
+/**
+ * 库统计。
+ *
+ * ★ v10.22：为什么不能只报 `bySource`
+ *
+ * 机地全量话题（17,220 条）入库时，其中 13,611 条与库里已有的 XD 条目
+ * **是同一款游戏**（靠封面里的 Steam appid 精确判定，不是模糊匹配），
+ * 这些**不重复建卡**，而是把机地侧信息（`jidiId` / `jidiUrl` / 热度）
+ * 挂到那条 XD 记录上 —— 否则同一款游戏会在分类流里出现两次。
+ *
+ * 但这带来一个**读数陷阱**：`bySource` 只数 `source` 字段，
+ * 于是机地看着只有 3,609 条，而它实际覆盖了 17,220 款。
+ * ⇒ 这里额外给出 `withJidi` / `withXd`（**覆盖数**，含合并过去的），
+ *   两个口径都如实报出，避免「同一个数字被两种问法问出两个答案」。
+ */
 function stats() {
   const bySource = {};
-  for (const g of games) bySource[g.source] = (bySource[g.source] || 0) + 1;
-  return { total: games.length, bySource };
+  let withJidi = 0;
+  let withXd = 0;
+  let dual = 0;
+  for (const g of games) {
+    bySource[g.source] = (bySource[g.source] || 0) + 1;
+    const hasJidi = g.source === 'jidi' || !!g.jidiId;
+    const hasXd = g.source === 'xdgamer' || g.source === 'xdgame';
+    if (hasJidi) withJidi++;
+    if (hasXd) withXd++;
+    if (hasJidi && hasXd) dual++;
+  }
+  return { total: games.length, bySource, withJidi, withXd, dual };
 }
 
 /** 分类浏览：按 genres 过滤 + 排序 + 分页（XD 风格分类流）

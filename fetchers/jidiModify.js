@@ -41,10 +41,11 @@
  *   const items = await poll('mod', { max: 0 });      // 0 = 全量
  */
 const { UA, HOST_JIDI } = require('../shared');
-const crypto = require('crypto');
+/* ★ v10.22：签名与 env 缓存抽到 jidiSigned.js —— **算法只留一份**。
+   本文件只保留「MOD / 修改器」这一条业务线自己的分页与字段归一化。
+   `getEnv` 的签名与旧版一致（旧调用 `getEnv()` / `getEnv({force:true})` 仍可用）。 */
+const { BODY_SALT, REQ_TIMEOUT, websign, extractEnv, getEnv: signedGetEnv } = require('./jidiSigned');
 
-const BODY_SALT = 'YhD6TCs9VpAl';
-const REQ_TIMEOUT = 25000;
 /** 服务端实测上限 100（传更大也只回 100） */
 const PAGE_LIMIT = 100;
 /** 翻页间隔（毫秒）—— 全量约 90 页，别把人家站点打疼 */
@@ -54,50 +55,9 @@ const PAGE_DELAY = 180;
 const TYPES = { mobile: 1, mod: 2, modifier: 3 };
 const TYPE_LABEL = { mobile: '手游', mod: 'MOD', modifier: '修改器' };
 
-const md5 = (s) => crypto.createHash('md5').update(String(s), 'utf8').digest('hex');
-
-/** websign 算法（还原自站点 app chunk；h_m 缺失时为 0） */
-function websign(body) {
-  const h = body && body.h_m ? body.h_m : 0;
-  const inner = md5(JSON.stringify(body) + BODY_SALT);
-  return 'v2-' + md5(String(h) + inner);
-}
-
-/* env 缓存：同一轮抓取复用一个 env（它承载 h_did，服务端据此校验） */
-let envCache = null;
-let envFetchedAt = 0;
-const ENV_TTL = 10 * 60 * 1000;
-
-/** 从 /modify/list 的 SSR HTML 里取 <script id="appState"> → env */
-function extractEnv(html) {
-  const m = html.match(/<script id="appState"[^>]*>([\s\S]*?)<\/script>/);
-  if (!m) return null;
-  const raw = m[1].replace(/^window\.[A-Za-z_$]+=/, '').trim().replace(/;?\s*$/, '');
-  try {
-    const j = JSON.parse(raw);
-    return (j && j.env) || null;
-  } catch {
-    return null;
-  }
-}
-
+/** 兼容旧调用形态：getEnv() / getEnv({force}) → 固定取 /modify/list 的 env */
 async function getEnv({ force = false } = {}) {
-  if (!force && envCache && Date.now() - envFetchedAt < ENV_TTL) return envCache;
-  const r = await fetch(HOST_JIDI + '/modify/list', {
-    headers: {
-      'User-Agent': UA,
-      Accept: 'text/html,application/xhtml+xml',
-      'Accept-Language': 'zh-CN,zh;q=0.9',
-    },
-    redirect: 'follow',
-    signal: AbortSignal.timeout(REQ_TIMEOUT),
-  });
-  if (!r.ok) throw new Error('取 env 失败 HTTP ' + r.status);
-  const env = extractEnv(await r.text());
-  if (!env || !env.host) throw new Error('机地列表页未内嵌 env（可能改版）');
-  envCache = env;
-  envFetchedAt = Date.now();
-  return env;
+  return signedGetEnv('/modify/list', { force });
 }
 
 /** 单页请求 */
@@ -225,33 +185,15 @@ function shape(it) {
   };
 }
 
+/* ★ v10.22：网盘识别表与 `extractLinks` 已统一到 `shared.js`。
+   本文件曾自带一份（上限 12、不过滤站内链接），与 jidiTopics 那份（上限 20、过滤站内）不一致
+   —— 同一段正文在两个功能下抽出不同结果。现只保留一份实现，此处仅按本模块的历史
+   契约（上限 12、字段名 `kind`）转调。 */
+const { extractLinks: sharedExtractLinks } = require('../shared');
+
 /** 从正文里挖网盘/直链（用户实际要的就是这个） */
-const NETDISK = [
-  [/pan\.quark\.cn/i, '夸克网盘'],
-  [/pan\.baidu\.com/i, '百度网盘'],
-  [/pan\.xunlei\.com/i, '迅雷网盘'],
-  [/cloud\.189\.cn/i, '天翼云盘'],
-  [/caiyun\.139\.com|yun\.139\.com/i, '移动云盘'],
-  [/www\.aliyundrive\.com|alipan\.com/i, '阿里云盘'],
-  [/123pan\.com/i, '123 网盘'],
-  [/lanzou[a-z]?\.com/i, '蓝奏云'],
-  [/mypikpak\.com/i, 'PikPak'],
-  [/drive\.uc\.cn/i, 'UC 网盘'],
-];
 function extractLinks(text) {
-  const out = [];
-  const seen = new Set();
-  const re = /https?:\/\/[^\s"'<>）)】\]，,。；;]+/g;
-  let m;
-  while ((m = re.exec(String(text || '')))) {
-    const u = m[0].replace(/[.,;。，、]+$/, '');
-    if (seen.has(u)) continue;
-    seen.add(u);
-    const hit = NETDISK.find(([re2]) => re2.test(u));
-    out.push({ url: u, kind: hit ? hit[1] : '其他链接' });
-    if (out.length >= 12) break;
-  }
-  return out;
+  return sharedExtractLinks(text, { max: 12 });
 }
 
 module.exports = {

@@ -15,7 +15,7 @@
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  const st = { data: null, idx: 0, q: '', sort: 'scale', only: '', raw: '', busy: false };
+  const st = { data: null, idx: 0, q: '', sort: 'hot', only: '', raw: '', busy: false };
 
   /* 示例：刻意写成「设备配置 + 最低要求」混在一起，
      用来演示两层语义被正确分开（内存 16 GB 是设备，8 GB 是要求）。 */
@@ -217,24 +217,45 @@
     box.innerHTML =
       '<div class="up-mstats">' +
         '<div class="up-ms"><b>' + s.playable + '</b><span>可跑 / 共 ' + s.total + ' 款</span></div>' +
-        '<div class="up-ms"><b>' + s.scanned + '</b><span>扫描游戏数</span></div>' +
+        '<div class="up-ms"><b>' + s.scanned + '</b><span>有配置要求的游戏</span></div>' +
+        '<div class="up-ms"><b>' + (s.hot || 0) + '</b><span>其中带热度数据</span></div>' +
         '<div class="up-dist">' + dist + '</div>' +
       '</div>' +
       '<div class="up-mbar">' +
         '<input class="up-search" id="upq" type="search" placeholder="在可跑清单里搜游戏名…" value="' + esc(st.q) + '" autocomplete="off">' +
         '<div class="up-sorts" id="upSorts">' +
-          btn('scale', '规模优先', st.sort) + btn('margin', '余量优先', st.sort) + btn('name', '名称', st.sort) +
+          btn('hot', '🔥 热门优先', st.sort) + btn('scale', '规模优先', st.sort) +
+          btn('margin', '余量优先', st.sort) + btn('name', '名称', st.sort) +
         '</div>' +
         '<button type="button" class="up-only' + (st.only === 'playable' ? ' on' : '') + '" id="upOnly">只看可跑</button>' +
       '</div>' +
-      '<div class="up-list" id="upList">' + (m.items.length ? m.items.map(card).join('') : '<div class="up-empty">没有匹配到游戏（试试放宽搜索词）</div>') + '</div>' +
-      '<div class="up-foot">判定依据：' + esc(s.source) + ' · 只看「架构 / 图形接口 / 内存 / 存储」四项，<b>不含显卡跑分</b></div>';
+      '<div class="emu-grid up-list" id="upList">' + (m.items.length ? m.items.map(card).join('') : '<div class="up-empty">没有匹配到游戏（试试放宽搜索词）</div>') + '</div>' +
+      '<div class="up-foot">判定依据：' + esc(s.source) + ' · 只用「架构 / 图形接口 / 内存 / 存储」四项，<b>不含显卡跑分</b>' +
+      '（配置要求里的显卡是 PC 卡自由文本，和本机 GPU 不是同一量纲，比出来是假精度）<br>' +
+      '热度 = 机地话题浏览量（dpv）· 封面 / 评分 / 容量均为源站真实字段，<b>未做任何推断</b></div>';
   }
 
   function btn(key, label, cur) {
     return '<button type="button" class="up-sort' + (cur === key ? ' on' : '') + '" data-s="' + key + '">' + label + '</button>';
   }
 
+  /** 热度：机地浏览量。过万折成「12.3万」，避免长数字把卡片撑破 */
+  function fmtHot(n) {
+    const v = Number(n) || 0;
+    if (!v) return null;
+    if (v >= 10000) return (Math.round(v / 1000) / 10) + ' 万';
+    if (v >= 1000) return (Math.round(v / 100) / 10) + 'k';
+    return String(v);
+  }
+
+  /**
+   * 结果卡片 —— **沿用手机专区的 .emu-card 版式**（用户口径：
+   * 「解包匹配的游戏能够跟手机专区的前端展示效果一样」）。
+   * ★ 直接复用主源已有的 .emu-card / .emu-grid 类，不另起一套样式：
+   *   另写一套必然与手机专区漂移（本项目在「同一语义只留一份」上踩过多次）。
+   * ★ 数据全部来自 spec-req.json（机地 17,220 话题 ∪ Steam 官方，按 Steam appid 精确合并）：
+   *   封面 / 分类 / 容量 / 评分 / 热度都是源站字段，不是推断出来的。
+   */
   function card(it) {
     const v = VERDICT[it.verdict] || VERDICT.unknown;
     const chips = it.dims.filter((d) => d.state !== 'skip' && DIM_STATE[d.state]).map((d) =>
@@ -243,15 +264,48 @@
       ? '<span class="up-ch uj" title="配置里没有这项，无法判定">未判定：' + it.unjudged.map((d) => DIM_NAME[d] || d).join('、') + '</span>' : '';
     const min = [];
     if (it.min.ram) min.push('内存 ' + it.min.ram);
-    if (it.min.storage) min.push(it.min.storage.replace(/^需要\s*/, '空间 '));
+    if (it.min.storage) min.push('空间 ' + it.min.storage);
     if (it.min.dx) min.push('DX ' + it.min.dx);
     if (it.min.gpu) min.push(it.min.gpu);
-    return '<article class="up-card ' + v.c + '" data-verdict="' + it.verdict + '" data-name="' + esc(it.name) + '">' +
-      '<div class="up-card-h"><span class="up-badge ' + v.c + '">' + v.t + '</span><b>' + esc(it.name) + '</b>' +
-        (it.margin != null ? '<span class="up-mg">余量 ' + it.margin + ' GB</span>' : '') + '</div>' +
+
+    /* 容量：库里是 "50GB"/"220MB" 这类串，原样显示；顺带标注它是不是源站给的 */
+    const tags = [];
+    (it.genres || []).slice(0, 3).forEach((g) => tags.push('<span class="tg">' + esc(g) + '</span>'));
+    if (it.size) tags.push('<span class="tg">' + esc(it.size) + '</span>');
+    if (it.score) tags.push('<span class="tg up-tg-score">★ ' + esc(String(it.score)) + '</span>');
+    /* ★ 要求来源如实标注：机地 / Steam 官方 / 两者都有。用户口径「不要推断」——
+       这三个标签就是「这条要求是从哪读到的」，不是猜的。 */
+    const fromMap = { jidi: '机地', steam: 'Steam 官方', 'jidi+steam': '机地 · Steam' };
+    const from = fromMap[it.reqFrom] || null;
+
+    const hot = fmtHot(it.hot);
+    const dl = it.libUrl
+      ? '<button class="cov-btn" type="button" data-dl-open data-dl-title="' + esc(it.name) +
+        '" data-dl-url="' + esc(it.libUrl) + '">⬇ 网盘下载</button>'
+      : (it.jidiTid
+        ? '<button class="cov-btn" type="button" data-dl-open data-dl-title="' + esc(it.name) +
+          '" data-dl-url="' + esc('https://jidiyouxi.com/topic/detail/' + it.jidiTid) + '">⬇ 网盘下载</button>'
+        : '');
+
+    return '<article class="emu-card' + (it.cover ? ' has-cov' : '') + ' up-mc" data-verdict="' + it.verdict + '" data-name="' + esc(it.name) + '">' +
+      (it.cover
+        ? '<div class="cov"><img src="' + esc(it.cover) + '" alt="" loading="lazy" onerror="this.parentNode.classList.add(\'noimg\');this.remove()"></div>'
+        : '') +
+      '<div class="top">' +
+        '<div class="nm">' + esc(it.name) + '</div>' +
+        (hot ? '<div class="cnt"><b>' + esc(hot) + '</b><span>热度</span></div>' : '<div class="cnt up-badge-wrap"><span class="up-badge ' + v.c + '">' + v.t + '</span></div>') +
+      '</div>' +
+      (hot ? '<div class="up-mc-row"><span class="up-badge ' + v.c + '">' + v.t + '</span>' +
+        (from ? '<span class="up-mc-src">要求来自 ' + esc(from) + '</span>' : '<span class="up-mc-src dim">要求来源未标注</span>') + '</div>'
+        : (from ? '<div class="up-mc-row"><span class="up-mc-src">要求来自 ' + esc(from) + '</span></div>' : '')) +
+      (tags.length ? '<div class="tags">' + tags.join('') + '</div>' : '') +
       '<div class="up-chips">' + chips + uj + '</div>' +
-      '<div class="up-min">最低配置：' + esc(min.join(' · ') || '未标注') + '</div>' +
-      (it.dims.some((d) => d.state === 'fail') ? '<div class="up-why">' + esc(it.dims.filter((d) => d.state === 'fail').map((d) => d.note).join('；')) + '</div>' : '') +
+      '<div class="up-min">最低：' + esc(min.join(' · ') || '未标注') + '</div>' +
+      (it.dims.some((d) => d.state === 'fail')
+        ? '<div class="up-why">' + esc(it.dims.filter((d) => d.state === 'fail').map((d) => d.note).join('；')) + '</div>' : '') +
+      '<div class="up-mc-btns">' + dl +
+        (it.libUrl ? '<a class="up-mc-go" href="' + esc(it.libUrl) + '" target="_blank" rel="noopener">源站详情 ↗</a>' : '') +
+      '</div>' +
       '</article>';
   }
 
@@ -260,6 +314,19 @@
     try {
       const d = await fetch(api('/api/spec/dict')).then((r) => r.json());
       if (!d.ok) return;
+      /* ★ 对照库口径必须如实写：v10.22 起不再是「Steam 官方 653 款」，
+         而是「机地话题 ∪ Steam 官方，按 Steam appid 精确合并」得到的 1.6 万款。
+         这里直接读服务端回传的 stats，**不在前端写死数字**（写死了必然过期）。 */
+      const s = d.stats || {};
+      const by = s.bySource || {};
+      const srcLine = (s.jidiCandidates || s.steamCandidates)
+        ? '对照库：机地 <b>' + (s.jidiCandidates || 0).toLocaleString() + '</b> 条话题 + Steam 官方 <b>' +
+          (s.steamCandidates || 0).toLocaleString() + '</b> 条，按 <b>Steam appid 精确合并</b>为 <b>' +
+          d.built.toLocaleString() + '</b> 款（不再做名称模糊匹配）。<br>' +
+          '要求来源分布：机地 <b>' + (by.jidi || 0).toLocaleString() + '</b> · Steam 官方 <b>' +
+          (by.steam || 0).toLocaleString() + '</b> · 两源都有 <b>' + (by['jidi+steam'] || 0).toLocaleString() +
+          '</b> 款 —— 卡片上的「要求来自」标签就是读的这里，不是猜的。'
+        : '对照库：<b>' + d.built.toLocaleString() + '</b> 款。';
       $('upDict').innerHTML =
         '<div class="up-dict">' +
         '<div class="up-dict-h">凭什么这么判</div>' +
@@ -267,7 +334,7 @@
           '<div class="up-dim"><b>' + esc(x.label) + '</b><span>' + esc(x.why) + '</span></div>').join('') + '</div>' +
         '<div class="up-dict-n">兼容层 → 图形接口能力：' + d.layers.map((l) => esc(l.note)).join('；') + '。<br>' +
         '能在 ARM 上执行 x86 指令的转译层：' + d.translators.map(esc).join(' / ') + '。<br>' +
-        '对照库：Steam 官方配置要求 <b>' + d.built + '</b> 款。</div>' +
+        srcLine + '</div>' +
         '</div>';
     } catch (e) { /* 判定依据是锦上添花，拿不到不影响主流程 */ }
   }

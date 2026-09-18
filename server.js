@@ -9,6 +9,7 @@ const { spawn } = require('child_process');
 const express = require('express');
 const jidi = require('./fetchers/jidi');
 const xdgamer = require('./fetchers/xdgamer');
+const download = require('./fetchers/download');
 const specDict = require('./data/spec-dict');
 const specMatch = require('./data/spec-match');
 
@@ -274,6 +275,7 @@ const devicespec = require('./data/devicespec');
 const deviceset = require('./data/deviceset');
 const devicefill = require('./data/devicefill');
 const related = require('./data/related');
+const jiditopics = require('./data/jiditopics');   /* v10.22 机地全量话题库读取层 */
 const indexer = require('./fetchers/indexer');
 const xdrank = require('./fetchers/xdrank');
 
@@ -1367,6 +1369,87 @@ app.post('/api/library/index/jidi', (req, res) => {
 
 app.get('/api/library/progress', (_req, res) => {
   res.json({ ok: true, run: indexRun, runJ: jidiRun, state: idxState });
+});
+
+/* ================= 🗂 机地全量话题库（v10.22） =================
+ *
+ * 用户口径：「有个很重要的问题，为什么机地的数据那么少」。
+ * 根因：老实现只抓机地的**人工精选**（首页 SSR 新游 + 周/月/年热榜），全站只有 **66 条**；
+ *       而 XD 一侧有 15,319 条 —— 两个源的份量完全不成比例。
+ * 全量其实在签名接口 `/api/topic/get_topics` 里（`limit` 可到 1000 ⇒ 18 次请求抓完）：
+ *       **17,220 条**，耗时 32 秒。抓取链见 fetchers/jidiTopics.js / jidiSigned.js。
+ *
+ * ★ 这里**只读落盘产物**，运行时零联网（与全站「产物一律落盘」的口径一致）。
+ * ★ 也**不做名称模糊匹配**：与 XD 对齐走 Steam appid（见 tools/build-spec-req.js）。
+ */
+app.get('/api/jiditopics/stats', (_req, res) => res.json(jiditopics.stats()));
+
+// GET /api/jiditopics/list?q=&sort=hot|update|score&limit=&offset=&dl=1&hotMin=
+app.get('/api/jiditopics/list', (req, res) => {
+  res.json(jiditopics.list({
+    q: req.query.q,
+    sort: req.query.sort,
+    limit: req.query.limit,
+    offset: req.query.offset,
+    dl: String(req.query.dl || '') === '1',
+    hotMin: parseInt(req.query.hotMin, 10) || 0,
+  }));
+});
+
+// GET /api/download?url=<详情页URL>
+//   或  /api/download?source=jidi|xdgamer&id=…&host=xdgamer|xdgame
+//   —— 「这游戏去哪下」：返回**可直接点开的网盘地址**（v10.22 新增）
+//
+//   · jidi   ：解析话题详情页 SSR 的 topic.ssrData.postsMap/postList，取帖子正文里的网盘直链
+//   · xdgamer：解析详情页 .article-down 的 a.downbtn，再跟随 /plus/download.php 的 302 拿真实地址
+//   详见 fetchers/download.js 头部说明。
+//
+//   ★ 优先吃 `url`：因为 xdgame.com 与 xdgamer.com 是**两套内容独立的平行站**
+//     （同 ID ≠ 同游戏），只给 id 而 host 猜错会拉到另一款游戏的资源。
+//     复用 parseDetailUrl()，与 /api/detail 同一个白名单与解析口径。
+//
+//   ★ 为什么带缓存：XD 一次要解 6 个盘口的 302（6 次外部请求），机地要拉一整张详情页。
+//     资源列表在几小时内不会变，缓存 30 分钟足够。
+app.get('/api/download', async (req, res) => {
+  const rawUrl = String(req.query.url || '').trim();
+  let target = null;
+  if (rawUrl) {
+    target = parseDetailUrl(rawUrl);
+    if (!target) return res.status(400).json({ ok: false, error: '仅支持机地/XDGAME 详情页链接' });
+  } else {
+    const source = String(req.query.source || '').trim();
+    const id = String(req.query.id || '').trim();
+    if (!id || (source !== 'jidi' && source !== 'xdgamer')) {
+      return res.status(400).json({ ok: false, error: '需要 url，或 source=jidi|xdgamer 与 id' });
+    }
+    target = { source, id, host: String(req.query.host || '').trim() || undefined };
+  }
+  const key = 'dl:' + target.source + ':' + (target.host || '') + ':' + target.id;
+  try {
+    const data = await cached(key, 30 * 60_000, () => download.resolve({
+      source: target.source,
+      id: target.id,
+      host: target.host,
+    }));
+    const items = data.items || [];
+    res.json({
+      ok: true,
+      fetchedAt: Date.now(),
+      source: data.source,
+      id: data.id,
+      title: data.title || null,
+      subtitle: data.subtitle || null,
+      version: data.version || null,
+      url: data.url || null,
+      /** ★ 源站要求登录 / 权限才能取（XD 对部分游戏如此）→ 前端给出明确原因 + 去源站的出口 */
+      needAuth: !!data.needAuth,
+      /** 只报「有真实地址」的条数，避免前端把解析失败的也算进去 */
+      count: items.filter((x) => x.real).length,
+      items,
+    });
+  } catch (e) {
+    res.status(502).json({ ok: false, error: String((e && e.message) || e) });
+  }
 });
 
 app.use((_req, res) => res.status(404).json({ ok: false, error: 'Not Found' }));
