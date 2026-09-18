@@ -109,6 +109,26 @@ const heads = ['# 状态汇报', '## ① 做了什么', '## ② 分享链接', '
 ok(heads.every((h) => out.includes(h)), '实跑输出六行标题全在', heads.filter((h) => !out.includes(h)).join(',') || '全在');
 ok(/git log 读取失败/.test(out) === false, '★ 实跑没触发「git log 读取失败」（引号坑已修）');
 
+console.log('\n=== ⑤-b 滞后文档不许自称「最新」（2026-09-18 新增，收 #46）===');
+/* 三份旧交接/设计文档曾长期停在 v10.10 / v10.1 / v10.3 却仍在顶部写「最新 —— 先看这段」，
+   而 HANDOFF.md 里给的是**已弃用的分享链接**（200 但内容很旧）。
+   错误文档比没有文档更危险 —— 照它干活会直接干错。 */
+const doc = (f) => { try { return fs.readFileSync(path.join(ROOT, f), 'utf8'); } catch { return ''; } };
+for (const f of ['HANDOFF.md', 'CODEX-HANDOFF.md']) {
+  const s = doc(f);
+  ok(/已归档/.test(s), '★ ' + f + ' 顶部有「已归档」说明（不再冒充最新）');
+  ok(!/最新\s*——\s*先看这段/.test(s), '★ ' + f + ' 已删掉「最新 —— 先看这段」的旧claim');
+  ok(/CODEX-INDEX\.md/.test(s), f + ' 指向 CODEX-INDEX.md（当前状态以它为准）');
+  ok(/gamehub-agg-v2\.app\.workbuddy\.host/.test(s), f + ' 给出**当前**分享链接');
+}
+const handoff = doc('HANDOFF.md');
+ok(/已弃用/.test(handoff) && /36aa37e911e6447eb86eb187240daff2/.test(handoff),
+  '★ HANDOFF.md 明确把旧链接标成「已弃用」（它 200 但内容很旧，是最容易骗人的那种）');
+const design = doc('DESIGN.md');
+ok(/第 4 节|筛选条/.test(design) && /已不是当前实现/.test(design),
+  '★ DESIGN.md 明示第 4 节筛选条已不是当前实现（v10.5 拆三行 / v10.9 七行 .emu-bar-row）');
+ok(/v10\.19/.test(design), 'DESIGN.md 记录了 v10.19 的指南卡片化');
+
 console.log('\n=== ⑥ 本地真实数据自检 ===');
 const idx = fs.readFileSync(path.join(ROOT, 'public/index.html'), 'utf8');
 ok(idx.length > 100000, 'public/index.html 有内容可算 md5', (Buffer.byteLength(idx, 'utf8') / 1024).toFixed(1) + 'KB');
