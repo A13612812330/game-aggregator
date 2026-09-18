@@ -16,6 +16,9 @@
     --shadow:0 1px 2px rgba(18,26,51,.06); --shadow-lg:0 14px 40px rgba(18,26,51,.14);
     --r-lg:14px; --r-md:10px; --r-sm:8px;
     --maxw:1240px;
+    /* 顶栏高度（统一声明，供粘性子元素计算自身 top；≤760px 处覆盖为 54px）。
+       v10.19：模拟器指南的模块导航要吸在顶栏**下面**，原来写 top:0 被 .topbar(z-index:60) 完全盖住 */
+    --topbar-h:60px;
     --font:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Roboto,sans-serif;
     --font-num:"DIN Alternate","Segoe UI",ui-monospace,SFMono-Regular,monospace;
   }
@@ -714,13 +717,31 @@
   .emu-intro.eg{background:linear-gradient(120deg,#ECFEFF,#F0F9FF);border-color:#BAE6FD}
   .emu-intro.eg .ic{background:linear-gradient(135deg,#0EA5E9,#0284C7)}
   .emu-intro.eg .tx b{color:#075985}
-  .eg-sec{margin:0 0 26px}
-  .eg-sec h3{margin:0 0 5px;font-size:15px;font-weight:800;color:var(--c-t1);display:flex;align-items:center;gap:8px}
+  /* ★ v10.19 模块化（修「模拟器指南太乱」）：
+     原来 7 个 .eg-sec 平铺、没有导航、没有卡片边界 —— 页面被拉成一整条，
+     用户找不到"我要看哪一节"。现在：吸顶模块导航（可点可滚动联动）+ 每个模块一张卡片 + 序号徽章。 */
+  .eg-nav{position:sticky;top:calc(var(--topbar-h) + 1px);z-index:7;display:flex;gap:6px;overflow-x:auto;
+    padding:10px 2px;margin:0 0 13px;background:var(--c-bg);
+    border-bottom:1px solid var(--c-border);scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .eg-nav::-webkit-scrollbar{display:none}
+  .eg-nav a{flex:none;display:inline-flex;align-items:center;gap:5px;padding:6px 11px;
+    border-radius:99px;border:1px solid var(--c-border);background:var(--c-surface);
+    font-size:11.5px;font-weight:700;color:var(--c-t2);text-decoration:none;white-space:nowrap;
+    transition:background .15s,border-color .15s,color .15s}
+  .eg-nav a:hover{border-color:#7DD3FC;color:#0369A1}
+  .eg-nav a.on{background:#0EA5E9;border-color:#0EA5E9;color:#fff}
+  .eg-nav a b{font:800 10.5px var(--font-num);opacity:.85}
+  .eg-sec{margin:0 0 12px;background:var(--c-surface);border:1px solid var(--c-border);
+    border-radius:var(--r-lg);padding:15px 17px 16px;scroll-margin-top:calc(var(--topbar-h) + 62px)}
+  .eg-sec h3{margin:0 0 6px;font-size:15px;font-weight:800;color:var(--c-t1);display:flex;align-items:center;gap:8px}
+  .eg-sec h3 .eg-no{flex:none;width:23px;height:23px;border-radius:7px;
+    background:linear-gradient(135deg,#0EA5E9,#0284C7);color:#fff;
+    font:800 11.5px/23px var(--font-num);text-align:center}
   .eg-lead{margin:0 0 13px;font-size:12px;line-height:1.6;color:var(--c-t3)}
   .eg-lead b{color:#0369A1}
   /* 五层栈 */
   .eg-stack{display:flex;flex-direction:column;gap:7px}
-  .eg-ly{display:flex;gap:11px;align-items:flex-start;padding:11px 13px;border-radius:11px;background:#fff;border:1px solid var(--c-line);position:relative;overflow:hidden}
+  .eg-ly{display:flex;gap:11px;align-items:flex-start;padding:11px 13px;border-radius:11px;background:#fff;border:1px solid var(--c-border);position:relative;overflow:hidden}
   .eg-ly.key{background:linear-gradient(120deg,#FFFBEB,#FEF3C7);border-color:#FCD34D}
   .eg-ly .no{flex:none;width:24px;height:24px;border-radius:7px;background:#E0F2FE;color:#0369A1;font:800 12px/24px var(--font-num);text-align:center}
   .eg-ly.key .no{background:#F59E0B;color:#fff}
@@ -731,7 +752,7 @@
   .eg-ly .flag{flex:none;font-size:10px;font-weight:800;color:#B45309;background:#FEF3C7;border-radius:5px;padding:2px 6px}
   /* 芯片卡 */
   .eg-chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:11px}
-  .eg-chip{background:#fff;border:1px solid var(--c-line);border-radius:12px;padding:12px 13px;display:flex;flex-direction:column;gap:6px}
+  .eg-chip{background:#fff;border:1px solid var(--c-border);border-radius:12px;padding:12px 13px;display:flex;flex-direction:column;gap:6px}
   .eg-chip .hd{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
   .eg-chip .hd .gen{font-size:12.5px;font-weight:800;color:var(--c-t1)}
   .eg-chip .tag{font-size:10px;font-weight:800;border-radius:5px;padding:1.5px 6px}
@@ -745,8 +766,8 @@
   .eg-chip .drv .ln.alt b{color:#0284C7;font-weight:700}
   .eg-chip .nt{font-size:11px;line-height:1.55;color:var(--c-t3)}
   /* 表格 */
-  .eg-tbl{border:1px solid var(--c-line);border-radius:11px;overflow:hidden;background:#fff}
-  .eg-tbl .tr{display:grid;align-items:start;gap:0;border-bottom:1px solid var(--c-line);font-size:11.5px}
+  .eg-tbl{border:1px solid var(--c-border);border-radius:11px;overflow:hidden;background:#fff}
+  .eg-tbl .tr{display:grid;align-items:start;gap:0;border-bottom:1px solid var(--c-border);font-size:11.5px}
   .eg-tbl .tr:last-child{border-bottom:none}
   .eg-tbl .tr.hd{background:#F0F9FF;font-weight:800;color:#075985;font-size:11px}
   .eg-tbl .tr>div{padding:9px 12px;line-height:1.5}
@@ -755,9 +776,13 @@
   .eg-tbl .tr .c3{color:var(--c-t3)}
   .eg-tbl.w3 .tr{grid-template-columns:150px 165px 1fr}
   .eg-tbl.w2 .tr{grid-template-columns:190px 110px 1fr}
+  /* v10.19：两列表（③包装器 / ⑥版本门槛 / ⑦帧率参考），比裸圆点列表可扫读得多 */
+  .eg-tbl.w2c .tr{grid-template-columns:180px 1fr}
+  .eg-tbl.w2c .tr .c1{color:var(--c-t1);font-weight:800;font-size:11.5px}
+  .eg-tbl.w2c .tr .c3{color:var(--c-t3);font-size:11.5px;line-height:1.6}
   /* 优化清单 */
   .eg-tune{margin:0;padding:0;list-style:none;counter-reset:eg}
-  .eg-tune li{counter-increment:eg;position:relative;padding:10px 13px 10px 42px;background:#fff;border:1px solid var(--c-line);border-radius:10px;margin-bottom:7px}
+  .eg-tune li{counter-increment:eg;position:relative;padding:10px 13px 10px 42px;background:#fff;border:1px solid var(--c-border);border-radius:10px;margin-bottom:7px}
   .eg-tune li::before{content:counter(eg);position:absolute;left:12px;top:10px;width:20px;height:20px;border-radius:6px;background:#0EA5E9;color:#fff;font:800 11px/20px var(--font-num);text-align:center}
   .eg-tune li b{display:block;font-size:12px;color:var(--c-t1);margin-bottom:2px}
   .eg-tune li span{font-size:11.5px;line-height:1.55;color:var(--c-t3)}
@@ -774,17 +799,17 @@
   .emu-intro.dm .ic{background:linear-gradient(135deg,#F59E0B,#D97706)}
   .emu-intro.dm .tx b{color:#92400E}
   .dm-pick{display:flex;gap:9px;flex-wrap:wrap;align-items:stretch;margin:0 0 13px}
-  .dm-sel{border:1px solid var(--c-line);border-radius:10px;background:#fff;padding:9px 11px;
+  .dm-sel{border:1px solid var(--c-border);border-radius:10px;background:#fff;padding:9px 11px;
     font:500 12.5px var(--font);color:var(--c-t1);min-width:150px;cursor:pointer;outline:none}
   .dm-sel:focus{border-color:#F59E0B;box-shadow:0 0 0 3px rgba(245,158,11,.14)}
   .dm-inp-wrap{position:relative;flex:1;min-width:210px}
-  .dm-inp{width:100%;box-sizing:border-box;border:1px solid var(--c-line);border-radius:10px;background:#fff;
+  .dm-inp{width:100%;box-sizing:border-box;border:1px solid var(--c-border);border-radius:10px;background:#fff;
     padding:9px 12px;font:500 12.5px var(--font);color:var(--c-t1);outline:none}
   .dm-inp:focus{border-color:#F59E0B;box-shadow:0 0 0 3px rgba(245,158,11,.14)}
   .dm-sug{position:absolute;z-index:30;top:calc(100% + 5px);left:0;right:0;max-height:270px;overflow:auto;
-    background:#fff;border:1px solid var(--c-line);border-radius:11px;box-shadow:0 12px 30px rgba(15,23,42,.13);display:none}
+    background:#fff;border:1px solid var(--c-border);border-radius:11px;box-shadow:0 12px 30px rgba(15,23,42,.13);display:none}
   .dm-sug-i{display:flex;flex-direction:column;gap:1px;width:100%;text-align:left;border:none;background:none;
-    padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--c-line);font-family:var(--font)}
+    padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--c-border);font-family:var(--font)}
   .dm-sug-i:last-child{border-bottom:none}
   .dm-sug-i:hover{background:#FFFBEB}
   .dm-sug-i b{font-size:12px;color:var(--c-t1)}
@@ -817,7 +842,7 @@
   .dm-sum{display:flex;gap:6px;flex-wrap:wrap}
   /* 档位筛选 */
   .dm-flt{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
-  .dm-f{border:1px solid var(--c-line);background:#fff;border-radius:8px;padding:6px 13px;cursor:pointer;
+  .dm-f{border:1px solid var(--c-border);background:#fff;border-radius:8px;padding:6px 13px;cursor:pointer;
     font:700 11.5px var(--font);color:var(--c-t2)}
   .dm-f:hover{border-color:#FCD34D}
   .dm-f.on{background:linear-gradient(135deg,#F59E0B,#D97706);border-color:transparent;color:#fff}
@@ -825,11 +850,11 @@
   .dm-need{font-size:10.5px;color:var(--c-t3);margin-top:5px}
   .dm-need code{font-family:var(--font-num);color:#B45309;font-weight:700}
   .dm-empty{grid-column:1/-1;text-align:center;color:var(--c-t3);font-size:12px;padding:22px 0}
-  .dm-more{display:block;margin:15px auto 0;border:1px solid var(--c-line);background:#fff;border-radius:10px;
+  .dm-more{display:block;margin:15px auto 0;border:1px solid var(--c-border);background:#fff;border-radius:10px;
     padding:9px 26px;cursor:pointer;font:700 12px var(--font);color:var(--c-t2)}
   .dm-more:hover{border-color:#FCD34D;color:#B45309}
   /* Turnip 驱动看板 */
-  .dm-turnip{background:#fff;border:1px solid var(--c-line);border-radius:12px;padding:13px 15px;margin:0 0 14px}
+  .dm-turnip{background:#fff;border:1px solid var(--c-border);border-radius:12px;padding:13px 15px;margin:0 0 14px}
   .dm-tp-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
   .dm-tp-h b{font-size:13px;font-weight:800;color:var(--c-t1)}
   .dm-tp-a{font:700 10.5px var(--font-num);color:#0369A1;background:#E0F2FE;border-radius:6px;padding:2px 7px}
@@ -1073,6 +1098,7 @@
     .sm-row img,.sm-row .ph2{width:66px;height:39px}
     .sm-row .go2{display:none}
     .topbar .in{height:54px}
+    :root{--topbar-h:54px}
     body{padding-bottom:66px}
     .main-nav{display:none}
     .live-tag{display:none}

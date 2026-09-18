@@ -392,47 +392,57 @@ const SECTIONS = `
     </div>
   </div>
 
-  <div class="eg-sec">
-    <h3>① 手机跑 PC 游戏，靠的是这五层</h3>
+  <nav class="eg-nav" id="egNav">
+    <a href="#egS1" class="on"><b>1</b>五层技术栈</a>
+    <a href="#egS2"><b>2</b>芯片驱动</a>
+    <a href="#egS3"><b>3</b>包装器</a>
+    <a href="#egS4"><b>4</b>优化清单</a>
+    <a href="#egS5"><b>5</b>避坑清单</a>
+    <a href="#egS6"><b>6</b>版本门槛</a>
+    <a href="#egS7"><b>7</b>帧率参考</a>
+  </nav>
+
+  <section class="eg-sec" id="egS1">
+    <h3><span class="eg-no">1</span>手机跑 PC 游戏，靠的是这五层</h3>
     <p class="eg-lead">ARM 手机芯片既看不懂 x86 指令、系统也不是 Windows。所以游戏 exe 要穿过五层翻译才能变成屏幕像素——<b>任何一层缺失或版本不匹配，都会是黑屏而不是「卡」</b>。</p>
     <div class="eg-stack" id="egStack"></div>
-  </div>
+  </section>
 
-  <div class="eg-sec">
-    <h3>② 你的芯片该装哪个驱动</h3>
+  <section class="eg-sec" id="egS2">
+    <h3><span class="eg-no">2</span>你的芯片该装哪个驱动</h3>
     <p class="eg-lead">这是唯一「换一个文件就能从幻灯片变 60 帧」的变量，也是新手最容易踩的坑。按 Adreno 世代选，不要跨代用。</p>
     <div class="eg-chips" id="egChips"></div>
-  </div>
+  </section>
 
-  <div class="eg-sec">
-    <h3>③ DirectX 包装器对照表</h3>
+  <section class="eg-sec" id="egS3">
+    <h3><span class="eg-no">3</span>DirectX 包装器对照表</h3>
     <p class="eg-lead">游戏用哪代 DirectX，就装哪个包装器。装错的表现是「启动即闪退」或「进游戏纯黑」。</p>
-    <ul class="eg-list" id="egWrap"></ul>
-  </div>
+    <div class="eg-tbl w2c" id="egWrap"></div>
+  </section>
 
-  <div class="eg-sec">
-    <h3>④ 优化清单（按投产比排序）</h3>
+  <section class="eg-sec" id="egS4">
+    <h3><span class="eg-no">4</span>优化清单（按投产比排序）</h3>
     <p class="eg-lead">这些是从「能开起来」到「能玩」的关键调优项，建议按顺序做。</p>
-    <ul class="eg-list" id="egTune"></ul>
-  </div>
+    <ol class="eg-tune" id="egTune"></ol>
+  </section>
 
-  <div class="eg-sec">
-    <h3>⑤ 避坑清单（结构上就不可能跑）</h3>
+  <section class="eg-sec" id="egS5">
+    <h3><span class="eg-no">5</span>避坑清单（结构上就不可能跑）</h3>
     <p class="eg-lead">下面这些不是配置问题，<b>再怎么调都跑不起来</b>，别浪费时间。</p>
-    <ul class="eg-list eg-avoid" id="egAvoid"></ul>
-  </div>
+    <div class="eg-avoid" id="egAvoid"></div>
+  </section>
 
-  <div class="eg-sec">
-    <h3>⑥ 版本门槛（2026-09 口径）</h3>
+  <section class="eg-sec" id="egS6">
+    <h3><span class="eg-no">6</span>版本门槛（2026-09 口径）</h3>
     <p class="eg-lead">「该装哪个版本」是新手最容易一句话答错的问题。这一节把当前该用的版本号固定下来，省得去翻一堆 release 页。</p>
-    <ul class="eg-list" id="egVer"></ul>
-  </div>
+    <div class="eg-tbl w2c" id="egVer"></div>
+  </section>
 
-  <div class="eg-sec">
-    <h3>⑦ 社区实测帧率参考</h3>
+  <section class="eg-sec" id="egS7">
+    <h3><span class="eg-no">7</span>社区实测帧率参考</h3>
     <p class="eg-lead">来自社区公开数据，仅供参考；同一机型因散热与 ROM 差异可能出入较大。</p>
-    <ul class="eg-list" id="egBench"></ul>
-  </div>
+    <div class="eg-tbl w2c" id="egBench"></div>
+  </section>
 </main>`;
 
 
@@ -479,7 +489,7 @@ const DEVMATCH_HTML = `
   </div>
 
   <div class="eg-sec">
-    <h3>① 选择你的机型</h3>
+    <h3><span class="eg-no">1</span>选择你的机型</h3>
     <p class="eg-lead">不知道具体型号？先选品牌看列表，或输入「小米 15」「S24」「K80」这类关键词试试。</p>
     <div class="dm-pick">
       <select class="dm-sel" id="dmBrand"><option value="">选择品牌…</option></select>
@@ -493,13 +503,13 @@ const DEVMATCH_HTML = `
   </div>
 
   <div class="eg-sec">
-    <h3>② 配套驱动：Turnip 最新构建</h3>
+    <h3><span class="eg-no">2</span>配套驱动：Turnip 最新构建</h3>
     <p class="eg-lead">高通 Adreno 机型跑 PC 游戏，<b>换对驱动往往比换机型提升更明显</b>。以下为自动化构建的最新版本，按你的 GPU 世代选对应变体。</p>
     <div id="dmTurnip"><div class="dm-turnip"><p class="dm-empty">加载中…</p></div></div>
   </div>
 
   <div class="eg-sec" id="dmResultSec" style="display:none">
-    <h3>③ 可跑游戏清单</h3>
+    <h3><span class="eg-no">3</span>可跑游戏清单</h3>
     <p class="eg-lead">「流畅」= 你的 GPU 明显强于该游戏已验证的最低配置；「可玩」= 刚好达到；「勉强」= 略低，需降画质。</p>
     <div class="dm-flt">
       <button class="dm-f on" data-dmv="" type="button">全部</button>

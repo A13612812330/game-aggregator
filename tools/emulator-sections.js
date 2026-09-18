@@ -247,42 +247,146 @@ async function initEmu() {
 /* ================= ③ 模拟器指南 ================= */
 const egState = { inited: false };
 
+/* ★ v10.19 修「模拟器指南太乱」——
+   本函数原来渲染的类名（.eg-n / .eg-tx / .eg-sub / .eg-key / .eg-ch-h / .eg-tier /
+   .eg-ch-b / .eg-ch-note / .eg-list）在 CSS 里**一个都不存在**：
+   数据全都渲染出来了，样式却全部落空 —— ④优化 / ⑥版本 / ⑦帧率 直接退化成
+   浏览器默认的圆点列表，五层技术栈与芯片卡只剩外框、内部文字全裸。
+   现在一律改用 CSS 里**已经定义好**的类名（.no/.bd/.nm/.sb/.ds/.flag、
+   .hd/.gen/.tag/.soc/.drv/.nt、.eg-tbl.w2c、.eg-tune、.eg-av）。
+   改这条时务必对照 public/index.html 的「第五分区」CSS，别再造新类名。 */
 async function initEg() {
   if (egState.inited) return; egState.inited = true;
   try {
     const g = await fetch(api('/api/emuguide')).then((r) => r.json());
+
+    /* ① 五层技术栈 —— CSS: .eg-ly[.key] > .no + .bd(.nm/.sb/.ds) + .flag */
     const st = document.getElementById('egStack');
     if (st && g.stack) {
-      st.innerHTML = g.stack.map((x) => `<div class="eg-ly">
-        <div class="eg-n">${x.n}</div>
-        <div class="eg-tx"><b>${esc(x.name)}</b><span class="eg-sub">${esc(x.sub || '')}</span><p>${esc(x.desc || '')}</p></div>
-        ${x.key ? '<span class="eg-key">关键</span>' : ''}
+      st.innerHTML = g.stack.map((x) => `<div class="eg-ly${x.key ? ' key' : ''}">
+        <div class="no">${x.n}</div>
+        <div class="bd">
+          <div class="nm">${esc(x.name)}</div>
+          <div class="sb">${esc(x.sub || '')}</div>
+          <div class="ds">${esc(x.desc || '')}</div>
+        </div>
+        ${x.key ? '<span class="flag">关键</span>' : ''}
       </div>`).join('');
     }
+
+    /* ② 芯片卡 —— CSS: .eg-chip > .hd(.gen/.tag) + .soc + .drv(.ln/.ln.alt) + .nt */
     const ch = document.getElementById('egChips');
     if (ch && g.chips) {
-      ch.innerHTML = g.chips.map((c) => `<div class="eg-chip ${esc(c.tone || '')}">
-        <div class="eg-ch-h"><b>${esc(c.soc || '')}</b><span class="eg-tier">${esc(c.tier || '')}</span></div>
-        <div class="eg-ch-b">推荐驱动 <code>${esc(c.driver || '—')}</code></div>
-        ${c.alt ? `<div class="eg-ch-b dim">备选 <code>${esc(c.alt)}</code></div>` : ''}
-        ${c.build ? `<div class="eg-ch-b dim">构建 <code>${esc(c.build)}</code></div>` : ''}
-        ${c.note ? `<p class="eg-ch-note">${esc(c.note)}</p>` : ''}
+      ch.innerHTML = g.chips.map((c) => `<div class="eg-chip">
+        <div class="hd">
+          <span class="gen">${esc(c.gen || '')}</span>
+          <span class="tag ${esc(c.tone || '')}">${esc(c.tier || '')}</span>
+        </div>
+        <div class="soc">${esc(c.soc || '')}</div>
+        <div class="drv">
+          <div class="ln">推荐驱动 <b>${esc(c.driver || '—')}</b></div>
+          ${c.alt ? `<div class="ln alt">备选 <b>${esc(c.alt)}</b></div>` : ''}
+          ${c.build ? `<div class="ln">构建 <b>${esc(c.build)}</b></div>` : ''}
+        </div>
+        ${c.note ? `<div class="nt">${esc(c.note)}</div>` : ''}
       </div>`).join('');
     }
-    const w = document.getElementById('egWrap');
-    if (w && g.wrappers) w.innerHTML = g.wrappers.map((x) => `<li><b>${esc(x.name || x.n || '')}</b>${esc(x.desc || x.d || '')}</li>`).join('');
+
+    /* ③⑥⑦ 两列表 —— CSS: .eg-tbl.w2c（带表头，可扫读） */
+    const tbl = (id, arr, k1, k2) => {
+      const el = document.getElementById(id);
+      if (!el || !arr) return;
+      el.innerHTML =
+        `<div class="tr hd"><div class="c1">${k1}</div><div class="c3">${k2}</div></div>` +
+        arr.map((x) => `<div class="tr">
+          <div class="c1">${esc(x.name || '')}</div>
+          <div class="c3">${esc(x.desc || '')}</div>
+        </div>`).join('');
+    };
+    tbl('egWrap', g.wrappers, 'DirectX 版本', '用哪个包装器 · 要注意什么');
+    tbl('egVer', g.versions, '组件', '当前该用的版本 · 怎么选');
+    tbl('egBench', g.bench, '游戏', '实测表现 · 条件');
+
+    /* ④ 优化清单 —— CSS: .eg-tune（ol + CSS counter 自动编号） */
     const tn = document.getElementById('egTune');
-    if (tn && g.tuning) tn.innerHTML = g.tuning.map((x) => `<li><b>${esc(x.name || x.n || '')}</b>${esc(x.desc || x.d || '')}</li>`).join('');
+    if (tn && g.tuning) {
+      tn.innerHTML = g.tuning.map((x) => `<li>
+        <b>${esc(x.name || '')}</b><span>${esc(x.desc || '')}</span>
+      </li>`).join('');
+    }
+
+    /* ⑤ 避坑 —— CSS: .eg-avoid(grid) > .eg-av(.nm/.wy) */
     const av = document.getElementById('egAvoid');
-    if (av && g.avoid) av.innerHTML = g.avoid.map((x) => `<li><b>${esc(x.name || x.n || '')}</b>${esc(x.desc || x.d || '')}</li>`).join('');
-    const be = document.getElementById('egBench');
-    if (be && g.bench) be.innerHTML = g.bench.map((x) => `<li><b>${esc(x.name || x.n || '')}</b>${esc(x.desc || x.d || '')}</li>`).join('');
-    /* ★ v10.13 新增：版本门槛（哪些版本号是当前该用的） */
-    const vr = document.getElementById('egVer');
-    if (vr && g.versions) vr.innerHTML = g.versions.map((x) => `<li><b>${esc(x.name || '')}</b>${esc(x.desc || '')}</li>`).join('');
+    if (av && g.avoid) {
+      av.innerHTML = g.avoid.map((x) => `<div class="eg-av">
+        <div class="nm">${esc(x.name || '')}</div>
+        <div class="wy">${esc(x.desc || '')}</div>
+      </div>`).join('');
+    }
+
     const s = document.getElementById('egSrc');
     if (s) s.textContent = '经验参考 · 非官方';
+
+    egBindNav();
   } catch (e) {}
+}
+
+/* 模块导航：点击跳转 + 滚动联动高亮（scroll spy）。
+   ★ v10.19 实拍踩到的坑：最初用 IntersectionObserver 做 spy，**点击后高亮不跟随**。
+     rootMargin 的收缩语义 + 回调只给「状态变化的元素」，导致滚到第 5 节时
+     第 4 节仍是负 top、判定与直觉不一致，调试成本高。
+     改成 rAF 节流的 scroll spy：判据只有一条 ——「最后一个 top 已越过吸顶导航下沿的模块」，
+     直观、可断言、不依赖 IO 的边界语义。scroll 回调里只置一个 rAF 标记，不掉帧。 */
+function egBindNav() {
+  const nav = document.getElementById('egNav');
+  if (!nav || nav.dataset.bound) return;
+  nav.dataset.bound = '1';
+  const links = [].slice.call(nav.querySelectorAll('a'));
+  const pairs = links
+    .map((a) => ({ a, el: document.querySelector(a.getAttribute('href')) }))
+    .filter((p) => p.el);
+  if (!pairs.length) return;
+
+  let cur = null;
+  const paint = (el) => {
+    if (cur === el) return;
+    cur = el;
+    pairs.forEach((p) => p.a.classList.toggle('on', p.el === el));
+  };
+
+  links.forEach((a) => a.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    const p = pairs.find((x) => x.a === a);
+    if (!p) return;
+    paint(p.el);
+    /* ★ 自己算目标位置再 scrollTo，不用 scrollIntoView。
+       实拍踩到：`scrollIntoView({behavior:'smooth'})` 在 headless 下出现
+       「高亮切了、页面纹丝不动（scrollY 0 → 0）」的静默失效。
+       偏移量取元素自身的 scroll-margin-top（CSS 里已按 --topbar-h 算好），
+       保证落点不被顶栏 + 模块导航遮住。 */
+    const off = parseFloat(getComputedStyle(p.el).scrollMarginTop) || 0;
+    const y = Math.max(0, p.el.getBoundingClientRect().top + window.pageYOffset - off);
+    try { window.scrollTo({ top: y, behavior: 'smooth' }); }
+    catch (e) { window.scrollTo(0, y); }
+  }));
+
+  /* 基准取**导航条自身的下沿**（它是 sticky，吸顶后 bottom 就是可视下沿）+ 8px 容差。
+     不硬编码顶栏高度 —— 桌面 60px / 窄屏 54px（CSS 变量 --topbar-h）会变。 */
+  let raf = 0;
+  const spy = () => {
+    raf = 0;
+    /* ⚠️ 容差必须 > 0 且留够余量（实拍抓到的边界 bug）：
+       点击导航后模块**正好停在 scroll-margin-top = --topbar-h + 62 = 122px** 处，
+       而 nav 吸顶后下沿 = 61 + 53 = 114，114 + 8 = 122 —— 两者恰好相等，
+       浮点误差让 `top <= line` 判成 false，高亮就抖回上一节（停在 #egS4）。
+       留 16px 余量后落点稳定命中本节，同时离下一节（约 465px）还远，不会提前点亮。 */
+    const line = nav.getBoundingClientRect().bottom + 16;
+    let best = pairs[0].el;
+    for (const p of pairs) if (p.el.getBoundingClientRect().top <= line) best = p.el;
+    paint(best);
+  };
+  window.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(spy); }, { passive: true });
+  spy();
 }
 
 /* ================= ④ 机型兼容查询 =================
