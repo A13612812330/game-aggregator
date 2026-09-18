@@ -61,10 +61,38 @@ const SUITES = [
 let pass = 0, fail = 0;
 const crashed = [];
 const missing = [];
+const noExit = [];
+
+/**
+ * 套件是否**把退出码挂在失败数上**。
+ *
+ * ★★ 为什么必须先查这个（v10.22 实测踩到）：本脚本靠**解析输出**里的 `n / m` 统计成绩，
+ *   所以即使某套件永远 exit 0，全量汇总**仍然是对的** —— 但这是「险过」：
+ *     · 单独跑 `node tools/test-xxx.js`（`WORKFLOW.md` 步骤 8 就是这么写的）时，
+ *       `echo $?` 得到 0 ⇒ **红的被当成绿的**；
+ *     · 标准反证判据（打坏护栏 → 退出码非零）**对它完全失效**，
+ *       等于这道护栏**验不了**，和没有差不多。
+ *   实测当时有 2 套中招：`test-report.js` 与 `test-alias-guard.js`（都已补）。
+ *
+ * 只认两种写法的「挂在失败数上」：
+ *   · `process.exit(fail ? 1 : 0)` / `process.exit(fail.length ? 1 : 0)`
+ *   · `if (fail) process.exitCode = 1`
+ * ★ 故意**不认** catch 里的 `process.exit(1)` —— 那只覆盖「脚本崩了」，
+ *   不覆盖「断言失败了」，正是本函数要区分的东西。
+ */
+function exitTiedToFailures(src) {
+  const NAMES = /^(fail|fails|failures|failed|bad|errs|nFail)$/;
+  const m1 = [...src.matchAll(/process\.exit\s*\(\s*([A-Za-z_$][\w$]*)(?:\.length)?\s*\?/g)];
+  if (m1.some((m) => NAMES.test(m[1]))) return true;
+  if (/process\.exitCode\s*=\s*1/.test(src) && /\bif\s*\(\s*(fail|fails|failures|failed|bad|errs|nFail)\b/.test(src)) return true;
+  return false;
+}
 
 for (const s of SUITES) {
   const file = path.join(ROOT, 'tools', s);
   if (!fs.existsSync(file)) { missing.push(s); continue; }
+
+  if (!exitTiedToFailures(fs.readFileSync(file, 'utf8'))) noExit.push(s);
 
   let out = '', code = 0;
   try {
@@ -98,10 +126,14 @@ console.log(`\n${'#'.repeat(52)}`);
 console.log(`静态防线：${SUITES.length} 套`);
 console.log(`通过 ${pass} / 失败 ${fail}`);
 if (missing.length) console.log(`⚠️ 清单里的文件不存在：${missing.join(', ')}`);
+if (noExit.length) {
+  console.log(`⚠️ 退出码不随失败变（单独跑时红绿不分，且反证验不了）：${noExit.join(', ')}`);
+  console.log('   ⇒ 在该套件末尾补 `process.exit(fail ? 1 : 0)`');
+}
 console.log(`异常退出：${crashed.length ? crashed.join(', ') : '无'}`);
 console.log(`${'#'.repeat(52)}`);
 
-if (fail || crashed.length || missing.length) {
+if (fail || crashed.length || missing.length || noExit.length) {
   console.log('\n⚠️ 静态防线未全绿 —— 先修这里，别急着跑实拍。');
   process.exit(1);
 }

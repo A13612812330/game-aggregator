@@ -159,6 +159,39 @@ ok(/000/.test(wf) && /服务挂了/.test(wf), '★ 记着「000 = 服务挂了�
 ok(/core\.autocrlf|入库字节/.test(wf), '★ 记着 autocrlf 坑（读磁盘建 blob 会推错内容）');
 ok(wf.includes('36aa37e9') ? /已弃用/.test(wf) : true, '若提到旧链接必须标「已弃用」');
 ok(!/最新\s*——\s*先看这段/.test(wf), '不许出现「最新 —— 先看这段」这种会在下版崩塌的措辞');
+ok(/PITFALLS\.md/.test(wf), '★ WORKFLOW 指向 PITFALLS.md（不然 13KB 的踩坑全集没人找得到）');
+
+console.log('\n=== ⑤-d 踩坑全集 PITFALLS.md（2026-09-18 从 MEMORY.md 迁出）===');
+/* 为什么给这份文档加护栏：它是**全项目信息密度最高**的一份（13KB，60+ 条判据），
+   却是从「有 3000 字上限的记忆文件」里挤出来的 —— 一旦它静默消失或长残，
+   丢掉的是本项目踩过的所有坑，而没有任何东西会报错。
+   ★ 顺带守「记忆文件不许再胖回去」：迁出的意义就是让它保持瘦。 */
+const pf = doc('PITFALLS.md');
+ok(pf.length > 8000, 'PITFALLS.md 存在且有实质内容', (Buffer.byteLength(pf, 'utf8') / 1024).toFixed(1) + 'KB');
+ok(/MEMORY\.md/.test(pf), '★ 写明了自己是从 MEMORY.md 迁出的（否则后人不知道两份文档的关系）');
+ok(/新增踩坑请写到这里/.test(pf), '★ 写了「新增踩坑写这里」—— 否则又会往流程文档里堆');
+ok(/elementFromPoint/.test(pf), '记着「存在 ≠ 可见」的判据（z-index 被压住时存在性断言全绿）');
+ok(/你没有权限下载/.test(pf) && /needAuthOf/.test(pf),
+  '★ 记着「源站权限门 ≠ 抓取失败」（两者该给的出口相反）');
+ok(/total.{0,6}恒为 0|恒为 0/.test(pf), '★ 记着机地接口的 `total` 陷阱字段');
+ok(/coreutils/.test(pf) && /command not found/.test(pf), '记着「coreutils 可能整批缺失，操作走 node」');
+ok(/workbuddy_sites_deploy|unpublish/.test(pf) && /正式入口/.test(pf),
+  '★ 记着「绝不用 unpublish 清旧 app —— 会把正式入口一起下掉」');
+const mem = doc(path.join('..', '.workbuddy', 'memory', 'MEMORY.md'));
+ok(mem.length > 200 && mem.length <= 3000,
+  '★ 记忆文件保持在 3000 字以内（迁出的意义就是别再胖回去）', mem.length + ' 字');
+ok(/PITFALLS\.md/.test(mem), '★ 记忆文件指向 PITFALLS.md（细节的唯一去处）');
+
+console.log('\n=== ⑤-e run-all 的「退出码」前置检查（v10.22 补的一类假绿）===');
+/* 实测过：`test-report.js` 与 `test-alias-guard.js` 原先只打印「n / m 通过」却**始终 exit 0**。
+   run-all 靠解析输出兜住了，但「单独跑」和「反证」两条路都会把红的当绿的。
+   ⇒ run-all 必须有一道前置检查，把这种套件直接点名。这里守的是**那道检查还在**。 */
+const ra = doc(path.join('tools', 'run-all.js'));
+ok(/exitTiedToFailures/.test(ra), '★ run-all 有「退出码是否挂钩失败数」的前置检查');
+ok(/process\.exit\s*\(\s*fail\s*\?/.test(ra), 'run-all 自己也要把退出码挂在失败数上');
+ok(/noExit/.test(ra) && /退出码不随失败变/.test(ra), '★ 命中时**点名报出**是哪些套件（不能只加个布尔）');
+ok(/process\.exit\(fail \? 1 : 0\)/.test(doc(path.join('tools', 'test-report.js'))), '★ 本套件自己的退出码也挂在失败数上');
+ok(/process\.exit\(fail \? 1 : 0\)/.test(doc(path.join('tools', 'test-alias-guard.js'))), '★ test-alias-guard 也已补齐');
 
 console.log('\n=== ⑥ 本地真实数据自检 ===');
 const idx = fs.readFileSync(path.join(ROOT, 'public/index.html'), 'utf8');
@@ -167,3 +200,12 @@ const dirty = execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8',
 ok(typeof dirty === 'string', 'git status 可读（工作区自检）', dirty ? dirty.split(/\r?\n/).length + ' 项未提交' : '干净');
 
 console.log('\n结果：' + pass + ' / ' + (pass + fail) + ' 通过');
+
+/* ★★ v10.22 补：**退出码必须跟着失败数走**。
+ *   本套件原先只打印「n / m 通过」却始终 exit 0 —— 后果是：
+ *     ① 单独跑 `node tools/test-report.js`（`WORKFLOW.md` 步骤 8 就是这么写的）
+ *        `echo $?` 得到 0 ⇒ **红的被当成绿的**；
+ *     ② 标准反证手法（判据 = 退出码非零）**对它完全失效**，断言打坏了也验不出来。
+ *   `run-all.js` 靠**解析输出**里的 `n / m` 兜住了，所以全量防线没被瞒过 ——
+ *   但这属于「险过」，不该依赖。同类缺陷当时还有 `test-alias-guard.js`（已一并补）。 */
+process.exit(fail ? 1 : 0);

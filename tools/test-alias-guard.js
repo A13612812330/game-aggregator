@@ -35,3 +35,9 @@ for (const [src, alts] of Object.entries(j.aliases || {})) {
   const it = pc.libMatch(src);
   if (it) { console.log(`  ${src}  →  ${it.title}`); shown++; }
 }
+
+/* ★★ v10.22 补：退出码必须跟着失败数走。
+   本套件原先只打印「结果：n / m 通过」却始终 exit 0 ⇒ 单独跑时红绿不分，
+   且「打坏护栏看断言是否变红」的反证手法对它失效（判据是退出码）。
+   判据：输出里的 n/m 是给人看的，**退出码才是给脚本看的**。 */
+process.exit(fail ? 1 : 0);

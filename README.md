@@ -86,7 +86,7 @@
 ### 验证
 
 ```
-node tools/run-all.js                → 20 套 / 1293 条 / 0 失败
+node tools/run-all.js                → 20 套 / 1309 条 / 0 失败
 node tools/preview-v1022.js          → 44 / 44（含 5 张实拍截图）
 node tools/_counterproof-v1022.js    → 8 / 8「打坏即变红」
 ```
