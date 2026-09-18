@@ -50,12 +50,25 @@ Celebration、`Command & Conquer Red Alert`→红色警戒2）—— 这些是**
 
 **真退化 0 · 换匹配目标 0**（`tools/diff-mobilehub.js` 逐条比对，退化为 0 才 exit 0）。
 
-**新增两件工具**：`tools/test-match-release.js`（**42 条**，含反证——断言在护栏被打坏时**真的会红**）
-· `tools/diff-mobilehub.js`（产物 before/after 差分，专抓「真退化」）。
-静态防线 **18 套 1163 / 0**。
+**新增三件工具**：`tools/test-match-release.js`（**42 条**，含反证——断言在护栏被打坏时**真的会红**）
+· `tools/diff-mobilehub.js`（产物 before/after 差分，专抓「真退化」）
+· `tools/audit-apps.js`（应用登记 × 域名实测**对账**）、`tools/test-audit-apps.js`（**28 条**）。
+静态防线 **19 套**。
 
 **发布**：新链接 **`https://gamehub-agg-v3.app.workbuddy.host/`**（旧 `gamehub-agg-v2` 域名
 绑不上新发布环境 ⇒ 按既有先例新建 app，**链接变了**，`tools/report.js` 的 LIVE 已同步）。
+
+**★ 发布后做了一次「链接对账」，结果推翻了一条旧结论**：
+
+| 域名 | 实际停点 |
+|---|---|
+| **`gamehub-agg-v3`** | ✅ 与本地同版（含数据层）← 正式入口 |
+| `gamehub-agg-v2` | 停在 v10.18 |
+| `gamehub-agg-join` | 停在 v10.17 |
+| `36aa37e9…` | ⚠️ **也已是最新**（旧记忆说它停在 v10.18，实测不成立）——但**未正式登记、更新不保证跟随**，仍不当入口 |
+
+⚠️ **别用 `unpublish` 清旧链接**：三个 app 的 `localDir` 是同一个目录，它取「同目录最新一次发布」
+⇒ **会把 v3 一起下掉**。旧 app 只能在「设置—数据管理—应用」里手工删。
 
 **遗留**：① 60% 匹配率**必须靠扩端游库**（P0，未开工）② 解包 JSON 样本仍未到
 （`data/spec-dict.js` 待校准）③ B 类 473 条假阳性说明**朴素子串匹配仍在用**，是下一版值得单独攻的点。

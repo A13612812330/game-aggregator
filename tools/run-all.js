@@ -50,6 +50,7 @@ const SUITES = [
   'test-pages-sync.js',
   'test-report.js',
   'test-match-release.js',
+  'test-audit-apps.js',
 ];
 
 let pass = 0, fail = 0;

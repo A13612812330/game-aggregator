@@ -137,11 +137,21 @@ git rev-list --left-right --count main...origin/main   # 期望 0  0
 ```bash
 node tools/report.js              # 联网实测线上 md5 + 远端 HEAD
 node tools/report.js --no-net --md
+node tools/audit-apps.js          # ★ 发布过就再跑一次：应用登记 × 域名实测**对账**
 ```
 
 ① 做了什么 ② 分享链接 ③ 项目文件夹 ④ 是否更新到 GitHub ⑤ GitHub 更新日志
 
 ⚠️ **只讲本项目** —— 盘点任务/进程/端口时，其他项目的自动化与监听**一律不列**。
+
+⚠️ **发布过就要跑 `audit-apps.js`**：本项目每发一版就多一条同名 app + 一个域名，
+而**旧域名全都返回 200**（内容停在旧版）。对账表能一眼看出「哪个域名还能用」。
+★ 它还会警告一个**危险动作**：`unpublish` 取的是「同目录最新一次发布」，
+而所有 app 的 localDir 是同一个 ⇒ **会把正式入口一起下掉**，清旧 app 只能手工删。
+
+⚠️ **`000` = 服务挂了，不是代码坏了**：`run-all.js` 里 4 套（`test-emulator-page` /
+`test-filter-layout` / `test-v1017` / `test-v1018`）要连 `127.0.0.1:8123`。
+服务一停它们就红，报的却是「接口不可达」。⇒ **先 `curl` 一下，再怀疑代码**。
 
 ---
 

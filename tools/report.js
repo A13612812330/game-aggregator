@@ -27,9 +27,12 @@ const MD_ONLY = argv.includes('--md');
 const LINKS = {
   LIVE: 'https://gamehub-agg-v3.app.workbuddy.host/',
   DEPRECATED: [
-    { url: 'https://gamehub-agg-v2.app.workbuddy.host/', why: '停在 v10.19 之前，域名无法重绑到新发布环境' },
-    { url: 'https://gamehub-agg-join.app.workbuddy.host/', why: '停在 v10.17，域名无法重绑到新发布环境' },
-    { url: 'https://36aa37e911e6447eb86eb187240daff2.app.workbuddy.host/', why: 'v10.10 那批的沙箱，碰巧含 v10.18，但非正式入口' },
+    { url: 'https://gamehub-agg-v2.app.workbuddy.host/', why: '停在 v10.18（实测无 eg-nav；域名无法重绑到新发布环境）' },
+    { url: 'https://gamehub-agg-join.app.workbuddy.host/', why: '停在 v10.17（实测 /api/device/fill-stats 404）' },
+    /* ⚠️ 2026-09-18 复测：这条**竟然与本地逐字节一致、数据层也是最新**（不再是「碰巧 v10.18」）。
+       但它不在 applications.yaml 的正式登记里、更新不保证跟随 ⇒ 只当别名，对外仍用 LIVE。
+       ★ 别因为「它俩内容一样」就把它当入口 —— 一旦它哪天不再跟随，用户会看到旧界面。 */
+    { url: 'https://36aa37e911e6447eb86eb187240daff2.app.workbuddy.host/', why: '未登记的别名域名（当前恰好与 LIVE 同内容，但更新不保证跟随）' },
   ],
 };
 const GITHUB = {

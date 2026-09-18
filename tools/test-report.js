@@ -150,8 +150,12 @@ for (const [kw, why] of [
   ['restart-server.js', '重启服务（改 server/data 后必须做，否则静默不生效）'],
   ['run-all.js', '全量静态防线'],
   ['report.js', '五项状态汇报'],
+  ['audit-apps.js', '★ 发布后必跑：应用登记 × 域名实测对账（旧域名全是 200）'],
   ['_push-via-api.js', '推送（github.com 被阻断，只能走 API）'],
 ]) ok(wf.includes(kw), '流程里点名了 ' + kw + ' —— ' + why);
+/* 2026-09-18 实测：本地服务停掉后 run-all 里 4 套变红，报的却是「接口不可达」——
+   看着像代码坏了。这条「先 curl 再怀疑代码」的判断必须写进流程，否则每次都要重查一遍。 */
+ok(/000/.test(wf) && /服务挂了/.test(wf), '★ 记着「000 = 服务挂了，不是代码坏了」');
 ok(/core\.autocrlf|入库字节/.test(wf), '★ 记着 autocrlf 坑（读磁盘建 blob 会推错内容）');
 ok(wf.includes('36aa37e9') ? /已弃用/.test(wf) : true, '若提到旧链接必须标「已弃用」');
 ok(!/最新\s*——\s*先看这段/.test(wf), '不许出现「最新 —— 先看这段」这种会在下版崩塌的措辞');
