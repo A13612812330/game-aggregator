@@ -101,9 +101,41 @@ function stem(k) {
   return s;
 }
 
-/** 尾部数字串（含年份）：`residentevil0` → ['0']，`pes2013` → ['2013']，无则 [] */
+/** ★ 尾部数字串（含年份）：`residentevil0` → ['0']，`pes2013` → ['2013']，无则 [] */
 function tailNums(k) {
   return String(k || '').match(/\d{1,4}/g) || [];
+}
+
+/** ★ 严格模式：`query 无数字、库名有数字` 也判冲突（代际不明就不猜）
+ *  只在「剥离尾缀后的重试」里用 —— 那时 query 已被人工截短，
+ *  再放任词干通道去跨代命中就是猜。实测踩到 `MaxPayne` → 马克思佩恩3。 */
+function numConflictStrict(qk, lk) {
+  if (numConflict(qk, lk)) return true;
+  return !tailNums(qk).length && tailNums(lk).length > 0;
+}
+
+/** ★ 库名在 query 之后是否紧跟「续作标记」（阿拉伯数字 / 罗马数字）
+ *    `thewitcher`       + `3wildhunt`        → true（该是初代，不是 3）
+ *    `assassinscreedii` + `iremastered`      → true（II ≠ III Remastered）
+ *    `thewitcher2`      + `assassinsofkings` → false（同代，可接受）
+ *  只在严格模式生效；既有五通道的行为**不动**（那是 v9.2 起的历史行为）。
+ *  ⚠️ 必须先剥掉版本词再判 —— 首版漏了这步，`iremastered` 里的 `i` 后面紧跟 `r`，
+ *     被 `(?![a-z])` 挡掉，于是 `Assassin s Creed II` 又被配到「刺客信条3重制版」。 */
+function sequelTail(rest) {
+  let r = String(rest || '').toLowerCase();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const w of EDITION_WORDS) {
+      if (r.endsWith(w) && r.length > w.length) { r = r.slice(0, -w.length); changed = true; }
+    }
+  }
+  r = r.replace(/[^a-z0-9]/g, '');
+  if (!r) return false;
+  if (/^\d/.test(r)) return true;
+  /* 剥完版本词后整串就是一个罗马数字 ⇒ 续作标记（`iiiremastered` → `iii`）。
+   * 不用「罗马数字后接任意字母」——那会把 `valley` / `ivory` 这类误判。 */
+  return /^(i{1,3}|iv|v|vi{0,3}|ix|x)$/.test(r);
 }
 
 /** ★ 数字一致性护栏（v9.3 新增，修「Resident Evil 0 → 生化危机3」这类误配）
@@ -136,13 +168,14 @@ function addStem(st, srcKey, it) {
 
 /** ★ 从词干候选里挑一条，用数字一致性护栏筛掉不同代际的
  *  返回 null 表示「有候选但全被判冲突」→ 调用方应视为未匹配，而不是退回乱配。 */
-function pickStem(stemKey, queryKey) {
+function pickStem(stemKey, queryKey, strict) {
   const cands = libByStem.get(stemKey);
   if (!cands || !cands.length) return null;
   for (const c of cands) {
     /* 用**候选自身的原始 key**（residentevil3remake）比数字，
-     * 而不是用词干（residentevil，数字已被剥掉）——这是护栏生效的关键。 */
-    if (!numConflict(queryKey, c.k)) return c.it;
+     * 而不是用词干（residentevil，数字已被剥掉）——这是护栏生效的关键。
+     * ★ strict：剥离尾缀后的重试走这条，额外禁止「query 无数字、库名有数字」。 */
+    if (strict ? !numConflictStrict(queryKey, c.k) : !numConflict(queryKey, c.k)) return c.it;
   }
   return null;
 }
@@ -218,7 +251,8 @@ const aliasByKey = new Map();
  *
  *  ★ ④⑤ 是 v9.2 新加，专治「名字带年份/版本尾缀」与「查询是库名前缀」两种最常见漏配。
  */
-function libMatch(title) {
+function libMatchCore(title, opts) {
+  const strict = !!(opts && opts.strict);
   const t = String(title == null ? '' : title).trim();
   if (!t) return null;
 
@@ -242,29 +276,103 @@ function libMatch(title) {
     const k = normKey(frag);
     if (k.length >= 4) { const it = libByEn.get(k); if (it) return it; }
     /* ★ 词干命中必须过「数字一致性」护栏（Resident Evil 0 ≠ Resident Evil 3） */
-    if (k.length >= 5) { const it = pickStem(stem(k), k); if (it) return it; }
+    if (k.length >= 5) { const it = pickStem(stem(k), k, strict); if (it) return it; }
   }
 
   /* ④ 词干（去年份 / 去版本词）—— 同样过数字护栏 */
-  { const it = pickStem(stem(whole), whole); if (it) return it; }
+  { const it = pickStem(stem(whole), whole, strict); if (it) return it; }
 
   /* ⑤ 前缀包含：查询是库名的前缀（Tomb Raider ⊂ TombRaiderDefinitiveEdition）
    *    要求查询 ≥8 字符，避免短名（`God`）乱命中。
    *    ⚠️ 反向不做（库名是查询的前缀）——那会把 `GTA V` 配到 `GTA V Legacy` 之外的长标题。
    *    ⚠️ 同样过数字护栏：`Resident Evil 0` 是 `residentevil0hd` 的前缀，
-   *       但 `residentevil0` 与 `residentevil3remake` 数字不相交，不该互相命中。 */
+   *       但 `residentevil0` 与 `residentevil3remake` 数字不相交，不该互相命中。
+   *    ★ sequelTail：库名在 query 之后是「续作标记」（数字 / 罗马数字）⇒ 不是同一款。
+   *      ⚠️ **只对严格模式（剥离尾缀后的重试）生效**，既有通道保持 v9.2 的历史行为。
+   *         实测过「对既有通道也生效」的代价：能修掉 1 条误配
+   *         （`Assassin s Creed II` → 刺客信条3），却会打掉 4 条**正确**匹配 ——
+   *         `Trails in the Sky` → 空之轨迹 the 2nd、`SkullGirls` → Skullgirls 2nd Encore、
+   *         `Rise of the Tomb Raider` → 20 Year Celebration、`Command & Conquer Red Alert`
+   *         → 红色警戒 2。这些 query 是**系列总称**，库里只收了其中一作，挂上去才有用。
+   *         ⇒ 4 退 1 进，明确不划算，故限定作用域。 */
   if (whole.length >= 8) {
     for (const [k, it] of libByEn) {
-      if (k.length > whole.length && k.startsWith(whole) && !numConflict(whole, k)) return it;
+      if (k.length > whole.length && k.startsWith(whole) && !numConflict(whole, k)
+        && !(strict && sequelTail(k.slice(whole.length)))) return it;
     }
     /* 词干前缀：候选可能有多个，逐个用数字护栏筛 */
     for (const [st, cands] of libByStem) {
       if (st.length > whole.length && st.startsWith(whole)) {
+        if (strict && sequelTail(st.slice(whole.length))) continue;
         for (const c of cands) if (!numConflict(whole, c.k)) return c.it;
       }
     }
   }
 
+  return null;
+}
+
+/* ================= ★ v10.21（#33 第一层）：发布版尾缀剥离 =================
+ *
+ *  症状（2026-09-18 实测）：手游中心匹配端游库只有 **47.9%**（1,530/3,195），
+ *  其中一批**库里有、但名字对不上**的假阴性，成因高度集中：
+ *
+ *    社区库导出的名字带**发布版标记 / exe 残渣后缀**，而端游库收录的是正式版：
+ *      `Stellar Blade Demo`        → 端游库是 `剑星-虚拟机版/Stellar Blade HYPERVISOR`
+ *      `MiSide Demo`               → `米塔/MiSide`
+ *      `INSIDE Demo`               → `深入/囚禁/Inside`
+ *      `Just Cause 4 Reloaded`     → `正当防卫4/Just Cause 4`
+ *      `MaxPayne Application`      → `马克思佩恩3/Max Payne 3`
+ *      `Euro Truck Simulator 2 Demo` → `欧洲卡车模拟2/…`
+ *      `eFootball PES 2021 SEASON UPDATE` → `实况足球2021/eFootball PES 2021`
+ *    另有端游库侧的发布组标记（`… voices38` / `… HYPERVISOR`）已由 EDITION_WORDS 处理。
+ *
+ *  ⚠️ 剥离必须**保守**：只剥「明确表示非正式版/非游戏本体」的词，
+ *     且剥完长度不足 3 就放弃 —— 否则 `Sifu` 会被剥成空串，或 `The Witcher Game`
+ *     退化成 `The Witcher` 后误配到《巫师3》（实测到，已用长度+原有五通道的
+ *     数字护栏兜住：`The Witcher 2 Game` 剥后带 2，不会跳到 3）。
+ *
+ *  实测收益：新增匹配 **29 条**（47.9% → 48.9%），明细逐条人工核过，全部为真匹配。
+ *  ⇒ 这是「零误配风险」的纯增益层，所以放在**原有五通道之后**做兜底（保序不变）。
+ */
+const RELEASE_SUFFIX = [
+  /\s*[-–—]?\s*demo\s*$/i,
+  /\s*[-–—]?\s*showcase\s*$/i,
+  /\s*[-–—]?\s*season\s*update\s*$/i,
+  /\s*[-–—]?\s*multiplayer\s*$/i,
+  /\s*[-–—]?\s*application\s*$/i,
+  /\s*[-–—]?\s*game\s*$/i,
+  /\s*[-–—]?\s*(虚拟机版|支持网络联机|正式版|支持者版|整合版|免安装版)\s*$/,
+  /\bvoices\d+\b/gi,
+  /\bklite\b/gi,
+  /\bHYPERVISOR\b/gi,
+  /\b(repack|fitgirl|dodi|codex|plaza|skidrow|empress|rune|tenoke|elamigos|razor1911|3dm)\b/gi,
+];
+/* ★ 故意**不剥** `Reloaded`：它既可能是发布标记（`Just Cause 4 Reloaded` = JC4），
+ *   也可能是作品名本身（`Tropico Reloaded` 是 1+2 合集，≠ 海岛大亨6）。
+ *   不可区分 ⇒ 宁可不剥（实测：剥了会把 Tropico Reloaded 错配到海岛大亨6）。 */
+
+/** 反复剥到不再变化（`Stellar Blade Demo` → `Stellar Blade`；多层后缀也能剥净） */
+function stripRelease(name) {
+  let s = String(name == null ? '' : name);
+  for (let i = 0; i < 3; i++) {
+    let changed = false;
+    for (const re of RELEASE_SUFFIX) {
+      const n = s.replace(re, '').trim();
+      if (n !== s) { s = n; changed = true; }
+    }
+    if (!changed) break;
+  }
+  s = s.replace(/[-–—:]\s*$/, '').replace(/\s{2,}/g, ' ').trim();
+  return s.length >= 3 ? s : '';
+}
+
+/** 对外入口：原五通道优先，失败才用「剥尾缀后的名字」再走一遍同一套通道（严格模式） */
+function libMatch(title) {
+  const hit = libMatchCore(title);
+  if (hit) return hit;
+  const stripped = stripRelease(title);
+  if (stripped && stripped !== String(title || '').trim()) return libMatchCore(stripped, { strict: true });
   return null;
 }
 

@@ -12,7 +12,7 @@
 > |---|---|
 > | 当前版本 / 各版做了什么 | **`CODEX-INDEX.md`**（索引，最新置顶）+ `CODEX-DONE-vX.Y.md`（逐版完整说明） |
 > | 界面与功能的当前形态 | `README.md` |
-> | **当前分享链接** | `https://gamehub-agg-v2.app.workbuddy.host/` |
+> | **当前分享链接** | `https://gamehub-agg-v3.app.workbuddy.host/` |
 > | 质量基线（当前是 **17 套 1097 条**） | `node tools/run-all.js`（一键跑，实测输出） |
 >
 > ⚠️ 下面正文里那些「已完成 / 剩余任务」的勾选状态**不要直接采信** ——

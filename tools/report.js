@@ -25,8 +25,9 @@ const MD_ONLY = argv.includes('--md');
 
 /* ============ 链接登记（发布后改这里） ============ */
 const LINKS = {
-  LIVE: 'https://gamehub-agg-v2.app.workbuddy.host/',
+  LIVE: 'https://gamehub-agg-v3.app.workbuddy.host/',
   DEPRECATED: [
+    { url: 'https://gamehub-agg-v2.app.workbuddy.host/', why: '停在 v10.19 之前，域名无法重绑到新发布环境' },
     { url: 'https://gamehub-agg-join.app.workbuddy.host/', why: '停在 v10.17，域名无法重绑到新发布环境' },
     { url: 'https://36aa37e911e6447eb86eb187240daff2.app.workbuddy.host/', why: 'v10.10 那批的沙箱，碰巧含 v10.18，但非正式入口' },
   ],
@@ -211,8 +212,15 @@ function changelog() {
     latest: mv,
     doneCount: doneFiles.length,
     doneLatest: doneFiles.slice(-3),
-    coverage: ['10.10','10.11','10.12','10.13','10.14','10.15','10.16','10.17','10.18','10.19','10.20']
-      .map((v) => ({ v, readme: readme.includes('v' + v), index: index.includes('v' + v) })),
+    /* ★ 覆盖清单**不再手写**：曾写死 `['10.10'…'10.20']`，v10.21 时就漏更新了
+       （汇报里少一行，看不出来）。现在自动从 10.10 连续到「INDEX 最新版 / CODEX-DONE 最大版」。 */
+    coverage: (() => {
+      const nums = doneFiles.map((f) => Number((f.match(/v10\.(\d+)/) || [])[1] || 0));
+      const top = Math.max(10, Number(String(mv).split('.')[1] || 0), ...nums);
+      const out = [];
+      for (let v = 10; v <= top; v++) out.push('10.' + v);
+      return out.map((v) => ({ v, readme: readme.includes('v' + v), index: index.includes('v' + v) }));
+    })(),
   };
 }
 

@@ -9,7 +9,7 @@
 > |---|---|
 > | 当前版本 / 各版做了什么 | **`CODEX-INDEX.md`**（索引，最新置顶）+ `CODEX-DONE-vX.Y.md`（逐版完整说明） |
 > | 界面与功能的当前形态 | `README.md` |
-> | **当前分享链接** | `https://gamehub-agg-v2.app.workbuddy.host/` |
+> | **当前分享链接** | `https://gamehub-agg-v3.app.workbuddy.host/` |
 > | 每次收尾的五项状态 | `node tools/report.js`（**实测**，不靠记忆） |
 >
 > ⚠️ **下面 v10.10 那段里的分享链接是已弃用的**：

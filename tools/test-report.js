@@ -27,9 +27,11 @@ const LIVE = liveMatch ? liveMatch[1] : '';
 ok(!!LIVE, '声明了正式链接 LIVE', LIVE);
 ok(/^https:\/\/[a-z0-9-]+\.app\.workbuddy\.host\/$/.test(LIVE), 'LIVE 是规范的 workbuddy.host 域名（带尾斜杠）', LIVE);
 ok(!/gamehub-agg-join\./.test(LIVE), '★ 已弃用的 gamehub-agg-join 不再是 LIVE（它停在 v10.17）');
-ok(/gamehub-agg-v2/.test(LIVE), 'LIVE 指向 gamehub-agg-v2（本次新建的正式入口）');
-const depSec = SRC.slice(SRC.indexOf('DEPRECATED'), SRC.indexOf('DEPRECATED') + 600);
+ok(!/gamehub-agg-v2\./.test(LIVE), '★ 已弃用的 gamehub-agg-v2 不再是 LIVE（它停在 v10.19 之前）');
+ok(/gamehub-agg-v3/.test(LIVE), 'LIVE 指向 gamehub-agg-v3（本次新建的正式入口）');
+const depSec = SRC.slice(SRC.indexOf('DEPRECATED'), SRC.indexOf('DEPRECATED') + 900);
 ok(/gamehub-agg-join/.test(depSec), '弃用清单里仍登记 gamehub-agg-join（避免下次又被捡回来）');
+ok(/gamehub-agg-v2/.test(depSec), '★ 弃用清单里也登记 gamehub-agg-v2（域名绑不上新环境，只读尸体）');
 
 console.log('\n=== ② 五项结构齐备 ===');
 for (const [k, re] of [
@@ -47,6 +49,10 @@ ok(/ls-remote/.test(SRC), 'GitHub 用 ls-remote 比对远端分支');
 ok(/synced/.test(SRC), '给出「远端 = 本地」的同步结论字段');
 ok(/CODEX-INDEX\.md/.test(SRC) && /README\.md/.test(SRC), '更新日志同时检查 README 与 CODEX-INDEX');
 ok(/CODEX-DONE-v10/.test(SRC), '更新日志统计 CODEX-DONE-v*.md 份数');
+/* ★ 反例：这条清单曾**写死** `['10.10'…'10.20']`，v10.21 时漏更新 —— 汇报里少一行，
+   而且看不出来（少一行不像报错）。所以断言不许它退回数组字面量。 */
+ok(!/coverage:\s*\[\s*'/.test(CODE), '★ 逐版覆盖清单是**算**出来的，不是手写数组（写死过 → v10.21 漏一行）');
+ok(/for \(let v = 10; v <= top; v\+\+\)/.test(CODE), '覆盖清单自动从 10.10 连续到最新版');
 
 console.log('\n=== ③-b 线上版本判定不许「报反」（2026-09-18 新增）===');
 /* 旧实现：md5 不同时用 `/.chip\.ol/` 猜，结果「线上还没发布 v10.20」被说成「新于本地？」。
@@ -119,7 +125,7 @@ for (const f of ['HANDOFF.md', 'CODEX-HANDOFF.md']) {
   ok(/已归档/.test(s), '★ ' + f + ' 顶部有「已归档」说明（不再冒充最新）');
   ok(!/最新\s*——\s*先看这段/.test(s), '★ ' + f + ' 已删掉「最新 —— 先看这段」的旧claim');
   ok(/CODEX-INDEX\.md/.test(s), f + ' 指向 CODEX-INDEX.md（当前状态以它为准）');
-  ok(/gamehub-agg-v2\.app\.workbuddy\.host/.test(s), f + ' 给出**当前**分享链接');
+  ok(/gamehub-agg-v3\.app\.workbuddy\.host/.test(s), f + ' 给出**当前**分享链接');
 }
 const handoff = doc('HANDOFF.md');
 ok(/已弃用/.test(handoff) && /36aa37e911e6447eb86eb187240daff2/.test(handoff),
