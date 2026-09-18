@@ -270,7 +270,7 @@ node tools/report.js --md     # 只输出 markdown 块，便于整段粘贴
 https://36aa37e911e6447eb86eb187240daff2.app.workbuddy.host
 ```
 
-> ⚠️ **该链接已不再是正式入口**，当前链接见本文件顶部 v10.11~v10.18 汇总一节。
+> ⚠️ **该链接已不再是正式入口**，当前链接见本文件顶部 **v10.21 增量**一节。
 
 以 **HTTP 服务**形态发布（sandbox `36aa37e911e6447eb86eb187240daff2`）：目录整包压缩上传（自动排除 `node_modules`），
 沙箱内 `npm install` 后 `node server.js` 拉起，注入 `PORT=8123`（`server.js` 读 `process.env.PORT`，无需改动）。

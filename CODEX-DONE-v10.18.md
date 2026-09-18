@@ -254,7 +254,7 @@ https://gamehub-agg-v2.app.workbuddy.host/
 |---|---|---|
 | `gamehub-agg-join…`（**上次给你的**） | `/api/device/fill-stats` → **404**；`index.html` 里 `.chip.ol` / `联网查询中` / `gtag` **全无** | **停在 v10.17** |
 | `36aa37e9…`（v10.10 那条旧链接） | `/api/device/fill-stats` → 200；`index.html` **md5 与本地逐字节一致** | 意外是 v10.18，但**未绑定本次发布环境** |
-| `gamehub-agg-v2…`（**本次新建**） | 同上接口 200、`index.html` md5 与本地一致 | ✅ 正式入口 |
+| `gamehub-agg-v2…`（**本次新建**） | 同上接口 200、`index.html` md5 与本地一致 | ✅ 正式入口（⚠️ **已于 v10.21 被 `v3` 取代**，见 `CODEX-INDEX.md` 顶部块） |
 
 本次发布工具直接**拒绝**复用旧 app：`应用预留域名 gamehub-agg-join.app.workbuddy.host
 未绑定到本次发布环境，为避免返回仍指向旧内容的链接，本次发布已停止` —— 这个拒绝是**对的**，
