@@ -51,6 +51,29 @@ const CODE = SRC.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '
 ok(!/GIT_TERMINAL_PROMPT/.test(CODE), '★ 代码里没有 GIT_TERMINAL_PROMPT=0（会让代理取不到凭据 → CONNECT tunnel failed）');
 ok(/'git log -4[^']*--pretty="format:/.test(CODE), 'git log 的 --pretty 整体加引号（否则 %h|%ad|%s 的竖线被 shell 当管道）');
 
+console.log('\n=== ④-b GitHub 探测回退（2026-09-18 新增，本机 github.com 被阻断）===');
+/* 背景：实测 github.com（20.205.243.166）连通 0/6，`git ls-remote`/`git push` 一律
+   `CONNECT tunnel failed, response 502`；而 api.github.com（20.205.243.168）通畅。
+   ⇒ report.js 必须能退到 REST API，否则④这一项会永远显示「无法确认」，
+     用户就再也拿不到「到底推上去没有」的确定答案。 */
+ok(/async function remoteViaApi/.test(CODE), '★ 新增 remoteViaApi（REST API 读远端 ref）');
+ok(/api\.github\.com/.test(CODE), '★ 退路走 api.github.com（不是猜的域名）');
+ok(/\/git\/ref\/heads\//.test(CODE), '调的是 Git ref 接口（与 ls-remote 同语义）');
+ok(/gh auth token/.test(CODE), 'token 从 gh 取（不硬编码、不入库）');
+/* ⚠️ 断言要取 `github()` 的**函数体**再比顺序：直接对全文 indexOf('remoteViaApi(env)')
+   会先命中 `async function remoteViaApi(env) {` 这行**定义**，测出来必然「顺序反了」——
+   是测试自己写错，不是代码错。 */
+const ghBody = CODE.slice(CODE.indexOf('async function github('));
+ok(ghBody.indexOf('git ls-remote') > -1 &&
+   ghBody.indexOf('git ls-remote') < ghBody.indexOf('await remoteViaApi(env)'),
+  '★ 先试 ls-remote，失败才退 API（顺序不能反）');
+ok(/via\s*=\s*'ls-remote'/.test(CODE) && /via\s*=\s*'api'/.test(CODE), '记录实际走了哪条路径（可审计，不假装）');
+ok(/gh\.via === 'api'/.test(CODE) && /REST API/.test(CODE), '★ 输出里标明探测路径，并说明 github.com 不可达');
+ok(/bothFailed/.test(CODE) && /gh\.bothFailed/.test(CODE),
+  '★ 两条路径都失败才判「无法确认」（不能一条失败就下结论），且该字段真被输出用到');
+ok(/owner:\s*'A13612812330'/.test(CODE) && /name:\s*'game-aggregator'/.test(CODE),
+  'REST API 用的 owner/name 与仓库一致');
+
 console.log('\n=== ⑤ 离线实跑（--no-net） ===');
 let out = '';
 try {

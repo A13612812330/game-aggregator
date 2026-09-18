@@ -31,7 +31,13 @@ const LINKS = {
     { url: 'https://36aa37e911e6447eb86eb187240daff2.app.workbuddy.host/', why: 'v10.10 那批的沙箱，碰巧含 v10.18，但非正式入口' },
   ],
 };
-const GITHUB = { repo: 'https://github.com/A13612812330/game-aggregator', branch: 'main', visibility: 'PRIVATE' };
+const GITHUB = {
+  repo: 'https://github.com/A13612812330/game-aggregator',
+  owner: 'A13612812330',
+  name: 'game-aggregator',
+  branch: 'main',
+  visibility: 'PRIVATE',
+};
 const GH_CONFIG_DIR = path.join(ROOT, '..', '.ghconfig');
 
 /* ============ 小工具 ============ */
@@ -92,26 +98,66 @@ async function probeLink(url, localMd5, localLen) {
 }
 
 /* ============ ④ GitHub ============ */
-function github(localHead) {
+/**
+ * 路径 2：走 api.github.com 读远端分支头。
+ *
+ * 为什么需要它（2026-09-18 实测）：本机网络对 **github.com（20.205.243.166）完全阻断**
+ *   （连测 6 次全超时），于是 `git ls-remote` / `git push` 一律报
+ *   `CONNECT tunnel failed, response 502`。
+ *   而 **api.github.com（20.205.243.168）通畅**（TLS 正常，只是未授权时 403）。
+ *   ⇒ 此时改用 REST API 读 ref，结果与 ls-remote 等价（同一个 sha）。
+ */
+async function remoteViaApi(env) {
+  const tk = sh('gh auth token', env);
+  if (!tk.ok || !tk.out) return { ok: false, err: '取 token 失败：' + tk.out.slice(0, 60) };
+  const c = new AbortController();
+  const t = setTimeout(() => c.abort(), 20000);
+  try {
+    const r = await fetch(`https://api.github.com/repos/${GITHUB.owner}/${GITHUB.name}/git/ref/heads/${GITHUB.branch}`, {
+      headers: { Authorization: 'Bearer ' + tk.out, Accept: 'application/vnd.github+json', 'User-Agent': 'gamehub-report' },
+      signal: c.signal,
+    });
+    clearTimeout(t);
+    const j = await r.json();
+    if (r.status !== 200) return { ok: false, err: `api ${r.status} ${j.message || ''}`.slice(0, 70) };
+    return { ok: true, sha: j.object.sha };
+  } catch (e) {
+    clearTimeout(t);
+    return { ok: false, err: e.message.slice(0, 70) };
+  }
+}
+
+async function github(localHead) {
   const env = Object.assign({}, process.env, { GH_CONFIG_DIR });
-  /* ⚠️ 实测两个坑（2026-09-18）：
+  /* ⚠️ 实测坑（2026-09-18）：
      ① 绝不能设 `GIT_TERMINAL_PROMPT=0` —— 本机 git 走代理，设了它取不到代理凭据，
         报 `CONNECT tunnel failed`，5 次全败；不设则默认参数稳定成功。
      ② 偶发 `OpenSSL SSL_read: unexpected eof` 是网络抖动，重试即可，
-        不能据此判定「没推上去」。 */
-  let remote = null, err = null;
-  for (let i = 1; i <= 6; i++) {
+        不能据此判定「没推上去」。
+     ③ 若 github.com 整段不可达（见 remoteViaApi 注释），自动退到 REST API，
+        并在结论里标明走的哪条路径 —— 不能因为「探测方式变了」就假装没查到。 */
+  let remote = null, err = null, via = null;
+  for (let i = 1; i <= 4; i++) {
     const r = sh('git ls-remote origin -h refs/heads/' + GITHUB.branch, env);
-    if (r.ok && /^[0-9a-f]{7,}/.test(r.out)) { remote = r.out.split(/\s+/)[0]; break; }
+    if (r.ok && /^[0-9a-f]{7,}/.test(r.out)) { remote = r.out.split(/\s+/)[0]; via = 'ls-remote'; break; }
     err = r.out.split(/\r?\n/).filter(Boolean)[0].slice(0, 80);
     sleep(i * 700);
+  }
+  let apiErr = null;
+  if (!remote) {
+    const a = await remoteViaApi(env);
+    if (a.ok) { remote = a.sha; via = 'api'; } else apiErr = a.err;
   }
   return {
     remote,
     remoteShort: remote ? remote.slice(0, 7) : null,
     head: localHead,
     synced: !!remote && remote.slice(0, 12) === localHead.slice(0, 12),
-    err: remote ? null : err,
+    via,
+    err: remote ? null : (err || apiErr),
+    /* 两条路径都失败时才叫「网络问题」；只要有一条通，就必须给出确定结论 */
+    bothFailed: !remote,
+    apiErr,
   };
 }
 
@@ -135,7 +181,7 @@ function changelog() {
     latest: mv,
     doneCount: doneFiles.length,
     doneLatest: doneFiles.slice(-3),
-    coverage: ['10.10','10.11','10.12','10.13','10.14','10.15','10.16','10.17','10.18']
+    coverage: ['10.10','10.11','10.12','10.13','10.14','10.15','10.16','10.17','10.18','10.19','10.20']
       .map((v) => ({ v, readme: readme.includes('v' + v), index: index.includes('v' + v) })),
   };
 }
@@ -190,7 +236,7 @@ function changelog() {
 
   /* ④ */
   const head = sh('git rev-parse HEAD').out || '';
-  const gh = NO_NET ? null : github(head);
+  const gh = NO_NET ? null : await github(head);
   p('');
   p('## ④ 是否更新到 GitHub');
   p('');
@@ -201,7 +247,10 @@ function changelog() {
     p('| 仓库 | ' + GITHUB.repo + '（' + GITHUB.visibility + '，分支 ' + GITHUB.branch + '） |');
     p('| 本地 HEAD | `' + head.slice(0, 7) + '` |');
     p('| 远端 ' + GITHUB.branch + ' | ' + (gh.remoteShort ? '`' + gh.remoteShort + '`' : '❌ 探测失败：' + gh.err) + ' |');
-    p('| 结论 | ' + (gh.synced ? '✅ 已同步（远端 = 本地）' : gh.remote ? '⚠️ 未推送（本地领先）' : '❌ 无法确认（网络问题）') + ' |');
+    p('| 探测路径 | ' + (gh.via === 'api' ? '🔄 REST API（github.com 不可达，见下方说明）' : gh.via === 'ls-remote' ? '`git ls-remote`' : '❌ 两条路径均失败') + ' |');
+    p('| 结论 | ' + (gh.synced ? '✅ 已同步（远端 = 本地）' : gh.remote ? '⚠️ 未推送（本地领先）' : gh.bothFailed ? '❌ 无法确认（两条探测路径均失败）' : '❌ 无法确认') + ' |');
+    if (gh.via === 'api') p('| 备注 | 本机 github.com 被阻断（`CONNECT tunnel failed, response 502`），' +
+      '但 api.github.com 可用 ⇒ 结论仍为**实测**，非推测。 |');
   }
 
   /* ⑤ */

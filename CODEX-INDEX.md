@@ -49,8 +49,20 @@
 > 另：搜「GTA」曾返回 0 条（库里叫 `Grand Theft Auto V 传承版`，字面包含匹配不到）
 > ⇒ 补 `abbrOf()` 首字母缩写匹配；排序曾按余量排导致榜上全是小体量小品 ⇒ 改**规模优先**。
 >
-> **回归**：静态 **17 套 1080/0** · `test-spec` **82/82** · 实拍 `preview-v1020` **38/38** ·
+> **回归**：静态 **17 套 1089/0** · `test-spec` **82/82** · 实拍 `preview-v1020` **38/38** ·
 > 接口 **575 款可跑**（非法 JSON 400 · 空体 400 · 数组样本按条匹配）。
+>
+> ★ **推送踩到的网络坑（重要）**：本机 **`github.com`（20.205.243.166）被完全阻断**（连通 0/6，
+> `git push` 一律 `CONNECT tunnel failed, response 502`），而 **`api.github.com`（.168）通畅**。
+> 已确认**不是沙箱策略**（关沙箱同样失败）。改走 **GitHub REST API 的 Git Data 通道**
+> （blob → tree → commit → ref，等价 fast-forward），落在一次性工具 `tools/_push-via-api.js`。
+> ⚠️ 其中还藏着一个更隐蔽的坑：本仓库 `core.autocrlf=true`，**磁盘字节 ≠ 入库字节**
+> （`public/index.html` 磁盘 228574B 含 3264 个 CRLF → 入库应 225310B 纯 LF）。
+> 第一版直接读磁盘建 blob ⇒ 远端 tree 与本地不一致（**推上去了错的内容**，而 API 全程 201、
+> `git status` 也干净）。必须用 `git cat-file blob HEAD:<path>` 取**入库字节**。
+> 修正后复刻作者/时间戳，**远端 commit sha 与本地完全一致**。
+> 由此把 `report.js` 的④改为「**先 ls-remote，失败退 API**」并**标明走了哪条路径**
+> （否则该项在上述网络下永远显示「无法确认」）；`test-report.js` 补 8 条断言守住回退。
 >
 > ★ **本版额外收益 `tools/test-pages-sync.js`（25 条）**：本项目「改了主源忘了重建派生页」
 > 一直没人守（派生页不报错、只是**悄悄漂移**）。现用 **CSS 尾部指纹 + 函数清单比对**

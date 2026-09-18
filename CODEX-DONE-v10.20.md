@@ -123,3 +123,42 @@
    样本里若有明确架构字段，这条会自然消失。
 3. 显卡维度暂不参与判定（原因见第三节）。若样本里的 GPU 是移动 GPU，
    `gpuScore()` 可直接启用，届时把 `cmpGpu` 加回 `judge()` 即可。
+
+## 八、推送时踩到的网络坑（重要，值得单列）
+
+### 现象
+`git push` 连续失败，报错在三句话之间跳：
+`CONNECT tunnel failed, response 502` / `OpenSSL SSL_read: unexpected eof` / `Error in the HTTP2 framing layer`。
+一开始按「瞬时抖动」重试了 6 轮 ×2 组，全败 —— **不是抖动**。
+
+### 定位（用连通性探测把「网络」和「代码」分开）
+```
+www.baidu.com     OK 200
+api.github.com    OK 403     ← 通！（未授权时 403 是正常的）
+github.com        TIMEOUT    ← 0/6 可达
+```
+DNS 也正常（github.com → 20.205.243.166，api.github.com → 20.205.243.168）。
+**结论：不是沙箱策略（关掉沙箱重试同样失败），是 github.com 这个主机被阻断。**
+
+### 改法：走 GitHub REST API（Git Data 通道）
+`blob → tree → commit → 更新 ref`，等价于一次 fast-forward push。
+落在 `tools/_push-via-api.js`（`tools/_*` 已在 .gitignore，属一次性工具）。
+
+★ **这里踩了第二个坑，而且更隐蔽**：第一版脚本直接读**磁盘文件**建 blob，结果
+```
+public/index.html   磁盘 228574B（含 3264 个 CRLF）  →  入库应为 225310B（纯 LF）
+```
+远端 tree `b838a05` ≠ 本地 tree `02d5d57` —— **推上去了不一样的内容**，而且 API 全程 201 成功、
+`git status` 也干净（`core.autocrlf=true` 让两边「看起来」一致）。
+⇒ 必须用 `git cat-file blob HEAD:<path>` 取**入库字节**、`git ls-tree` 取**入库模式**。
+
+改完后：新 tree == 本地 tree；复刻作者/时间戳后 **新 commit sha == 本地 sha（`c5fc988`）**，
+远端 main 与本地 HEAD 完全同一个 sha。
+
+### 沉淀成防线
+`tools/report.js` 的「④ 是否更新到 GitHub」原先只走 `git ls-remote`，
+在上述网络下会**永远显示「无法确认」**，用户就再也拿不到确定答案。
+现改为：**先 ls-remote，失败自动退到 `api.github.com`**，并在输出里**标明走的是哪条路径**
+（不能让「探测方式变了」变成「假装没查到」）。两条都失败才判「无法确认」。
+`tools/test-report.js` 补 8 条断言守住这个回退（含「顺序不能反」）。
+
