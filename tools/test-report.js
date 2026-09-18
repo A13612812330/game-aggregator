@@ -1,0 +1,79 @@
+/* 状态汇报脚本（tools/report.js）的常驻防线
+ *
+ * 为什么要给它写测试：本项目历史上「文档/记忆里的链接与真实发布不一致」已复发多次
+ * （v10.15/16/17/18 各一次），report.js 是唯一会把「线上到底是哪一版」实测出来的入口。
+ * 一旦它的链接登记写错、或五项里有哪项悄悄不输出，汇报就会重新变成「我记得」——
+ * 那比不汇报更危险。所以这里把「结构」钉死，并用 --no-net 保证离线可跑。
+ */
+const fs = require('fs');
+const path = require('path');
+const { execFileSync } = require('child_process');
+
+const ROOT = path.join(__dirname, '..');
+const SRC = fs.readFileSync(path.join(ROOT, 'tools/report.js'), 'utf8');
+
+let pass = 0, fail = 0;
+const ok = (cond, name, detail) => {
+  if (cond) { pass++; console.log('  PASS  ' + name + (detail ? '  — ' + detail : '')); }
+  else { fail++; console.log('  × FAIL  ' + name + (detail ? '  — ' + detail : '')); }
+};
+
+console.log('=== ① 链接登记 ===');
+const liveMatch = SRC.match(/LIVE:\s*'([^']+)'/);
+const LIVE = liveMatch ? liveMatch[1] : '';
+ok(!!LIVE, '声明了正式链接 LIVE', LIVE);
+ok(/^https:\/\/[a-z0-9-]+\.app\.workbuddy\.host\/$/.test(LIVE), 'LIVE 是规范的 workbuddy.host 域名（带尾斜杠）', LIVE);
+ok(!/gamehub-agg-join\./.test(LIVE), '★ 已弃用的 gamehub-agg-join 不再是 LIVE（它停在 v10.17）');
+ok(/gamehub-agg-v2/.test(LIVE), 'LIVE 指向 gamehub-agg-v2（本次新建的正式入口）');
+const depSec = SRC.slice(SRC.indexOf('DEPRECATED'), SRC.indexOf('DEPRECATED') + 600);
+ok(/gamehub-agg-join/.test(depSec), '弃用清单里仍登记 gamehub-agg-join（避免下次又被捡回来）');
+
+console.log('\n=== ② 五项结构齐备 ===');
+for (const [k, re] of [
+  ['① 做了什么', /①\s*做了什么/],
+  ['② 分享链接', /②\s*分享链接/],
+  ['③ 项目文件夹', /③\s*项目文件夹/],
+  ['④ 是否更新到 GitHub', /④\s*是否更新到 GitHub/],
+  ['⑤ GitHub 更新日志', /⑤\s*GitHub 更新日志/],
+]) ok(re.test(SRC), '输出含「' + k + '」段');
+
+console.log('\n=== ③ 关键判据（防止退化成「只看 HTTP 200」）===');
+ok(/createHash\('md5'\)/.test(SRC), '★ 用 md5 比对判定线上版本，不只看状态码');
+ok(/与本地逐字节一致/.test(SRC), '判定文案明确写「与本地逐字节一致」');
+ok(/ls-remote/.test(SRC), 'GitHub 用 ls-remote 比对远端分支');
+ok(/synced/.test(SRC), '给出「远端 = 本地」的同步结论字段');
+ok(/CODEX-INDEX\.md/.test(SRC) && /README\.md/.test(SRC), '更新日志同时检查 README 与 CODEX-INDEX');
+ok(/CODEX-DONE-v10/.test(SRC), '更新日志统计 CODEX-DONE-v*.md 份数');
+
+console.log('\n=== ④ 已知坑：不能设 GIT_TERMINAL_PROMPT=0 ===');
+/* 先剥掉注释再查源码：注释里**特意**写了这个坑的说明，不剥会误报（注释里提到 ≠ 代码里用了） */
+const CODE = SRC.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+ok(!/GIT_TERMINAL_PROMPT/.test(CODE), '★ 代码里没有 GIT_TERMINAL_PROMPT=0（会让代理取不到凭据 → CONNECT tunnel failed）');
+ok(/'git log -4[^']*--pretty="format:/.test(CODE), 'git log 的 --pretty 整体加引号（否则 %h|%ad|%s 的竖线被 shell 当管道）');
+
+console.log('\n=== ⑤ 离线实跑（--no-net） ===');
+let out = '';
+try {
+  out = execFileSync(process.execPath, ['tools/report.js', '--no-net', '--md'], {
+    encoding: 'utf8', cwd: ROOT, timeout: 90000, maxBuffer: 1 << 22,
+  });
+} catch (e) {
+  out = String((e.stdout || '') + (e.stderr || ''));
+}
+ok(out.length > 200, '脚本能跑出内容（长度 > 200）', out.length + ' 字符');
+ok(LIVE.indexOf('https://') === 0 && out.includes(LIVE.replace(/\/$/, '')), '输出里出现正式链接');
+const realPath = ROOT.replace(/\//g, '\\');
+ok(out.includes(realPath), '输出里出现项目文件夹真实路径');
+ok(/--no-net/.test(out), '--no-net 模式下明确标注「跳过联网」（不会假装验过）');
+ok(!/undefined|NaN|\[object Object\]/.test(out), '★ 输出无 undefined / NaN / [object Object]（模板拼接未出错）');
+const heads = ['# 状态汇报', '## ① 做了什么', '## ② 分享链接', '## ③ 项目文件夹', '## ④ 是否更新到 GitHub', '## ⑤ GitHub 更新日志'];
+ok(heads.every((h) => out.includes(h)), '实跑输出六行标题全在', heads.filter((h) => !out.includes(h)).join(',') || '全在');
+ok(/git log 读取失败/.test(out) === false, '★ 实跑没触发「git log 读取失败」（引号坑已修）');
+
+console.log('\n=== ⑥ 本地真实数据自检 ===');
+const idx = fs.readFileSync(path.join(ROOT, 'public/index.html'), 'utf8');
+ok(idx.length > 100000, 'public/index.html 有内容可算 md5', (Buffer.byteLength(idx, 'utf8') / 1024).toFixed(1) + 'KB');
+const dirty = execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8', cwd: ROOT }).trim();
+ok(typeof dirty === 'string', 'git status 可读（工作区自检）', dirty ? dirty.split(/\r?\n/).length + ' 项未提交' : '干净');
+
+console.log('\n结果：' + pass + ' / ' + (pass + fail) + ' 通过');

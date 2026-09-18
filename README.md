@@ -18,6 +18,27 @@ https://gamehub-agg-v2.app.workbuddy.host/
 至今仍返回 **v10.17**，而 `36aa37e9…` 反而返回 v10.18 却没绑定本次发布环境 —— 只看状态码会得出
 **完全相反**的结论。改完前端**必须重跑** `node tools/verify-online.js`。
 
+### 状态汇报（每次收尾固定输出五项）
+
+```bash
+node tools/report.js          # 完整（含联网实测）
+node tools/report.js --no-net # 离线自查
+node tools/report.js --md     # 只输出 markdown 块，便于整段粘贴
+```
+
+| # | 项 | 实测方式 |
+|---|---|---|
+| ① | 做了什么 | `git log` 最近提交 + 工作区是否干净 |
+| ② | 分享链接 | 拉线上 `index.html` 与本地**比 md5** → 判定「是否已是最新」；弃用链接一并列出免得被捡回来 |
+| ③ | 项目文件夹 | 绝对路径 + `public/index.html` 体积与 md5 |
+| ④ | 是否更新到 GitHub | `git ls-remote` 比远端 `main` 与本地 HEAD |
+| ⑤ | GitHub 更新日志 | 检查 `README.md` / `CODEX-INDEX.md` 是否含最新版本块 + `CODEX-DONE-v*.md` 份数 + 逐版覆盖 |
+
+**设计原则：全部字段实测，不接受「我记得」。** 本项目已三次出现「文档里的链接 ≠ 真实发布」，
+而 HTTP 200 区分不出新旧 —— 所以②一律以 md5 为准。防线见 `tools/test-report.js`（27 条，离线可跑）。
+⚠️ 每次发布后需更新 `tools/report.js` 顶部的链接登记（`LINKS.LIVE` / `LINKS.DEPRECATED`），
+`test-report.js` 会守住「弃用链接不许被改回 LIVE」。
+
 ### 八轮改动一览
 
 | 版本 | 日期 | 一句话 | 详细文档 |
