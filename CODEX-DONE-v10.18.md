@@ -198,12 +198,13 @@ moto g(20)        → 网 Unisoc T700   ← 不是误配成 Moto G (2022)
 | 套件 | 结果 |
 |---|---|
 | 静态 12 套（alias-guard / date-norm / device-translate / emuhub / emulator-structure / mods / related-dl / saves-match / v1014 / v1016 / v1017 / **v1018**） | **831 条全绿**（v1018 = **92/92**） |
-| `preview-v1018`（实拍，5 段） | **34 / 34** |
+| `preview-v1018`（实拍，6 段） | **35 / 35** |
+| `verify-online`（**线上**真机） | **24 / 24** |
 | `test-v1015` | 62 / 62 |
 | `test-search-ui` | 44 / 44 |
 | `test-emulator-page` | 118 / 118 |
 | `test-filter-layout` | 77 / 77 |
-| **合计** | **1,166 条通过，0 失败** |
+| **合计** | **1,191 条通过，0 失败** |
 
 ### 本轮新增的断言（都是「曾经错过一次」的地方）
 
@@ -234,3 +235,53 @@ moto g(20)        → 网 Unisoc T700   ← 不是误配成 Moto G (2022)
    `Qualcomm Snapdragon 8 Gen 3`（第一个），完整值在 `title` 与展开面板里。
 3. **联动数据现状**：`MobileModels` 库覆盖 8,261 个内部编号，但社区库里仍有 12 台拿不到译名
    （多为 `SM xxx` 三星代号 + 1 台 `Pocket FIT unknown`），这是上游收录问题，不是解析逻辑问题。
+
+---
+
+## 八、发布与线上验收（2026-09-18）
+
+### 新链接
+
+```
+https://gamehub-agg-v2.app.workbuddy.host/
+```
+
+（sandbox `96805ba99b8b40ff840552084dc11217`，HTTP 服务形态，`npm install` + `node server.js`）
+
+### 为什么又换链接：上次给的链接**根本没更新**
+
+| 域名 | 实测 | 判定 |
+|---|---|---|
+| `gamehub-agg-join…`（**上次给你的**） | `/api/device/fill-stats` → **404**；`index.html` 里 `.chip.ol` / `联网查询中` / `gtag` **全无** | **停在 v10.17** |
+| `36aa37e9…`（v10.10 那条旧链接） | `/api/device/fill-stats` → 200；`index.html` **md5 与本地逐字节一致** | 意外是 v10.18，但**未绑定本次发布环境** |
+| `gamehub-agg-v2…`（**本次新建**） | 同上接口 200、`index.html` md5 与本地一致 | ✅ 正式入口 |
+
+本次发布工具直接**拒绝**复用旧 app：`应用预留域名 gamehub-agg-join.app.workbuddy.host
+未绑定到本次发布环境，为避免返回仍指向旧内容的链接，本次发布已停止` —— 这个拒绝是**对的**，
+它挡住的正是「发布成功但链接还指着旧内容」这个假成功。按项目已有先例（v10.17 也是「域名无法重新绑定
+只能新建 app」）新建了 `gamehub-agg-v2`，**链接变了**。
+
+★ **判断「线上到底是哪一版」要比 md5，不能只看 HTTP 200**：
+上面第二个域名 200 且内容正确，第三个域名 200 但内容是旧的 —— 只看状态码会得出完全相反的结论。
+
+### ★ 顺手修掉验收脚本自己的 bug（两个，都会导致「假绿/假红」）
+
+1. **默认链接没跟着发布走**（→ 假绿）。`tools/verify-online.js` 的 `BASE` 默认值还停在
+   `gamehub-agg-join` —— 那个域名是 **v10.17**。也就是说它「老老实实验收了旧包」并全绿。
+   **验收目标本身错了，比不验更危险。** 已改默认值，并在脚本头写明「换链接必须同步改这里」。
+2. **断言选择器过范围**（→ 假红）。我把图例断言写成 `#bhDevSlot .d-devlist-lg`，但图例实际挂在
+   `#bhSlot > .d-blk > h4 > .cnt` 里 —— **`#bhDevSlot` 是 h4 的兄弟容器，不是祖先**，所以查不到。
+   已改为 `#bhSlot .d-devlist-lg`，并额外断言 `closest('h4')`（钉住「它属于表头」这个语义，
+   而不只是「页面上存在」）。`preview-v1018` 同步加了一条同样的断言。
+
+### 线上验收 24 / 24（`node tools/verify-online.js`）
+
+| 组 | 关键断言 |
+|---|---|
+| 接口 6 条 | 机型库 8,261 个内部编号 · 清单 ≥9 台 · kalvo 从沙箱可达（81 行/12 组）· **v10.18 新接口已上线**（缓存 16 条 / 已补 14 / 联网 14）· `specs` 逐台带 `chip` · 本款确有本地查不到的机型 |
+| 页面 7 条 | 12 个特征串齐 · 9 台机型 · `MTN NX3` → **`Honor Magic8 Lite`** · **无 JS 报错** · 无横向溢出 |
+| 三要素 8 条 | ① 9 台全部带芯片徽标（宽高 57×19 / 85×19…，真占版面）② **全整显示无截断**（`scrollWidth ≤ clientWidth`，9 台全过）③ **`MTN NX3` 那台线上被补成 `Qualcomm Snapdragon 6 Gen 4`，徽标是靛蓝 `.chip.ol` + 「网」角标** · 联网补全全部收尾（无残留「联网查询中」）· 门槛行内徽标 + 表头图例 |
+| 交互 3 条 | ★ 点一台真能展开硬件面板（**844px 高 / 650px 宽**，含 `Snapdragon 8s Gen 4` + `Adreno 825`） |
+
+实拍：`_preview/live-devs.png`（清单 + 徽标）、`_preview/live-hw.png`（硬件面板）。
+**线上 9 台机型 0 台「未收录」** —— 改前是 3 台。

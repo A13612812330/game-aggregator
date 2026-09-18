@@ -66,6 +66,8 @@ function chk(ok, name, extra) {
       })),
       gateRows: document.querySelectorAll('#bhDevSlot .dv.gate').length,
       legend: (document.querySelector('.d-devlist-lg') || {}).textContent || '',
+      /* 图例必须挂在**表头 h4** 里；`#bhDevSlot` 是 h4 的兄弟容器，用它做前缀会查不到 */
+      legendInH4: (() => { const lg = document.querySelector('.d-devlist-lg'); return !!(lg && lg.closest('h4')); })(),
       oldGate: !!document.querySelector('#bhGate'),
       blkTxt: ((document.querySelector('#bhDevSlot') || {}).innerText || '').replace(/\s+/g, ' '),
       overflow: document.documentElement.scrollWidth > window.innerWidth + 1,
@@ -97,6 +99,7 @@ function chk(ok, name, extra) {
   console.log('\n=== ② 门槛并入行内（顶部重复摘要已取消）===');
   chk(r.gateRows === 1, '清单里正好一台带「门槛」徽标', r.gateRows + ' 台');
   chk(!!r.legend, '表头有「门槛机型」图例说明含义', r.legend);
+  chk(r.legendInH4, '★ 图例挂在**表头 h4** 内（不是散在机型清单里）', '');
   chk(!r.oldGate, '★ 顶部那条独立的「门槛 …」摘要行已移除（不再与首行重复）', '');
   chk(!/这台实测跑通了/.test(r.blkTxt), '旧摘要行的长句文案不再出现在清单里', '');
   await p.screenshot({ path: path.join(OUT, 'v1018-devs.png') });
