@@ -21,7 +21,8 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const FILE = path.join(__dirname, 'device-fill.json');
+/** 缓存文件。`DEVICEFILL_CACHE` 是给回归测试用的隔离出口（不设就走正式文件） */
+const FILE = process.env.DEVICEFILL_CACHE || path.join(__dirname, 'device-fill.json');
 const TOKENS = path.join(__dirname, 'chip-tokens.json');
 
 /** 命中缓存 30 天、未命中 3 天 —— 与 devicespec 同一套口径（未命中更该重试） */
@@ -29,7 +30,7 @@ const TTL_HIT = 30 * 24 * 3600 * 1000;
 const TTL_MISS = 3 * 24 * 3600 * 1000;
 
 let _cache = null;
-let _writes = 0;
+let _dirty = false;
 
 /* ------------------------------------------------------------------ 缓存 */
 
@@ -46,13 +47,25 @@ function load() {
   return _cache;
 }
 
-function flush() {
+/**
+ * 落盘。⚠️ 这里曾经写成 `if (_writes < 3) flush()` 想做「同一 tick 合并写」的节流，
+ * 结果是个**静默丢数据**的坑：一个进程里只有前 3 次 put 会落盘，其余全丢在内存里
+ * （实测批量联网 12 台 → 磁盘只剩 3 条，重启后 9 条白跑一遍网络）。
+ * 改成与 `devicespec.js` **同一套模式**（`_dirty` + 写穿）：一个语义只留一种写法。
+ * 条目量级是几百条、文件几十 KB，写穿的代价可以忽略。
+ */
+function flush(force) {
+  if (!_dirty && !force) return;
   const c = load();
   c.builtAt = Date.now();
-  try {
-    fs.writeFileSync(FILE, JSON.stringify(c));
-    _writes++;
-  } catch (e) { console.error('[devicefill] 缓存写入失败', e.message); }
+  try { fs.writeFileSync(FILE, JSON.stringify(c)); _dirty = false; }
+  catch (e) { console.error('[devicefill] 缓存写入失败', e.message); }
+}
+
+function put(raw, rec) {
+  load().items[raw] = Object.assign({ at: Date.now() }, rec);
+  _dirty = true;
+  flush();
 }
 
 function cached(raw) {
@@ -61,11 +74,6 @@ function cached(raw) {
   const ttl = it.chip ? TTL_HIT : TTL_MISS;
   if (Date.now() - (it.at || 0) > ttl) return null;
   return it;
-}
-
-function put(raw, rec) {
-  load().items[raw] = Object.assign({ at: Date.now() }, rec);
-  if (_writes < 3) flush();          // 同一个 tick 里多次 put 只落盘一次
 }
 
 function stats() {

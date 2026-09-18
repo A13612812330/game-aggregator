@@ -18,6 +18,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const json = (f) => { try { return JSON.parse(read(f)); } catch (e) { return null; } };
@@ -187,6 +188,36 @@ sec('⑤ 服务端 /api/device/specs 与 /api/device/fill');
   ok(tokens && tokens.QCS8550 && tokens.S5E8825, 'chip-tokens.json 存在且含两张 part number');
   ok(tokens && typeof tokens._note === 'string' && /印证|part number/.test(tokens._note), 'chip-tokens.json 写清来源依据（可审计）');
   ok(!/T606|MALEOON920C/.test(JSON.stringify(Object.keys(tokens || {}).filter((k) => !k.startsWith('_')))), '★ T606 / Maleoon 920C **不写进手工表**（现有数据里就有，避免双份维护）');
+
+  /* ---- 落盘必须写穿：曾经写成 `if (_writes < 3) flush()`，一个进程里只有前 3 次 put 落盘，
+     实测批量联网 12 台 → 磁盘只剩 3 条，重启后 9 条白跑一遍网络。**静默丢数据最危险。** ---- */
+  const dfSrc = read('data/devicefill.js');
+  ok(/_dirty = true;\s*\n\s*flush\(\);/.test(dfSrc), '★ 落盘是**写穿**（与 devicespec.js 同一套模式，无「只写前 N 次」节流）');
+  {
+    const out = path.join(ROOT, '_test-out');
+    fs.mkdirSync(out, { recursive: true });
+    const tmp = path.join(out, 'devicefill-cache-probe.json');
+    const child = `
+      const df = require(${JSON.stringify(path.join(ROOT, 'data', 'devicefill.js'))});
+      (async () => {
+        df._setCache({ builtAt: 0, items: {} });
+        for (const k of ['T1 probe', 'T2 probe', 'T3 probe', 'T4 probe', 'T5 probe']) {
+          await df.fill(k, { online: false });
+        }
+        df.flush();
+      })().catch(() => {});
+    `;
+    try {
+      execFileSync(process.execPath, ['-e', child], {
+        env: Object.assign({}, process.env, { DEVICEFILL_CACHE: tmp }), timeout: 90000, stdio: 'ignore',
+      });
+      const saved = JSON.parse(fs.readFileSync(tmp, 'utf8'));
+      const n = Object.keys(saved.items || {}).length;
+      ok(n === 5, '★ 批量补全**每一条**都落盘了（隔离缓存实测 5 条）', n + ' 条');
+    } catch (e) {
+      ok(false, '★ 批量补全每一条都落盘了', '探测失败：' + e.message.slice(0, 60));
+    }
+  }
 
   console.log('\n' + '='.repeat(58));
   console.log(`静态防线：${pass} / ${pass + fail} 通过` + (fail ? `，${fail} 失败` : ''));
