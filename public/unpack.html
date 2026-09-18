@@ -1,8 +1,10 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>手机玩 PC 游戏 · 社区配置 / 实测配置 / 模拟器指南 — GameHub</title>
-<meta name="description" content="手机玩 PC 游戏专区：社区模拟器配置库、本站实测配置库（含帧率与踩坑记录）、模拟器技术指南。仅聚合信息，不提供下载。">
+<title>解包配置匹配 · GameHub 聚合</title>
+<meta name="description" content="把游戏解包 / 兼容层工具导出的 JSON 贴进来，自动识别配置并对撞 Steam 官方配置要求，给出可适配游戏清单。">
 <style>
   :root{
     --c-primary:#2E6BFF; --c-primary-deep:#1B4FD8; --c-primary-soft:#EAF1FF;
@@ -1169,120 +1171,177 @@
     .d-hw .kvs2{grid-template-columns:1fr}
     .d-hw .kvs2 div span{width:70px}
   }
-  /* ===== 独立页专属：一条 5 页签切换条 =====
-   *  v10.2：这一行原本左边还有个「← 返回聚合首页」按钮（.page-back a / .crumb 是它的样式）。
-   *         按钮已删 —— 回首页统一走顶栏与底部 Tab，样式随之清掉，不留死 CSS。 */
-  .page-back{display:flex;align-items:center;gap:12px;padding:14px 0 0;flex-wrap:wrap}
 
-  /* v9.1：一条分栏式切换条（segmented control），页签平级。
-     数字不再「压」在文字上方撑高卡片 —— 改为数字内嵌在标题右侧的小胶囊里，
-     整条高度一致、视觉更平、点击目标更大。
-     v10 页签由 3 个增到 5 个：窄屏放不下「数字胶囊 + 文字」，故 ≤760px 起收起数字胶囊
-     （各分区标题右侧仍显示「共 N 款」），保证 5 个页签一眼看全、不用横向滚。 */
-  #emuTabs{display:flex;gap:4px;padding:4px;background:#EEF1F7;border:1px solid var(--c-border);
-    border-radius:13px;max-width:100%;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-  #emuTabs::-webkit-scrollbar{display:none}
-  #emuTabs .emu-tab{display:inline-flex;align-items:center;gap:7px;flex:none;min-width:0;
-    padding:8px 14px;border:none;border-radius:10px;background:transparent;cursor:pointer;
-    font:650 12.5px/1 var(--font);color:var(--c-t2);white-space:nowrap;transition:.15s;
-    -webkit-tap-highlight-color:transparent}
-  #emuTabs .emu-tab:hover{background:rgba(255,255,255,.7);color:var(--c-t1)}
-  #emuTabs .emu-tab b{font:800 11.5px/1 var(--font-num);color:#6D28D9;background:rgba(124,58,237,.10);
-    padding:3px 7px;border-radius:6px;min-width:22px;text-align:center}
-  #emuTabs .emu-tab span{color:inherit}
-  #emuTabs .emu-tab.on{background:linear-gradient(135deg,#7C3AED,#4F46E5);color:#fff;
-    box-shadow:0 3px 10px rgba(124,58,237,.30)}
-  #emuTabs .emu-tab.on b{background:rgba(255,255,255,.22);color:#fff}
+  /* ===== 📦 解包配置匹配（独立页专属） ===== */
+  .bar.up{background:linear-gradient(180deg,#7C3AED,#4F46E5)}
+  .up-intro{display:flex;gap:12px;align-items:flex-start;background:var(--c-surface);border:1px solid var(--c-border);
+    border-radius:var(--r-lg);padding:14px 16px;margin:0 0 16px;box-shadow:var(--shadow)}
+  .up-intro .ic{font-size:22px;line-height:1;flex:none}
+  .up-intro .tx{font-size:13px;line-height:1.75;color:var(--c-t2)}
+  .up-intro .tx b{color:var(--c-t1)}
+  .up-intro .dim{display:block;margin-top:4px;opacity:.8}
+
+  .up-blk{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-lg);
+    padding:14px 16px 16px;margin:0 0 16px;box-shadow:var(--shadow)}
+  .up-blk.dict{background:transparent;border:none;box-shadow:none;padding:0}
+  .up-blk-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:11px}
+  .up-blk-h b{font-size:14.5px;font-weight:800;color:var(--c-t1)}
+  .up-blk-h span{margin-left:auto;font-size:11.5px;color:var(--c-t3)}
+
+  /* 输入区 */
+  .up-ta{width:100%;min-height:172px;max-height:44vh;resize:vertical;padding:11px 13px;
+    border:1px solid var(--c-border2);border-radius:var(--r-md);background:#FBFCFE;
+    font:12.5px/1.65 var(--font-num);color:var(--c-t1);outline:none;transition:.15s}
+  .up-ta:focus{border-color:var(--c-primary);background:#fff;box-shadow:0 0 0 3px rgba(46,107,255,.10)}
+  .up-ta.drag{border-color:var(--c-primary);background:var(--c-primary-soft);border-style:dashed}
+  .up-btns{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .up-b{padding:8px 15px;border-radius:9px;border:1px solid var(--c-border2);background:#fff;
+    font:650 12.5px/1 var(--font);color:var(--c-t2);transition:.15s}
+  .up-b:hover{border-color:var(--c-primary);color:var(--c-primary);background:var(--c-primary-soft)}
+  .up-b.primary{background:linear-gradient(135deg,#7C3AED,#4F46E5);border-color:transparent;color:#fff;
+    box-shadow:0 3px 10px rgba(79,70,229,.28)}
+  .up-b.primary:hover{filter:brightness(1.06);color:#fff}
+  .up-b.primary:disabled{opacity:.55;cursor:default;filter:none}
+  .up-b.ghost{color:var(--c-t3);border-color:var(--c-border)}
+  .up-sp{flex:1}
+  .up-cov{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--c-t3)}
+  .up-cov.blank{display:none}
+  .up-cov-n{font:800 15px/1 var(--font-num);color:var(--c-ok)}
+  .up-cov-t b{color:var(--c-t2)}
+  .up-msg{margin-top:10px;padding:9px 12px;border-radius:9px;font-size:12.5px;line-height:1.6;
+    background:var(--c-primary-soft);color:var(--c-t2)}
+  .up-msg.warn{background:#FFF8E6;color:#8A6100}
+  .up-msg.err{background:#FDECEC;color:#A31616}
+
+  /* 多记录选择器 */
+  #upRecs{margin-bottom:16px}
+  .up-recs-t{font-size:12.5px;color:var(--c-t2);margin-bottom:8px}
+  .up-recs-t b{color:var(--c-t1)}
+  .up-recs-l{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+  .up-rec{flex:none;display:flex;flex-direction:column;gap:2px;align-items:flex-start;padding:8px 12px;
+    border:1px solid var(--c-border);border-radius:10px;background:#fff;max-width:230px;transition:.15s}
+  .up-rec b{font-size:12.5px;color:var(--c-t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .up-rec span{font-size:11px;color:var(--c-t3)}
+  .up-rec.on{border-color:#7C3AED;background:#F5F3FF;box-shadow:0 0 0 2px rgba(124,58,237,.14)}
+
+  /* 配置画像 */
+  .up-prof-h{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+  .up-prof-h b{font-size:13.5px;color:var(--c-t1)}
+  .up-prof-h span{margin-left:auto;font-size:11.5px;color:var(--c-t3)}
+  .up-note.warn{background:#FFF8E6;border:1px solid #F0DFAE;border-radius:9px;padding:8px 11px;
+    font-size:12px;line-height:1.6;color:#7A5600;margin-bottom:10px}
+  .up-cells{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:9px}
+  .up-cell{border:1px solid var(--c-border);border-radius:var(--r-md);padding:9px 11px;background:#FCFDFF;
+    display:flex;flex-direction:column;gap:2px;min-width:0}
+  .up-cell .lb{font-size:11px;color:var(--c-t3)}
+  .up-cell b{font-size:13.5px;color:var(--c-t1);font-weight:750;line-height:1.4;word-break:break-word}
+  .up-cell .nt{font-size:10.5px;color:var(--c-t3);line-height:1.5;word-break:break-word}
+  .up-cell .none{font-style:normal;font-weight:500;color:var(--c-t3);font-size:12px}
+  .up-cell.hi{border-color:#BBF7D0;background:#F4FDF7}
+  .up-cell.hi b{color:#15803D}
+  .up-cell.lo{border-color:#E8D9F7;background:#FBF8FF}
+  .up-cell.req{border-color:#F0DFAE;background:#FFFDF5}
+  .up-cell.req b{font-size:12.5px}
+
+  /* 逐项明细 */
+  .up-grps{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:10px}
+  .up-grp{border:1px solid var(--c-border);border-radius:var(--r-md);overflow:hidden;background:#fff}
+  .up-grp .hd{display:flex;align-items:center;gap:7px;padding:8px 11px;background:#F5F7FB;border-bottom:1px solid var(--c-border)}
+  .up-grp .hd b{font-size:12.5px;color:var(--c-t1)}
+  .up-grp .hd i{margin-left:auto;font-style:normal;font:700 11px/1 var(--font-num);color:var(--c-t3);
+    background:#fff;border:1px solid var(--c-border);border-radius:5px;padding:2px 6px}
+  .up-grp .bd{padding:4px 0}
+  .up-grp .it,.up-unk .it{display:flex;align-items:baseline;gap:8px;padding:5px 11px;font-size:12px;min-width:0}
+  .up-grp .it code,.up-unk .it code{font:11.5px/1.5 var(--font-num);color:#6D28D9;background:#F5F3FF;
+    padding:1px 5px;border-radius:4px;flex:none;max-width:44%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .up-grp .it .vv,.up-unk .it span{color:var(--c-t2);word-break:break-word;min-width:0}
+  .up-grp .tg{font-style:normal;font-size:10px;font-weight:700;border-radius:4px;padding:1.5px 5px;flex:none}
+  .up-grp .tg.min{background:#FEF3C7;color:#92400E}
+  .up-grp .tg.rec{background:#DBEAFE;color:#1E40AF}
+  .up-grp .tg.low{background:#F3F4F6;color:#6B7280}
+  .up-unk{margin-top:11px;border:1px solid var(--c-border);border-radius:var(--r-md);background:#FCFDFF}
+  .up-unk summary{cursor:pointer;padding:9px 12px;font-size:12.5px;color:var(--c-t2);list-style:none}
+  .up-unk summary::-webkit-details-marker{display:none}
+  .up-unk summary::before{content:'▸ ';color:var(--c-t3)}
+  .up-unk[open] summary::before{content:'▾ '}
+  .up-unk summary b{color:var(--c-t1)}
+  .up-unk-l{padding:2px 0 8px;border-top:1px solid var(--c-border);max-height:260px;overflow:auto}
+
+  /* 匹配结果 */
+  .up-mstats{display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:2px 0 12px}
+  .up-ms{display:flex;flex-direction:column;gap:1px}
+  .up-ms b{font:800 20px/1.15 var(--font-num);color:var(--c-primary)}
+  .up-ms span{font-size:11.5px;color:var(--c-t3)}
+  .up-dist{display:flex;gap:12px;flex-wrap:wrap;margin-left:auto}
+  .up-d{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--c-t3)}
+  .up-d b{color:var(--c-t1);font-family:var(--font-num)}
+  .up-d .dot{width:8px;height:8px;border-radius:50%;background:var(--c-t3)}
+  .up-d .dot.sm{background:#16A34A}.up-d .dot.ok{background:#2E6BFF}
+  .up-d .dot.mb{background:#D97706}.up-d .dot.un{background:#9AA3B5}.up-d .dot.no{background:#DC2626}
+  .up-mbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--c-border)}
+  .up-search{flex:1;min-width:190px;padding:8px 12px;border:1px solid var(--c-border2);border-radius:9px;
+    font:13px/1 var(--font);color:var(--c-t1);outline:none;background:#fff}
+  .up-search:focus{border-color:var(--c-primary);box-shadow:0 0 0 3px rgba(46,107,255,.10)}
+  .up-sorts{display:flex;gap:4px;background:#EEF1F7;border:1px solid var(--c-border);border-radius:10px;padding:3px}
+  .up-sort{padding:6px 11px;border-radius:7px;font:650 12px/1 var(--font);color:var(--c-t2);transition:.15s}
+  .up-sort:hover{background:rgba(255,255,255,.7);color:var(--c-t1)}
+  .up-sort.on{background:#fff;color:#4F46E5;box-shadow:0 1px 3px rgba(18,26,51,.12)}
+  .up-only{padding:7px 12px;border-radius:9px;border:1px solid var(--c-border2);background:#fff;
+    font:650 12px/1 var(--font);color:var(--c-t2)}
+  .up-only.on{background:var(--c-primary-soft);border-color:var(--c-primary);color:var(--c-primary)}
+  .up-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(292px,1fr));gap:10px;padding:2px 0 4px}
+  .up-card{border:1px solid var(--c-border);border-left:3px solid var(--c-t3);border-radius:var(--r-md);
+    padding:10px 12px;background:#fff;display:flex;flex-direction:column;gap:6px;min-width:0}
+  .up-card.sm{border-left-color:#16A34A}.up-card.ok{border-left-color:#2E6BFF}
+  .up-card.mb{border-left-color:#D97706}.up-card.un{border-left-color:#9AA3B5}
+  .up-card.no{border-left-color:#DC2626;opacity:.72}
+  .up-card-h{display:flex;align-items:center;gap:8px;min-width:0}
+  .up-card-h b{font-size:13px;color:var(--c-t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .up-mg{margin-left:auto;font:600 10.5px/1 var(--font-num);color:var(--c-t3);flex:none}
+  .up-badge{flex:none;font-size:10.5px;font-weight:750;border-radius:5px;padding:2.5px 7px}
+  .up-badge.sm{background:#DCFCE7;color:#15803D}
+  .up-badge.ok{background:#DBEAFE;color:#1D4ED8}
+  .up-badge.mb{background:#FEF3C7;color:#92400E}
+  .up-badge.un{background:#F1F3F7;color:#5A6474}
+  .up-badge.no{background:#FEE2E2;color:#B91C1C}
+  .up-chips{display:flex;gap:5px;flex-wrap:wrap}
+  .up-ch{font-size:10.5px;font-weight:650;border-radius:5px;padding:2px 6px;background:#F1F3F7;color:var(--c-t2)}
+  .up-ch.ok{background:#EDF7F0;color:#15803D}
+  .up-ch.fail{background:#FDECEC;color:#B91C1C}
+  .up-ch.unknown,.up-ch.uj{background:#FFF8E6;color:#8A6100}
+  .up-min{font-size:11px;color:var(--c-t3);line-height:1.55;word-break:break-word}
+  .up-why{font-size:11px;color:#B91C1C;line-height:1.55;background:#FEF6F6;border-radius:6px;padding:5px 8px}
+  .up-foot{padding-top:11px;margin-top:4px;border-top:1px solid var(--c-border);font-size:11px;color:var(--c-t3);line-height:1.7}
+  .up-empty{padding:24px 4px;text-align:center;color:var(--c-t3);font-size:13px}
+
+  /* 判定依据 */
+  .up-dict{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-lg);
+    padding:14px 16px;box-shadow:var(--shadow)}
+  .up-dict-h{font-size:13.5px;font-weight:800;color:var(--c-t1);margin-bottom:10px}
+  .up-dims{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:9px}
+  .up-dim{border:1px solid var(--c-border);border-radius:var(--r-md);padding:9px 11px;background:#FCFDFF}
+  .up-dim b{display:block;font-size:12.5px;color:var(--c-t1);margin-bottom:3px}
+  .up-dim span{font-size:11.5px;color:var(--c-t2);line-height:1.6}
+  .up-dict-n{margin-top:10px;font-size:11.5px;color:var(--c-t3);line-height:1.75}
+  .up-dict-n b{color:var(--c-t2)}
+  .page-deadnodes{display:none!important}
 
   @media(max-width:760px){
-    .page-back{gap:9px}
-    #emuTabs{margin-left:0;width:100%}
-    #emuTabs .emu-tab{flex:1;padding:8px 5px;gap:5px;font-size:11.5px;justify-content:center}
-    /* ★ v10：5 个页签放不下数字胶囊，窄屏收起（分区标题有「共 N 款」兜底） */
-    #emuTabs .emu-tab b{display:none}
+    .up-cells{grid-template-columns:repeat(auto-fill,minmax(148px,1fr))}
+    .up-grps{grid-template-columns:1fr}
+    .up-list{grid-template-columns:1fr}
+    .up-dist{margin-left:0;width:100%}
+    .up-intro{padding:12px 13px}
   }
   @media(max-width:430px){
-    /* 超窄屏：字号再收一档，5 个文字页签仍要一眼看全 */
-    #emuTabs .emu-tab{font-size:10.5px;padding:8px 3px}
-    .emu-grid.sv{grid-template-columns:1fr}
+    .up-btns .up-b{padding:8px 11px;font-size:12px}
+    .up-mbar .up-search{min-width:100%}
   }
-
-  /* v9.1：二级切换条已删除（改为一条 4 页签）。
-     原 .eg-subbar / .eg-sub 规则一并移除，避免留死 CSS。 */
-
-  /* ===== 独立页专属：两个配置面板（抽屉内）+ 卡片占位 ===== */  .emu-loading,.emu-empty{padding:26px 4px;color:var(--c-t3);font-size:13.5px;text-align:center}
-  .emu-deadnodes{display:none!important}
-  .cf-head{padding:4px 2px 10px;border-bottom:1px solid var(--c-border)}
-  .cf-head h3{margin:8px 0 2px;font-size:17px;font-weight:800;color:var(--c-t1);line-height:1.35}
-  .cf-sub{font-size:12.5px;color:var(--c-t3)}
-  .cf-body{padding:12px 2px 24px}
-  .cf-loading,.cf-empty{padding:24px 0;color:var(--c-t3);font-size:13.5px;text-align:center}
-  .cf-stats{display:flex;gap:8px;margin:10px 0 12px}
-  .cf-stats .st{flex:1;min-width:0;background:#fff;border:1px solid var(--c-border);border-radius:12px;padding:10px 12px;text-align:center}
-  .cf-stats .st b{display:block;font-size:19px;font-weight:800;color:var(--c-primary);line-height:1.2}
-  .cf-stats .st span{font-size:11.5px;color:var(--c-t3)}
-  .cf-note{background:#fff8e6;border:1px solid #f0dfae;border-radius:11px;padding:10px 12px;
-    font-size:12.5px;line-height:1.65;color:var(--c-t2);margin-bottom:12px}
-  .cf-scroll{max-height:52vh;overflow:auto;border:1px solid var(--c-border);border-radius:12px;background:#fff}
-  .cf-table{width:100%;border-collapse:collapse;font-size:12.5px}
-  .cf-table th{position:sticky;top:0;background:#f7f9fc;text-align:left;padding:9px 10px;font-weight:700;
-    color:var(--c-t2);border-bottom:1px solid var(--c-border);white-space:nowrap}
-  .cf-table td{padding:8px 10px;border-bottom:1px solid #eef1f6;color:var(--c-t2);vertical-align:middle}
-  .cf-table tr:last-child td{border-bottom:0}
-  .cf-dl{color:var(--c-primary);font-weight:650;text-decoration:none;white-space:nowrap}
-  .cf-dl:hover{text-decoration:underline}
-  /* ===== ★ v10.13 逐条游玩参数（配置面板内）=====
-     原先面板只有 [机型|GPU|日期|下载JSON] 一张表，参数全在 JSON 里 ——
-     现在把解析出来的真实参数铺成卡片。 */
-  .cf-sec-t{display:flex;align-items:center;gap:8px;margin:14px 0 8px;font-size:12.5px;font-weight:800;color:var(--c-t2)}
-  .cf-sec-t .n{margin-left:auto;font-size:11px;font-weight:650;color:var(--c-t3);font-family:var(--font-num)}
-  .cf-params{display:flex;flex-direction:column;gap:9px}
-  .cf-param{border:1px solid var(--c-border);border-radius:12px;background:#fff;overflow:hidden}
-  .cf-param .hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 11px;background:#f5f7fb}
-  .cf-param .hd b{font-size:12.5px;color:var(--c-t1)}
-  .cf-param .hd .gp{font-size:10.5px;font-weight:750;color:#0F766E;background:#CCFBF1;border-radius:5px;padding:1.5px 6px}
-  .cf-param .hd .dt{margin-left:auto;font-size:10.5px;color:var(--c-t3);font-family:var(--font-num)}
-  .cf-param .hd .dl{font-size:10.5px;font-weight:700;color:var(--c-primary);text-decoration:none}
-  .cf-param .kvs{display:flex;flex-wrap:wrap;gap:6px;padding:9px 11px}
-  /* ★ v10.14：机型 → 芯片规格行（与详情抽屉同款视觉） */
-  .cf-param .spec{display:flex;flex-wrap:wrap;gap:6px;padding:0 11px 9px}
-  .cf-param .spec .sp{font-size:10.5px;color:var(--c-t2);background:#eef4ff;border:1px solid #dce7fb;border-radius:6px;padding:2px 7px}
-  .cf-param .spec .sp b{color:#1d4ed8;font-weight:800}
-  .cf-param .spec .sp.soc b{color:#0f766e}
-  .cf-param .spec .sp.cpu{font-family:var(--font-num);color:var(--c-t3);background:#f6f7fb;border-color:#e8ebf3}
-  /* ★ v10.15：与详情抽屉同款分层 —— 驱动 / DXVK 带底色，其余中性灰；
-     分辨率 / 内存这类「跟机型强相关」的也提亮一档，扫一眼就能定位重点。 */
-  .cf-param .kvs .kv{font-size:10.5px;color:var(--c-t3);background:#f6f7fb;border:1px solid #e8ebf3;
-    border-radius:6px;padding:2px 7px;font-family:var(--font-num)}
-  .cf-param .kvs .kv b{color:#334155;font-weight:750;margin-right:1px}
-  .cf-param .kvs .kv.hot{background:#f5f3ff;border-color:#e9e4fb}
-  .cf-param .kvs .kv.hot b{color:#6D28D9}
-  .cf-param .kvs .kv.ok{background:#ecfdf5;border-color:#d1fae5}
-  .cf-param .kvs .kv.ok b{color:#0F766E}
-  .cf-rec{padding:12px 13px;border-bottom:1px solid #eef1f6}
-  .cf-rec:last-child{border-bottom:0}
-  .cf-rec-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
-  .cf-rec-h b{font-size:13.5px;color:var(--c-t1)}
-  .cf-kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 10px}
-  .cf-kv>div{display:flex;flex-direction:column;gap:2px;min-width:0}
-  .cf-kv i{font-style:normal;font-size:11px;color:var(--c-t3)}
-  .cf-kv code{font-size:11.5px;color:var(--c-t1);background:#f4f6fb;border-radius:6px;padding:2px 6px;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .cf-note-inline{margin-top:9px;background:#f4f8ff;border-left:3px solid var(--c-primary);border-radius:0 8px 8px 0;
-    padding:8px 11px;font-size:12.5px;line-height:1.6;color:var(--c-t2)}
-  .cf-lib{display:flex;gap:12px;align-items:center;background:#fff;border:1px solid var(--c-border);
-    border-radius:12px;padding:10px;margin-bottom:12px}
-  .cf-lib img{width:104px;height:48px;object-fit:cover;border-radius:8px;background:#eef1f6;flex:none}
-  .cf-lib-tx{min-width:0;display:flex;flex-direction:column;gap:7px}
-  .cf-lib-tx b{font-size:13px;color:var(--c-t1);line-height:1.4}
-  .cf-btn{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;background:var(--c-primary);color:#fff;
-    border:0;border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;text-decoration:none;transition:.15s}
-  .cf-btn:hover{filter:brightness(1.08)}
-  .cf-foot{margin-top:12px;text-align:center}
 </style>
 </head>
-<body data-page="emulator">
+<body>
 
+<!-- ===== 顶栏（从主源 public/index.html 抽取，勿直接改这里） ===== -->
 <header class="topbar">
   <div class="wrap in">
     <a class="brand" href="/">
@@ -1292,8 +1351,8 @@
     </a>
     <nav class="main-nav">
       <a href="/" id="navHome">🏠 首页</a>
-      <a href="/emulator.html" class="on" id="navEmu">📱 手机专区</a>
-      <a href="/unpack.html" id="navUnpack">📦 解包匹配</a>
+      <a href="/emulator.html" id="navEmu">📱 手机专区</a>
+      <a href="/unpack.html" class="on" id="navUnpack">📦 解包匹配</a>
     </nav>
     <span class="spacer"></span>
     <button class="top-search" id="searchOpen" type="button" aria-label="搜索游戏">
@@ -1305,257 +1364,61 @@
   </div>
 </header>
 
-<div class="wrap page-back">
-  <div class="emu-tabs" id="emuTabs">
-    <button class="emu-tab on" data-et="emu" type="button"><b id="tabNumEmu">—</b><span>手游中心</span></button>
-    <button class="emu-tab" data-et="tr" type="button"><b id="tabNumTr">—</b><span>修改器</span></button>
-    <button class="emu-tab" data-et="sv" type="button"><b id="tabNumSv">—</b><span>云存档</span></button>
-    <button class="emu-tab" data-et="dm" type="button"><b id="tabNumDm">—</b><span>机型兼容</span></button>
-    <button class="emu-tab" data-et="eg" type="button"><b>指南</b><span>模拟器指南</span></button>
-  </div>
-</div>
 
+<main class="wrap" id="unpack">
+  <div class="sec-h"><span class="bar up"></span><h2>解包配置匹配</h2><span class="en">UNPACK MATCH</span></div>
 
-<!-- ===== 子页签 ①：📱 手游中心（社区配置库 + 机型实测库 **合并成一张表**） =====
-     ★ v9.3：原本这里有两个平级页签（「手游可玩」= 社区库、「实测配置」= 实测库），
-       同一款游戏两边各出现一次，用户要在两个页签来回切，也看不出
-       「这款到底有几套配置可抄 + 实测跑多少帧」。现在合并成一张卡片列表：
-         · 同款游戏只占一条（按端游库 id 或归一化名归并）
-         · 配置数累加（社区 N 套 + 实测 M 条）
-         · 卡片上同时标「N 套配置」与「实测 XX 帧」
-         · **默认只显示能对上端游库的**（有封面、点得进详情）
-     实测库的独立视角（按机型/帧率筛）保留在「机型兼容」页签里。 -->
-<main class="wrap" id="emulator" data-et="emu">
-  <div class="sec-h"><span class="bar emu"></span><h2>手游中心</h2><span class="en">MOBILE HUB · 社区 + 实测</span><span class="more" id="emuCount"></span></div>
-  <div class="emu-intro">
-    <span class="ic">📱</span>
+  <div class="up-intro">
+    <span class="ic">📦</span>
     <div class="tx">
-      <b>手机跑 PC 游戏</b>——这张表把两路数据<b>合并去重</b>了：
-      <b>社区配置库</b>（玩家在安卓机上跑通某款 PC 游戏后导出的模拟器配置，DXVK / Box64 / 驱动版本）+
-      <b>机型实测库</b>（本项目自建，带<b>实测帧率</b>与踩坑备注）。
-      同款游戏只占一条，<b>配置数累加</b>——配置越多说明越多人跑通、越省心。
-      <span style="opacity:.75">默认只显示<b>能对上端游库的游戏</b>（有封面、点得进详情），可切到全量。</span>
-      <span id="emuBuilt" style="opacity:.75"></span>
+      <b>手里这份配置，能跑哪些游戏？</b>
+      把从游戏包 / 兼容层工具里导出的 JSON 贴进来，这里会<b>自动认出</b>内存、架构、
+      兼容层（DXVK / Box64 / Wine）等关键项，再对撞 <b>Steam 官方配置要求</b>，给出可适配清单 ——
+      每个判定都摊开理由。
+      <span class="dim">字段名不认识也能认：键名看不出来时会按<b>值的形态</b>推断，并标注「推断」。</span>
     </div>
   </div>
-  <div class="emu-stats" id="emuStats"></div>
-  <div class="emu-bar">
-    <div class="emu-bar-row">
-      <input class="emu-search" id="emuSearch" type="text" placeholder="搜索：GTA V / 只狼 / 艾尔登法环…（社区库英文名也认）" autocomplete="off">
-      <select class="emu-sel" id="emuGpu"><option value="">全部 GPU / 机型</option></select>
-      <select class="emu-sel" id="emuTier">
-        <option value="">全部帧率</option>
-        <option value="流畅">流畅 ≥55 帧</option>
-        <option value="可玩">可玩 28-55 帧</option>
-        <option value="勉强">勉强 15-28 帧</option>
-        <option value="卡顿">卡顿 &lt;15 帧</option>
-      </select>
+
+  <section class="up-in">
+    <div class="up-blk-h"><b>① 贴上 JSON</b><span id="upShape"></span></div>
+    <textarea id="upInput" class="up-ta" spellcheck="false" autocomplete="off"
+      placeholder='把 JSON 贴到这里，或直接把文件拖进来…&#10;&#10;例：&#10;{&#10;  &quot;arch&quot;: &quot;arm64-v8a&quot;,&#10;  &quot;memory&quot;: &quot;16 GB&quot;,&#10;  &quot;compatibility&quot;: { &quot;dxvk&quot;: &quot;2.4&quot;, &quot;box64&quot;: &quot;0.3.4&quot; }&#10;}'></textarea>
+    <input type="file" id="upFile" accept=".json,.txt,application/json" hidden>
+    <div class="up-btns">
+      <button type="button" class="up-b primary" id="upRun">开始匹配</button>
+      <button type="button" class="up-b" id="upPick">选择文件</button>
+      <button type="button" class="up-b" id="upSample">载入示例</button>
+      <button type="button" class="up-b ghost" id="upClear">清空</button>
+      <span class="up-sp"></span>
+      <span class="up-cov blank" id="upCoverage"></span>
     </div>
-    <div class="emu-bar-row">
-      <span class="emu-bar-lb">排序</span>
-      <div class="emu-sorts" id="emuSorts">
-        <button class="emu-sort on" data-s="both" type="button" title="既有社区配置、又有实测记录的游戏优先（最能体现「合并」价值）">双料优先</button>
-        <button class="emu-sort" data-s="configs" type="button">配置最多</button>
-        <button class="emu-sort" data-s="fps" type="button">帧率优先</button>
-        <button class="emu-sort" data-s="recent" type="button">最近上传</button>
-        <button class="emu-sort" data-s="name" type="button">名称</button>
-      </div>
+    <div class="up-msg" id="upMsg" hidden></div>
+  </section>
+
+  <section id="upResult" hidden>
+    <div id="upRecs" hidden></div>
+
+    <div class="up-blk">
+      <div class="up-blk-h"><b>② 这份配置被识别成</b><span>「自身配置」与「最低要求」分开统计，不会互相顶替</span></div>
+      <div id="upProfile"></div>
     </div>
-    <!-- ★ v10.5：筛选独占一行（原先与搜索/排序挤同一行，开关一变宽就顶掉后面的开关）。
-         开关文案恒定、只用 ○/✓ 表示状态，切换不产生回流。 -->
-    <div class="emu-bar-row">
-      <span class="emu-bar-lb">筛选</span>
-      <button class="emu-refresh em-tg" id="emuToggleLib" type="button" title="只显示能对上端游库（有封面与详情页）的游戏">仅看匹配端游</button>
-      <button class="emu-refresh both em-tg" id="emuToggleBoth" type="button" title="只看既有社区配置、又有本站实测记录的游戏（全量 3161 条里仅 88 条，最能体现两库合并价值）">只看双料</button>
-      <button class="emu-refresh tr em-tg" id="emuToggleTr" type="button" title="只看「修改器」库里收录到的游戏（按端游库 id 关联）">🛠 有修改器</button>
-      <button class="emu-refresh sv em-tg" id="emuToggleSv" type="button" title="只看「云存档」库里查到存档位置/云同步的游戏（按端游库 id 关联）">💾 有云存档</button>
-      <span class="emu-bar-sp"></span>
-      <button class="emu-refresh" id="emuRefresh" type="button" title="从 BannerHub 仓库拉取最新配置快照（约 12-60 秒）">↻ 刷新配置库</button>
+
+    <div class="up-blk">
+      <div class="up-blk-h"><b>③ 逐项识别明细</b><span>「推断」= 键名不认识、按值的形态判断</span></div>
+      <div id="upGroups" class="up-grps"></div>
+      <div id="upUnknown"></div>
     </div>
-  </div>
-  <div class="emu-grid" id="emuGrid"></div>
-  <button class="load-more" id="emuMore" style="display:none">加载更多</button>
+
+    <div class="up-blk">
+      <div class="up-blk-h"><b>④ 可适配游戏</b><span>默认「规模优先」：先看能跑的<b>最吃配置</b>的游戏</span></div>
+      <div id="upMatch" class="up-match"><div class="up-empty">匹配中…</div></div>
+    </div>
+  </section>
+
+  <section class="up-blk dict"><div id="upDict"></div></section>
 </main>
 
-<!-- ===== 子页签 ②：📖 模拟器指南（静态知识库） ===== -->
-<main class="wrap et-hide" id="emuguide" data-et="eg">
-  <div class="sec-h"><span class="bar eg"></span><h2>模拟器指南</h2><span class="en">EMULATOR GUIDE</span><span class="more" id="egSrc"></span></div>
-  <div class="emu-intro eg">
-    <span class="ic">📖</span>
-    <div class="tx">
-      <b>先看这里，再动手装</b>——手游中心告诉你「这款游戏跑多少帧」，这里回答它前后三个问题：
-      <b>该装哪个驱动 / 构建</b>（装错根本开不起来）、<b>开起来了但卡 / 黑屏该调什么</b>，
-      以及<b>这一堆容器、驱动、包装器各该用哪一版</b>（见第 ⑥ 节）。
-      <span style="opacity:.75">内容整理自社区实测与公开文档（<b>2026-09 口径</b>），属<b>经验参考</b>而非官方保证；驱动生态变化很快，请以发布页为准。</span>
-    </div>
-  </div>
-
-  <nav class="eg-nav" id="egNav">
-    <a href="#egS1" class="on"><b>1</b>五层技术栈</a>
-    <a href="#egS2"><b>2</b>芯片驱动</a>
-    <a href="#egS3"><b>3</b>包装器</a>
-    <a href="#egS4"><b>4</b>优化清单</a>
-    <a href="#egS5"><b>5</b>避坑清单</a>
-    <a href="#egS6"><b>6</b>版本门槛</a>
-    <a href="#egS7"><b>7</b>帧率参考</a>
-  </nav>
-
-  <section class="eg-sec" id="egS1">
-    <h3><span class="eg-no">1</span>手机跑 PC 游戏，靠的是这五层</h3>
-    <p class="eg-lead">ARM 手机芯片既看不懂 x86 指令、系统也不是 Windows。所以游戏 exe 要穿过五层翻译才能变成屏幕像素——<b>任何一层缺失或版本不匹配，都会是黑屏而不是「卡」</b>。</p>
-    <div class="eg-stack" id="egStack"></div>
-  </section>
-
-  <section class="eg-sec" id="egS2">
-    <h3><span class="eg-no">2</span>你的芯片该装哪个驱动</h3>
-    <p class="eg-lead">这是唯一「换一个文件就能从幻灯片变 60 帧」的变量，也是新手最容易踩的坑。按 Adreno 世代选，不要跨代用。</p>
-    <div class="eg-chips" id="egChips"></div>
-  </section>
-
-  <section class="eg-sec" id="egS3">
-    <h3><span class="eg-no">3</span>DirectX 包装器对照表</h3>
-    <p class="eg-lead">游戏用哪代 DirectX，就装哪个包装器。装错的表现是「启动即闪退」或「进游戏纯黑」。</p>
-    <div class="eg-tbl w2c" id="egWrap"></div>
-  </section>
-
-  <section class="eg-sec" id="egS4">
-    <h3><span class="eg-no">4</span>优化清单（按投产比排序）</h3>
-    <p class="eg-lead">这些是从「能开起来」到「能玩」的关键调优项，建议按顺序做。</p>
-    <ol class="eg-tune" id="egTune"></ol>
-  </section>
-
-  <section class="eg-sec" id="egS5">
-    <h3><span class="eg-no">5</span>避坑清单（结构上就不可能跑）</h3>
-    <p class="eg-lead">下面这些不是配置问题，<b>再怎么调都跑不起来</b>，别浪费时间。</p>
-    <div class="eg-avoid" id="egAvoid"></div>
-  </section>
-
-  <section class="eg-sec" id="egS6">
-    <h3><span class="eg-no">6</span>版本门槛（2026-09 口径）</h3>
-    <p class="eg-lead">「该装哪个版本」是新手最容易一句话答错的问题。这一节把当前该用的版本号固定下来，省得去翻一堆 release 页。</p>
-    <div class="eg-tbl w2c" id="egVer"></div>
-  </section>
-
-  <section class="eg-sec" id="egS7">
-    <h3><span class="eg-no">7</span>社区实测帧率参考</h3>
-    <p class="eg-lead">来自社区公开数据，仅供参考；同一机型因散热与 ROM 差异可能出入较大。</p>
-    <div class="eg-tbl w2c" id="egBench"></div>
-  </section>
-</main>
-
-<main class="wrap et-hide" id="devmatch" data-et="dm">
-  <div class="sec-h"><span class="bar dm"></span><h2>机型兼容查询</h2><span class="en">DEVICE COMPATIBILITY</span><span class="more" id="dmCount"></span></div>
-  <div class="emu-intro dm">
-    <span class="ic">📲</span>
-    <div class="tx">
-      <b>选你的机型，看能跑哪些 PC 游戏</b>——先选品牌再挑型号，或直接输入手机型号搜索。
-      系统按<b>芯片 GPU 性能档</b>推断：某游戏被更低配置的机型跑通过，你的机型就<b>同样能跑</b>（配置越高越流畅）。
-      <span style="opacity:.75">数据来自 BannerHub 社区配置库（14,000+ 份实测）、Arm SoC 规格库与 Turnip 驱动构建源；结论为<b>推断参考</b>，实际表现受散热与 ROM 影响。</span>
-    </div>
-  </div>
-
-  <div class="eg-sec">
-    <h3><span class="eg-no">1</span>选择你的机型</h3>
-    <p class="eg-lead">不知道具体型号？先选品牌看列表，或输入「小米 15」「S24」「K80」这类关键词试试。</p>
-    <div class="dm-pick">
-      <select class="dm-sel" id="dmBrand"><option value="">选择品牌…</option></select>
-      <div class="dm-inp-wrap">
-        <input class="dm-inp" id="dmInput" type="text" placeholder="输入机型，如 Xiaomi 2412DPC0AG / SM S928B / ayn Odin3…" autocomplete="off">
-        <div class="dm-sug" id="dmSug"></div>
-      </div>
-      <button class="dm-btn" id="dmGo" type="button">查询能跑的游戏</button>
-    </div>
-    <div class="dm-info" id="dmInfo"></div>
-  </div>
-
-  <div class="eg-sec">
-    <h3><span class="eg-no">2</span>配套驱动：Turnip 最新构建</h3>
-    <p class="eg-lead">高通 Adreno 机型跑 PC 游戏，<b>换对驱动往往比换机型提升更明显</b>。以下为自动化构建的最新版本，按你的 GPU 世代选对应变体。</p>
-    <div id="dmTurnip"><div class="dm-turnip"><p class="dm-empty">加载中…</p></div></div>
-  </div>
-
-  <div class="eg-sec" id="dmResultSec" style="display:none">
-    <h3><span class="eg-no">3</span>可跑游戏清单</h3>
-    <p class="eg-lead">「流畅」= 你的 GPU 明显强于该游戏已验证的最低配置；「可玩」= 刚好达到；「勉强」= 略低，需降画质。</p>
-    <div class="dm-flt">
-      <button class="dm-f on" data-dmv="" type="button">全部</button>
-      <button class="dm-f" data-dmv="smooth" type="button">流畅</button>
-      <button class="dm-f" data-dmv="ok" type="button">可玩</button>
-      <button class="dm-f" data-dmv="maybe" type="button">勉强</button>
-      <input class="dm-inp" id="dmSearch" type="text" placeholder="在结果里搜索…" style="max-width:200px;margin-left:auto" autocomplete="off">
-    </div>
-    <div class="emu-grid" id="dmGrid"></div>
-    <button class="dm-more" id="dmMore" type="button" style="display:none">加载更多</button>
-  </div>
-</main>
-
-<main class="wrap et-hide" id="trainers" data-et="tr">
-  <div class="sec-h"><span class="bar tr"></span><h2>修改器</h2><span class="en">TRAINERS</span><span class="more" id="trCount"></span></div>
-  <div class="emu-intro tr">
-    <span class="ic">🛠</span>
-    <div class="tx">
-      <b>单机游戏修改器，一处查全</b>——数据来自 <b>Game Cheats Manager</b> 的公开清单，
-      汇总 <b>5 个来源</b>：<b>风灵月影</b>（业界标准、数量最多）、<b>CE 修改表</b>、<b>社区贡献</b>、<b>小幸修改器</b>、<b>GCM 精选</b>。
-      每条都标了<b>来源与版本</b>，并<b>自动关联端游库</b>——能对上库的可以直接点进游戏详情。
-      <span style="opacity:.75">本站<b>不托管修改器文件</b>：官方下载走的是一次性签名链接，无法离线复现，请用卡片上的「获取方式」到官方渠道取。</span>
-      <span id="trBuilt" style="opacity:.75"></span>
-    </div>
-  </div>
-  <div class="emu-stats" id="trStats"></div>
-  <div class="emu-bar">
-    <div class="emu-bar-row">
-      <input class="emu-search" id="trSearch" type="text" placeholder="搜索：艾尔登法环 / ELDEN RING / 只狼…" autocomplete="off">
-      <select class="emu-sel" id="trSource"><option value="">全部来源</option></select>
-    </div>
-    <div class="emu-bar-row">
-      <span class="emu-bar-lb">排序</span>
-      <div class="emu-sorts" id="trSorts">
-        <button class="emu-sort on" data-s="lib" type="button" title="能对上端游库（有封面、点得进详情）的优先">匹配优先</button>
-        <button class="emu-sort" data-s="zh" type="button">中文名</button>
-        <button class="emu-sort" data-s="name" type="button">英文名</button>
-        <button class="emu-sort" data-s="source" type="button">按来源</button>
-      </div>
-      <span class="emu-bar-sp"></span>
-      <button class="emu-refresh tr on em-tg" id="trToggleLib" type="button" title="只显示能对上端游库的游戏">仅看匹配端游</button>
-    </div>
-  </div>
-  <div class="emu-grid tr" id="trGrid"></div>
-  <button class="load-more" id="trMore" style="display:none">加载更多</button>
-</main>
-
-<main class="wrap et-hide" id="saves" data-et="sv">
-  <div class="sec-h"><span class="bar sv"></span><h2>云存档</h2><span class="en">CLOUD SAVE</span><span class="more" id="svCount"></span></div>
-  <div class="emu-intro sv">
-    <span class="ic">💾</span>
-    <div class="tx">
-      <b>存档到底放在哪？</b>——这张表给出每款游戏的<b>存档文件位置</b>与<b>注册表存档项</b>，
-      照着路径就能备份、迁移、跨设备接档；同时标出<b>是否支持云同步</b>（Steam / GOG / Epic / Origin…）。
-      数据来自开源存档清单 <b>Ludusavi</b>（MIT 许可，社区长期维护）。
-      <span style="opacity:.75">路径里的 <code>&lt;用户名&gt;</code> 换成你自己的系统用户名即可；模拟器里则是虚拟 C 盘下的同一路径。</span>
-      <span id="svBuilt" style="opacity:.75"></span>
-    </div>
-  </div>
-  <div class="emu-stats" id="svStats"></div>
-  <div class="emu-bar">
-    <div class="emu-bar-row">
-      <input class="emu-search" id="svSearch" type="text" placeholder="搜索：艾尔登法环 / ELDEN RING / 博德之门3…" autocomplete="off">
-    </div>
-    <div class="emu-bar-row">
-      <span class="emu-bar-lb">排序</span>
-      <div class="emu-sorts" id="svSorts">
-        <button class="emu-sort on" data-s="paths" type="button" title="存档项多的游戏优先">存档最多</button>
-        <button class="emu-sort" data-s="cloud" type="button">云同步优先</button>
-        <button class="emu-sort" data-s="name" type="button">名称</button>
-      </div>
-      <span class="emu-bar-sp"></span>
-      <button class="emu-refresh sv on em-tg" id="svPhone" type="button" title="只显示手游中心里能玩的游戏">仅看手机能玩</button>
-      <button class="emu-refresh sv em-tg" id="svCloud" type="button" title="只显示支持云同步的游戏">仅看云同步</button>
-    </div>
-  </div>
-  <div class="emu-grid sv" id="svGrid"></div>
-  <button class="load-more" id="svMore" style="display:none">加载更多</button>
-</main>
-
+<!-- ===== 搜索弹层（通用脚本依赖，缺了会中断整段脚本） ===== -->
 <!-- ===== 🔍 搜索弹窗（命令面板式：联想 + 结果 + 源站兜底，均在此完成） ===== -->
 <div class="smask" id="smask"></div>
 <div class="smodal" id="smodal" role="dialog" aria-modal="true" aria-label="搜索游戏">
@@ -1580,8 +1443,21 @@
 </div>
 
 
-<!-- 独立页无热榜分区：这里只为满足通用脚本的 DOM 依赖，整块隐藏 -->
-<div class="emu-deadnodes" hidden aria-hidden="true">
+<!-- ===== 遮罩 + 详情抽屉 + 底部 Tab ===== -->
+<div class="mask" id="mask"></div>
+<aside class="drawer" id="drawer" aria-label="游戏详情"><div id="drawerBody"></div></aside>
+<div class="toast" id="toast"></div>
+
+<!-- 移动端底部 Tab（<=760px 显示，桌面隐藏） -->
+<nav class="tabbar" id="tabbar" aria-label="移动端导航">
+  <a href="/" aria-label="首页"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.6 12 3.4l9 7.2"/><path d="M5.6 9.4V19a1.6 1.6 0 0 0 1.6 1.6h3.3V15h3v5.6h3.3A1.6 1.6 0 0 0 18.4 19V9.4"/></svg>首页</a>
+  <a href="/emulator.html" aria-label="手机专区"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18.5h2"/></svg>手机专区</a>
+  <a href="/unpack.html" class="on" aria-label="解包"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5 12 3l9 4.5-9 4.5-9-4.5Z"/><path d="M3 12.6 12 17.1l9-4.5"/><path d="M3 17.2 12 21.7l9-4.5"/></svg>解包</a>
+  <a href="#" data-tab="search" aria-label="搜索"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>搜索</a>
+</nav>
+
+<!-- 派生页无这些分区：仅为满足通用脚本的 DOM 依赖，整块隐藏 -->
+<div class="page-deadnodes" hidden aria-hidden="true">
       <div class="stage-pills" id="rankPills">
         <button class="stage-pill on" data-p="week" type="button">周榜</button>
         <button class="stage-pill" data-p="month" type="button">月榜</button>
@@ -1592,8 +1468,6 @@
         <span id="rankMeta">加载中…</span>
         <button class="stage-refresh" id="rankRefresh" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>刷新</button>
       </div>
-</div>
-<div class="emu-deadnodes" hidden aria-hidden="true">
       <div style="display:flex;gap:8px;margin-top:10px">
         <button class="mini-btn" id="idxBtn" style="flex:1.35">↻ 增量更新</button>
         <button class="mini-btn" id="calBtn" style="flex:1;background:#fff;color:var(--c-t2);border-color:var(--c-border2)">校准续跑</button>
@@ -1601,17 +1475,6 @@
       <button class="mini-btn" id="jidiBtn" style="background:rgba(230,65,93,.07);border-color:rgba(230,65,93,.3);color:var(--c-jidi)">⇅ 同步机地话题入本地库</button>
       <div class="idx-bar" id="idxBar"><i id="idxBarI"></i></div>
 </div>
-
-<div class="mask" id="mask"></div>
-<aside class="drawer" id="drawer" aria-label="游戏详情"><div id="drawerBody"></div></aside>
-<div class="toast" id="toast"></div>
-
-<!-- 移动端底部 Tab（<=760px 显示，桌面隐藏） -->
-<nav class="tabbar" id="tabbar" aria-label="移动端导航">
-  <a href="/" aria-label="首页"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.6 12 3.4l9 7.2"/><path d="M5.6 9.4V19a1.6 1.6 0 0 0 1.6 1.6h3.3V15h3v5.6h3.3A1.6 1.6 0 0 0 18.4 19V9.4"/></svg>首页</a>
-  <a href="#" data-tab="emu" id="tabEmu" class="on" aria-label="手机专区"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18.5h2"/></svg>手机专区</a>
-  <a href="#" data-tab="search" aria-label="搜索"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>搜索</a>
-</nav>
 
 <script>
 'use strict';
@@ -1979,7 +1842,7 @@ function bindRankUI() {
   $('#rankPills').addEventListener('click', (e) => {
     const b = e.target.closest('.stage-pill'); if (!b || b.dataset.p === rankPeriod) return;
     rankPeriod = b.dataset.p;
-    $$('#rankPills .stage-pill').forEach(x => x.classList.toggle('on', x === b));  /* refreshRank：独立页无热榜分区，跳过 */
+    $$('#rankPills .stage-pill').forEach(x => x.classList.toggle('on', x === b));  /* refreshRank：派生页无热榜分区，跳过 */
   });
   $('#rankRefresh').addEventListener('click', () => { toast('正在刷新榜单…'); refreshRank(true); });
 }
@@ -2627,1299 +2490,7 @@ $('#navHome').addEventListener('click', (e) => {
 });
 /* 三个手机分区已拆到独立页 /emulator.html，点击 = 页面跳转（见下方专区跳转块） */
 
-
-/* ================= 📱 手机专区三分区驱动（独立页专用） =================
- *
- * 为什么单独一份：
- *   这三个分区原先内联在 index.html，随「拆独立页」一起被移除。
- *   独立页需要它们自己的数据加载 / 渲染 / 筛选 / 懒加载逻辑。
- *
- * 分区与接口对应：
- *   #emulator  手游中心（社区库 + 实测库 **合并成一张表**）
- *              → /api/mobilehub/stats、/api/mobilehub/list、/api/mobilehub/match
- *   #emuguide  模拟器指南 → /api/emuguide、/api/emuguide/chip
- *   #devmatch  机型兼容 → /api/device/*
- *
- * 懒加载：每个分区首次被切到时才发请求（inited 标记），避免一次性打满接口。
- */
-
-/* ---------------- 通用小工具（若主脚本已定义则复用） ---------------- */
-if (typeof window.esc !== 'function') {
-  window.esc = (s) => String(s == null ? '' : s)
-    .replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-const EMU_PAGE_SIZE = 24;
-
-/* ================= ① 手游中心（社区库 + 实测库 合并） =================
- *
- * ★ v9.3 改造（用户诉求：「先将手游已有的配置+实测汇总，再将已收录的游戏对应电脑的进行匹配，
- *   手游默认显示跟端游匹配的游戏」）：
- *   原本这里是「手游可玩」（社区库）一个页签，隔壁还有「实测配置」（实测库）一个页签。
- *   同一款游戏（GTA V）在两个页签各出现一次，用户要来回切，也看不出
- *   「这款到底有几套配置可抄 + 实测跑多少帧」。
- *
- *   现在统一走 /api/mobilehub/*，后端已把两个库按名字/端游库 id 归并：
- *     · 同款只占一条，配置数累加（社区 N 套 + 实测 M 条）
- *     · 卡片同时显示「N 套配置」「M 条实测」「实测 XX 帧」
- *     · **默认只显示能对上端游库的**（matched）—— 有封面、点得进详情
- *     · **默认「双料优先」排序**：帧率数据与社区配置数几乎不重叠（详见 mobilehub.js 注释），
- *       纯按配置数排首屏看不到任何帧率卡，所以默认把「两类信息都有」的顶上来
- */
-const emuState = { q: '', gpu: '', tier: '', sort: 'both', matched: true, both: false, tr: false, sv: false, offset: 0, total: 0, items: [], inited: false, loading: false };
-
-/** 帧率档 → 徽标配色类 */
-const TIER_CLS = { '流畅': 'smooth', '可玩': 'ok', '勉强': 'low', '卡顿': 'bad' };
-
-/** 合并卡片：封面（命中端游库则铺图）+ 配置数 + 实测帧率 + GPU/机型标签 */
-function emuCard(it) {
-  const title = it.name || it.libTitle || '?';
-  const cov = it.libCover
-    ? `<div class="cov"><img src="${esc(it.libCover)}" alt="" loading="lazy" referrerpolicy="no-referrer">
-         ${it.libId ? `<button class="cov-btn" data-lib="${esc(it.libId)}" data-title="${esc(it.libTitle || title)}" type="button">查看游戏详情</button>` : ''}</div>`
-    : `<div class="cov noimg"><span>${esc(String(title).slice(0, 2).toUpperCase())}</span></div>`;
-
-  /* 数据来源徽标：一眼看出「这条是社区抄的配置 / 还是本站实测的」 */
-  const srcs = it.sources || [];
-  const srcTag = (srcs.indexOf('bh') >= 0 && srcs.indexOf('pc') >= 0)
-    ? `<span class="tg src both">社区+实测</span>`
-    : srcs.indexOf('pc') >= 0 ? `<span class="tg src pc">本站实测</span>`
-      : `<span class="tg src bh">社区配置</span>`;
-
-  const cfg = it.configs || 0;
-  const rec = it.records || 0;
-  const fps = it.bestLabel || (it.bestMid ? it.bestMid + ' 帧' : '');
-
-  const gpus = (it.gpus || []).slice(0, 3).map((g) => `<span class="tg">${esc(g)}</span>`).join('');
-  const more = (it.gpus || []).length > 3 ? `<span class="tg dim">+${it.gpus.length - 3}</span>` : '';
-
-  /* ★ v10.5：把「有修改器 / 有云存档」这层交叉信息露在卡面上 ——
-   *   否则用户点了筛选、却说不出这些卡为什么被留下。 */
-  const xrefTag = (it.hasTr ? '<span class="tg has-tr" title="修改器库收录了这款">🛠 有修改器</span>' : '')
-    + (it.hasSv ? '<span class="tg has-sv" title="云存档库有这款的存档位置">💾 有存档</span>' : '');
-
-  /* 别名提示：社区库是英文名、实测库是中文名，让用户看到两面 */
-  const alt = (it.alt || []).filter((a) => a && a !== title)[0] || '';
-  const altHtml = alt ? `<div class="alt" title="${esc(alt)}">${esc(String(alt).slice(0, 40))}</div>` : '';
-
-  /* ★ v10.5：社区配置入口从「整卡点击」降级为卡上一个次级按钮 ——
-   *   原因：「有社区配置键(bhKeys) 且 命中端游库(libId)」的卡片，旧逻辑让 bhk 优先，
-   *   于是点正文进的是社区配置面板，用户反馈「点了不是游戏详情页」。
-   *   现在正文一律进详情（有 libId 时），配置面板走这个明确的按钮。 */
-  /* ★ v10.13：把**全部**候选仓库键带上（逗号分隔），不再只给第一个。
-   *   同一款游戏在社区仓库里常有多个别名目录，份数差很多（如 PES2013 只有 2 份，
-   *   Pro_Evolution_Soccer_2013 有 2773 份）。后端会挑份数最多的那个。 */
-  const bhKeyList = (it.bhKeys || []).join(',');
-  const cfgBtn = (it.bhKeys || []).length
-    ? `<button class="cfg-btn" data-bhk="${esc(bhKeyList)}" data-nm="${esc(title)}" type="button" title="看这台设备上逐条跑通的模拟器配置">📋 社区配置</button>`
-    : '';
-
-  return `<article class="emu-card${it.libCover ? ' has-cov' : ''}" data-name="${esc(title)}" data-lib="${esc(it.libId || '')}" data-libt="${esc(it.libTitle || '')}" data-bhk="${esc(bhKeyList)}">
-    ${cov}
-    <div class="bd">
-      <h4 title="${esc(title)}">${esc(title)}</h4>
-      ${altHtml}
-      <div class="meta">
-        ${cfg ? `<span class="pill hot">${cfg} 套配置</span>` : ''}
-        ${rec ? `<span class="pill rec">${rec} 条实测</span>` : ''}
-        ${fps ? `<span class="pill fps ${TIER_CLS[it.tier] || ''}">${esc(String(fps))}</span>` : ''}
-      </div>
-      <div class="tgs">${srcTag}${gpus}${more}${xrefTag}${cfgBtn}</div>
-    </div>
-  </article>`;
-}
-
-/** 卡片点击分流（v10.5 统一语义：**有端游库命中就进详情页**）
- *   · 点「📋 社区配置」按钮 → 社区配置面板
- *   · 点「查看游戏详情」按钮 / 卡片正文（有 libId）→ 游戏详情抽屉
- *   · 没对上端游库但社区库有键 → 社区配置面板（此时没有详情可去，整卡开面板）
- *   · 都没有 → 提示未收录
- */
-function bindEmuCards() {
-  const g = document.getElementById('emuGrid'); if (!g || g.dataset.bound) return;
-  g.dataset.bound = '1';
-  g.addEventListener('click', (e) => {
-    const card = e.target.closest('.emu-card'); if (!card) return;
-    const cfg = e.target.closest('.cfg-btn');
-    if (cfg && cfg.dataset.bhk && typeof openBhPanel === 'function') {
-      e.stopPropagation();
-      openBhPanel(cfg.dataset.bhk, cfg.dataset.nm || card.dataset.name);
-      return;
-    }
-    const btn = e.target.closest('.cov-btn');
-    const lib = (btn && btn.dataset.lib) || card.dataset.lib;
-    if (lib && typeof openDetailById === 'function') {
-      openDetailById(lib, (btn && btn.dataset.title) || card.dataset.libt || card.dataset.name);
-      return;
-    }
-    if (card.dataset.bhk && typeof openBhPanel === 'function') {
-      openBhPanel(card.dataset.bhk, card.dataset.name);
-      return;
-    }
-    if (typeof toast === 'function') toast('这款未收录进本地端游库，暂无详情页');
-  });
-}
-
-async function loadEmu(more) {
-  if (emuState.loading) return;
-  emuState.loading = true;
-  const grid = document.getElementById('emuGrid');
-  if (!more) { emuState.offset = 0; if (grid) grid.innerHTML = '<div class="emu-loading">正在拉取手游中心数据…</div>'; }
-  try {
-    const qs = new URLSearchParams({
-      q: emuState.q, gpu: emuState.gpu, tier: emuState.tier, sort: emuState.sort,
-      limit: EMU_PAGE_SIZE, offset: emuState.offset,
-    });
-    /* ★ 默认只显示匹配端游库的；关掉开关时传 stats=all 看全量 */
-    if (!emuState.matched) qs.set('stats', 'all');
-    /* ★ v10.1「只看双料」：与 stats 是 AND 关系（两个都开 = 双料且对上端游库 = 85 条） */
-    if (emuState.both) qs.set('only', 'both');
-    /* ★ v10.5 横切筛选：有修改器 / 有云存档（同样与上面各条件 AND） */
-    if (emuState.tr) qs.set('tr', '1');
-    if (emuState.sv) qs.set('sv', '1');
-    const j = await fetch(api('/api/mobilehub/list?' + qs)).then((r) => r.json());
-    emuState.total = j.total || 0;
-    const items = j.items || [];
-    emuState.items = more ? emuState.items.concat(items) : items;
-    emuState.offset = emuState.items.length;
-    if (grid) grid.innerHTML = emuState.items.length ? emuState.items.map(emuCard).join('') : '<div class="emu-empty">没有匹配的游戏，换个关键词试试</div>';
-    const cnt = document.getElementById('emuCount'); if (cnt) cnt.textContent = `共 ${emuState.total.toLocaleString()} 款`;
-    const mo = document.getElementById('emuMore');
-    if (mo) mo.style.display = emuState.items.length < emuState.total ? '' : 'none';
-  } catch (e) {
-    if (grid) grid.innerHTML = '<div class="emu-empty">拉取失败，请稍后重试</div>';
-  } finally { emuState.loading = false; }
-}
-
-async function initEmu() {
-  if (emuState.inited) return; emuState.inited = true;
-  bindEmuCards();
-  // 顶部概览数字（合并口径）
-  try {
-    const s = await fetch(api('/api/mobilehub/stats')).then((r) => r.json());
-    const box = document.getElementById('emuStats');
-    if (box) {
-      box.innerHTML = [
-        ['合并游戏', s.total], ['匹配端游', s.matched], ['配置总数', s.configs], ['实测记录', s.records],
-      ].map(([k, v]) => `<div class="st"><b>${v == null ? '—' : (typeof v === 'number' ? v.toLocaleString() : esc(v))}</b><span>${k}</span></div>`).join('');
-    }
-    const built = document.getElementById('emuBuilt');
-    if (built && s.builtAt) built.textContent = `（索引更新于 ${new Date(s.builtAt).toLocaleString('zh-CN', { hour12: false })}，匹配率 ${s.matchedRate}%）`;
-    // GPU / 机型 下拉
-    const sel = document.getElementById('emuGpu');
-    if (sel && s.gpus) {
-      sel.innerHTML = '<option value="">全部 GPU / 机型</option>' + s.gpus.map((g) => `<option value="${esc(g)}">${esc(g)}</option>`).join('');
-    }
-  } catch (e) {}
-  // 工具条事件
-  const si = document.getElementById('emuSearch');
-  if (si && !si.dataset.bound) {
-    si.dataset.bound = '1';
-    let t;
-    si.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { emuState.q = si.value.trim(); loadEmu(false); }, 260); });
-  }
-  const gpu = document.getElementById('emuGpu');
-  if (gpu && !gpu.dataset.bound) { gpu.dataset.bound = '1'; gpu.addEventListener('change', () => { emuState.gpu = gpu.value; loadEmu(false); }); }
-  const tier = document.getElementById('emuTier');
-  if (tier && !tier.dataset.bound) { tier.dataset.bound = '1'; tier.addEventListener('change', () => { emuState.tier = tier.value; loadEmu(false); }); }
-  const sorts = document.getElementById('emuSorts');
-  if (sorts && !sorts.dataset.bound) {
-    sorts.dataset.bound = '1';
-    sorts.addEventListener('click', (e) => {
-      const b = e.target.closest('.emu-sort'); if (!b) return;
-      sorts.querySelectorAll('.emu-sort').forEach((x) => x.classList.toggle('on', x === b));
-      emuState.sort = b.dataset.s; loadEmu(false);
-    });
-  }
-  const mo = document.getElementById('emuMore');
-  if (mo && !mo.dataset.bound) { mo.dataset.bound = '1'; mo.addEventListener('click', () => loadEmu(true)); }
-  /* ---- 筛选开关统一装配（v10.5）----
-   *   ★ 状态**完全不碰文案**：文字恒定，只在 .on 之间切换；
-   *     左侧的「○ / ✓」由 CSS 定宽伪元素 .em-tg::before 提供。
-   *     踩过两次坑：① 旧版把文案改成「…（已开）」→ 按钮宽 +28px → 后面的开关被挤换行；
-   *     ② 把 ✓/○ 写进文案 → 两个字形宽度差 1.6px → 浏览器实测宽度仍在变。
-   *     定宽伪元素是唯一能保证「盒宽逐像素不变」的写法。 */
-  const bindToggle = (id, key, storeKey) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (storeKey) { try { emuState[key] = localStorage.getItem(storeKey) === '1'; } catch (e) {} }
-    const paint = () => el.classList.toggle('on', !!emuState[key]);
-    paint();
-    if (el.dataset.bound) return;
-    el.dataset.bound = '1';
-    el.addEventListener('click', () => {
-      emuState[key] = !emuState[key];
-      if (storeKey) { try { localStorage.setItem(storeKey, emuState[key] ? '1' : '0'); } catch (e) {} }
-      paint();
-      loadEmu(false);
-    });
-  };
-  /* 「仅看匹配端游」**默认开**（用户诉求：手游默认显示跟端游匹配的游戏） */
-  bindToggle('emuToggleLib', 'matched');
-  /* 「只看双料」：社区配置库(bh) 与 机型实测库(pc) 都有记录 —— 全量 3161 条里只有 88 条。
-   *   正因为稀缺，它才最能体现「两库合并」的价值：既有玩家跑通的配置，又有本站实测帧率。 */
-  bindToggle('emuToggleBoth', 'both', 'ghEmuBoth');
-  /* ★ v10.5 新增：按「修改器 / 云存档」索引是否收录来筛（两条数据都挂端游库 id） */
-  bindToggle('emuToggleTr', 'tr', 'ghEmuTr');
-  bindToggle('emuToggleSv', 'sv', 'ghEmuSv');
-  const rf = document.getElementById('emuRefresh');
-  if (rf && !rf.dataset.bound) {
-    rf.dataset.bound = '1';
-    rf.addEventListener('click', async () => {
-      if (typeof toast === 'function') toast('正在刷新社区配置库…');
-      try { await fetch(api('/api/bh/refresh'), { method: 'POST' }); } catch (e) {}
-      setTimeout(() => loadEmu(false), 1500);
-    });
-  }
-  await loadEmu(false);
-}
-
-
-/* ================= ③ 模拟器指南 ================= */
-const egState = { inited: false };
-
-/* ★ v10.19 修「模拟器指南太乱」——
-   本函数原来渲染的类名（.eg-n / .eg-tx / .eg-sub / .eg-key / .eg-ch-h / .eg-tier /
-   .eg-ch-b / .eg-ch-note / .eg-list）在 CSS 里**一个都不存在**：
-   数据全都渲染出来了，样式却全部落空 —— ④优化 / ⑥版本 / ⑦帧率 直接退化成
-   浏览器默认的圆点列表，五层技术栈与芯片卡只剩外框、内部文字全裸。
-   现在一律改用 CSS 里**已经定义好**的类名（.no/.bd/.nm/.sb/.ds/.flag、
-   .hd/.gen/.tag/.soc/.drv/.nt、.eg-tbl.w2c、.eg-tune、.eg-av）。
-   改这条时务必对照 public/index.html 的「第五分区」CSS，别再造新类名。 */
-async function initEg() {
-  if (egState.inited) return; egState.inited = true;
-  try {
-    const g = await fetch(api('/api/emuguide')).then((r) => r.json());
-
-    /* ① 五层技术栈 —— CSS: .eg-ly[.key] > .no + .bd(.nm/.sb/.ds) + .flag */
-    const st = document.getElementById('egStack');
-    if (st && g.stack) {
-      st.innerHTML = g.stack.map((x) => `<div class="eg-ly${x.key ? ' key' : ''}">
-        <div class="no">${x.n}</div>
-        <div class="bd">
-          <div class="nm">${esc(x.name)}</div>
-          <div class="sb">${esc(x.sub || '')}</div>
-          <div class="ds">${esc(x.desc || '')}</div>
-        </div>
-        ${x.key ? '<span class="flag">关键</span>' : ''}
-      </div>`).join('');
-    }
-
-    /* ② 芯片卡 —— CSS: .eg-chip > .hd(.gen/.tag) + .soc + .drv(.ln/.ln.alt) + .nt */
-    const ch = document.getElementById('egChips');
-    if (ch && g.chips) {
-      ch.innerHTML = g.chips.map((c) => `<div class="eg-chip">
-        <div class="hd">
-          <span class="gen">${esc(c.gen || '')}</span>
-          <span class="tag ${esc(c.tone || '')}">${esc(c.tier || '')}</span>
-        </div>
-        <div class="soc">${esc(c.soc || '')}</div>
-        <div class="drv">
-          <div class="ln">推荐驱动 <b>${esc(c.driver || '—')}</b></div>
-          ${c.alt ? `<div class="ln alt">备选 <b>${esc(c.alt)}</b></div>` : ''}
-          ${c.build ? `<div class="ln">构建 <b>${esc(c.build)}</b></div>` : ''}
-        </div>
-        ${c.note ? `<div class="nt">${esc(c.note)}</div>` : ''}
-      </div>`).join('');
-    }
-
-    /* ③⑥⑦ 两列表 —— CSS: .eg-tbl.w2c（带表头，可扫读） */
-    const tbl = (id, arr, k1, k2) => {
-      const el = document.getElementById(id);
-      if (!el || !arr) return;
-      el.innerHTML =
-        `<div class="tr hd"><div class="c1">${k1}</div><div class="c3">${k2}</div></div>` +
-        arr.map((x) => `<div class="tr">
-          <div class="c1">${esc(x.name || '')}</div>
-          <div class="c3">${esc(x.desc || '')}</div>
-        </div>`).join('');
-    };
-    tbl('egWrap', g.wrappers, 'DirectX 版本', '用哪个包装器 · 要注意什么');
-    tbl('egVer', g.versions, '组件', '当前该用的版本 · 怎么选');
-    tbl('egBench', g.bench, '游戏', '实测表现 · 条件');
-
-    /* ④ 优化清单 —— CSS: .eg-tune（ol + CSS counter 自动编号） */
-    const tn = document.getElementById('egTune');
-    if (tn && g.tuning) {
-      tn.innerHTML = g.tuning.map((x) => `<li>
-        <b>${esc(x.name || '')}</b><span>${esc(x.desc || '')}</span>
-      </li>`).join('');
-    }
-
-    /* ⑤ 避坑 —— CSS: .eg-avoid(grid) > .eg-av(.nm/.wy) */
-    const av = document.getElementById('egAvoid');
-    if (av && g.avoid) {
-      av.innerHTML = g.avoid.map((x) => `<div class="eg-av">
-        <div class="nm">${esc(x.name || '')}</div>
-        <div class="wy">${esc(x.desc || '')}</div>
-      </div>`).join('');
-    }
-
-    const s = document.getElementById('egSrc');
-    if (s) s.textContent = '经验参考 · 非官方';
-
-    egBindNav();
-  } catch (e) {}
-}
-
-/* 模块导航：点击跳转 + 滚动联动高亮（scroll spy）。
-   ★ v10.19 实拍踩到的坑：最初用 IntersectionObserver 做 spy，**点击后高亮不跟随**。
-     rootMargin 的收缩语义 + 回调只给「状态变化的元素」，导致滚到第 5 节时
-     第 4 节仍是负 top、判定与直觉不一致，调试成本高。
-     改成 rAF 节流的 scroll spy：判据只有一条 ——「最后一个 top 已越过吸顶导航下沿的模块」，
-     直观、可断言、不依赖 IO 的边界语义。scroll 回调里只置一个 rAF 标记，不掉帧。 */
-function egBindNav() {
-  const nav = document.getElementById('egNav');
-  if (!nav || nav.dataset.bound) return;
-  nav.dataset.bound = '1';
-  const links = [].slice.call(nav.querySelectorAll('a'));
-  const pairs = links
-    .map((a) => ({ a, el: document.querySelector(a.getAttribute('href')) }))
-    .filter((p) => p.el);
-  if (!pairs.length) return;
-
-  let cur = null;
-  const paint = (el) => {
-    if (cur === el) return;
-    cur = el;
-    pairs.forEach((p) => p.a.classList.toggle('on', p.el === el));
-  };
-
-  links.forEach((a) => a.addEventListener('click', (ev) => {
-    ev.preventDefault();
-    const p = pairs.find((x) => x.a === a);
-    if (!p) return;
-    paint(p.el);
-    /* ★ 自己算目标位置再 scrollTo，不用 scrollIntoView。
-       实拍踩到：`scrollIntoView({behavior:'smooth'})` 在 headless 下出现
-       「高亮切了、页面纹丝不动（scrollY 0 → 0）」的静默失效。
-       偏移量取元素自身的 scroll-margin-top（CSS 里已按 --topbar-h 算好），
-       保证落点不被顶栏 + 模块导航遮住。 */
-    const off = parseFloat(getComputedStyle(p.el).scrollMarginTop) || 0;
-    const y = Math.max(0, p.el.getBoundingClientRect().top + window.pageYOffset - off);
-    try { window.scrollTo({ top: y, behavior: 'smooth' }); }
-    catch (e) { window.scrollTo(0, y); }
-  }));
-
-  /* 基准取**导航条自身的下沿**（它是 sticky，吸顶后 bottom 就是可视下沿）+ 8px 容差。
-     不硬编码顶栏高度 —— 桌面 60px / 窄屏 54px（CSS 变量 --topbar-h）会变。 */
-  let raf = 0;
-  const spy = () => {
-    raf = 0;
-    /* ⚠️ 容差必须 > 0 且留够余量（实拍抓到的边界 bug）：
-       点击导航后模块**正好停在 scroll-margin-top = --topbar-h + 62 = 122px** 处，
-       而 nav 吸顶后下沿 = 61 + 53 = 114，114 + 8 = 122 —— 两者恰好相等，
-       浮点误差让 `top <= line` 判成 false，高亮就抖回上一节（停在 #egS4）。
-       留 16px 余量后落点稳定命中本节，同时离下一节（约 465px）还远，不会提前点亮。 */
-    const line = nav.getBoundingClientRect().bottom + 16;
-    let best = pairs[0].el;
-    for (const p of pairs) if (p.el.getBoundingClientRect().top <= line) best = p.el;
-    paint(best);
-  };
-  window.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(spy); }, { passive: true });
-  spy();
-}
-
-/* ================= ④ 机型兼容查询 =================
- * 「选品牌 + 型号 → 能跑哪些 PC 游戏」。
- * 数据：/api/device/brands、/api/device/models、/api/device/match、/api/device/turnip
- * 判定：机型 → GPU → 性能档；游戏被「性能 ≤ 用户档」的 GPU 跑过即算可跑（向下兼容）。
- */
-const dmState = {
-  inited: false,
-  brand: '',
-  model: '',
-  gpu: '',
-  score: null,
-  list: [],
-  total: 0,
-  summary: null,
-  verdict: '',     // '' | smooth | ok | maybe
-  q: '',
-  offset: 0,
-};
-
-const DM_TIER = {
-  smooth: { txt: '流畅', cls: 'ok' },
-  ok: { txt: '可玩', cls: 'mid' },
-  maybe: { txt: '勉强', cls: 'low' },
-};
-
-function dmFmtScore(s) {
-  return s == null ? '—' : Math.round(s);
-}
-
-/** 机型卡片 */
-function dmCard(g) {
-  const t = DM_TIER[g.verdict] || { txt: '—', cls: '' };
-  const cov = g.libCover
-    ? `<div class="cov"><img src="${esc(g.libCover)}" alt="" loading="lazy" referrerpolicy="no-referrer"></div>`
-    : `<div class="cov noimg"><span>${esc((g.name || '?').slice(0, 2).toUpperCase())}</span></div>`;
-  return `<article class="emu-card${g.libCover ? ' has-cov' : ''}" data-k="${esc(g.k)}" data-p="${esc(g.name || '')}">
-    ${cov}
-    <div class="bd">
-      <h4 title="${esc(g.name || '')}">${esc(g.name || g.k || '')}</h4>
-      <div class="meta">
-        <span class="pill ${t.cls}">${t.txt}</span>
-        <span class="pill">${g.configs || 0} 套配置</span>
-        ${g.devices ? `<span class="pill">${g.devices} 机型</span>` : ''}
-      </div>
-      <div class="dm-need">最低参考 <code>${esc(g.minGpu || '—')}</code></div>
-    </div>
-  </article>`;
-}
-
-/** 渲染结果网格（支持分页） */
-function dmRender() {
-  const box = document.getElementById('dmGrid');
-  if (!box) return;
-  let list = dmState.list;
-  if (dmState.verdict) list = list.filter((g) => g.verdict === dmState.verdict);
-  if (dmState.q) {
-    const k = dmState.q.toLowerCase();
-    list = list.filter((g) => String(g.name || '').toLowerCase().includes(k));
-  }
-  dmState.filtered = list;
-  const page = list.slice(dmState.offset, dmState.offset + EMU_PAGE_SIZE);
-  box.innerHTML = page.length
-    ? page.map(dmCard).join('')
-    : '<p class="dm-empty">没有符合条件的游戏。</p>';
-
-  const cnt = document.getElementById('dmCount');
-  if (cnt) cnt.textContent = `共 ${list.length} 款`;
-
-  const more = document.getElementById('dmMore');
-  if (more) more.style.display = list.length > dmState.offset + EMU_PAGE_SIZE ? '' : 'none';
-}
-
-/** 执行一次匹配查询 */
-async function dmQuery(model) {
-  if (!model) return;
-  dmState.model = model;
-  dmState.offset = 0;
-  const grid = document.getElementById('dmGrid');
-  if (grid) grid.innerHTML = '<p class="dm-empty">匹配中…</p>';
-  try {
-    const r = await fetch(api('/api/device/match?limit=1000&model=' + encodeURIComponent(model))).then((x) => x.json());
-    if (!r.ok) {
-      const msg = r.error === 'notfound' ? '未找到该机型，试试下拉列表里的写法。'
-        : r.error === 'nogpu' ? '这台机型在库里还没记录到 GPU 信息。' : '查询失败。';
-      if (grid) grid.innerHTML = `<p class="dm-empty">${msg}</p>`;
-      return;
-    }
-    dmState.gpu = r.device.gpu;
-    dmState.score = r.device.score;
-    dmState.list = r.games || [];
-    dmState.total = r.total;
-    dmState.summary = r.summary;
-    dmState.filtered = dmState.list;
-
-    // 结果区从隐藏 → 显示
-    /* ★ dmResultSec 的隐藏是**内联** style="display:none"，置空即可；
-       dmInfo 的隐藏却写在 CSS 规则里（.dm-info 的默认 display 就是 none），
-       置空只是删掉内联样式、CSS 照样赢 → 机型卡永远不显示。
-       必须显式给一个非 none 的值。（截图体检才发现的）
-       注：注释里不要写「选择器 + 花括号」的完整形式，否则会被
-       test-emulator-page 的「裸 CSS 文本」断言误判为 CSS 泄漏。 */
-    const sec = document.getElementById('dmResultSec');
-    if (sec) sec.style.display = '';
-
-    const info = document.getElementById('dmInfo');
-    if (info) {
-      info.style.display = 'block';   // 不能用 ''：.dm-info 的 CSS 默认就是 display:none
-      /* ★ v10.11/v10.12 机型「转译」：把 `SM S938B` / `Xiaomi 24115RA8EG` 这类内部代号，
-         翻成人看得懂的 GPU → SoC → CPU 三级。
-           · GPU：来自 bannerhub-files.json 的**逐条配对**（机型与 GPU 本来就成对，覆盖 95.6%）
-           · SoC：由 data/gpu-soc.json 的 GPU→SoC 表反查（覆盖 92.9% 记录）
-           · CPU：data/soc-cpu.json（tools/fetch-soc-cpu.js 从 nanoreview 抓的核簇描述，
-                  343 条 = 246 市场名 + 97 芯片编号别名），覆盖 92.4% 机型；
-                  device-board.json 只作兜底（它只有 200 条主板，且实测有脏值）
-         旧实现的 GPU 是 `gps[0]`（该游戏第一个 GPU），与本机型无关，配错很多。 */
-      const dv = r.device || {};
-      const socTxt = dv.soc ? (dv.socVendor ? dv.socVendor + ' ' + dv.soc : dv.soc) : '';
-      /* ★ v10.16：抬头优先显示译出的「品牌 + 型号」；内部代号退到小字（对得上原输入）。
-         译不出（disp 为空）就照旧显示 model，不编造。 */
-      info.innerHTML = `
-        <div class="dm-info-h">
-          <b>${esc(dv.disp || dv.model)}</b>
-          <span class="dm-brand">${esc(dv.brand || '')}</span>
-          ${dv.disp && dv.disp !== dv.model ? `<span class="dm-code">${esc(dv.model)}</span>` : ''}
-        </div>
-        <div class="dm-info-r">
-          ${socTxt
-            ? `<span>芯片 <b>${esc(socTxt)}</b></span>`
-            : '<span class="dm-nosoc">芯片 未收录</span>'}
-          <span>GPU <code>${esc(dv.gpu || '未知')}</code></span>
-          <span>性能档 <b>${dmFmtScore(dv.score)}</b></span>
-        </div>
-        ${dv.cpu ? `<div class="dm-info-cpu"><i>CPU</i><code>${esc(dv.cpu)}</code></div>` : ''}
-        <div class="dm-sum">
-          <span class="pill ok">流畅 ${r.summary.smooth}</span>
-          <span class="pill mid">可玩 ${r.summary.ok}</span>
-          <span class="pill low">勉强 ${r.summary.maybe}</span>
-          <span class="pill dim">合计 ${r.total}</span>
-        </div>`;
-    }
-    dmRender();
-    dmLoadTurnip();
-  } catch (e) {
-    if (grid) grid.innerHTML = '<p class="dm-empty">网络错误，请稍后重试。</p>';
-  }
-}
-
-/** 加载 Turnip 驱动看板（顺带展示，不阻塞主查询） */
-async function dmLoadTurnip() {
-  const box = document.getElementById('dmTurnip');
-  if (!box || box.dataset.done) return;
-  box.dataset.done = '1';
-  try {
-    const t = await fetch(api('/api/device/turnip')).then((r) => r.json());
-    if (!t.ok) throw 0;
-    const L = t.latest || {};
-    box.innerHTML = `
-      <div class="dm-tp-h"><b>Turnip 驱动最新构建</b><span class="dm-tp-a">${esc(L.buildDate || '')}</span></div>
-      <div class="dm-tp-r">
-        <span>Mesa <code>${esc(L.mesa || '—')}</code></span>
-        <span>Vulkan <code>${esc(L.vulkan || '—')}</code></span>
-      </div>
-      <div class="dm-tp-v">
-        ${(t.variants || []).map((v) => `<div class="dm-var">
-          <b>${esc(v.name)}</b>
-          <span class="dm-var-g">${esc(v.gpus)}</span>
-          ${v.note ? `<span class="dm-var-n">${esc(v.note)}</span>` : ''}
-        </div>`).join('')}
-      </div>
-      <a class="dm-tp-link" href="${esc(t.site || '#')}" target="_blank" rel="noopener">前往下载 ↓</a>`;
-  } catch (e) {
-    box.innerHTML = '';
-  }
-}
-
-/** 初始化机型查询分区 */
-async function initDm() {
-  dmLoadTurnip();
-  if (dmState.inited) return;
-  dmState.inited = true;
-
-  // 品牌下拉
-  try {
-    const b = await fetch(api('/api/device/brands')).then((r) => r.json());
-    const sel = document.getElementById('dmBrand');
-    if (sel && b.ok) {
-      sel.innerHTML = '<option value="">选择品牌…</option>' +
-        b.brands.map((x) => `<option value="${esc(x.name)}">${esc(x.name)}（${x.n}）</option>`).join('');
-    }
-  } catch (e) {}
-
-  // 型号搜索建议（输入即查）
-  const inp = document.getElementById('dmInput');
-  const box = document.getElementById('dmSug');
-  if (inp) {
-    let timer = null;
-    inp.addEventListener('input', () => {
-      clearTimeout(timer);
-      const q = inp.value.trim();
-      if (q.length < 1) { if (box) box.style.display = 'none'; return; }
-      timer = setTimeout(async () => {
-        try {
-          const r = await fetch(api('/api/device/models?limit=12&q=' + encodeURIComponent(q))).then((x) => x.json());
-          if (!r.ok || !r.models.length) { if (box) box.style.display = 'none'; return; }
-          /* ★ v10.16：与下面「品牌切换」那段**必须同款**——两处都是机型建议列表。
-             这里原先漏了 `disp`，于是「输入即查」铺出来的还是内部代号（`Xiaomi 2412DPC0AG`），
-             同一个下拉两副面孔。改动时两处一起改。 */
-          box.innerHTML = r.models.map((m) => {
-            const title = m.disp || m.model;
-            const sub = (m.disp && m.disp !== m.model ? m.model + ' · ' : '') + m.brand;
-            return `<button type="button" class="dm-sug-i" data-m="${esc(m.model)}">
-              <b>${esc(title)}</b>
-              <span>${esc(sub)}${m.gpu ? ' · ' + esc(m.gpu) : ''}</span>
-            </button>`;
-          }).join('');
-          box.style.display = '';
-          box.querySelectorAll('[data-m]').forEach((el) => {
-            el.addEventListener('click', () => {
-              inp.value = el.dataset.m;
-              box.style.display = 'none';
-              dmQuery(el.dataset.m);
-            });
-          });
-        } catch (e) {}
-      }, 180);
-    });
-    inp.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { if (box) box.style.display = 'none'; dmQuery(inp.value.trim()); }
-    });
-    document.addEventListener('click', (e) => {
-      if (box && !box.contains(e.target) && e.target !== inp) box.style.display = 'none';
-    });
-  }
-
-  // 查询按钮
-  const go = document.getElementById('dmGo');
-  if (go) {
-    go.addEventListener('click', () => {
-      const v = inp ? inp.value.trim() : '';
-      if (!v) { if (inp) inp.focus(); return; }
-      if (box) box.style.display = 'none';
-      dmQuery(v);
-    });
-  }
-
-  // 品牌切换 → 列出该品牌机型
-  const brand = document.getElementById('dmBrand');
-  if (brand) {
-    brand.addEventListener('change', async () => {
-      const bv = brand.value;
-      if (!bv) return;
-      try {
-        const r = await fetch(api('/api/device/models?limit=200&brand=' + encodeURIComponent(bv))).then((x) => x.json());
-        if (!r.ok) return;
-        if (box) {
-          /* ★ v10.16：`m.model` 常是内部代号（`Xiaomi 2412DPC0AG`），列表里直接铺出来认不出是哪台手机。
-             服务端顺带返回 `disp`（品牌 + 型号），有就显示它；回填与查询仍用 `m.model`。 */
-          box.innerHTML = r.models.map((m) =>
-            `<button type="button" class="dm-sug-i" data-m="${esc(m.model)}">
-              <b>${esc(m.disp || m.model)}</b>
-              <span>${m.gpu ? esc(m.gpu) : ''}${m.games ? ' · ' + m.games + ' 款可玩' : ''}</span>
-            </button>`).join('');
-          box.style.display = '';
-          box.querySelectorAll('[data-m]').forEach((el) => {
-            el.addEventListener('click', () => {
-              if (inp) inp.value = el.dataset.m;
-              box.style.display = 'none';
-              dmQuery(el.dataset.m);
-            });
-          });
-        }
-      } catch (e) {}
-    });
-  }
-
-  // 档位筛选
-  document.querySelectorAll('[data-dmv]').forEach((el) => {
-    el.addEventListener('click', () => {
-      document.querySelectorAll('[data-dmv]').forEach((x) => x.classList.remove('on'));
-      el.classList.add('on');
-      dmState.verdict = el.dataset.dmv;
-      dmState.offset = 0;
-      dmRender();
-    });
-  });
-
-  // 结果内搜索
-  const s = document.getElementById('dmSearch');
-  if (s) {
-    s.addEventListener('input', () => {
-      dmState.q = s.value.trim();
-      dmState.offset = 0;
-      dmRender();
-    });
-  }
-
-  // 加载更多
-  const more = document.getElementById('dmMore');
-  if (more) {
-    more.addEventListener('click', () => {
-      dmState.offset += EMU_PAGE_SIZE;
-      const list = dmState.filtered || dmState.list;
-      const page = list.slice(dmState.offset, dmState.offset + EMU_PAGE_SIZE);
-      const g = document.getElementById('dmGrid');
-      if (g) g.insertAdjacentHTML('beforeend', page.map(dmCard).join(''));
-      if (list.length <= dmState.offset + EMU_PAGE_SIZE) more.style.display = 'none';
-    });
-  }
-}
-
-/* ================= ⑤ 两个配置面板（抽屉内） =================
- * 卡片本体点击 → 打开配置面板（而非游戏详情）。
- * 面板复用全局 #drawer / #drawerBody / lockBody / closeDetail，
- * 通过 drawerMode='bh' | 'pc' 让 closeDetail 知道「关掉即回页面」。
- */
-function panelShell(title, sub, body) {
-  return `<div class="cf-head">
-      ${closeBtnHtml()}
-      <h3>${esc(title)}</h3>
-      <div class="cf-sub">${sub}</div>
-    </div>
-    <div class="cf-body">${body}</div>`;
-}
-
-/* ---- 社区配置面板（BannerHub）：机型 / GPU / 日期 / 配置直链 ----
- *  ★ v10.13：新增「逐条游玩参数」区（驱动 / DXVK / 容器 / 翻译层 / 分辨率…）。
- *    原先面板只有一张 [机型 | GPU | 日期 | 下载 JSON] 表 —— 用户要抄的**参数**全在
- *    那份 JSON 里，必须点下载才知道内容。现在服务端解析后直接铺出来，
- *    完整清单（最多 200 条文件名）仍保留在下面，供精确下载。
- */
-async function openBhPanel(k, p) {
-  if (!k) return;
-  drawerMode = 'bh';
-  $('#drawer').classList.add('show'); $('#mask').classList.add('show');
-  lockBody();
-  $('#drawerBody').innerHTML = panelShell(p || k, '正在读取社区配置…', '<div class="cf-loading">加载中…</div>');
-  try {
-    const [cj, pj] = await Promise.all([
-      fetch(api('/api/bh/configs?k=' + encodeURIComponent(k))).then((r) => r.json()),
-      fetch(api('/api/bh/params?k=' + encodeURIComponent(k) + '&limit=6')).then((r) => r.json()).catch(() => null),
-    ]);
-    const j = cj;
-    if (!j.ok) throw new Error(j.error || '读取失败');
-    const g = j.game || {};
-    const items = j.items || [];
-    const gpus = [...new Set(items.map((x) => x.gpu).filter(Boolean))];
-    const phones = [...new Set(items.map((x) => x.phone).filter(Boolean))];
-    const params = (pj && pj.items) || [];
-    const rows = items.map((x) => `<tr>
-        <td>${esc(x.phone || '—')}</td>
-        <td><span class="tg">${esc(x.gpu || '—')}</span></td>
-        <td>${esc(x.date || '—')}</td>
-        <td><a class="cf-dl" href="${esc(x.url)}" target="_blank" rel="noopener">下载 JSON</a></td>
-      </tr>`).join('');
-    const paramHtml = params.length
-      ? `<div class="cf-sec-t">逐条游玩参数<span class="n">最近 ${params.length} 份</span></div>
-         <div class="cf-params">${params.map(cfParamCard).join('')}</div>`
-      : `<div class="cf-note">这款暂无可解析的逐条参数（配置文件尚未收录或读取失败），可按下表下载原始 JSON 查看。</div>`;
-    $('#drawerBody').innerHTML = panelShell(p || k, '', `
-      <div class="cf-stats">
-        <div class="st"><b>${items.length}</b><span>份配置</span></div>
-        <div class="st"><b>${gpus.length}</b><span>种 GPU</span></div>
-        <div class="st"><b>${phones.length}</b><span>款机型</span></div>
-      </div>
-      <div class="cf-note">数据来自 <b>BannerHub</b> 社区共享仓库（GitHub）。配置为玩家手动导出，
-        跑通与否取决于机型与驱动版本；建议先看下面的逐条参数，挑与自己机型最接近的那份照搬。</div>
-      ${paramHtml}
-      <div class="cf-sec-t">全部配置清单<span class="n">${items.length} 条</span></div>
-      <div class="cf-scroll"><table class="cf-table">
-        <thead><tr><th>机型</th><th>GPU</th><th>上传日期</th><th>配置</th></tr></thead>
-        <tbody>${rows || '<tr><td colspan="4">暂无逐条配置</td></tr>'}</tbody>
-      </table></div>
-      <div class="cf-foot"><a class="cf-btn" href="${esc(j.repo || '#')}" target="_blank" rel="noopener">在 GitHub 查看仓库 →</a></div>
-    `);
-  } catch (e) {
-    $('#drawerBody').innerHTML = panelShell(p || k, '', '<div class="cf-empty">读取失败，请稍后重试</div>');
-  }
-}
-
-/** 一条逐条参数 → 面板内的卡片（与详情抽屉里的芯片行同一份信息，版式更宽） */
-function cfParamCard(p) {
-  const chips = [];
-  const add = (label, val, cls) => { if (val) chips.push(`<span class="kv ${cls || ''}"><b>${esc(label)}</b>${esc(String(val))}</span>`); };
-  add('驱动', p.driver, 'hot');
-  add('DXVK', p.dxvk, 'hot');
-  add('VKD3D', p.vkd3d);
-  add('容器', p.container);
-  add('翻译层', p.translator, 'ok');
-  add('分辨率', p.resolution);
-  add('内存', p.maxMem);
-  add('核心', p.cores);
-  add('FEX', p.fexBuild);
-  if (p.vibration) add('振动', '开');
-  (p.translatorFlags || []).slice(0, 4).forEach((f) => add('', f));
-  /* ★ v10.14：机型代号 → 芯片规格（与详情抽屉同源，都由 /api/bh/params 的 spec 提供） */
-  const sp = p.spec;
-  const specRow = (sp && (sp.soc || sp.gpu))
-    ? `<div class="spec">
-        ${sp.soc ? `<span class="sp soc"><b>${sp.approx ? '≈' : ''}${esc(sp.soc)}</b></span>` : ''}
-        ${sp.brand ? `<span class="sp">${esc(sp.brand)}</span>` : ''}
-        ${sp.cpu ? `<span class="sp cpu">${esc(sp.cpu)}</span>` : ''}
-        ${sp.score ? `<span class="sp">性能分 <b>${esc(String(Math.round(sp.score)))}</b></span>` : ''}
-      </div>`
-    : '';
-  return `<div class="cf-param">
-    <div class="hd"><b>${esc(p.device || '未知机型')}</b><span class="gp">${esc(p.gpu || '')}</span>
-      <span class="dt">${esc(p.date || '')}${p.ver ? ' · BH ' + esc(p.ver) : ''}</span>
-      ${p.url ? `<a class="dl" href="${esc(p.url)}" target="_blank" rel="noopener">原始 JSON</a>` : ''}</div>
-    ${specRow}
-    <div class="kvs">${chips.join('') || '<span class="kv">该份配置未记录可解析参数</span>'}</div>
-  </div>`;
-}
-
-/* ---- 实测配置面板（本项目自建）：逐条机型 / 兼容层 / 驱动 / 帧率 / 备注 ---- */
-async function openPcPanel(title) {
-  if (!title) return;
-  drawerMode = 'pc';
-  $('#drawer').classList.add('show'); $('#mask').classList.add('show');
-  lockBody();
-  $('#drawerBody').innerHTML = panelShell(title, '正在读取实测记录…', '<div class="cf-loading">加载中…</div>');
-  try {
-    const j = await fetch(api('/api/pc/records?k=' + encodeURIComponent(title))).then((r) => r.json());
-    if (!j.ok) throw new Error(j.error || '读取失败');
-    const cm = j.chipMap || {};
-    const items = j.items || [];
-    const lib = j.lib;
-    const rows = items.map((x) => `<div class="cf-rec ${x.ok ? 'ok' : 'no'}">
-        <div class="cf-rec-h">
-          <span class="pill ${x.ok ? 'ok' : 't-bad'}">${x.ok ? '可玩' : '不可玩'}</span>
-          <b>${esc(cm[x.chip] || x.chipName || x.chip || '—')}</b>
-          <span class="pill t-mid">${esc(x.fpsTier || '—')} ${esc(x.fpsLabel || '')}</span>
-        </div>
-        <div class="cf-kv">
-          <div><i>兼容层</i><code>${esc(x.layer || '—')}</code></div>
-          <div><i>运行模式</i><code>${esc(x.mode || '—')}</code></div>
-          <div><i>驱动 GPU</i><code>${esc(x.gpu || '—')}</code></div>
-          <div><i>DXVK</i><code>${esc(x.dxvk || '—')}</code></div>
-          ${x.vkd3d ? `<div><i>vkd3d</i><code>${esc(x.vkd3d)}</code></div>` : ''}
-          <div><i>运行库</i><code>${esc(x.runtime || '—')}</code></div>
-          ${x.exe ? `<div><i>主程序</i><code>${esc(x.exe)}</code></div>` : ''}
-        </div>
-        ${x.note ? `<div class="cf-note-inline">💡 ${esc(x.note)}</div>` : ''}
-      </div>`).join('');
-    $('#drawerBody').innerHTML = panelShell(title, '', `
-      ${lib ? `<div class="cf-lib"><img src="${esc(lib.cover)}" alt="" referrerpolicy="no-referrer" loading="lazy">
-        <div class="cf-lib-tx"><b>${esc(lib.title || '')}</b>
-        <button class="cf-btn" onclick="closeDetail();openDetailById('${esc(lib.id)}','${esc(lib.title || '')}')" type="button">查看游戏详情</button></div></div>` : ''}
-      <div class="cf-stats">
-        <div class="st"><b>${items.length}</b><span>条实测</span></div>
-        <div class="st"><b>${items.filter((x) => x.ok).length}</b><span>可玩</span></div>
-        <div class="st"><b>${[...new Set(items.map((x) => x.chip))].length}</b><span>款机型</span></div>
-      </div>
-      <div class="cf-scroll">${rows || '<div class="cf-empty">暂无实测记录</div>'}</div>
-    `);
-  } catch (e) {
-    $('#drawerBody').innerHTML = panelShell(title, '', '<div class="cf-empty">读取失败，请稍后重试</div>');
-  }
-}
-
-
-/* ================= ⑤ 修改器（Game Cheats Manager 公开清单） =================
- *
- * 数据源：https://gamezonelabs.com/api/data/gcm （公开 GET，免密钥）
- *   → tools/fetch-trainers.js 采集 → data/trainers.json → /api/trainers/*
- *
- * ⚠️ 本节**刻意不做下载按钮**：GCM 官方下载走一次性 S3 签名 URL
- *    （download_base_thread.py 的 get_signed_download_url()，依赖仓库外的
- *     secret_config 提供 SIGNED_URL_DOWNLOAD_ENDPOINT + CLIENT_API_KEY），
- *    签名 URL 用完即废，我们既无法离线复现、也不应绕过。
- *    所以卡片给的是「**获取方式**」——把用户导向官方渠道。
- *
- * ★ 关于「放置位置」（用户本轮特别问的）：
- *    修改器与存档不同 —— 它是**独立 exe，不需要放进游戏目录**。
- *    直接运行即可，它会自己挂上游戏进程。页面把这条讲清楚，
- *    避免用户照搬「存档要放对目录」的思路去找位置。
- */
-const trState = { q: '', source: '', sort: 'lib', matched: true, offset: 0, total: 0, items: [], inited: false, loading: false };
-
-/** 5 个来源的展示名与官方获取入口（链接均已实测 200） */
-const TR_SRC = {
-  fling: { label: '风灵月影', go: 'https://flingtrainer.com/', goLabel: '风灵月影官网' },
-  cheat_table: { label: 'CE 修改表', go: 'https://gamezonelabs.com/products/gcm/trainers', goLabel: 'GCM 修改器库' },
-  community: { label: '社区贡献', go: 'https://gamezonelabs.com/products/gcm/trainers', goLabel: 'GCM 修改器库' },
-  xiaoxing: { label: '小幸修改器', go: 'https://gamezonelabs.com/products/gcm/trainers', goLabel: 'GCM 修改器库' },
-  gcm: { label: 'GCM 精选', go: 'https://github.com/dyang886/Game-Cheats-Manager/releases', goLabel: 'GCM 下载页' },
-};
-
-function trCard(it) {
-  const zh = it.zh || '';
-  const en = it.name || '';
-  const title = zh || en || '?';
-  const meta = TR_SRC[it.source] || { label: it.source || '未知来源', go: '', goLabel: '' };
-
-  const cov = it.libCover
-    ? '<div class="cov"><img src="' + esc(it.libCover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
-      + (it.libId ? '<button class="cov-btn" data-lib="' + esc(it.libId) + '" data-title="' + esc(it.libTitle || title) + '" type="button">查看游戏详情</button>' : '')
-      + '</div>'
-    : '<div class="cov noimg"><span>' + esc(String(title).slice(0, 2).toUpperCase()) + '</span></div>';
-
-  /* 中文名优先做标题，英文名降级成别名行；两者相同时不重复渲染 */
-  const altHtml = (zh && en && zh !== en) ? '<div class="alt" title="' + esc(en) + '">' + esc(String(en).slice(0, 46)) + '</div>' : '';
-
-  const go = meta.go
-    ? '<div class="tr-go"><a href="' + esc(meta.go) + '" target="_blank" rel="noopener noreferrer">获取方式 ↗ ' + esc(meta.goLabel) + '</a></div>'
-    : '';
-
-  return '<article class="emu-card' + (it.libCover ? ' has-cov' : '') + '" data-name="' + esc(title) + '" data-lib="' + esc(it.libId || '') + '" data-libt="' + esc(it.libTitle || '') + '">'
-    + cov
-    + '<div class="bd">'
-    + '<h4 title="' + esc(title) + '">' + esc(title) + '</h4>'
-    + altHtml
-    + '<div class="meta">'
-    + '<span class="tg src ' + esc(it.source) + '">' + esc(meta.label) + '</span>'
-    + (it.version ? '<span class="pill ver">v ' + esc(it.version) + '</span>' : '')
-    + (it.libId ? '<span class="tg">已关联端游库</span>' : '')
-    + '</div>'
-    + go
-    + '<div class="tr-note">💡 <b>放置位置</b>：独立 exe，<b>不用放进游戏目录</b>，双击运行即可（会自动挂上游戏进程）。</div>'
-    + '</div>'
-    + '</article>';
-}
-
-function bindTrCards() {
-  const g = document.getElementById('trGrid'); if (!g || g.dataset.bound) return;
-  g.dataset.bound = '1';
-  g.addEventListener('click', (e) => {
-    const btn = e.target.closest('.cov-btn');
-    const card = e.target.closest('.emu-card'); if (!card) return;
-    if (btn && btn.dataset.lib && typeof openDetailById === 'function') {
-      e.stopPropagation();
-      openDetailById(btn.dataset.lib, btn.dataset.title || card.dataset.libt || card.dataset.name);
-      return;
-    }
-    if (card.dataset.lib && typeof openDetailById === 'function') {
-      openDetailById(card.dataset.lib, card.dataset.libt || card.dataset.name);
-      return;
-    }
-    if (typeof toast === 'function') toast('这款未收录进本地端游库，暂无详情页');
-  });
-}
-
-async function loadTr(more) {
-  if (trState.loading) return;
-  trState.loading = true;
-  const grid = document.getElementById('trGrid');
-  if (!more) { trState.offset = 0; if (grid) grid.innerHTML = '<div class="emu-loading">正在拉取修改器清单…</div>'; }
-  try {
-    const qs = new URLSearchParams({
-      q: trState.q, source: trState.source, sort: trState.sort,
-      limit: EMU_PAGE_SIZE, offset: trState.offset,
-    });
-    if (!trState.matched) qs.set('stats', 'all');
-    const j = await fetch(api('/api/trainers/list?' + qs)).then((r) => r.json());
-    trState.total = j.total || 0;
-    const items = j.items || [];
-    trState.items = more ? trState.items.concat(items) : items;
-    trState.offset = trState.items.length;
-    if (grid) grid.innerHTML = trState.items.length ? trState.items.map(trCard).join('') : '<div class="emu-empty">没有匹配的修改器，换个关键词试试</div>';
-    const cnt = document.getElementById('trCount'); if (cnt) cnt.textContent = '共 ' + trState.total.toLocaleString() + ' 条';
-    const mo = document.getElementById('trMore');
-    if (mo) mo.style.display = trState.items.length < trState.total ? '' : 'none';
-  } catch (e) {
-    if (grid) grid.innerHTML = '<div class="emu-empty">拉取失败，请稍后重试</div>';
-  } finally { trState.loading = false; }
-}
-
-async function initTr() {
-  if (trState.inited) return; trState.inited = true;
-  bindTrCards();
-  try {
-    const s = await fetch(api('/api/trainers/stats')).then((r) => r.json());
-    const box = document.getElementById('trStats');
-    if (box) {
-      box.innerHTML = [
-        ['修改器总数', s.total], ['已关联端游', s.matched], ['来源数', (s.sources || []).length], ['匹配率', s.matchedRate + '%'],
-      ].map(([k, v]) => '<div class="st"><b>' + (v == null ? '—' : (typeof v === 'number' ? v.toLocaleString() : esc(v))) + '</b><span>' + k + '</span></div>').join('');
-    }
-    const built = document.getElementById('trBuilt');
-    if (built && s.builtAt) built.textContent = '（清单更新于 ' + new Date(s.builtAt).toLocaleString('zh-CN', { hour12: false }) + '）';
-    const sel = document.getElementById('trSource');
-    if (sel && s.sources) {
-      sel.innerHTML = '<option value="">全部来源</option>' + s.sources
-        .map((x) => '<option value="' + esc(x.key) + '">' + esc(x.label) + '（' + Number(x.count).toLocaleString() + '）</option>').join('');
-    }
-  } catch (e) {}
-  const si = document.getElementById('trSearch');
-  if (si && !si.dataset.bound) {
-    si.dataset.bound = '1';
-    let t;
-    si.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { trState.q = si.value.trim(); loadTr(false); }, 260); });
-  }
-  const src = document.getElementById('trSource');
-  if (src && !src.dataset.bound) { src.dataset.bound = '1'; src.addEventListener('change', () => { trState.source = src.value; loadTr(false); }); }
-  const sorts = document.getElementById('trSorts');
-  if (sorts && !sorts.dataset.bound) {
-    sorts.dataset.bound = '1';
-    sorts.addEventListener('click', (e) => {
-      const b = e.target.closest('.emu-sort'); if (!b) return;
-      sorts.querySelectorAll('.emu-sort').forEach((x) => x.classList.toggle('on', x === b));
-      trState.sort = b.dataset.s; loadTr(false);
-    });
-  }
-  const mo = document.getElementById('trMore');
-  if (mo && !mo.dataset.bound) { mo.dataset.bound = '1'; mo.addEventListener('click', () => loadTr(true)); }
-  const libTog = document.getElementById('trToggleLib');
-  if (libTog) {
-    const paint = () => {
-      libTog.classList.toggle('on', trState.matched);
-      libTog.classList.toggle('on', trState.matched);
-    };
-    paint();
-    if (!libTog.dataset.bound) {
-      libTog.dataset.bound = '1';
-      libTog.addEventListener('click', () => { trState.matched = !trState.matched; paint(); loadTr(false); });
-    }
-  }
-  await loadTr(false);
-}
-
-
-/* ================= ⑥ 云存档（存档位置库 · Ludusavi 开源清单） =================
- *
- * 数据源：https://github.com/mtkennerly/ludusavi-manifest（MIT）
- *   → tools/build-saves.js 流式过滤 → data/saves.json → /api/saves/*
- *
- * ★ 这一节的核心产出就是**存档路径本身**（用户要的「放置位置」）。
- *   所以卡片不做折叠 —— 直接把路径铺在卡面上，
- *   等宽字体、允许换行、**不截断**（截断了用户就没法照着找文件）。
- *
- * ★ 默认口径与页签数字一致：**仅看手机能玩**（在手游中心内），
- *   因为这是「手机专区」语境；关掉开关或传 stats=all 才看全量 5,741 款。
- */
-const svState = { q: '', sort: 'paths', phone: true, cloud: false, offset: 0, total: 0, items: [], inited: false, loading: false };
-
-function svCard(it) {
-  const title = it.title || it.name || '?';
-  const paths = it.paths || [];
-  const regs = it.regs || [];
-  const cloud = it.cloud || [];
-
-  const cov = it.libCover
-    ? '<div class="cov"><img src="' + esc(it.libCover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
-      + (it.libId ? '<button class="cov-btn" data-lib="' + esc(it.libId) + '" data-title="' + esc(title) + '" type="button">查看游戏详情</button>' : '')
-      + '</div>'
-    : '<div class="cov noimg"><span>' + esc(String(title).slice(0, 2).toUpperCase()) + '</span></div>';
-
-  /* 中文标题优先；清单原名作别名行 */
-  const altHtml = (it.name && it.name !== title) ? '<div class="alt" title="' + esc(it.name) + '">' + esc(String(it.name).slice(0, 46)) + '</div>' : '';
-
-  /* 路径行：最多铺 3 条文件路径 + 2 条注册表项，其余折叠成「另有 N 条」
-   *   ★ v10.5：每行右侧带「复制」按钮 —— 路径是本分区的主产物，复制是最高频动作，
-   *     不能再要求用户「先全选再 Ctrl+C」。 */
-  const MAXP = 3, MAXR = 2;
-  const rows = [];
-  for (const p of paths.slice(0, MAXP)) {
-    const tag = (p.tags && p.tags.length) ? String(p.tags[0]) : '存档';
-    const label = tag === 'save' ? '存档' : (tag === 'config' ? '配置' : tag);
-    const full = p.shown || p.raw;
-    rows.push('<div class="p"><i>' + esc(label) + '</i><span>' + esc(full) + '</span>'
-      + '<button class="cp" type="button" data-cp="' + esc(full) + '" title="复制这条路径">复制</button></div>');
-  }
-  for (const r of regs.slice(0, MAXR)) {
-    rows.push('<div class="p reg"><i>注册表</i><span>' + esc(r.raw) + '</span>'
-      + '<button class="cp" type="button" data-cp="' + esc(r.raw) + '" title="复制这条注册表项">复制</button></div>');
-  }
-  const hidden = (paths.length - Math.min(paths.length, MAXP)) + (regs.length - Math.min(regs.length, MAXR));
-  const moreLine = hidden > 0 ? '<div class="more">另有 ' + hidden + ' 条存档位置未展示，进游戏详情查看</div>' : '';
-
-  const cloudTags = cloud.length
-    ? cloud.map((c) => '<span class="tg cloud">☁ ' + esc(String(c).toUpperCase()) + '</span>').join('')
-    : '<span class="tg dim">不支持云同步</span>';
-
-  return '<article class="emu-card sv' + (it.libCover ? ' has-cov' : '') + '" data-name="' + esc(title) + '" data-lib="' + esc(it.libId || '') + '">'
-    + cov
-    + '<div class="bd">'
-    + '<h4 title="' + esc(title) + '">' + esc(title) + '</h4>'
-    + altHtml
-    + '<div class="meta">'
-    + (it.phone ? '<span class="tg phone">手机能玩</span>' : '')
-    + '<span class="pill">' + paths.length + ' 条存档</span>'
-    + (regs.length ? '<span class="pill">' + regs.length + ' 项注册表</span>' : '')
-    + '</div>'
-    + '<div class="tgs">' + cloudTags + '</div>'
-    + '<div class="paths">' + (rows.join('') || '<div class="p"><span>暂无文件路径记录</span></div>') + moreLine + '</div>'
-    + '</div>'
-    + '</article>';
-}
-
-/** 复制文本：优先 Clipboard API，失败退回隐藏 textarea + execCommand
- *  （http 非 localhost / 老内核下 Clipboard API 不可用，别让「复制」按钮点了没反应） */
-function copyText(txt) {
-  const s = String(txt || '');
-  if (!s) return;
-  const fallback = () => {
-    try {
-      const ta = document.createElement('textarea');
-      ta.value = s;
-      ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      return true;
-    } catch (e) { return false; }
-  };
-  const done = () => { if (typeof toast === 'function') toast('已复制：' + (s.length > 42 ? s.slice(0, 42) + '…' : s)); };
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(s).then(done).catch(() => { if (fallback()) done(); });
-  } else if (fallback()) done();
-}
-
-function bindSvCards() {
-  const g = document.getElementById('svGrid'); if (!g || g.dataset.bound) return;
-  g.dataset.bound = '1';
-  /* ★ v10.5 点击分流修正：
-   *   上一版为了「路径文字防误触」把整卡点击整个吞掉（只留封面上的按钮可点），
-   *   用户点卡片正文毫无反应 —— 反馈为「云存档点击未跳转」。
-   *   现在按区域分工：
-   *     · 点 .cp        → 只复制这条路径（不跳转）
-   *     · 点 .paths 区  → 允许选中/复制，不跳转
-   *     · 点卡上其它地方 → 有端游库命中就进游戏详情
-   *   这样「抄路径」和「看详情」两个诉求都保住，不再互相牺牲。 */
-  g.addEventListener('click', (e) => {
-    const cp = e.target.closest('.cp');
-    if (cp) { e.stopPropagation(); copyText(cp.dataset.cp || ''); return; }
-    const card = e.target.closest('.emu-card'); if (!card) return;
-    if (e.target.closest('.paths')) return;   // 路径区不触发跳转（要能选中文字）
-    const btn = e.target.closest('.cov-btn');
-    const lib = (btn && btn.dataset.lib) || card.dataset.lib;
-    if (lib && typeof openDetailById === 'function') {
-      openDetailById(lib, (btn && btn.dataset.title) || card.dataset.name);
-      return;
-    }
-    if (typeof toast === 'function') toast('这条没对上端游库，没有详情页；存档路径可直接点「复制」');
-  });
-}
-
-async function loadSv(more) {
-  if (svState.loading) return;
-  svState.loading = true;
-  const grid = document.getElementById('svGrid');
-  if (!more) { svState.offset = 0; if (grid) grid.innerHTML = '<div class="emu-loading">正在拉取存档位置库…</div>'; }
-  try {
-    const qs = new URLSearchParams({
-      q: svState.q, sort: svState.sort, limit: EMU_PAGE_SIZE, offset: svState.offset,
-    });
-    /* ★ 开关语义：phone 关掉 = 放开到全量（stats=all） */
-    if (svState.phone) qs.set('phone', '1'); else qs.set('stats', 'all');
-    if (svState.cloud) qs.set('cloud', '1');
-    const j = await fetch(api('/api/saves/list?' + qs)).then((r) => r.json());
-    svState.total = j.total || 0;
-    const items = j.items || [];
-    svState.items = more ? svState.items.concat(items) : items;
-    svState.offset = svState.items.length;
-    if (grid) grid.innerHTML = svState.items.length ? svState.items.map(svCard).join('') : '<div class="emu-empty">没有匹配的游戏，换个关键词试试</div>';
-    const cnt = document.getElementById('svCount'); if (cnt) cnt.textContent = '共 ' + svState.total.toLocaleString() + ' 款';
-    const mo = document.getElementById('svMore');
-    if (mo) mo.style.display = svState.items.length < svState.total ? '' : 'none';
-  } catch (e) {
-    if (grid) grid.innerHTML = '<div class="emu-empty">拉取失败，请稍后重试</div>';
-  } finally { svState.loading = false; }
-}
-
-async function initSv() {
-  if (svState.inited) return; svState.inited = true;
-  bindSvCards();
-  try {
-    const s = await fetch(api('/api/saves/stats')).then((r) => r.json());
-    const box = document.getElementById('svStats');
-    if (box) {
-      box.innerHTML = [
-        ['手机能玩', s.phonePlayable], ['收录游戏', s.total], ['存档位置', s.pathCount], ['支持云同步', s.withCloud],
-      ].map(([k, v]) => '<div class="st"><b>' + (v == null ? '—' : (typeof v === 'number' ? v.toLocaleString() : esc(v))) + '</b><span>' + k + '</span></div>').join('');
-    }
-    const built = document.getElementById('svBuilt');
-    if (built && s.builtAt) built.textContent = '（清单更新于 ' + new Date(s.builtAt).toLocaleString('zh-CN', { hour12: false }) + '，源：' + s.source + '）';
-  } catch (e) {}
-  const si = document.getElementById('svSearch');
-  if (si && !si.dataset.bound) {
-    si.dataset.bound = '1';
-    let t;
-    si.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { svState.q = si.value.trim(); loadSv(false); }, 260); });
-  }
-  const sorts = document.getElementById('svSorts');
-  if (sorts && !sorts.dataset.bound) {
-    sorts.dataset.bound = '1';
-    sorts.addEventListener('click', (e) => {
-      const b = e.target.closest('.emu-sort'); if (!b) return;
-      sorts.querySelectorAll('.emu-sort').forEach((x) => x.classList.toggle('on', x === b));
-      svState.sort = b.dataset.s; loadSv(false);
-    });
-  }
-  const mo = document.getElementById('svMore');
-  if (mo && !mo.dataset.bound) { mo.dataset.bound = '1'; mo.addEventListener('click', () => loadSv(true)); }
-  const ph = document.getElementById('svPhone');
-  if (ph) {
-    const paint = () => { ph.classList.toggle('on', svState.phone); };
-    paint();
-    if (!ph.dataset.bound) {
-      ph.dataset.bound = '1';
-      ph.addEventListener('click', () => { svState.phone = !svState.phone; paint(); loadSv(false); });
-    }
-  }
-  const cl = document.getElementById('svCloud');
-  if (cl) {
-    const paint = () => { cl.classList.toggle('on', svState.cloud); };
-    paint();
-    if (!cl.dataset.bound) {
-      cl.dataset.bound = '1';
-      cl.addEventListener('click', () => { svState.cloud = !svState.cloud; paint(); loadSv(false); });
-    }
-  }
-  await loadSv(false);
-}
-
-/* ================= 📱 手机专区 · 子页签（独立页） =================
-   v9.1 改版：**只有一条切换条**，4 个平级页签 —— 不再有"二级切换条"。
-     手游中心(#emulator) / 模拟器指南(#emuguide) / 机型兼容(#devmatch)
-
-   为什么去掉二级：v9.0 的「3 主页签 + 1 二级条」在非"兼容·指南"页签上
-   仍常驻显示那条二级条，点它却什么也看不到（目标分区还是 et-hide）——
-   看起来能点其实没反应。现在四个页面平级，点哪个切哪个，所见即所得。
-
-   ★ v9.3：原「手游可玩(#emulator)」与「实测配置(#phonecfg)」**合并为「手游中心」**，
-          实测库视角并入合并索引（见 SECTIONS 注释）。页签由 4 个减为 3 个，
-          #pc 路由保留为**兼容别名**（旧链接 #pc 会落到 #emu，不会白屏）。
-
-   ★ v10：新增 **修改器(#trainers)** 与 **云存档(#saves)** —— 共 **5 个平级页签**。
-
-   URL hash 同步：/emulator.html#emu / #tr / #sv / #eg / #dm（#pc 归一为 #emu）
-*/
-const ET_MAP = { emu: '#emulator', tr: '#trainers', sv: '#saves', eg: '#emuguide', dm: '#devmatch' };
-let etCur = 'emu';
-
-/* ★ v10.2 修的孤儿调用：主脚本（两页共用）里底部 Tab 的 emu/pc/eg 分支会调 goEmuPage()，
-   但那个函数定义在「独立页跳转块」里，派生页把整块换掉了 —— 于是这里只剩调用点，
-   每点一次底部「手机专区」就抛一次 ReferenceError（页面勉强还能用，控制台一直报）。
-   本页已经在专区里，正确语义是**切页签**而不是再跳一次。 */
-function goEmuPage(t) { switchEmuTab(t === 'pc' ? 'emu' : t); }
-
-/** 各分区懒加载入口（在 initXxx 声明之后调用，避免 TDZ） */
-function etInit(t) {
-  if (t === 'emu') return initEmu();
-  if (t === 'tr') return initTr();
-  if (t === 'sv') return initSv();
-  if (t === 'eg') return initEg();
-  if (t === 'dm') return initDm();
-}
-
-function switchEmuTab(t, opts) {
-  if (!ET_MAP[t]) return;
-  etCur = t;
-  /* 四个分区平级：只留目标那个可见 */
-  for (const [k, sel] of Object.entries(ET_MAP)) {
-    const el = document.querySelector(sel);
-    if (el) el.classList.toggle('et-hide', k !== t);
-  }
-  document.querySelectorAll('#emuTabs .emu-tab').forEach((b) => b.classList.toggle('on', b.dataset.et === t));
-  /* 懒加载：首次切到才拉数据（各 init 内部有 inited 标记，重复切不会重复请求） */
-  try { etInit(t); } catch (e) {}
-  if (opts && opts.scroll !== false) window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-/* 顶栏「手机专区」入口：本页已在专区，改为切「手游中心」 */
-(function bindNavEmu() {
-  const el = document.getElementById('navEmu'); if (!el) return;
-  el.setAttribute('href', '#emu');
-  el.addEventListener('click', (e) => { e.preventDefault(); switchEmuTab('emu'); });
-})();
-/** 子页签数字回填（手游中心合并游戏数 / 修改器条数 / 云存档手机可玩数 / 机型库条目数） */
-async function fillTabNums() {
-  const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.textContent = Number(v).toLocaleString(); };
-  try { const s = await fetch(api('/api/mobilehub/stats')).then((r) => r.json()); if (s && s.total != null) set('tabNumEmu', s.total); } catch (e) {}
-  try {
-    const s = await fetch(api('/api/tools/stats')).then((r) => r.json());
-    if (s && s.trainers) set('tabNumTr', s.trainers.total);
-    /* 云存档页签数字用「手机能玩」口径，与页面默认筛选一致，避免「显示 5,741 结果只列出 1,117」 */
-    if (s && s.saves) set('tabNumSv', s.saves.phonePlayable);
-  } catch (e) {}
-  try { const s = await fetch(api('/api/device/stats')).then((r) => r.json()); if (s && s.devices != null) set('tabNumDm', s.devices); } catch (e) {}
-}
-/* 底部 Tab 同款处理（底部「手机专区」直接落 手游中心） */
-const tb = document.getElementById('tabbar');
-if (tb) tb.addEventListener('click', (e) => {
-  const a = e.target.closest('a[data-tab]'); if (!a) return;
-  const t = a.dataset.tab;
-  if (t === 'emu') { e.preventDefault(); switchEmuTab('emu'); }
-  else if (ET_MAP[t]) { e.preventDefault(); switchEmuTab(t); }
-});
-/* 切换条点击 */
-document.getElementById('emuTabs').addEventListener('click', (e) => {
-  const b = e.target.closest('.emu-tab'); if (!b) return;
-  switchEmuTab(b.dataset.et);
-});
-/* 首屏：按 hash 决定进哪个页签，默认手游中心
- * ★ v9.3：#pc 是旧链接的兼容别名，归一为 #emu（老书签不会白屏） */
-(function bootTab() {
-  let t = location.hash.slice(1);
-  if (t === 'pc') t = 'emu';
-  switchEmuTab(ET_MAP[t] ? t : 'emu', { scroll: false });
-  fillTabNums();
-})();
+/* 手机专区跳转块：派生页不需要 */
 
 /* ================= 详情抽屉 ================= */
 let drawerMode = 'game';   // 'game'=游戏详情 | 'bh'=BannerHub 社区配置面板 | 'pc'=实测配置面板
@@ -4828,7 +3399,7 @@ async function loadDlBlock(d, fb, title) {
 $('#mask').addEventListener('click', closeDetail);
 
 /* ================= 启动 ================= */
-async function init() {  /* bindRankUI：独立页无榜单 UI，跳过 */  /* renderSide：独立页无右栏，跳过 */  /* renderCats：独立页无分类行，跳过 */  /* renderList：独立页无最新收录列表，跳过 */
+async function init() {  /* bindRankUI：派生页无榜单 UI，跳过 */  /* renderSide：派生页无右栏，跳过 */  /* renderCats：派生页无分类行，跳过 */  /* renderList：派生页无最新收录列表，跳过 */
   refreshRank(false); // 首页主体：热榜（缓存秒显 / 首次拉取）
   // 手机三个分区（社区配置 / 实测配置 / 指南）已拆到 /emulator.html，
   // 首页只保留入口卡（数字由上面的专区跳转块异步回填），此处不再初始化。
@@ -4856,6 +3427,339 @@ async function init() {  /* bindRankUI：独立页无榜单 UI，跳过 */  /*
   document.documentElement.setAttribute('data-ready', '1');
 }
 init();
+
+/* ================= 📦 解包配置匹配 · 页面逻辑（独立页专属） =================
+ *
+ * 这个页面回答一个问题：**「我手上这份配置，能跑哪些游戏？」**
+ * 输入是用户从游戏包 / 兼容层工具里导出的一份 JSON（字段名事先未知），
+ * 输出是可适配游戏清单，且每个判定都摊开理由。
+ *
+ * 分工：
+ *   识别（字段名 → 语义）在 data/spec-dict.js
+ *   判定（配置 → 能不能跑）在 data/spec-match.js
+ *   本文件只管「拿数据、画出来、响应交互」。
+ *
+ * ★ 样本字段变了**不要改这里** —— 去扩 data/spec-dict.js 的词典。
+ */
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  const st = { data: null, idx: 0, q: '', sort: 'scale', only: '', raw: '', busy: false };
+
+  /* 示例：刻意写成「设备配置 + 最低要求」混在一起，
+     用来演示两层语义被正确分开（内存 16 GB 是设备，8 GB 是要求）。 */
+  const SAMPLE = JSON.stringify({
+    device: 'OnePlus 13 (SM8750)',
+    os: 'Android 15',
+    arch: 'arm64-v8a',
+    memory: '16 GB',
+    storage_free: '256 GB',
+    compatibility: { wine: '9.0', box64: '0.3.4', dxvk: '2.4', turnip: '24.1' },
+    minRequirements: { ram: '8 GB', storage: '40 GB', dx: '11' },
+  }, null, 2);
+
+  const VERDICT = {
+    smooth: { t: '流畅', c: 'sm' },
+    ok: { t: '可跑', c: 'ok' },
+    maybe: { t: '待确认', c: 'mb' },
+    unknown: { t: '信息不足', c: 'un' },
+    no: { t: '不可跑', c: 'no' },
+  };
+  const DIM_NAME = { arch: '架构', dx: '图形接口', ram: '内存', storage: '存储' };
+  const DIM_STATE = { ok: '通过', fail: '不满足', unknown: '未判定', skip: '' };
+  const GROUP_ICON = { gpu: '🎮', cpu: '🧠', ram: '📐', vram: '🧩', storage: '💽', os: '🪟', api: '🔌', layer: '🧪', driver: '⚙️', arch: '🏗', res: '🖼', ver: '🏷', other: '•' };
+
+  function msg(text, kind) {
+    const el = $('upMsg');
+    if (!el) return;
+    if (!text) { el.hidden = true; el.textContent = ''; return; }
+    el.hidden = false;
+    el.className = 'up-msg' + (kind ? ' ' + kind : '');
+    el.textContent = text;
+  }
+
+  /* ---------- 请求 ---------- */
+  async function run() {
+    const raw = ($('upInput').value || '').trim();
+    if (!raw) { msg('先把 JSON 贴进来（或点「选择文件」/「载入示例」）', 'warn'); return; }
+    if (st.busy) return;
+    st.busy = true;
+    $('upRun').disabled = true;
+    msg('正在解析并匹配…');
+    try {
+      const r = await fetch(api('/api/spec/analyze'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ json: raw, idx: st.idx, q: st.q, sort: st.sort, only: st.only, limit: 80 }),
+      });
+      const j = await r.json();
+      if (!j.ok) { msg(j.error || '解析失败', 'err'); $('upResult').hidden = true; return; }
+      st.raw = raw;
+      st.data = j;
+      if (st.idx >= j.records.length) st.idx = 0;
+      msg('');
+      render(j);
+    } catch (e) {
+      msg('请求失败：' + (e && e.message), 'err');
+    } finally {
+      st.busy = false;
+      $('upRun').disabled = false;
+    }
+  }
+
+  /* ---------- 渲染 ---------- */
+  function render(j) {
+    $('upResult').hidden = false;
+    renderHead(j);
+    renderRecs(j);
+    renderProfile(j.current.profile);
+    renderGroups(j.current.entries);
+    renderUnknown(j.current.unknown, j.current.truncated);
+    renderMatch(j.match);
+    window.__UP_DONE__ = true;   // 实拍脚本的就绪信号
+  }
+
+  function renderHead(j) {
+    const s = j.stats || {};
+    const cov = s.coverage == null ? 0 : s.coverage;
+    $('upCoverage').innerHTML =
+      '<span class="up-cov-n">' + cov + '%</span>' +
+      '<span class="up-cov-t">字段识别率 <b>' + (s.hit || 0) + '/' + (s.nodes || 0) + '</b></span>';
+    $('upShape').textContent = j.shape === 'array' ? '顶层是数组（' + (j.records ? j.records.length : 0) + ' 条记录）'
+      : j.shape === 'object' ? '顶层是对象（单条记录）' : '顶层是标量';
+  }
+
+  function renderRecs(j) {
+    const box = $('upRecs');
+    if (!j.records || j.records.length <= 1) { box.hidden = true; return; }
+    box.hidden = false;
+    box.innerHTML = '<div class="up-recs-t">检测到 ' + j.records.length + ' 条记录 —— 当前对第 <b>' + (j.idx + 1) + '</b> 条做匹配</div>' +
+      '<div class="up-recs-l">' + j.records.slice(0, 60).map((r) =>
+        '<button type="button" class="up-rec' + (r.idx === j.idx ? ' on' : '') + '" data-i="' + r.idx + '">' +
+        '<b>' + esc(r.name) + '</b><span>' + r.entries + ' 项' + (r.ram ? ' · ' + r.ram + 'GB' : '') + '</span></button>'
+      ).join('') + '</div>';
+  }
+
+  /** 配置画像：把「这份配置到底是什么」摊开 —— 这是用户最需要确认的一屏 */
+  function renderProfile(p) {
+    const cells = [];
+    const cell = (label, val, note, tone) =>
+      cells.push('<div class="up-cell' + (tone ? ' ' + tone : '') + '">' +
+        '<span class="lb">' + label + '</span>' +
+        '<b>' + (val == null || val === '' ? '<i class="none">未识别</i>' : esc(val)) + '</b>' +
+        (note ? '<span class="nt">' + esc(note) + '</span>' : '') + '</div>');
+
+    if (p.gpu) {
+      const sc = p.gpu.score;
+      const tone = sc && sc.fam !== 'other' ? 'hi' : 'lo';
+      cell('显卡 / GPU', p.gpu.raw,
+        sc && sc.fam !== 'other' ? '档位 ' + sc.score + '（' + sc.fam + '）' : '未能定档（非移动 GPU 型号）', tone);
+    } else cell('显卡 / GPU', null);
+
+    cell('处理器', p.cpu && p.cpu.raw, p.cpu && p.cpu.tier === 'min' ? '取自最低要求' : '');
+    /* 自身配置时不重复显示原值（值本身就是它数值化后的样子）；
+       只有「取自最低要求」才需要提示，否则用户会误以为是设备能力。 */
+    cell('内存', p.ram ? p.ram.gb + ' GB' : null, p.ram && p.ram.src === 'req' ? '取自最低要求' : '');
+    cell('存储', p.storage ? p.storage.gb + ' GB' : null, p.storage && p.storage.src === 'req' ? '取自最低要求' : '');
+    cell('系统', p.os && p.os.raw);
+    cell('指令集架构', p.arch && p.arch.raw);
+    cell('分辨率', p.res && p.res.raw);
+    cell('驱动', p.driver && p.driver.raw);
+
+    const layers = Object.keys(p.layer || {});
+    cell('兼容层', layers.length ? layers.join(' · ') : null,
+      layers.length ? layers.map((k) => k + (p.layer[k].raw ? ' ' + p.layer[k].raw : '')).join('，') : '没识别到 DXVK / Box64 / Wine 之类');
+
+    /* 图形接口：JSON 里常只写「要求 DX 几」（那是要求不是能力），
+       此时按兼容层推一份能力出来并注明来源 —— 否则这里只剩一个「未识别」，
+       而判定其实是有依据的（DXVK→11 / VKD3D→12）。 */
+    const apis = (p.api || []).map((a) => a.kind === 'dx' ? 'DX' + a.v : a.kind);
+    let apiVal = apis.length ? apis.join(' · ') : (p.apiRaw && p.apiRaw.length ? p.apiRaw.join(' · ') : null);
+    let apiNote = '';
+    if (!apis.length) {
+      const caps = [];
+      if (p.layer && p.layer.vkd3d) caps.push(12);
+      if (p.layer && (p.layer.dxvk || p.layer.wined3d)) caps.push(11);
+      if (caps.length) { apiVal = 'DX ≤ ' + Math.max.apply(null, caps); apiNote = '据兼容层推断'; }
+    }
+    cell('图形接口', apiVal, apiNote);
+
+    if (p.req && (p.req.ram || p.req.storage || p.req.dx)) {
+      const bits = [];
+      if (p.req.ram) bits.push(p.req.ram + ' GB 内存');
+      if (p.req.storage) bits.push(p.req.storage + ' GB 空间');
+      if (p.req.dx) bits.push('DX ' + p.req.dx);
+      cell('这份 JSON 的「最低要求」', bits.join(' / '), '只作参考，不参与「自身能力」判定', 'req');
+    }
+
+    const srcNote = p.src === 'req' ? '⚠️ 这份 JSON 只有「最低要求」，没有独立的环境配置 —— 匹配结果可信度有限'
+      : p.src === 'mixed' ? '⚠️ 部分字段取自「最低要求」：' + (p.borrowed || []).join('、')
+      : '';
+    $('upProfile').innerHTML =
+      '<div class="up-prof-h"><b>' + esc(p.name || '未命名记录') + '</b>' +
+        '<span>' + cells.length + ' 项已识别</span></div>' +
+      (srcNote ? '<div class="up-note warn">' + esc(srcNote) + '</div>' : '') +
+      '<div class="up-cells">' + cells.join('') + '</div>';
+  }
+
+  function renderGroups(entries) {
+    const by = {};
+    for (const e of entries) (by[e.group] = by[e.group] || []).push(e);
+    const order = ['gpu', 'cpu', 'ram', 'vram', 'storage', 'os', 'arch', 'api', 'layer', 'driver', 'res', 'ver', 'other'];
+    const keys = Object.keys(by).sort((a, b) => order.indexOf(a) - order.indexOf(b));
+    if (!keys.length) { $('upGroups').innerHTML = '<div class="up-empty">没有识别到任何配置字段</div>'; return; }
+    $('upGroups').innerHTML = keys.map((g) =>
+      '<div class="up-grp"><div class="hd"><span>' + (GROUP_ICON[g] || '•') + '</span><b>' + groupLabel(g) + '</b><i>' + by[g].length + '</i></div>' +
+      '<div class="bd">' + by[g].map((e) =>
+        '<div class="it"><code>' + esc(e.key || e.path) + '</code>' +
+        '<span class="vv">' + esc(typeof e.value === 'object' ? JSON.stringify(e.value) : e.value) + '</span>' +
+        (e.tier === 'min' ? '<em class="tg min">最低</em>' : e.tier === 'rec' ? '<em class="tg rec">推荐</em>' : '') +
+        (e.from === 'value' ? '<em class="tg low" title="键名不认识，是按值的形态猜的">推断</em>' : '') +
+        '</div>').join('') + '</div></div>'
+    ).join('');
+  }
+
+  function groupLabel(g) {
+    return ({
+      gpu: '显卡 / GPU', cpu: '处理器', ram: '内存', vram: '显存', storage: '存储空间', os: '操作系统',
+      api: '图形接口', layer: '兼容层', driver: '驱动', arch: '指令集架构', res: '分辨率', ver: '版本', other: '其他',
+    })[g] || g;
+  }
+
+  function renderUnknown(unknown, trunc) {
+    const box = $('upUnknown');
+    if (!unknown || !unknown.length) { box.hidden = true; return; }
+    box.hidden = false;
+    box.innerHTML = '<details class="up-unk"><summary>未识别的字段 <b>' + unknown.length + '</b> 项' +
+      (trunc && trunc.unknown ? '（已截断）' : '') + ' —— 这些不影响已有判定</summary>' +
+      '<div class="up-unk-l">' + unknown.map((u) =>
+        '<div class="it"><code>' + esc(u.path) + '</code><span>' + esc(String(u.value).slice(0, 120)) + '</span></div>'
+      ).join('') + '</div></details>';
+  }
+
+  function renderMatch(m) {
+    const box = $('upMatch');
+    if (!m || !m.ok) { box.innerHTML = '<div class="up-empty">匹配失败：' + esc((m && m.error) || '未知错误') + '</div>'; return; }
+    const s = m.stats;
+    const dist = Object.keys(s.distLabel).map((k) =>
+      '<span class="up-d"><i class="dot ' + (Object.values(VERDICT).find((v) => v.t === k) || {}).c + '"></i>' + k + ' <b>' + s.distLabel[k] + '</b></span>').join('');
+    box.innerHTML =
+      '<div class="up-mstats">' +
+        '<div class="up-ms"><b>' + s.playable + '</b><span>可跑 / 共 ' + s.total + ' 款</span></div>' +
+        '<div class="up-ms"><b>' + s.scanned + '</b><span>扫描游戏数</span></div>' +
+        '<div class="up-dist">' + dist + '</div>' +
+      '</div>' +
+      '<div class="up-mbar">' +
+        '<input class="up-search" id="upq" type="search" placeholder="在可跑清单里搜游戏名…" value="' + esc(st.q) + '" autocomplete="off">' +
+        '<div class="up-sorts" id="upSorts">' +
+          btn('scale', '规模优先', st.sort) + btn('margin', '余量优先', st.sort) + btn('name', '名称', st.sort) +
+        '</div>' +
+        '<button type="button" class="up-only' + (st.only === 'playable' ? ' on' : '') + '" id="upOnly">只看可跑</button>' +
+      '</div>' +
+      '<div class="up-list" id="upList">' + (m.items.length ? m.items.map(card).join('') : '<div class="up-empty">没有匹配到游戏（试试放宽搜索词）</div>') + '</div>' +
+      '<div class="up-foot">判定依据：' + esc(s.source) + ' · 只看「架构 / 图形接口 / 内存 / 存储」四项，<b>不含显卡跑分</b></div>';
+  }
+
+  function btn(key, label, cur) {
+    return '<button type="button" class="up-sort' + (cur === key ? ' on' : '') + '" data-s="' + key + '">' + label + '</button>';
+  }
+
+  function card(it) {
+    const v = VERDICT[it.verdict] || VERDICT.unknown;
+    const chips = it.dims.filter((d) => d.state !== 'skip' && DIM_STATE[d.state]).map((d) =>
+      '<span class="up-ch ' + d.state + '" title="' + esc(d.note) + '">' + DIM_NAME[d.dim] + ' ' + DIM_STATE[d.state] + '</span>').join('');
+    const uj = (it.unjudged || []).length
+      ? '<span class="up-ch uj" title="配置里没有这项，无法判定">未判定：' + it.unjudged.map((d) => DIM_NAME[d] || d).join('、') + '</span>' : '';
+    const min = [];
+    if (it.min.ram) min.push('内存 ' + it.min.ram);
+    if (it.min.storage) min.push(it.min.storage.replace(/^需要\s*/, '空间 '));
+    if (it.min.dx) min.push('DX ' + it.min.dx);
+    if (it.min.gpu) min.push(it.min.gpu);
+    return '<article class="up-card ' + v.c + '" data-verdict="' + it.verdict + '" data-name="' + esc(it.name) + '">' +
+      '<div class="up-card-h"><span class="up-badge ' + v.c + '">' + v.t + '</span><b>' + esc(it.name) + '</b>' +
+        (it.margin != null ? '<span class="up-mg">余量 ' + it.margin + ' GB</span>' : '') + '</div>' +
+      '<div class="up-chips">' + chips + uj + '</div>' +
+      '<div class="up-min">最低配置：' + esc(min.join(' · ') || '未标注') + '</div>' +
+      (it.dims.some((d) => d.state === 'fail') ? '<div class="up-why">' + esc(it.dims.filter((d) => d.state === 'fail').map((d) => d.note).join('；')) + '</div>' : '') +
+      '</article>';
+  }
+
+  /* ---------- 判定依据（凭什么这么判） ---------- */
+  async function initDict() {
+    try {
+      const d = await fetch(api('/api/spec/dict')).then((r) => r.json());
+      if (!d.ok) return;
+      $('upDict').innerHTML =
+        '<div class="up-dict">' +
+        '<div class="up-dict-h">凭什么这么判</div>' +
+        '<div class="up-dims">' + d.dims.map((x) =>
+          '<div class="up-dim"><b>' + esc(x.label) + '</b><span>' + esc(x.why) + '</span></div>').join('') + '</div>' +
+        '<div class="up-dict-n">兼容层 → 图形接口能力：' + d.layers.map((l) => esc(l.note)).join('；') + '。<br>' +
+        '能在 ARM 上执行 x86 指令的转译层：' + d.translators.map(esc).join(' / ') + '。<br>' +
+        '对照库：Steam 官方配置要求 <b>' + d.built + '</b> 款。</div>' +
+        '</div>';
+    } catch (e) { /* 判定依据是锦上添花，拿不到不影响主流程 */ }
+  }
+
+  /* ---------- 交互绑定 ---------- */
+  let qt = 0;
+  function bind() {
+    $('upRun').addEventListener('click', run);
+    $('upSample').addEventListener('click', () => { $('upInput').value = SAMPLE; st.idx = 0; run(); });
+    $('upClear').addEventListener('click', () => {
+      $('upInput').value = ''; $('upResult').hidden = true; st.data = null; st.idx = 0; msg('');
+    });
+    $('upPick').addEventListener('click', () => $('upFile').click());
+    $('upFile').addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      const fr = new FileReader();
+      fr.onload = () => { $('upInput').value = String(fr.result || ''); st.idx = 0; run(); };
+      fr.onerror = () => msg('读取文件失败', 'err');
+      fr.readAsText(f);
+    });
+
+    /* 拖拽整份文件到文本框 */
+    const ta = $('upInput');
+    ['dragenter', 'dragover'].forEach((t) => ta.addEventListener(t, (e) => { e.preventDefault(); ta.classList.add('drag'); }));
+    ['dragleave', 'drop'].forEach((t) => ta.addEventListener(t, (e) => { e.preventDefault(); ta.classList.remove('drag'); }));
+    ta.addEventListener('drop', (e) => {
+      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) { const fr = new FileReader(); fr.onload = () => { ta.value = String(fr.result || ''); st.idx = 0; run(); }; fr.readAsText(f); return; }
+      const txt = e.dataTransfer && e.dataTransfer.getData('text');
+      if (txt) { ta.value = txt; st.idx = 0; run(); }
+    });
+
+    /* 结果区事件委托（内容是动态重绘的） */
+    const res = $('upResult');
+    res.addEventListener('click', (e) => {
+      const rec = e.target.closest('.up-rec');
+      if (rec) { st.idx = Number(rec.dataset.i) || 0; run(); return; }
+      const s = e.target.closest('.up-sort');
+      if (s) { st.sort = s.dataset.s; run(); return; }
+      if (e.target.closest('#upOnly')) { st.only = st.only === 'playable' ? '' : 'playable'; run(); }
+    });
+    res.addEventListener('input', (e) => {
+      if (e.target.id !== 'upq') return;
+      clearTimeout(qt);
+      const v = e.target.value;
+      qt = setTimeout(() => { st.q = v; run(); }, 320);
+    });
+  }
+
+  let inited = false;
+  window.initUp = function () {
+    if (inited) return;
+    inited = true;
+    bind();
+    initDict();
+  };
+})();
+
+
+/* 首屏：绑定交互并拉取「判定依据」。放在最后 —— 上面的脚本已声明 api() 等依赖。 */
+initUp();
 </script>
 </body>
 </html>

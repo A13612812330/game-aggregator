@@ -19,7 +19,7 @@ const count = (s, re) => (s.match(re) || []).length;
 
 /* ================= 首页 ================= */
 const navBlock = (idx.match(/<nav class="main-nav">[\s\S]*?<\/nav>/) || [''])[0];
-t('首页顶栏恰好 2 个入口（首页 / 手机专区）', count(navBlock, /<a /g) === 2, `实际 ${count(navBlock, /<a /g)}`);
+t('首页顶栏恰好 3 个入口（首页 / 手机专区 / 解包匹配）', count(navBlock, /<a /g) === 3, `实际 ${count(navBlock, /<a /g)}`);
 t('首页顶栏含「首页」#navHome 与「手机专区」#navEmu',
   /id="navHome"/.test(navBlock) && /navEmu/.test(navBlock) && /emulator\.html/.test(navBlock));
 t('首页顶栏已无 navRank / navLatest 旧分段入口', !/id="navRank"|id="navLatest"/.test(navBlock));

@@ -9,6 +9,8 @@ const { spawn } = require('child_process');
 const express = require('express');
 const jidi = require('./fetchers/jidi');
 const xdgamer = require('./fetchers/xdgamer');
+const specDict = require('./data/spec-dict');
+const specMatch = require('./data/spec-match');
 
 const app = express();
 /* ★ 端口唯一真源（v10.1）
@@ -55,6 +57,12 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
+
+/* JSON 请求体解析（v10.20 新增）
+ *   在此之前全站 POST 都不读 body（都是「触发一个动作」型），所以从没配过 parser。
+ *   新增的「解包配置分析」要接收用户整份 JSON，故补上。
+ *   上限 12MB —— 解包导出的配置可能有几 MB，但不该成为内存攻击面。 */
+app.use(express.json({ limit: '12mb' }));
 
 // 默认首页 = 单页聚合主站 public/index.html（内容库合并 + 聚合搜索）
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
@@ -758,6 +766,54 @@ app.get('/api/pc/records', (req, res) => {
   res.json({
     ok: true, title: r.title, chipMap: phonecfg.ensure().chipMap || {}, items: r.items,
     lib: it ? { id: it.id, title: it.title, url: it.url, cover: it.cover } : null,
+  });
+});
+
+/* ================= 📦 解包配置匹配（v10.20） =================
+   把用户手里「一份字段名未知的 JSON」（游戏解包 / 兼容层工具导出）解析成配置画像，
+   再对撞 Steam 官方配置库，回答「这套配置能跑哪些游戏」。
+   ★ 识别词典在 data/spec-dict.js —— 样本字段变了**只改那一个文件**，接口与前端不动。 */
+// GET /api/spec/dict — 判定依据自述（前端「凭什么这么判」面板）
+app.get('/api/spec/dict', (_req, res) => res.json(specMatch.dictInfo()));
+
+// POST /api/spec/analyze — body: {json|text, idx, q, sort, only, limit}
+app.post('/api/spec/analyze', (req, res) => {
+  const body = req.body || {};
+  const raw = body.json != null ? body.json : body.text;
+  if (raw == null || raw === '') return res.status(400).json({ ok: false, error: '没有收到 JSON 内容' });
+
+  let ex;
+  try { ex = specDict.extract(raw); }
+  catch (e) { return res.status(400).json({ ok: false, error: '解析异常：' + e.message }); }
+  if (!ex.ok) return res.status(400).json({ ok: false, error: ex.error });
+
+  const idx = Math.max(0, Math.min(Number(body.idx) || 0, ex.records.length - 1));
+  const cur = ex.records[idx];
+  const match = specMatch.analyze(cur.profile, {
+    q: body.q, sort: body.sort, only: body.only, limit: body.limit,
+  });
+
+  /* 条目可能上千条，回包截断，但把「截断了」如实告诉前端（不静默丢） */
+  const CAP = 240;
+  const cap = (a) => (a.length > CAP ? a.slice(0, CAP) : a);
+  res.json({
+    ok: true,
+    shape: ex.shape,
+    stats: ex.stats,
+    records: ex.records.map((r) => ({
+      idx: r.idx,
+      name: r.profile.name || ('记录 #' + (r.idx + 1)),
+      ram: r.profile.ram && r.profile.ram.gb,
+      layers: Object.keys(r.profile.layer || {}),
+      entries: r.entries.length,
+    })),
+    current: {
+      idx, profile: cur.profile,
+      entries: cap(cur.entries),
+      unknown: cap(cur.unknown),
+      truncated: { entries: cur.entries.length > CAP, unknown: cur.unknown.length > CAP },
+    },
+    match,
   });
 });
 

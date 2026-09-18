@@ -65,9 +65,12 @@ async function main() {
   ok('首页已移除引导卡 #emuHub', !$('#emuHub'));
   ok('首页已无任何 /emulator.html 的内联分区残留', !$('#emulator') && !$('#devmatch'));
 
-  // v9.1：顶栏收敛为 2 个入口（首页 / 手机专区）—— 热榜+最新收录 合进「首页」
+  // v10.20：顶栏由 2 个入口增为 3 个（新增「📦 解包匹配」），导航是共享资产故两页同步
   const navLinks = $$('.main-nav a');
-  ok('顶栏只剩 2 个入口（首页 / 手机专区）', navLinks.length === 2, `实际 ${navLinks.length}：${navLinks.map((a) => a.textContent.trim()).join(' / ')}`);
+  ok('顶栏有 3 个入口（首页 / 手机专区 / 解包匹配）', navLinks.length === 3, `实际 ${navLinks.length}：${navLinks.map((a) => a.textContent.trim()).join(' / ')}`);
+  ok('顶栏第三条是「解包匹配」#navUnpack → /unpack.html',
+    !!$('#navUnpack') && $('#navUnpack').getAttribute('href') === '/unpack.html',
+    $('#navUnpack') ? $('#navUnpack').getAttribute('href') : '(缺失)');
   ok('顶栏第一个是「首页」#navHome', !!$('#navHome'), ($('#navHome') || {}).textContent || '(缺失)');
   const navEmuEl = $('#navEmu');
   ok('顶栏「手机专区」→ /emulator.html（不带 hash，落默认页签）',

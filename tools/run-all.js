@@ -26,10 +26,14 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const QUIET = process.argv.includes('--quiet');
 
-/* 静态（不依赖浏览器）的套件清单 —— 新增一个就往这里加一个 */
+/* 套件清单 —— 新增一个就往这里加一个。
+ * 判据不是「有没有用浏览器」，而是「要不要人盯着」（下面这些都无需交互、秒级出结果）。
+ * ⚠️ 其中 test-emulator-page.js 用 jsdom 从 http://127.0.0.1:8123 加载真实页面，
+ *    所以跑全量静态防线时**服务要在跑**（否则它会整体失败，看起来像代码坏了）。
+ * ⚠️ 末行汇总格式：各套件必须以「通过 n/m」结尾，本脚本取**最后一个** `n / m` 当成绩。 */
 const SUITES = [
   'test-alias-guard.js',
-  'test-emuhub.js',
+  'test-emulator-page.js',
   'test-saves-match.js',
   'test-date-norm.js',
   'test-mods.js',
@@ -42,6 +46,8 @@ const SUITES = [
   'test-v1016.js',
   'test-v1017.js',
   'test-v1018.js',
+  'test-spec.js',
+  'test-pages-sync.js',
   'test-report.js',
 ];
 
