@@ -129,6 +129,27 @@ ok(/第 4 节|筛选条/.test(design) && /已不是当前实现/.test(design),
   '★ DESIGN.md 明示第 4 节筛选条已不是当前实现（v10.5 拆三行 / v10.9 七行 .emu-bar-row）');
 ok(/v10\.19/.test(design), 'DESIGN.md 记录了 v10.19 的指南卡片化');
 
+console.log('\n=== ⑤-c 流程总纲 WORKFLOW.md（2026-09-18 新增）===');
+/* 新加的流程文档同样是「会过期却看不出来」的高危物。
+   尤其这批：把某一步漏掉，照它干活就会漏做 —— 漏做又不会报错（重建派生页/重启服务都是静默失败）。
+   所以断言盯的是「不可跳过的步骤必须在文档里」，而不是文笔。 */
+const wf = doc('WORKFLOW.md');
+ok(wf.length > 3000, 'WORKFLOW.md 存在且有实质内容', (Buffer.byteLength(wf, 'utf8') / 1024).toFixed(1) + 'KB');
+ok(/CODEX-INDEX\.md/.test(wf), '★ 指向 CODEX-INDEX.md（版本真源不是它，避免又养出一份「自称最新」）');
+ok(/基线[^\n]*v\d+\.\d+/.test(wf), '声明了明确基线版本（便于一眼看出是否过期）');
+for (const [kw, why] of [
+  ['build-emulator-page.js', '重建手机专区派生页'],
+  ['build-unpack-page.js', '重建解包匹配派生页'],
+  ['test-pages-sync.js', '★ 派生页同步防线（唯一能发现「主源改了没重建」的手段）'],
+  ['restart-server.js', '重启服务（改 server/data 后必须做，否则静默不生效）'],
+  ['run-all.js', '全量静态防线'],
+  ['report.js', '五项状态汇报'],
+  ['_push-via-api.js', '推送（github.com 被阻断，只能走 API）'],
+]) ok(wf.includes(kw), '流程里点名了 ' + kw + ' —— ' + why);
+ok(/core\.autocrlf|入库字节/.test(wf), '★ 记着 autocrlf 坑（读磁盘建 blob 会推错内容）');
+ok(wf.includes('36aa37e9') ? /已弃用/.test(wf) : true, '若提到旧链接必须标「已弃用」');
+ok(!/最新\s*——\s*先看这段/.test(wf), '不许出现「最新 —— 先看这段」这种会在下版崩塌的措辞');
+
 console.log('\n=== ⑥ 本地真实数据自检 ===');
 const idx = fs.readFileSync(path.join(ROOT, 'public/index.html'), 'utf8');
 ok(idx.length > 100000, 'public/index.html 有内容可算 md5', (Buffer.byteLength(idx, 'utf8') / 1024).toFixed(1) + 'KB');
