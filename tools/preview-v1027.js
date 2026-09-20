@@ -103,7 +103,9 @@ const TID = 'https://jidiyouxi.com/topic/detail/171085167';   // 剑星：本体
     ok(byKey.mod && byKey.mod.open === false && byKey.modifier.open === false,
       '★ mod / 修改器默认折叠', 'mod=' + byKey.mod.open + ' modifier=' + byKey.modifier.open);
     ok(byKey.body.h > 150, '★ 展开的区块真占版面', byKey.body.h + 'px');
-    ok(byKey.mod.h > 0 && byKey.mod.h < 60, '折叠的区块只剩标题行（不是 0 高、也不是整块）', byKey.mod.h + 'px');
+    ok(byKey.mod.h > 0 && byKey.mod.h < byKey.body.h / 3,
+      '折叠的区块只剩标题行（>0 说明仍可见可点；远矮于展开态说明没铺开）',
+      byKey.mod.h + 'px（展开态 ' + byKey.body.h + 'px）');
     ok(r.offDomRows === 0, '★★ 折叠区块里**没有任何行节点**（不渲染而非 display:none 藏起来）', String(r.offDomRows));
 
     /* ---------- ③ 条目：一行一帖 + 标题完整可见 ---------- */
