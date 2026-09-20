@@ -191,6 +191,12 @@ CSS 开头全局声明」）。⇒ 改为**行首锚定** `/^ {2}\[hidden\]\{dis
 | `tools/_counterproof-v1023.js` | **新增**反证（4 处） |
 | `tools/run-all.js` | SUITES 登记 `test-twin.js`（20 套 → **21 套**） |
 | `tools/test-v1014.js`、`test-v1015.js`、`test-download.js`、`test-emulator-page.js`、`test-emulator-structure.js`、`test-match-release.js` | 断言同步到新结构（**预期变更，不是退化**） |
+| `fetchers/xdrank.js` | **第二轮**：新增 `coverOf()`（懒加载占位剔除 + 相对路径补全）、`mergeRankRows()`；`rawHot()` 每行带 `img` |
+| `server.js` | **第二轮**：`/api/rank` 改用 `xdrank.mergeRankRows()`（去掉内联 `byUrl` 的 `cover:null`） |
+| `data/games.json` | **第二轮**：补齐 7 条空封面并回填 `appid`，全库封面 99.96% → **100%** |
+| `tools/fill-covers.js` | **第二轮新增**：幂等补封面工具（详情页 → appid → Steam 官方 `header_image` → 镜像映射） |
+| `tools/test-covers.js` | **第二轮新增**静态套件（49 条） |
+| `tools/preview-covers.js` | **第二轮新增**浏览器实拍（11 条，判据 `naturalWidth > 0`） |
 | `PITFALLS.md` | 新增 3 条（`hidden` 被 display 压掉 / 注释里 `**加粗**/` 提前闭合 / 断言被注释命中） |
 
 ### 关于 GitHub 双重验证（用户第一句）
@@ -200,7 +206,86 @@ CSS 开头全局声明」）。⇒ 改为**行首锚定** `/^ {2}\[hidden\]\{dis
 
 ---
 
-## 六、下一步（阻塞在用户）
+## 六、第二轮（同日追加）—— 前端可见的游戏图片全部补齐
+
+> 用户原话：「其次 @截图 前端可见的游戏图片需要你进行获取图片」。
+> 截图红框圈着全站热榜第 2 / 5 / 8 名三张**空白色块**。
+
+### 6.1 根因：源站本来就给了图，是我们的抓取把它丢掉了
+
+用户第一反应是「是不是要把图片下载下来」—— 实测**不是**：
+`shared.cdn.queniuqe.com` 的图全部 `HTTP 206` + `image/jpeg`，浏览器能正常加载。
+真正的原因是**两条都不报错**的取数问题：
+
+| # | 位置 | 问题 | 实测证据 |
+|---|---|---|---|
+| ① | `fetchers/xdrank.js` | 解析 `.hot-soft .plate-list` 每行时只取 `a[href]` / `a[title]`，把同一行 `<img class="lazy" src="/images/defaultpic.gif" data-original="真图">` **整个丢掉** | 源站三档 29 行**每行都有 `data-original`** |
+| ② | `server.js` 的 `/api/rank` | 只用 `byUrl.get(it.url)` 精确匹配本地库；落空即写死 `cover: null` | 线上周榜 10 条里 **2 条**无图（本地 1 条） |
+
+② 的落空有两种、都很常见：库里根本没收录（「DLSS 5 Swapper」这类工具条目）、
+库里有但 url 串差一点（`http/https`、`www`、尾斜杠任一不同）。
+
+### 6.2 修法（只改后端，前端一行没动）
+
+前端本来就有「有图渲染 `<img onerror=…>` / 无图渲染首字 `.ph`」两个分支，
+且缩略图槽位是 `width:74px;height:44px;object-fit:cover` —— 所以**数据给对就行**。
+
+1. **`coverOf(src, dataOriginal)`**（新增纯函数）
+   `data-original` 优先；没有它才退到 `src`，且**必须剔除懒加载占位图**
+   （`/images/defaultpic.gif`、`lazy.gif|png|svg`、`/images/blank`）。
+   相对路径补全为绝对 URL，`data:` 一律不认。→ 实测三档 **29/29 行**都抠出了图。
+2. **`mergeRankRows(rows, all)`**（新增纯函数，抽出来便于离线回归）
+   ```
+   ① byUrl.get(it.url)                     ← 老路
+   ② byId.get('xd-' + it.gid)              ← ★ 本地库 id 就是 xd-<gid>，比 url 串稳
+   ③ 都没有 → 用源站行图 it.img
+   封面优先序：库内 cover（Steam 标准 460×215） > 源站行图 > null
+   ```
+   ★ **不编造**：两边都没有图时 `cover` 保持 `null`，前端自然走首字占位分支。
+3. **`tools/fill-covers.js`**（新增工具）：补齐全库 7 条空封面。
+   路线 = 抓 XD 详情页 → 从页内图反推 Steam appid → 调 Steam 官方
+   `appdetails?appids=<id>&filters=basic` 拿 `header_image` → 域名映射到库内统一镜像。
+   ★ 关键：**官方给的是带 hash 的完整路径**，自己硬拼 `apps/<id>/header.jpg` 会 404 ——
+   「欺世欢悦 4001800」实测就是这种（硬拼 404，官方路径 200 且 460×215）。
+   ★ 只在 `HTTP 2xx + image/*` 验证通过后才写回，并顺带回填 `appid`
+   （等于用「这个 appid 真能取到图」当它正确性的证明）。工具**幂等**（只填空、不覆写、无变化不写盘）。
+   实测 **7/7 成功**，Steam 返回名与条目标题**逐条对得上**，零误配。
+
+### 6.3 效果（全部实测）
+
+| 指标 | 修前 | 修后 |
+|---|---|---|
+| 四榜（周/月/全站/社区）41 条无封面 | 本地 1 条 · **线上 2 条** | **0 条** |
+| 全库 18,961 条封面覆盖 | 99.96%（7 条空） | **100.00%** |
+| 浏览器实拍「图真的加载了」（`naturalWidth > 0`） | — | **19 / 19 张**（含冠军卡大图） |
+
+### 6.4 防线
+
+- 新增 `tools/test-covers.js` **49 条**：`coverOf` 七种输入 / `cleanPlate` 不许丢 `img` /
+  `mergeRankRows` 五条分支 / 全库覆盖率 / 三页接线与两个渲染分支
+- 新增 `tools/preview-covers.js` **11/11**：判据是 ★`img.naturalWidth > 0`
+  （**元素存在 ≠ 图加载成功**：404 / 防盗链 / 空 `src` 的 `<img>` 一样占版面、
+   一样有 `getBoundingClientRect`、一样能点到，但 `naturalWidth` 恒为 0）
+- 反证扩到 **9 处**（本轮新增 5 处：gid 兜底 / 源站图兜底 / 占位图剔除 / `rawHot` 带 `img` / server 接线）
+- `tools/run-all.js` SUITES 登记 → 静态 **22 套 / 1437 条 / 0 失败**
+
+### 6.5 ★ 本轮抓到的一条**假红**（值得单记）
+
+实拍脚本里我先写了「全站榜的图必须走 `/uploads/` 相对路径，以证明相对路径补全真的生效」——
+**它红了**。但红的不是代码，是**我的假设**：封面优先序是「库内 cover > 源站行图」，
+而全站榜都是热门老游戏、库里全都有 cover，所以**永远走不到源站那条相对路径**。
+硬要它出现就是**为凑断言而写假断言** —— 而且那种断言会反过来逼着后来人
+把「库内优先」这个正确设计改坏。
+⇒ 改成断言「图都来自库内 cover（说明优先序生效）」，
+相对路径补全由 `test-covers.js` 的 ① 组**离线覆盖**。
+
+**一般化**：断言红了先分两类 ——
+「代码坏了」还是「我把预期写错了」。**后者改断言，但必须同时想清楚
+「那条行为现在由谁守着」**，别把覆盖点一起删掉。
+
+---
+
+## 七、下一步（阻塞在用户）
 
 v10.24 仍是**解包匹配的字段校准**，需要一份解包 JSON 样本，且**只改 `data/spec-dict.js`**
 （界面与 `/api/spec/*` 都不动）。

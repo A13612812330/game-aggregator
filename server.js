@@ -1075,14 +1075,10 @@ app.get('/api/rank', async (req, res) => {
       }
       const raw = await xdrank.rawHot(); // {week:[],month:[],year:[]}
       const rows = raw[p] || [];
-      const all = gamesDb.all();
-      const byUrl = new Map(all.map((g) => [g.url, g]));
-      const list = rows.map((it) => {
-        const rec = byUrl.get(it.url);
-        return rec
-          ? { ...rec, rank: it.rank || 0 }
-          : { source: 'xdgamer', rank: it.rank || 0, title: it.name, cover: null, genres: [], size: null, score: null, updatedTs: null, dateLabel: null, url: it.url };
-      });
+      /* ★ v10.23：合并逻辑抽成纯函数放 xdrank 里（可离线回归）。
+         旧写法 `byUrl.get(it.url)` 落空即 cover:null → 前端只能显示首字占位块；
+         现在按「本地库精确命中 > 源站行图」取封面，库外条目也有图。 */
+      const list = xdrank.mergeRankRows(rows, gamesDb.all());
       return { p, meta: { ...RANK_META[p], dropped: (raw._dropped || {})[p] || 0 }, list: list.map(withBh) };
     });
     res.json({ ok: true, fetchedAt: Date.now(), ...data });

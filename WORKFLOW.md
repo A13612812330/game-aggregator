@@ -81,7 +81,7 @@ curl http://localhost:8123/api/health    # 期望 ok
 ### 步骤 5 · 跑三层防线
 
 ```bash
-# 第一层：静态（21 套 / 1388 条 / 必须 0 失败）
+# 第一层：静态（22 套 / 1437 条 / 必须 0 失败）
 node tools/run-all.js
 
 # 第二层：浏览器实拍（puppeteer，★ 必须加大超时 + 分批跑）
@@ -211,8 +211,8 @@ node tools/audit-apps.js          # ★ 发布过就再跑一次：应用登记 
 
 | 层 | 工具 | 规模 | 特点 | 何时跑 |
 |---|---|---|---|---|
-| ① 静态 | `tools/run-all.js` | **21 套 / 1388 条** | 秒级、无需人盯 | 每次改完 |
-| ② 行为 | `test-emulator-page.js`（jsdom，含在 21 套内） | 119 条 | 需服务在 8123 | 每次改完 |
+| ① 静态 | `tools/run-all.js` | **22 套 / 1437 条** | 秒级、无需人盯 | 每次改完 |
+| ② 行为 | `test-emulator-page.js`（jsdom，含在 22 套内） | 119 条 | 需服务在 8123 | 每次改完 |
 | ③ 实拍 | `tools/preview-v*.js`（15 个） | 各 30~70 条 | puppeteer，**慢且脆** | 改页面时 |
 | ④ 线上 | `tools/verify-online.js` | — | 对**线上**验收 | 仅发布后 |
 
@@ -362,7 +362,7 @@ $NODE tools/build-emulator-page.js && $NODE tools/build-unpack-page.js
 # 重启服务 / 健康检查
 $NODE tools/restart-server.js
 
-# 全量静态防线（21 套 1388 条）
+# 全量静态防线（22 套 1437 条）
 $NODE tools/run-all.js
 
 # 浏览器实拍（按需换版本号）
