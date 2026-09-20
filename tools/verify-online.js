@@ -23,9 +23,16 @@ const fs = require('fs');
 const path = require('path');
 const { connectBrowser, sleep } = require('./browser');
 
-/* ⚠️ 默认目标跟着 tools/report.js 的 LINKS.LIVE 走 —— 别在这儿另写一份，会漂。
-   2026-09-18（v10.22）：LIVE 从 gamehub-agg-v3（发布环境失效）切到下面这个平台域名。 */
-const BASE = (process.argv[2] || process.env.BASE || 'https://36aa37e911e6447eb86eb187240daff2.app.workbuddy.host/').replace(/\/?$/, '/');
+/* ⚠️ 默认目标**从 tools/report.js 的 LINKS.LIVE 现抠**，不在这儿另写一份 ——
+   另写就会漂（本项目踩过：默认值曾停在 gamehub-agg-join，而那时 LIVE 早换成别的了）。
+   2026-09-20（v10.23）：LIVE 从 `36aa37e9…`（未登记、发布工具无法更新）切到 `gamehub-agg-v4`。 */
+const REPORT_SRC = fs.readFileSync(path.join(__dirname, 'report.js'), 'utf8');
+const LIVE_FROM_REPORT = (REPORT_SRC.match(/LIVE:\s*'(https:\/\/[^']+)'/) || [])[1];
+if (!LIVE_FROM_REPORT) {
+  console.error('✗ 无法从 tools/report.js 抠出 LINKS.LIVE —— report.js 的结构变了？');
+  process.exit(1);
+}
+const BASE = (process.argv[2] || process.env.BASE || LIVE_FROM_REPORT).replace(/\/?$/, '/');
 const OUT = path.join(__dirname, '..', '_preview');
 /* 抽样游戏：用户截图那款（机型最多、踩过全部三个 bug：6 台上限 / 残缺代号 / 误导文案）
  * 其中 `HONOR MTN-NX3` 本地查不到芯片、要靠 kalvo 联网补 → 正好验 ③ */

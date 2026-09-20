@@ -267,7 +267,7 @@ CSS 开头全局声明」）。⇒ 改为**行首锚定** `/^ {2}\[hidden\]\{dis
   （**元素存在 ≠ 图加载成功**：404 / 防盗链 / 空 `src` 的 `<img>` 一样占版面、
    一样有 `getBoundingClientRect`、一样能点到，但 `naturalWidth` 恒为 0）
 - 反证扩到 **9 处**（本轮新增 5 处：gid 兜底 / 源站图兜底 / 占位图剔除 / `rawHot` 带 `img` / server 接线）
-- `tools/run-all.js` SUITES 登记 → 静态 **22 套 / 1437 条 / 0 失败**
+- `tools/run-all.js` SUITES 登记 → 静态 **22 套 / 1439 条 / 0 失败**
 
 ### 6.5 ★ 本轮抓到的一条**假红**（值得单记）
 

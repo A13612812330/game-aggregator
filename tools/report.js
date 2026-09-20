@@ -39,8 +39,9 @@ const MD_ONLY = argv.includes('--md');
    ⑤ ⚠️ 它不在 `.workbuddy/applications.yaml` 的正式登记里。**v10.23 若要发布，
       优先选「新建 app」拿一个已登记的新链接**，别再指望这个域名能跟着更新。 */
 const LINKS = {
-  LIVE: 'https://36aa37e911e6447eb86eb187240daff2.app.workbuddy.host/',
+  LIVE: 'https://gamehub-agg-v4.app.workbuddy.host/',
   DEPRECATED: [
+    { url: 'https://36aa37e911e6447eb86eb187240daff2.app.workbuddy.host/', why: '停在 v10.22（★ 未登记在 applications.yaml ⇒ 发布工具按 appId 找应用，根本无法更新它；2026-09-20 发 v10.23 时改为新建 app）' },
     { url: 'https://gamehub-agg-v3.app.workbuddy.host/', why: '停在 v10.21（发布环境已失效：工具拒绝覆盖，报「预留域名未绑定到本次发布环境」）' },
     { url: 'https://gamehub-agg-v2.app.workbuddy.host/', why: '停在 v10.18（实测无 eg-nav；域名无法重绑到新发布环境）' },
     { url: 'https://gamehub-agg-join.app.workbuddy.host/', why: '停在 v10.17（实测 /api/device/fill-stats 404）' },

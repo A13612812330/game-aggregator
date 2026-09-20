@@ -93,17 +93,30 @@ console.log('\n=== G. 与 report.js 同源（LIVE 只能有一个真源）===');
 }
 
 console.log('\n=== H. 弃用链接的 why 必须与实测一致（防旧说法漂移）===');
-/* 这类文案漂移会让下一个人判断错「哪个域名还能用」。36aa 的 why 变过三次，每次都是实测推翻旧说法：
-   ① 「碰巧含 v10.18」→ ② 「未登记的别名域名」→ ③ ★ v10.22 它**被选为 LIVE**
-   （缘由：v3 的发布环境失效、工具拒绝覆盖），于是它**不该再留在弃用清单里**，
-   而 v3 必须带着「发布环境失效」这个**实测**原因进来。
+/* 这类文案漂移会让下一个人判断错「哪个域名还能用」。36aa 的 why 变过**四次**，每次都是实测推翻旧说法：
+   ① 「碰巧含 v10.18」→ ② 「未登记的别名域名」→ ③ v10.22 它**被选为 LIVE**
+   （缘由：v3 的发布环境失效、工具拒绝覆盖）→ ④ ★ v10.23 它**又降回弃用**
+   （缘由：它未登记 ⇒ 发布工具按 appId 找应用、够不着它，只能新建 v4）。
+   所以下面那条改成了「从 report.js 现抠 LIVE 主机名、断言它不在弃用清单里」——
+   钉具体域名的话，每反转一次就要改一次断言，而**改断言的人正是最容易写错的人**。
    ★ 切片地标别用 `'DEPRECATED'` 这个词 —— 它在 report.js **顶部注释**里也出现，
      indexOf 会命中注释而不是清单 ⇒ 后面几条断言可能恒真（v10.22 在 test-report.js 上踩过同一个坑）。 */
 const LINKS_BLOCK = REPORT.slice(REPORT.indexOf('const LINKS = {'), REPORT.indexOf('const GITHUB'));
 ok(LINKS_BLOCK.length > 200, '★ 切到 LINKS 块本身（地标变了会让下面几条断言恒真/恒假）', LINKS_BLOCK.length + 'B');
 const DEP = LINKS_BLOCK.slice(LINKS_BLOCK.indexOf('DEPRECATED'));
-ok(!/36aa37e911e6447eb86eb187240daff2/.test(DEP),
-  '★ 36aa 已升为 LIVE，不许再留在弃用清单里（留着会让人以为它还能被「捡回来」）');
+/* ★ 2026-09-20（v10.23 发布）：36aa 的处境**又反转了一次** ——
+   v4 发布后它反过来进了弃用清单。缘由：它**未登记在 applications.yaml**，
+   而发布工具是按 appId 找应用的 ⇒ 根本够不着它（实测证实），只能新建 app。
+   所以这条不再钉「某个具体域名在不在清单里」，而是**从 report.js 现抠 LIVE 主机名**，
+   断言「LIVE 绝不出现在 DEPRECATED 里」—— 以后再换域名不用改断言，也不会漏。
+   （同一域名同时出现在 LIVE 与弃用两处 = 下一个人一定判错，这正是本段要守的东西。） */
+const LIVE_HOST = ((REPORT.match(/LIVE:\s*'(https:\/\/[^']+)'/) || [])[1] || '')
+  .replace(/^https:\/\//, '').replace(/\/$/, '');
+ok(!!LIVE_HOST, '★ 从 report.js 抠出 LIVE 主机名（抠不到 ⇒ 下一条恒真 = 假绿）', LIVE_HOST);
+ok(!DEP.includes(LIVE_HOST),
+  '★ LIVE 绝不出现在弃用清单里（同时出现在两处 = 下一个人一定判错）', LIVE_HOST);
+ok(/36aa37e911e6447eb86eb187240daff2/.test(DEP) && /未登记/.test(DEP),
+  '★ 36aa 已入弃用清单，且 why 写明「未登记 ⇒ 发布工具无法更新它」');
 ok(/gamehub-agg-v3/.test(DEP) && /未绑定到本次发布环境|发布环境已失效/.test(DEP),
   '★ v3 进了弃用清单，且 why 写明「发布环境失效 / 预留域名未绑定」（不是含糊的「停更」）');
 ok(/停在 v10\.21/.test(DEP), 'v3 的 why 写明实测停点 v10.21');

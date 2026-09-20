@@ -68,7 +68,7 @@
 
 ### 防线
 
-静态 **22 套 / 1437 条 / 0 失败**（新增 `tools/test-twin.js` 69 条 + `tools/test-covers.js` 49 条）·
+静态 **22 套 / 1439 条 / 0 失败**（新增 `tools/test-twin.js` 69 条 + `tools/test-covers.js` 49 条）·
 实拍 `preview-v1023.js` **17/17** ＋ `preview-covers.js` **11/11**（用 `naturalWidth>0` 验「图真的加载出来了」）·
 反证 `tools/_counterproof-v1023.js` **9/9 打坏即变红**。
 ★ 反证当场抓出一条**假绿**（断言被 CSS 注释里引用的同一串文字命中 ⇒ 改行首锚定），
@@ -164,7 +164,7 @@
 ### 验证
 
 ```
-node tools/run-all.js                → 22 套 / 1437 条 / 0 失败
+node tools/run-all.js                → 22 套 / 1439 条 / 0 失败
 node tools/preview-v1022.js          → 44 / 44（含 5 张实拍截图）
 node tools/preview-v1023.js          → 17 / 17（跨源按钮：显形/可点/指向详情页）
 node tools/_counterproof-v1022.js    → 8 / 8「打坏即变红」
@@ -374,8 +374,14 @@ Celebration、`Command & Conquer Red Alert`→红色警戒2）—— 这些是**
 ### 当前线上链接
 
 ```
-https://36aa37e911e6447eb86eb187240daff2.app.workbuddy.host/
+https://gamehub-agg-v4.app.workbuddy.host/
 ```
+
+> ⚠️ 判定「线上是不是最新版」**必须比 `index.html` 的 md5** ——
+> 不更新的旧域名**也返回 HTTP 200**，只看状态码会得出完全相反的结论。
+> ⚠️ 比 md5 时响应体要用 **`Buffer.concat(chunks)`** 拼，别用字符串 `b += chunk`：
+> 后者会在**跨 chunk 的中文字符**上损坏 UTF-8 ⇒ 把「完全一致」误判成「不一致」
+> （2026-09-20 实测踩到）。
 
 （**v10.22 起改用这条**。⚠️ 它是**平台自动域名**，未登记在 `.workbuddy/applications.yaml`；
 实测**不跟随本地改动**（放临时文件探远端 → 404）⇒ **是快照**，改完本地不会自动上线。

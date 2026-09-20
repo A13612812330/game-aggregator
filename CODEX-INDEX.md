@@ -72,7 +72,7 @@
 >   「欺世欢悦 4001800」实测就是这种 ⇒ **只在 HTTP 2xx + image/\* 验证通过后才写回**，并回填 `appid`）。
 > **效果**：四榜 41 条无封面 **1 → 0**（线上 2 → 0）· 全库 **99.96% → 100.00%** ·
 >   实拍「图真的加载了」`naturalWidth > 0` **19/19 张**。
-> **防线**：静态 **22 套 / 1437 条 / 0 失败**（新增 `test-twin.js` 69 条 ＋ `test-covers.js` 49 条）·
+> **防线**：静态 **22 套 / 1439 条 / 0 失败**（新增 `test-twin.js` 69 条 ＋ `test-covers.js` 49 条）·
 >   实拍 `preview-v1023.js` **17/17**（含 `elementFromPoint` 验「真能点到」）＋
 >   `preview-covers.js` **11/11**（判据 `img.naturalWidth > 0` —— 元素存在 ≠ 图加载成功）·
 >   反证 `_counterproof-v1023.js` **9/9 打坏即变红**。
