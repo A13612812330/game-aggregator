@@ -37,12 +37,29 @@ const OUT = path.join(__dirname, '..', '_preview');
 /* 抽样游戏：用户截图那款（机型最多、踩过全部三个 bug：6 台上限 / 残缺代号 / 误导文案）
  * 其中 `HONOR MTN-NX3` 本地查不到芯片、要靠 kalvo 联网补 → 正好验 ③ */
 const GAME = { id: 'xd-2044', name: '终极漫画英雄vs卡普空3' };
-/* 这一版必须出现在页面上的特征串（漏一个就说明线上是旧包） */
+/* 这一版必须出现在页面上的特征串（漏一个就说明线上是旧包）
+ * ⚠️ 只写「**首页 index.html** 上能看到的串」——派生页（emulator / unpack）的串（如 dmCard）
+ *    不在首页里，写进来必然失败。
+ * ⚠️ 新增串**必须先在本地 `public/index.html` 里验证存在**（见下方 LOCAL_MISSING 自检）：
+ *    本地都没有的串区分不了新旧版本，只会把任何线上包都判成旧包 —— 假红。
+ *    （2026-09-20 立此规矩：`tools/audit-apps.js` 的门禁就是这样过期的，见该文件 ③-b 段。） */
 const MUST = [
   'bhHwSlot', 'toggleDevHardware', 'data-hw', 'hasDetailUrl', 'd-hw .kvs2',
   /* ---- v10.18：三要素徽标 + 门槛并入行内 + 未收录联网补全 ---- */
   'chipHtml', 'chipShort', 'chipTag', '.chip.ol', '联网查询中', 'gtag', 'd-devlist-lg',
+  /* ---- v10.19：模拟器指南模块导航 ---- */
+  'eg-nav',
+  /* ---- v10.24：机型兼容 / 解包统一卡片（占位块 + 图片 404 兜底） ---- */
+  'covAbbr', '.emu-card .cov.ph{', 'window.covErr = covErr',
 ];
+
+/* ★ MUST 自检：本地首页都没有的串不可能区分新旧版本，只会制造假红 */
+const LOCAL_MISSING = (() => {
+  try {
+    const loc = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+    return MUST.filter((k) => !loc.includes(k));
+  } catch (e) { return []; }
+})();
 
 let pass = 0, fail = 0;
 function chk(ok, name, extra) {
@@ -92,7 +109,10 @@ function chk(ok, name, extra) {
 
   const html = await p.content();
   const missing = MUST.filter((k) => !html.includes(k));
-  chk(missing.length === 0, '[页面] 线上首页含本版全部特征串', missing.length ? '缺：' + missing.join(', ') : MUST.length + ' 项齐');
+  chk(missing.length === 0, '[页面] 线上首页含全部特征串（v10.14~v10.24）', missing.length ? '缺：' + missing.join(', ') : MUST.length + ' 项齐');
+  chk(LOCAL_MISSING.length === 0,
+    '★ MUST 每一项在**本地首页**里都存在（本地没有的串区分不了新旧，只会假红）',
+    LOCAL_MISSING.length ? '本地缺：' + LOCAL_MISSING.join(', ') : MUST.length + ' 项');
 
   console.log(`\n=== 线上详情页「${GAME.name}」实拍 ===`);
   await p.evaluate((x) => window.openDetailById(x), GAME.id);

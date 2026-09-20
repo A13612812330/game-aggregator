@@ -56,7 +56,7 @@
 
 ### 防线
 
-静态 **23 套 / 1514 条 / 0 失败**（新增 `tools/test-card-parity.js` 69 条，已登记进 `run-all.js` 的 `SUITES`）·
+静态 **23 套 / 1522 条 / 0 失败**（新增 `tools/test-card-parity.js` 69 条，已登记进 `run-all.js` 的 `SUITES`）·
 实拍 `preview-v1024.js` **20/20**（含把某张卡的 `img.src` 换成不存在的地址、验 `92px → 92px` 的**端到端**兜底）·
 反证 `tools/_counterproof-v1024.js` **12/12 打坏即变红**。
 
@@ -67,6 +67,36 @@
 ② **减法型断言恒真** —— `ok(emu.maxH - up.maxH <= 60)`：解包 338 > 基线 232 ⇒ 表达式恒为负 ⇒ **永远通过**。
 并修掉一条**假红**：`Math.abs(dm.maxH - emu.maxH) <= 24` 判红（207 vs 232），
 差的 25px 是「手机专区卡多一行别名 `.alt`」，不是退化。
+
+### ✅ 已发布（2026-09-20）
+
+用户授权后选「**覆盖当前 LIVE**」`wbapp_047aLTlMY7YdDmtVpp3BYa`
+⇒ **同一 sandbox 复用成功**，链接**未变**：**https://gamehub-agg-v4.app.workbuddy.host/**
+
+| 验收项 | 结果 |
+|---|---|
+| 三页 md5 | index `c0eaccde19` · emulator `e4855f873b` · unpack `73e7d3b5bc` —— **逐字节一致** |
+| 对账 `tools/audit-apps.js` | LIVE「**与本地同版（含数据层）**」 |
+| 线上验收 `tools/verify-online.js` | **25 / 25**（`MUST` **16 项齐**） |
+| 线上站实拍（`BASE=<线上>` 跑 `preview-v1024.js`） | **20 / 20** —— 机型兼容 **21/24 真出图**、行内差 0px、占位块不矮、404 兜底 92→92px |
+
+★ **推翻一条旧结论**：v10.23 记的「覆盖旧 app 全部被硬拒 ⇒ 只能新建 app」**这次没成立** ——
+同样的覆盖动作被接受、链接与 sandbox 都没变
+⇒ 改成「**环境相关的偶发拒绝：先试覆盖，被拒再新建**」。
+
+★ **发布验收时顺手修掉三处「验收工具自己报反」**（都在判定链路上，错了结论正好反着来、且全不报错）：
+
+1. `tools/audit-apps.js` 门禁写死 `total === 3181`，而数据已涨到 **3,195** ⇒ 该门禁**本地也为假**
+   ⇒ 把 LIVE 判成「停在 v10.21 之前」（**差点把「发布成功」写成「没发上去」**）。
+   修：计数门禁一律 `>=` ＋ **门禁本地自检**（本地也不满足的进 `STALE`、**不参与版本判定**，
+   单列「⚠️ 标记失效」）；防线 `test-audit-apps.js` **28 → 41 条**；
+   反证 `tools/_counterproof-audit.js` **4/4**（并给反证加了「打坏后必须语法合法」的自保）。
+2. `tools/verify-online.js` 的 `MUST` 只到 v10.18，断言名却写「**本版全部**特征串」（over-claim）⇒
+   补到 **16 项**、改名「v10.14~v10.24」、加 `LOCAL_MISSING` 自检。
+3. 反证脚本第一版把 `if (…) x();` 换成裸语句**留下悬空 `else`** ⇒ 红的是 `SyntaxError`、不算数
+   ⇒ 反证前先 `node --check` 被打坏的文件。
+
+新增铁律 **PITFALLS 54~59**。
 
 ---
 
@@ -296,7 +326,7 @@ Celebration、`Command & Conquer Red Alert`→红色警戒2）—— 这些是**
 
 **新增三件工具**：`tools/test-match-release.js`（**42 条**，含反证——断言在护栏被打坏时**真的会红**）
 · `tools/diff-mobilehub.js`（产物 before/after 差分，专抓「真退化」）
-· `tools/audit-apps.js`（应用登记 × 域名实测**对账**）、`tools/test-audit-apps.js`（**28 条**）。
+· `tools/audit-apps.js`（应用登记 × 域名实测**对账**）、`tools/test-audit-apps.js`（**41 条**）。
 静态防线 **19 套**。
 
 **发布（v10.22）**：⚠️ **v3 无法覆盖更新** —— 发布工具**硬拒绝**：

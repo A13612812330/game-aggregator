@@ -62,6 +62,34 @@ ok(/test:\s*\(r\)\s*=>\s*r\.body\s*&&\s*r\.body\.total/.test(SRC),
   '数据层门控读 r.body.total（不是把 body 当响应对象用）');
 ok(/test:\s*\(r\)\s*=>\s*r\.status\s*===\s*200/.test(SRC), '接口型门控读 r.status');
 
+console.log('\n=== D-2. 门禁必须先过「本地自检」（2026-09-20 新增铁律）===');
+/* 背景：门禁写死 `total === 3181`，而当天数据已涨到 **3,195** ⇒ 该门禁**在本地也为假**。
+   过期门禁的表现不是报错，而是**每一个域名都被判成「旧版」** —— 假红，
+   而且正好把发布后验收污染成「LIVE 还没更新」（实测当天差点据此误判）。
+   判据：**一条只能在本地为真的断言，才有资格拿来判线上。** */
+/* ★ 这几条必须**只切 GATES 代码块**再断言 —— 不能搜整个文件：
+   本段上方的注释里就写着反例原文（`total === 3181`），搜全文必然命中注释 ⇒ 恒假。
+   这与 PITFALLS 15/37/46 是同一个坑：**注释里的同一串文字会把断言骗过去**。 */
+const GATES_BLOCK = (() => {
+  const s = SRC.indexOf('const GATES = [');
+  if (s < 0) return '';
+  return SRC.slice(s, SRC.indexOf('];', s) + 2);
+})();
+ok(GATES_BLOCK.length > 200, '★ 切到了 GATES 代码块本身（切不到 ⇒ 下面几条全是空跑）', GATES_BLOCK.length + 'B');
+ok(!/total\s*===\s*\d{3,}/.test(GATES_BLOCK),
+  '★ GATES 里的数据量门禁不许写等号（数据只会涨 ⇒ 写死必然在某天变永假 ⇒ 假红）');
+ok(/total\s*>=\s*\d{3,}/.test(GATES_BLOCK), 'GATES 用 `>=`：3181 是**下界**，不是定值');
+ok(/async function selfCheck\(/.test(SRC) && /LOCAL_BASE/.test(SRC),
+  '★ 存在本地自检（`selfCheck` + 本地地址）：门禁先拿本地跑一遍');
+ok(/self\.alive\.get\(g\)/.test(SRC),
+  '★ 远端缺口按「本地是否满足」分流，只有 `self.alive.get(g)` 为真才计入 missing');
+ok(/STALE\.set\(g,/.test(SRC) && /标记失效/.test(SRC),
+  '★ 本地也不满足的门禁进 STALE 并单列，**不参与版本判定**（否则只会制造假红）');
+ok(/async function gateHas\(g, text, get\)/.test(SRC),
+  '远端与本地共用同一个 `gateHas`（两套口径 = 两套结论）');
+ok(/reachable/.test(SRC) && /api\/health/.test(SRC),
+  '★ 本地服务没起时**不**据此判定门禁失效（否则会把版本判定能力静默关掉），而是打印告警');
+
 console.log('\n=== E. 必须收集「全部」缺口再取最旧 ===');
 /* break 在第一个缺口 ⇒ 「停在 v10.18」被报成「尚未发布 v10.21」 */
 ok(/const missing = \[\];/.test(SRC) && /missing\.push\(g\)/.test(SRC),

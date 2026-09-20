@@ -18,6 +18,11 @@
  * ★ 版本推断为什么不能只看 HTML：
  *   v10.21 是**纯数据层**改动（只换了 data/mobilehub.json），`index.html` 的 md5 **完全不变**。
  *   所以必须同时探接口：`/api/mobilehub/stats` 的 total 才能把 v10.20 与 v10.21 分开。
+ *
+ * ★ 门禁必须「先过本地自检」（2026-09-20 加，见 ③-b 段）：
+ *   门禁**过期**时不会报错，只会把**每一个域名**都判成旧版 —— 是假红，且正好污染发布后验收。
+ *   实测：门禁写死 `total === 3181`，而当天数据已涨到 3,195 ⇒ LIVE 只差一个 v10.24
+ *   却被报成「停在 v10.21 之前」。判据：**一条只能在本地为真的断言，才有资格拿来判线上。**
  */
 'use strict';
 const fs = require('fs');
@@ -78,12 +83,69 @@ function readLinks() {
 /* 顺序：新 → 旧。**收集全部缺口**，取最旧的那个当「线上停在哪一版之前」——
    只看第一个缺口会把「停在 v10.18」误报成「尚未发布 v10.21」（都对，但后者没用）。 */
 const GATES = [
-  { since: 'v10.21', name: '手游中心数据 3181 条（v10.21 尾缀剥离）', api: '/api/mobilehub/stats', test: (r) => r.body && r.body.total === 3181 },
+  /* ★ 数字一律用「≥ 当时水平」，**绝不写等号**：
+     数据只会涨 —— 写死 `=== 3181` 意味着它**必然**在某天变成永假，
+     而永假的门禁表现为「任何域名都缺这一版」= 假红（2026-09-20 实测踩到，详见自检段）。 */
+  { since: 'v10.24', name: '卡片版式统一（占位块 + 图片 404 兜底 covErr）', html: /window\.covErr\s*=\s*covErr/ },
+  { since: 'v10.21', name: '手游中心数据 ≥ 3181 条（v10.21 尾缀剥离）', api: '/api/mobilehub/stats', test: (r) => r.body && r.body.total >= 3181 },
   { since: 'v10.20', name: '解包匹配接口 /api/spec/dict', api: '/api/spec/dict', test: (r) => r.status === 200 },
   { since: 'v10.19', name: '指南模块导航 eg-nav', html: /eg-nav/ },
   { since: 'v10.18', name: '机型补全接口 /api/device/fill-stats', api: '/api/device/fill-stats', test: (r) => r.status === 200 },
   { since: 'v10.17', name: '设备译名接口 /api/device/market', api: '/api/device/market', test: (r) => r.status === 200 },
 ];
+
+/* ============ ③-b 门禁自检（本地先跑一遍） ============ */
+/* ★ 为什么必须有这一段（2026-09-20 实测踩到）：
+   门禁写的是 `total === 3181`，而当天数据已涨到 **3,195** ⇒ 这条门禁**在本地也为假**。
+   后果不是「报错」，而是**任何一个域名都被判成「旧版（缺 v10.21）」** ——
+   实测当天 LIVE 只差一个 v10.24，却被报成「停在 v10.21 之前」，正好把发布后验收污染反了。
+   同一天还有第二个例子：`/3181/` 这个 HTML 特征串在**本地 index.html 里也搜不到**。
+
+   **根本判据**：一条只能在本地为真的断言，才有资格拿来判线上。
+   本地不满足的门禁**不参与版本判定**（否则它只会制造假红），单独列成「⚠️ 标记失效」提示去修探针。
+
+   ⚠️ 本地服务没起时**不能**据此判定门禁失效（那样会把版本判定能力整个静默关掉）——
+   此时保守按「未失效」处理，并打印告警。 */
+const LOCAL_BASE = 'http://127.0.0.1:8123';
+let _selfCheck = null;
+
+async function localGet(p) {
+  const c = new AbortController();
+  const t = setTimeout(() => c.abort(), 8000);
+  try {
+    const r = await fetch(LOCAL_BASE + p, { signal: c.signal });
+    const txt = await r.text();
+    let body = null;
+    try { body = JSON.parse(txt); } catch { /* 非 JSON 就留 null */ }
+    return { status: r.status, text: txt, body };
+  } finally { clearTimeout(t); }
+}
+
+/* 统一吃 {status,text,body} 三件套 —— 与远端探针同一口径（分流过一次，判据恒假） */
+async function gateHas(g, text, get) {
+  if (g.html) return g.html.test(text);
+  return g.test(await get(g.api));
+}
+
+async function selfCheck(localTxt) {
+  if (_selfCheck) return _selfCheck;
+  let reachable = false;
+  try { reachable = (await localGet('/api/health')).status === 200; } catch { reachable = false; }
+
+  const alive = new Map();
+  for (const g of GATES) {
+    let has = false;
+    if (g.html) has = g.html.test(localTxt);
+    else if (reachable) { try { has = await gateHas(g, localTxt, localGet); } catch { has = false; } }
+    else has = true;                       // 本地服务没起 ⇒ 无法自检，保守按「未失效」
+    alive.set(g, has);
+  }
+  _selfCheck = { reachable, alive };
+  return _selfCheck;
+}
+
+/* 本地不满足的门禁，跨域名汇总后在末尾单列（不参与版本判定） */
+const STALE = new Map();
 
 async function probe(url, localMd5, localTxt) {
   const base = url.replace(/\/$/, '');
@@ -110,12 +172,15 @@ async function probe(url, localMd5, localTxt) {
     /* ★ 统一传「响应对象」给 test，不要按 JSON/text 分流 ——
        分流过一次：status===200 时把 body 传进去，`(r) => r.status === 200` 就永远为假，
        结果把 LIVE 判成了「缺 v10.20」。 */
+    /* ★ 远端缺的门禁必须分两类：**真缺口** vs **本地也缺（探针过期）**。
+       只有前者才有资格判版本；后者拿去做判据只会制造假红。 */
+    const self = await selfCheck(localTxt);
     const missing = [];
     for (const g of GATES) {
-      let remoteHas;
-      if (g.html) remoteHas = g.html.test(r.text);
-      else remoteHas = g.test(await get(g.api));
-      if (!remoteHas) missing.push(g);
+      const remoteHas = await gateHas(g, r.text, get);
+      if (remoteHas) continue;
+      if (self.alive.get(g)) missing.push(g);
+      else STALE.set(g, (STALE.get(g) || 0) + 1);   // 本地也不满足 ⇒ 标记失效，不计入
     }
     const oldest = missing[missing.length - 1];   // GATES 由新到旧 ⇒ 末位 = 最旧的缺口
 
@@ -168,6 +233,16 @@ async function probe(url, localMd5, localTxt) {
         (r.err || r.detail || '—') + ' |');
     }
     console.log('');
+    /* ★ 把「探针过期」说出来 —— 不说的话，下一个人会拿着失效门禁去报「线上缺 X」 */
+    if (STALE.size) {
+      console.log('⚠️ **标记失效**（本地自检同样不通过 ⇒ 这些门禁**不参与**上面的版本判定）：');
+      for (const [g, n] of STALE) console.log('- `' + g.since + '` · ' + g.name + '（' + n + ' 个域名都缺，**本地也一样缺**）');
+      console.log('  ⇒ 它们区分不了新旧版本，别再拿它们报「线上缺 X」。修法见本文件 ③-b 段。\n');
+    }
+    if (!_selfCheck || !_selfCheck.reachable) {
+      console.log('⚠️ 本地服务（' + LOCAL_BASE + '）未就绪 ⇒ 接口型门禁**跳过了自检**，上面的判定可能混入假红。');
+      console.log('   ⇒ 先起服务（`node server.js`）再重跑本脚本。\n');
+    }
     console.log(liveOk ? '✅ LIVE 与本地逐字节一致。' : '❌ LIVE 不是本地这一版 —— 别急着说「已发布」。');
   }
 
