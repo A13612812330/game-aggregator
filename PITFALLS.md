@@ -378,6 +378,63 @@ v10.18 起每条带 `chip`/`chipSrc`/`needFill`）→ 缺芯片走
     ⇒ 凡是「取回字节再比对 / 哈希 / 落盘」的场景一律走 Buffer，字符串只在**确定收全**之后才 `toString()`。
     同族：`fs.readFileSync(p,'utf8')` 读二进制、`fetch().text()` 拿去比对哈希。
 
+48. ★ **模板字符串里不能出现反引号 —— 包括注释里的**（v10.24 一轮内踩了两次）：
+    `tools/build-unpack-page.js` 里有一大段 CSS 位于反引号模板内，我在**注释**里写了 `` `.cov` ``
+    ⇒ 模板提前闭合，报 `SyntaxError: Unexpected token '.'`；
+    半个小时后在 `tools/preview-v1024.js` 又踩一次（注释里写 `` `align-items:stretch` ``，
+    报 `Unexpected identifier 'align'`）。
+    ⇒ 写「模板里的 CSS / JS 片段」时，注释里**只用中文引号或去掉引号**；
+    改完先 `node --check <file>` 再跑，别等运行时才炸。
+    正解示例（本项目已采用）：`/* 网格用了 align-items:stretch …… */`。
+
+49. ★ **同一个类名拼错 = 静默无样式**（v10.24 实测的真 bug）：
+    `DM_TIER` 原本写 `cls: 'ok'|'mid'|'low'`，模板拼出 `class="pill ok"` / `pill mid` / `pill low`，
+    而共享 CSS 里**只有** `.pill.fps.smooth|ok|low|bad` —— 三个档位全是灰底 `rgb(241,243,248)`，
+    与旁边的普通 pill 长得一模一样，**不报错、不告警、DOM 断言也全过**。
+    ⇒ 判据不能写「CSS 里有 `.pill.fps.smooth`」，要从**引用侧**取类名、到**定义侧**逐个核对：
+    ```js
+    for (const m of (emuSrc + upSrc).matchAll(/['"]fps\s+(smooth|ok|low|bad)['"]/g)) …  // 引用侧
+    new RegExp('\\.pill\\.fps\\.' + c + '\\{').test(idx)                              // 定义侧
+    ```
+    唯一能抓住它的是**浏览器实拍里读 `getComputedStyle(pill).backgroundColor`**，别只信 DOM 结构。
+
+50. ★ **断言锚点太宽 = 假绿；「全文件搜一个类名」是最常见的一种**（v10.24 自查发现）：
+    `test-card-parity.js` 第一版写 `ok(/class="cov noimg"/.test(emuSrc), '★ 无图时走 .cov.noimg')`
+    —— 标签说的是**机型兼容**，命中的却是同文件里**手机专区** `emuCard` 的那一行。
+    把机型兼容的兜底整个删掉，它照样绿。
+    ⇒ 凡是断言「某个函数怎么实现」，**必须先按行把那个函数体抠出来**（`sliceFn(src, /^function dmCard\(/, /^\}$/)`），
+    再在**函数体字符串**上断言；并额外断言「真抠出来了、长度 > N」（抠成空串 = 下面全空跑）。
+    抠函数体**不能用 `[\s\S]{0,2000}?}` 这类窗口** —— 卡片模板上千字符，窗口一小就抠不到。
+
+51. ★ **「只断言总数够」会被「两条链路互相顶替」骗过**（v10.24 实测）：
+    取封面有两条链路，阈值定 `withCov >= 400`。实测**只留 ① 是 417、只留 ② 是 523** ——
+    两条**各自都过线**，所以 400 这个阈值拦不住任何一条分支退化（掐掉任何一条都不变红）。
+    ⇒ 两手：① 阈值压到接近实测（526 → 500）；② **给每条分支配一个「只有它能解」的样本键**
+    （实测挑：① 独有 `EA_SPORTS__FIFA_23`，② 独有 `Tomb_Raider`），
+    这样掐掉哪条分支，对应那条断言必然变红（已由 `_counterproof-v1024.js` 验证）。
+    通用形状：**冗余设计的覆盖率断言，必须回答「哪条分支挂了它才会红」**。
+
+52. ★ **网格 `align-items:stretch` 下「全屏等高」是错误预期；减法型断言写反方向会恒真**（v10.24 实测）：
+    ① 实拍里我断言 `机型兼容高度 == 手机专区高度（差 ≤24px）`，实得 207 vs 232 判红 ——
+    逐张打印后发现**同一行内恒等高**（第 1 行 4 张全 207、第 2 行全 185），
+    差的那 25px 来自「手机专区卡多一行别名 `.alt`」，行间差来自**标题折行**（`.bd` 59→81）。
+    所以正确断言是三条：屏内跨度 ≤ 基线跨度+30 ／ **行内最大差 ≤ 4px** ／
+    **用占位块的那几张不矮于同行最高卡**。
+    ② 同一次我还写了 `ok(emu.maxH - up.maxH <= 60)` —— 解包 338 > 基线 232，
+    表达式恒为负 ⇒ **永远通过**。减法比较必须**取绝对值**或写明确方向，
+    否则「哪个大」这一项根本没被判过（同族：PITFALLS 46）。
+
+53. ★ **图挂掉时的兜底不能「收起占位」，也不能只 `visibility:hidden` 留一块灰**（v10.24 实测）：
+    解包卡原本 `onerror="this.parentNode.classList.add('noimg');this.remove()"`，
+    而 `.cov.noimg{height:0;display:none}` ⇒ 只要封面 404，**封面位整个塌掉**，
+    同一行其它卡有图、就它少一截 —— 正是用户说的「很空」。
+    ⇒ 统一成**换同尺寸占位块**（`covErr(img, abbr)`：给 `.cov` 加 `.ph`、塞进缩写 span），
+    实拍判据是「`before=92px → after=92px`、`classList` 有 `ph`、span 有字」。
+    ⚠️ 内联 `onerror` 只在**全局环境**里找名字：`const covErr = …` 不 `window.covErr = covErr`
+    就是线上 `ReferenceError`，而且这个错误会被浏览器 onerror **静默吞掉**（静态断言已守这一条）。
+    ⚠️ 另一个易漏点：**占位块的高度靠 `.cov` 的固定 `height:92px` 撑住** ——
+    改成 `min-height` 就定不住（同族 PITFALLS 5）。
+
 ---
 
 ## 附：已沉淀 skills（勿在本文件重复）

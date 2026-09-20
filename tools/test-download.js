@@ -257,14 +257,29 @@ eq(dl.serverOf('https://store.steampowered.com/app/1/'), '其他链接',
   ok(/needAuth:\s*!!data\.needAuth/.test(read('server.js')),
     '服务端把 needAuth 透传给前端（只看 items 里有没有 real，前端分不清「被锁」和「超时」）');
 
-  /* 解包页：结果卡片要跟手机专区同版式 */
+  /* 解包页：结果卡片要跟手机专区同版式
+   * ★ v10.24 起判据收紧：**光有 `.emu-card` 类名不算「同版式」**。
+   *   v10.22 就是只借了类名，正文另起 `.top/.nm/.cnt` + 六个自定义区块，
+   *   卡片高 352px（手机专区 232px）—— 用户一眼看出不是同一套东西。
+   *   真正要守的是**正文骨架同构**：`.bd > h4 + .alt + .meta > .pill + .tgs > .tg`。
+   *   ⚠️ 断言一律**锚定到模板串**（`'<div class="bd">' +`），不裸搜类名 ——
+   *   注释里出现过同一串文字就会恒真（本项目栽过：PITFALLS 15/37）。 */
   const up = read('public/unpack.html');
   ok(/class="emu-grid up-list"/.test(up), '★ 解包结果容器复用手机专区的 .emu-grid 网格');
-  ok(/class="emu-card[^"]*up-mc/.test(up), '★ 结果卡片复用手机专区的 .emu-card 版式（不是另写一套）');
+  ok(/class="emu-card[^"]*up-mc/.test(up), '★ 结果卡片复用手机专区的 .emu-card 类名');
+  ok(/'<div class="bd">' \+/.test(up), '★ 卡片正文是 .bd 容器（与手机专区同构）');
+  ok(/'<h4 title="' \+ esc\(it\.name\)/.test(up), '★ 游戏名用 <h4>（手机专区同款标题位，不是自定义 .nm）');
+  ok(/'<div class="meta">' \+ pills \+/.test(up) && /'<div class="tgs">' \+ tags\.join/.test(up),
+    '★ 徽标行 / 标签行走手机专区同款 .meta > .pill 与 .tgs > .tg');
+  ok(!/'<div class="top">'/.test(up) && !/'<div class="nm">'/.test(up),
+    '★ 不再产出 v10.22 的 .top / .nm 正文（同一语义只留一套版式）');
+  ok(/'<span class="tg src">要求来自 '/.test(up), '★ 要求来源做成手机专区同款 .tg src 标签');
+  ok(!/\.up-badge\{/.test(up) && !/\.up-mc-src\{/.test(up) && !/\.up-mc-row\{/.test(up),
+    '★ 旧版式的死 CSS 已清掉（留着会让下一个人以为卡片还是旧版式）');
   ok(/btn\('hot', '🔥 热门优先'/.test(up), '解包页有「🔥 热门优先」排序按钮');
   ok(/sort: 'hot'/.test(up), '★ 解包页默认排序是 hot（不是规模优先）');
   ok(/data-dl-open/.test(up), '★ 解包页卡片能直接唤起下载弹窗');
-  ok(/\.up-mc-btns/.test(up) && /\.up-mc-src/.test(up), '解包页补了「要求来源」与按钮行样式');
+  ok(/\.up-mc-btns\{/.test(up), '解包页有按钮行样式 .up-mc-btns');
   ok(!/对照库：Steam 官方配置要求/.test(up), '★ 判定依据面板不再写死「Steam 官方配置要求 N 款」这种过期口径');
 
   /* ============================================================

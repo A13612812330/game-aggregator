@@ -200,18 +200,11 @@ const CSS_EXTRA = `
     font:650 12px/1 var(--font);color:var(--c-t2)}
   .up-only.on{background:var(--c-primary-soft);border-color:var(--c-primary);color:var(--c-primary)}
   .up-list{margin:2px 0 4px}
-  /* ★ v10.22：结果卡片改成**手机专区同款版式**（用户口径：「解包匹配的游戏能够跟
-     手机专区的前端展示效果一样」）—— 直接复用主源的 .emu-card / .emu-grid，
-     这里只补解包页多出来的三样东西：判定徽标行、要求来源标注、下载/源站按钮行。
-     ★ 复用而不是另写一套：另写必然与手机专区漂移（本项目在「同一语义只留一份」上踩过多次）。 */
-  .up-mc .cnt span{font-size:9.5px;color:var(--c-t3)}
-  .up-mc .nm{font-size:13.5px}
-  .up-mc-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-  .up-mc-src{font-size:10.5px;font-weight:650;color:var(--c-t3)}
-  .up-mc-src.dim{opacity:.75}
-  .up-mc .up-badge{font-size:10.5px;font-weight:750;border-radius:5px;padding:2.5px 7px}
-  .up-mc .up-badge-wrap{text-align:right}
-  .up-tg-score{background:#FFF4D6!important;color:#B45309!important}
+  /* ★ v10.24：结果卡片正文已换成**手机专区同款骨架**（.cov + .bd > h4 + .alt
+     + .meta > .pill + .tgs > .tg），档位徽标也改用手机专区那套 .pill.fps.*。
+     ⇒ v10.22 的自定义行（.up-mc-row / .up-mc-src / .up-badge.* / .up-mc .cnt|.nm）
+     **全部删掉**：页面已无一处产出这些类名，留着只会让下一个人以为卡片还是旧版式。
+     ⚠️ 本段是模板字符串里的 CSS，注释里**不能出现反引号**（会把模板提前闭合）。 */
   .up-mc-btns{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:1px;
     border-top:1px dashed var(--c-border);padding-top:8px}
   .up-mc-btns .cov-btn{margin-top:0}
@@ -219,13 +212,6 @@ const CSS_EXTRA = `
   .up-mc-go:hover{text-decoration:underline}
   .up-mc .up-min{font-size:11px}
   .up-mc .up-why{font-size:11px}
-  /* 判定徽标：卡片主版式复用手机专区，只有徽标是解包页自己的（手机专区没有「可跑性」概念） */
-  .up-badge{flex:none;font-size:10.5px;font-weight:750;border-radius:5px;padding:2.5px 7px}
-  .up-badge.sm{background:#DCFCE7;color:#15803D}
-  .up-badge.ok{background:#DBEAFE;color:#1D4ED8}
-  .up-badge.mb{background:#FEF3C7;color:#92400E}
-  .up-badge.un{background:#F1F3F7;color:#5A6474}
-  .up-badge.no{background:#FEE2E2;color:#B91C1C}
   .up-chips{display:flex;gap:5px;flex-wrap:wrap}
   .up-ch{font-size:10.5px;font-weight:650;border-radius:5px;padding:2px 6px;background:#F1F3F7;color:var(--c-t2)}
   .up-ch.ok{background:#EDF7F0;color:#15803D}

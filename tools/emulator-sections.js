@@ -408,22 +408,35 @@ const dmState = {
   offset: 0,
 };
 
+/* ★ v10.24：档位徽标必须复用手机专区那套 `.pill.fps.*`。
+   从前写的是 `cls: 'ok' | 'mid' | 'low'` ⇒ 拼出 `class="pill ok"` / `pill mid` / `pill low`，
+   而共享 CSS 里只有 `.pill.fps.smooth|ok|low|bad` —— 三个类**一个都不存在**
+   ⇒ 「流畅 / 可玩 / 勉强」是最重要的信号，却全是灰底默认色（和旁边没有颜色的 pill 长得一样）。
+   这类「类名拼错→静默无样式」不报错、测试也只断言类名在不在，只能靠对着共享 CSS 核。 */
 const DM_TIER = {
-  smooth: { txt: '流畅', cls: 'ok' },
-  ok: { txt: '可玩', cls: 'mid' },
-  maybe: { txt: '勉强', cls: 'low' },
+  smooth: { txt: '流畅', cls: 'fps smooth' },
+  ok: { txt: '可玩', cls: 'fps ok' },
+  maybe: { txt: '勉强', cls: 'fps low' },
 };
 
 function dmFmtScore(s) {
   return s == null ? '—' : Math.round(s);
 }
 
-/** 机型卡片 */
+/** 机型卡片
+ *  ★ v10.24：正文与手机专区**同构**的五块 —— `.cov` / `.bd > h4` / `.meta > .pill` / `.tgs > .tg`。
+ *  从前「最低参考」单起一行 `.dm-need`，而那行是手机专区没有的第六块 ⇒ 骨架不一致。
+ *  现在折算成 `.tgs` 里的一枚 `.tg`，与手机专区的「最低 Mali-G52 MC2」同位同款。
+ *
+ *  无封面时用 `.cov.ph`（同尺寸占位块，缩写走共用的 covAbbr），**不用**手机专区的
+ *  `.cov.noimg`（把封面区收起）：手机专区能 100% 有图是因为它按「有库内条目」过滤过，
+ *  本专区不能过滤（那会把真正能跑、只是库里没收录的冷门游戏藏掉，实测约占 48%）。
+ */
 function dmCard(g) {
   const t = DM_TIER[g.verdict] || { txt: '—', cls: '' };
   const cov = g.libCover
-    ? `<div class="cov"><img src="${esc(g.libCover)}" alt="" loading="lazy" referrerpolicy="no-referrer"></div>`
-    : `<div class="cov noimg"><span>${esc((g.name || '?').slice(0, 2).toUpperCase())}</span></div>`;
+    ? `<div class="cov"><img src="${esc(g.libCover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="covErr(this,'${esc(covAbbr(g.name))}')"></div>`
+    : `<div class="cov ph"><span>${esc(covAbbr(g.name))}</span></div>`;
   return `<article class="emu-card${g.libCover ? ' has-cov' : ''}" data-k="${esc(g.k)}" data-p="${esc(g.name || '')}">
     ${cov}
     <div class="bd">
@@ -433,7 +446,7 @@ function dmCard(g) {
         <span class="pill">${g.configs || 0} 套配置</span>
         ${g.devices ? `<span class="pill">${g.devices} 机型</span>` : ''}
       </div>
-      <div class="dm-need">最低参考 <code>${esc(g.minGpu || '—')}</code></div>
+      <div class="tgs"><span class="tg" title="这款游戏被跑通过的最弱 GPU —— 比它强的机型都能跑">最低 <code>${esc(g.minGpu || '—')}</code></span></div>
     </div>
   </article>`;
 }

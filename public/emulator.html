@@ -341,6 +341,16 @@
   .emu-card .cov{position:relative;height:92px;margin:-2px -2px 3px;border-radius:9px;overflow:hidden;background:#EEF1F7}
   .emu-card .cov img{width:100%;height:100%;object-fit:cover;display:block}
   .emu-card .cov.noimg{height:0;margin:0;display:none}
+  /* ★ v10.24「无封面占位块」：
+     机型兼容 / 解包专区列出的是「能跑的游戏」，**不能**像手机专区那样按「有库内条目」过滤
+     （那会把真正能跑、只是库里没收录的游戏藏掉）。实测机型兼容里约 48% 的游戏对不上端游库。
+     若照搬手机专区的 `.cov.noimg`（把封面区收起），网格被拉齐后这些卡顶部会空出 92px ——
+     同一排里其它卡都有图，就它一块白，比「没有图」更扎眼。
+     所以这两个专区改用本类：**同尺寸、沿用 .cov 自身底色**的占位块，只放游戏名缩写。
+     绝不用网图/截图顶替 —— 「宁可不显示，也不安一张错的图」是本项目铁律。 */
+  .emu-card .cov.ph{display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#EEF1F7,#E3E8F1)}
+  .emu-card .cov.ph span{font:800 21px/1 var(--font-num);color:#9AA7B8;letter-spacing:1.5px;user-select:none}
   .emu-card.has-cov .cov{cursor:pointer}
   .emu-card.has-cov .cov::after{content:'查看详情 ↗';position:absolute;right:6px;bottom:6px;font-size:9.5px;font-weight:800;color:#fff;
     background:rgba(12,18,38,.62);border-radius:5px;padding:2px 7px;opacity:0;transition:.15s;backdrop-filter:blur(2px)}
@@ -855,8 +865,8 @@
   .dm-f:hover{border-color:#FCD34D}
   .dm-f.on{background:linear-gradient(135deg,#F59E0B,#D97706);border-color:transparent;color:#fff}
   /* 结果网格 */
-  .dm-need{font-size:10.5px;color:var(--c-t3);margin-top:5px}
-  .dm-need code{font-family:var(--font-num);color:#B45309;font-weight:700}
+  /* ★ v10.24：`.dm-need` 已删 —— 机型卡正文改成与手机专区同构的 `.tgs > .tg`，
+     「最低参考 XXX」折成其中一枚标签。留着这条规则会让下一个人以为还有第六块正文。 */
   .dm-empty{grid-column:1/-1;text-align:center;color:var(--c-t3);font-size:12px;padding:22px 0}
   .dm-more{display:block;margin:15px auto 0;border:1px solid var(--c-border);background:#fff;border-radius:10px;
     padding:9px 26px;cursor:pointer;font:700 12px var(--font);color:var(--c-t2)}
@@ -1742,6 +1752,30 @@
 const $ = (s, r) => (r || document).querySelector(s);
 const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* ★ v10.24：无封面占位块里的缩写（`.cov.ph > span`）。三页共用一份 —— 机地/手机/解包
+   三条链路各写一遍必然出现「同一个游戏三个缩写」（同一语义只留一份实现）。 */
+const covAbbr = (name) => {
+  const s = String(name == null ? '' : name).trim();
+  if (!s) return '?';
+  const words = s.split(/[\s:_\-–—]+/).filter(Boolean);
+  if (words.length >= 2 && /^[A-Za-z0-9]/.test(words[0])) return (words[0][0] + words[1][0]).toUpperCase();
+  return s.slice(0, 2).toUpperCase();
+};
+/* ★ v10.24：封面图**加载失败**时的兜底 —— 换成同尺寸占位块，**不是**把封面区收起。
+   本站既有写法是 `onerror="this.style.visibility='hidden'"`（首页各卡），
+   但 `.cov.noimg`（`height:0;display:none`）会让整块封面位塌掉 ——
+   同一行其它卡有图时，这张就「少一截」，正是用户说的「很空」。
+   写成全局函数（而不是内联一长串）是为了让三条链路共用同一份逻辑。 */
+const covErr = (img, abbr) => {
+  const box = img && img.parentNode;
+  if (!box || !box.classList) return;
+  box.classList.add('ph');
+  box.textContent = '';
+  const sp = document.createElement('span');
+  sp.textContent = abbr || '?';
+  box.appendChild(sp);
+};
+window.covErr = covErr;
 const okScoreV = (v) => v != null && v > 0 && v <= 10;
 let toastTimer;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2400); }
@@ -3166,22 +3200,35 @@ const dmState = {
   offset: 0,
 };
 
+/* ★ v10.24：档位徽标必须复用手机专区那套 `.pill.fps.*`。
+   从前写的是 `cls: 'ok' | 'mid' | 'low'` ⇒ 拼出 `class="pill ok"` / `pill mid` / `pill low`，
+   而共享 CSS 里只有 `.pill.fps.smooth|ok|low|bad` —— 三个类**一个都不存在**
+   ⇒ 「流畅 / 可玩 / 勉强」是最重要的信号，却全是灰底默认色（和旁边没有颜色的 pill 长得一样）。
+   这类「类名拼错→静默无样式」不报错、测试也只断言类名在不在，只能靠对着共享 CSS 核。 */
 const DM_TIER = {
-  smooth: { txt: '流畅', cls: 'ok' },
-  ok: { txt: '可玩', cls: 'mid' },
-  maybe: { txt: '勉强', cls: 'low' },
+  smooth: { txt: '流畅', cls: 'fps smooth' },
+  ok: { txt: '可玩', cls: 'fps ok' },
+  maybe: { txt: '勉强', cls: 'fps low' },
 };
 
 function dmFmtScore(s) {
   return s == null ? '—' : Math.round(s);
 }
 
-/** 机型卡片 */
+/** 机型卡片
+ *  ★ v10.24：正文与手机专区**同构**的五块 —— `.cov` / `.bd > h4` / `.meta > .pill` / `.tgs > .tg`。
+ *  从前「最低参考」单起一行 `.dm-need`，而那行是手机专区没有的第六块 ⇒ 骨架不一致。
+ *  现在折算成 `.tgs` 里的一枚 `.tg`，与手机专区的「最低 Mali-G52 MC2」同位同款。
+ *
+ *  无封面时用 `.cov.ph`（同尺寸占位块，缩写走共用的 covAbbr），**不用**手机专区的
+ *  `.cov.noimg`（把封面区收起）：手机专区能 100% 有图是因为它按「有库内条目」过滤过，
+ *  本专区不能过滤（那会把真正能跑、只是库里没收录的冷门游戏藏掉，实测约占 48%）。
+ */
 function dmCard(g) {
   const t = DM_TIER[g.verdict] || { txt: '—', cls: '' };
   const cov = g.libCover
-    ? `<div class="cov"><img src="${esc(g.libCover)}" alt="" loading="lazy" referrerpolicy="no-referrer"></div>`
-    : `<div class="cov noimg"><span>${esc((g.name || '?').slice(0, 2).toUpperCase())}</span></div>`;
+    ? `<div class="cov"><img src="${esc(g.libCover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="covErr(this,'${esc(covAbbr(g.name))}')"></div>`
+    : `<div class="cov ph"><span>${esc(covAbbr(g.name))}</span></div>`;
   return `<article class="emu-card${g.libCover ? ' has-cov' : ''}" data-k="${esc(g.k)}" data-p="${esc(g.name || '')}">
     ${cov}
     <div class="bd">
@@ -3191,7 +3238,7 @@ function dmCard(g) {
         <span class="pill">${g.configs || 0} 套配置</span>
         ${g.devices ? `<span class="pill">${g.devices} 机型</span>` : ''}
       </div>
-      <div class="dm-need">最低参考 <code>${esc(g.minGpu || '—')}</code></div>
+      <div class="tgs"><span class="tg" title="这款游戏被跑通过的最弱 GPU —— 比它强的机型都能跑">最低 <code>${esc(g.minGpu || '—')}</code></span></div>
     </div>
   </article>`;
 }

@@ -343,6 +343,16 @@
   .emu-card .cov{position:relative;height:92px;margin:-2px -2px 3px;border-radius:9px;overflow:hidden;background:#EEF1F7}
   .emu-card .cov img{width:100%;height:100%;object-fit:cover;display:block}
   .emu-card .cov.noimg{height:0;margin:0;display:none}
+  /* ★ v10.24「无封面占位块」：
+     机型兼容 / 解包专区列出的是「能跑的游戏」，**不能**像手机专区那样按「有库内条目」过滤
+     （那会把真正能跑、只是库里没收录的游戏藏掉）。实测机型兼容里约 48% 的游戏对不上端游库。
+     若照搬手机专区的 `.cov.noimg`（把封面区收起），网格被拉齐后这些卡顶部会空出 92px ——
+     同一排里其它卡都有图，就它一块白，比「没有图」更扎眼。
+     所以这两个专区改用本类：**同尺寸、沿用 .cov 自身底色**的占位块，只放游戏名缩写。
+     绝不用网图/截图顶替 —— 「宁可不显示，也不安一张错的图」是本项目铁律。 */
+  .emu-card .cov.ph{display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#EEF1F7,#E3E8F1)}
+  .emu-card .cov.ph span{font:800 21px/1 var(--font-num);color:#9AA7B8;letter-spacing:1.5px;user-select:none}
   .emu-card.has-cov .cov{cursor:pointer}
   .emu-card.has-cov .cov::after{content:'查看详情 ↗';position:absolute;right:6px;bottom:6px;font-size:9.5px;font-weight:800;color:#fff;
     background:rgba(12,18,38,.62);border-radius:5px;padding:2px 7px;opacity:0;transition:.15s;backdrop-filter:blur(2px)}
@@ -857,8 +867,8 @@
   .dm-f:hover{border-color:#FCD34D}
   .dm-f.on{background:linear-gradient(135deg,#F59E0B,#D97706);border-color:transparent;color:#fff}
   /* 结果网格 */
-  .dm-need{font-size:10.5px;color:var(--c-t3);margin-top:5px}
-  .dm-need code{font-family:var(--font-num);color:#B45309;font-weight:700}
+  /* ★ v10.24：`.dm-need` 已删 —— 机型卡正文改成与手机专区同构的 `.tgs > .tg`，
+     「最低参考 XXX」折成其中一枚标签。留着这条规则会让下一个人以为还有第六块正文。 */
   .dm-empty{grid-column:1/-1;text-align:center;color:var(--c-t3);font-size:12px;padding:22px 0}
   .dm-more{display:block;margin:15px auto 0;border:1px solid var(--c-border);background:#fff;border-radius:10px;
     padding:9px 26px;cursor:pointer;font:700 12px var(--font);color:var(--c-t2)}
@@ -1394,18 +1404,11 @@
     font:650 12px/1 var(--font);color:var(--c-t2)}
   .up-only.on{background:var(--c-primary-soft);border-color:var(--c-primary);color:var(--c-primary)}
   .up-list{margin:2px 0 4px}
-  /* ★ v10.22：结果卡片改成**手机专区同款版式**（用户口径：「解包匹配的游戏能够跟
-     手机专区的前端展示效果一样」）—— 直接复用主源的 .emu-card / .emu-grid，
-     这里只补解包页多出来的三样东西：判定徽标行、要求来源标注、下载/源站按钮行。
-     ★ 复用而不是另写一套：另写必然与手机专区漂移（本项目在「同一语义只留一份」上踩过多次）。 */
-  .up-mc .cnt span{font-size:9.5px;color:var(--c-t3)}
-  .up-mc .nm{font-size:13.5px}
-  .up-mc-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-  .up-mc-src{font-size:10.5px;font-weight:650;color:var(--c-t3)}
-  .up-mc-src.dim{opacity:.75}
-  .up-mc .up-badge{font-size:10.5px;font-weight:750;border-radius:5px;padding:2.5px 7px}
-  .up-mc .up-badge-wrap{text-align:right}
-  .up-tg-score{background:#FFF4D6!important;color:#B45309!important}
+  /* ★ v10.24：结果卡片正文已换成**手机专区同款骨架**（.cov + .bd > h4 + .alt
+     + .meta > .pill + .tgs > .tg），档位徽标也改用手机专区那套 .pill.fps.*。
+     ⇒ v10.22 的自定义行（.up-mc-row / .up-mc-src / .up-badge.* / .up-mc .cnt|.nm）
+     **全部删掉**：页面已无一处产出这些类名，留着只会让下一个人以为卡片还是旧版式。
+     ⚠️ 本段是模板字符串里的 CSS，注释里**不能出现反引号**（会把模板提前闭合）。 */
   .up-mc-btns{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:1px;
     border-top:1px dashed var(--c-border);padding-top:8px}
   .up-mc-btns .cov-btn{margin-top:0}
@@ -1413,13 +1416,6 @@
   .up-mc-go:hover{text-decoration:underline}
   .up-mc .up-min{font-size:11px}
   .up-mc .up-why{font-size:11px}
-  /* 判定徽标：卡片主版式复用手机专区，只有徽标是解包页自己的（手机专区没有「可跑性」概念） */
-  .up-badge{flex:none;font-size:10.5px;font-weight:750;border-radius:5px;padding:2.5px 7px}
-  .up-badge.sm{background:#DCFCE7;color:#15803D}
-  .up-badge.ok{background:#DBEAFE;color:#1D4ED8}
-  .up-badge.mb{background:#FEF3C7;color:#92400E}
-  .up-badge.un{background:#F1F3F7;color:#5A6474}
-  .up-badge.no{background:#FEE2E2;color:#B91C1C}
   .up-chips{display:flex;gap:5px;flex-wrap:wrap}
   .up-ch{font-size:10.5px;font-weight:650;border-radius:5px;padding:2px 6px;background:#F1F3F7;color:var(--c-t2)}
   .up-ch.ok{background:#EDF7F0;color:#15803D}
@@ -1621,6 +1617,30 @@
 const $ = (s, r) => (r || document).querySelector(s);
 const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* ★ v10.24：无封面占位块里的缩写（`.cov.ph > span`）。三页共用一份 —— 机地/手机/解包
+   三条链路各写一遍必然出现「同一个游戏三个缩写」（同一语义只留一份实现）。 */
+const covAbbr = (name) => {
+  const s = String(name == null ? '' : name).trim();
+  if (!s) return '?';
+  const words = s.split(/[\s:_\-–—]+/).filter(Boolean);
+  if (words.length >= 2 && /^[A-Za-z0-9]/.test(words[0])) return (words[0][0] + words[1][0]).toUpperCase();
+  return s.slice(0, 2).toUpperCase();
+};
+/* ★ v10.24：封面图**加载失败**时的兜底 —— 换成同尺寸占位块，**不是**把封面区收起。
+   本站既有写法是 `onerror="this.style.visibility='hidden'"`（首页各卡），
+   但 `.cov.noimg`（`height:0;display:none`）会让整块封面位塌掉 ——
+   同一行其它卡有图时，这张就「少一截」，正是用户说的「很空」。
+   写成全局函数（而不是内联一长串）是为了让三条链路共用同一份逻辑。 */
+const covErr = (img, abbr) => {
+  const box = img && img.parentNode;
+  if (!box || !box.classList) return;
+  box.classList.add('ph');
+  box.textContent = '';
+  const sp = document.createElement('span');
+  sp.textContent = abbr || '?';
+  box.appendChild(sp);
+};
+window.covErr = covErr;
 const okScoreV = (v) => v != null && v > 0 && v <= 10;
 let toastTimer;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2400); }
@@ -3814,12 +3834,15 @@ init();
     minRequirements: { ram: '8 GB', storage: '40 GB', dx: '11' },
   }, null, 2);
 
+  /* `c`  = 旧的 `.up-badge.*` 类名（统计条图例还在用，保留）
+   * `pill` = 手机专区同款 `.pill.fps.*`（绿/蓝/黄/红 = 实测帧率那套配色），卡片正文改用它。
+   *   ★ 不要为「解包档位」另起第五种配色 —— 同一语义两套视觉必然漂移。 */
   const VERDICT = {
-    smooth: { t: '流畅', c: 'sm' },
-    ok: { t: '可跑', c: 'ok' },
-    maybe: { t: '待确认', c: 'mb' },
-    unknown: { t: '信息不足', c: 'un' },
-    no: { t: '不可跑', c: 'no' },
+    smooth: { t: '流畅', c: 'sm', pill: 'fps smooth' },
+    ok: { t: '可跑', c: 'ok', pill: 'fps ok' },
+    maybe: { t: '待确认', c: 'mb', pill: 'fps low' },
+    unknown: { t: '信息不足', c: 'un', pill: '' },
+    no: { t: '不可跑', c: 'no', pill: 'fps bad' },
   };
   const DIM_NAME = { arch: '架构', dx: '图形接口', ram: '内存', storage: '存储' };
   const DIM_STATE = { ok: '通过', fail: '不满足', unknown: '未判定', skip: '' };
@@ -4041,6 +4064,23 @@ init();
    * ★ 数据全部来自 spec-req.json（机地 17,220 话题 ∪ Steam 官方，按 Steam appid 精确合并）：
    *   封面 / 分类 / 容量 / 评分 / 热度都是源站字段，不是推断出来的。
    */
+  /**
+   * 结果卡片 —— **沿用手机专区的 .emu-card 版式**（用户口径，v10.22 首次提出、v10.24 对齐到位：
+   * 「解包匹配的游戏能够跟手机专区的前端展示效果一样」）。
+   *
+   * ★ 结构必须与手机专区**逐块同构**，否则就是「同一语义两套渲染」：
+   *     .cov  → 封面 92px（有图才有，无图 `.cov.noimg` 收起）
+   *     .bd > h4（游戏名） + .alt（别名） + .meta > .pill（档位/热度/评分）+ .tgs > .tg（分类/容量/来源）
+   *   v10.22 只借了 `.emu-card` **类名**，正文却另起了 `.top/.nm/.cnt + .up-mc-row + …`
+   *   六个自定义区块 ⇒ 卡片 352px 高（手机专区 232px），一眼就不是同一套东西。
+   *
+   * 保留下来的是解包专区的**独有信息**（删了就等于砍功能）：
+   *     `.up-chips` 四维判定 · `.up-min` 最低要求 · `.up-why` 不通过原因 · `.up-mc-btns` 下载/详情
+   *   它们的量级都压到与机型兼容那张卡的 `.dm-need` 一行同级（11px 轻量补充行）。
+   *
+   * 档位配色**复用已有的 `.pill.fps.*`**（绿/蓝/黄/红 = 手机专区实测帧率那套），
+   * 不另起 `.up-badge` 第五种配色语言。
+   */
   function card(it) {
     const v = VERDICT[it.verdict] || VERDICT.unknown;
     const chips = it.dims.filter((d) => d.state !== 'skip' && DIM_STATE[d.state]).map((d) =>
@@ -4053,17 +4093,23 @@ init();
     if (it.min.dx) min.push('DX ' + it.min.dx);
     if (it.min.gpu) min.push(it.min.gpu);
 
-    /* 容量：库里是 "50GB"/"220MB" 这类串，原样显示；顺带标注它是不是源站给的 */
-    const tags = [];
-    (it.genres || []).slice(0, 3).forEach((g) => tags.push('<span class="tg">' + esc(g) + '</span>'));
-    if (it.size) tags.push('<span class="tg">' + esc(it.size) + '</span>');
-    if (it.score) tags.push('<span class="tg up-tg-score">★ ' + esc(String(it.score)) + '</span>');
     /* ★ 要求来源如实标注：机地 / Steam 官方 / 两者都有。用户口径「不要推断」——
        这三个标签就是「这条要求是从哪读到的」，不是猜的。 */
     const fromMap = { jidi: '机地', steam: 'Steam 官方', 'jidi+steam': '机地 · Steam' };
     const from = fromMap[it.reqFrom] || null;
 
+    /* 正文徽标行：档位（复用手机专区的 .pill.fps 配色）+ 热度 + 评分 */
     const hot = fmtHot(it.hot);
+    const pills = '<span class="pill ' + v.pill + '">' + v.t + '</span>'
+      + (hot ? '<span class="pill hot">' + esc(hot) + ' 热度</span>' : '')
+      + (it.score ? '<span class="pill">★ ' + esc(String(it.score)) + '</span>' : '');
+
+    /* 标签行：分类 / 容量 / 要求来源 —— 与手机专区的 `.tgs > .tg` 同一套 */
+    const tags = [];
+    (it.genres || []).slice(0, 3).forEach((g) => tags.push('<span class="tg">' + esc(g) + '</span>'));
+    if (it.size) tags.push('<span class="tg">' + esc(it.size) + '</span>');
+    if (from) tags.push('<span class="tg src">要求来自 ' + esc(from) + '</span>');
+
     const dl = it.libUrl
       ? '<button class="cov-btn" type="button" data-dl-open data-dl-title="' + esc(it.name) +
         '" data-dl-url="' + esc(it.libUrl) + '">⬇ 网盘下载</button>'
@@ -4074,22 +4120,22 @@ init();
 
     return '<article class="emu-card' + (it.cover ? ' has-cov' : '') + ' up-mc" data-verdict="' + it.verdict + '" data-name="' + esc(it.name) + '">' +
       (it.cover
-        ? '<div class="cov"><img src="' + esc(it.cover) + '" alt="" loading="lazy" onerror="this.parentNode.classList.add(\'noimg\');this.remove()"></div>'
-        : '') +
-      '<div class="top">' +
-        '<div class="nm">' + esc(it.name) + '</div>' +
-        (hot ? '<div class="cnt"><b>' + esc(hot) + '</b><span>热度</span></div>' : '<div class="cnt up-badge-wrap"><span class="up-badge ' + v.c + '">' + v.t + '</span></div>') +
-      '</div>' +
-      (hot ? '<div class="up-mc-row"><span class="up-badge ' + v.c + '">' + v.t + '</span>' +
-        (from ? '<span class="up-mc-src">要求来自 ' + esc(from) + '</span>' : '<span class="up-mc-src dim">要求来源未标注</span>') + '</div>'
-        : (from ? '<div class="up-mc-row"><span class="up-mc-src">要求来自 ' + esc(from) + '</span></div>' : '')) +
-      (tags.length ? '<div class="tags">' + tags.join('') + '</div>' : '') +
-      '<div class="up-chips">' + chips + uj + '</div>' +
-      '<div class="up-min">最低：' + esc(min.join(' · ') || '未标注') + '</div>' +
-      (it.dims.some((d) => d.state === 'fail')
-        ? '<div class="up-why">' + esc(it.dims.filter((d) => d.state === 'fail').map((d) => d.note).join('；')) + '</div>' : '') +
-      '<div class="up-mc-btns">' + dl +
-        (it.libUrl ? '<a class="up-mc-go" href="' + esc(it.libUrl) + '" target="_blank" rel="noopener">源站详情 ↗</a>' : '') +
+        ? '<div class="cov"><img src="' + esc(it.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="covErr(this,\'' + esc(covAbbr(it.name)) + '\')"></div>'
+        : '<div class="cov ph"><span>' + esc(covAbbr(it.name)) + '</span></div>') +
+      /* ★ v10.24：正文换成手机专区同款骨架 `.bd > h4 + .alt + .meta + .tgs` */
+      '<div class="bd">' +
+        '<h4 title="' + esc(it.name) + '">' + esc(it.name) + '</h4>' +
+        (it.nameEn && it.nameEn !== it.name
+          ? '<div class="alt" title="' + esc(it.nameEn) + '">' + esc(it.nameEn) + '</div>' : '') +
+        '<div class="meta">' + pills + '</div>' +
+        '<div class="tgs">' + tags.join('') + '</div>' +
+        '<div class="up-chips">' + chips + uj + '</div>' +
+        '<div class="up-min">最低：' + esc(min.join(' · ') || '未标注') + '</div>' +
+        (it.dims.some((d) => d.state === 'fail')
+          ? '<div class="up-why">' + esc(it.dims.filter((d) => d.state === 'fail').map((d) => d.note).join('；')) + '</div>' : '') +
+        '<div class="up-mc-btns">' + dl +
+          (it.libUrl ? '<a class="up-mc-go" href="' + esc(it.libUrl) + '" target="_blank" rel="noopener">源站详情 ↗</a>' : '') +
+        '</div>' +
       '</div>' +
       '</article>';
   }

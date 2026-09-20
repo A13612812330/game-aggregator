@@ -29,12 +29,15 @@
     minRequirements: { ram: '8 GB', storage: '40 GB', dx: '11' },
   }, null, 2);
 
+  /* `c`  = 旧的 `.up-badge.*` 类名（统计条图例还在用，保留）
+   * `pill` = 手机专区同款 `.pill.fps.*`（绿/蓝/黄/红 = 实测帧率那套配色），卡片正文改用它。
+   *   ★ 不要为「解包档位」另起第五种配色 —— 同一语义两套视觉必然漂移。 */
   const VERDICT = {
-    smooth: { t: '流畅', c: 'sm' },
-    ok: { t: '可跑', c: 'ok' },
-    maybe: { t: '待确认', c: 'mb' },
-    unknown: { t: '信息不足', c: 'un' },
-    no: { t: '不可跑', c: 'no' },
+    smooth: { t: '流畅', c: 'sm', pill: 'fps smooth' },
+    ok: { t: '可跑', c: 'ok', pill: 'fps ok' },
+    maybe: { t: '待确认', c: 'mb', pill: 'fps low' },
+    unknown: { t: '信息不足', c: 'un', pill: '' },
+    no: { t: '不可跑', c: 'no', pill: 'fps bad' },
   };
   const DIM_NAME = { arch: '架构', dx: '图形接口', ram: '内存', storage: '存储' };
   const DIM_STATE = { ok: '通过', fail: '不满足', unknown: '未判定', skip: '' };
@@ -256,6 +259,23 @@
    * ★ 数据全部来自 spec-req.json（机地 17,220 话题 ∪ Steam 官方，按 Steam appid 精确合并）：
    *   封面 / 分类 / 容量 / 评分 / 热度都是源站字段，不是推断出来的。
    */
+  /**
+   * 结果卡片 —— **沿用手机专区的 .emu-card 版式**（用户口径，v10.22 首次提出、v10.24 对齐到位：
+   * 「解包匹配的游戏能够跟手机专区的前端展示效果一样」）。
+   *
+   * ★ 结构必须与手机专区**逐块同构**，否则就是「同一语义两套渲染」：
+   *     .cov  → 封面 92px（有图才有，无图 `.cov.noimg` 收起）
+   *     .bd > h4（游戏名） + .alt（别名） + .meta > .pill（档位/热度/评分）+ .tgs > .tg（分类/容量/来源）
+   *   v10.22 只借了 `.emu-card` **类名**，正文却另起了 `.top/.nm/.cnt + .up-mc-row + …`
+   *   六个自定义区块 ⇒ 卡片 352px 高（手机专区 232px），一眼就不是同一套东西。
+   *
+   * 保留下来的是解包专区的**独有信息**（删了就等于砍功能）：
+   *     `.up-chips` 四维判定 · `.up-min` 最低要求 · `.up-why` 不通过原因 · `.up-mc-btns` 下载/详情
+   *   它们的量级都压到与机型兼容那张卡的 `.dm-need` 一行同级（11px 轻量补充行）。
+   *
+   * 档位配色**复用已有的 `.pill.fps.*`**（绿/蓝/黄/红 = 手机专区实测帧率那套），
+   * 不另起 `.up-badge` 第五种配色语言。
+   */
   function card(it) {
     const v = VERDICT[it.verdict] || VERDICT.unknown;
     const chips = it.dims.filter((d) => d.state !== 'skip' && DIM_STATE[d.state]).map((d) =>
@@ -268,17 +288,23 @@
     if (it.min.dx) min.push('DX ' + it.min.dx);
     if (it.min.gpu) min.push(it.min.gpu);
 
-    /* 容量：库里是 "50GB"/"220MB" 这类串，原样显示；顺带标注它是不是源站给的 */
-    const tags = [];
-    (it.genres || []).slice(0, 3).forEach((g) => tags.push('<span class="tg">' + esc(g) + '</span>'));
-    if (it.size) tags.push('<span class="tg">' + esc(it.size) + '</span>');
-    if (it.score) tags.push('<span class="tg up-tg-score">★ ' + esc(String(it.score)) + '</span>');
     /* ★ 要求来源如实标注：机地 / Steam 官方 / 两者都有。用户口径「不要推断」——
        这三个标签就是「这条要求是从哪读到的」，不是猜的。 */
     const fromMap = { jidi: '机地', steam: 'Steam 官方', 'jidi+steam': '机地 · Steam' };
     const from = fromMap[it.reqFrom] || null;
 
+    /* 正文徽标行：档位（复用手机专区的 .pill.fps 配色）+ 热度 + 评分 */
     const hot = fmtHot(it.hot);
+    const pills = '<span class="pill ' + v.pill + '">' + v.t + '</span>'
+      + (hot ? '<span class="pill hot">' + esc(hot) + ' 热度</span>' : '')
+      + (it.score ? '<span class="pill">★ ' + esc(String(it.score)) + '</span>' : '');
+
+    /* 标签行：分类 / 容量 / 要求来源 —— 与手机专区的 `.tgs > .tg` 同一套 */
+    const tags = [];
+    (it.genres || []).slice(0, 3).forEach((g) => tags.push('<span class="tg">' + esc(g) + '</span>'));
+    if (it.size) tags.push('<span class="tg">' + esc(it.size) + '</span>');
+    if (from) tags.push('<span class="tg src">要求来自 ' + esc(from) + '</span>');
+
     const dl = it.libUrl
       ? '<button class="cov-btn" type="button" data-dl-open data-dl-title="' + esc(it.name) +
         '" data-dl-url="' + esc(it.libUrl) + '">⬇ 网盘下载</button>'
@@ -289,22 +315,22 @@
 
     return '<article class="emu-card' + (it.cover ? ' has-cov' : '') + ' up-mc" data-verdict="' + it.verdict + '" data-name="' + esc(it.name) + '">' +
       (it.cover
-        ? '<div class="cov"><img src="' + esc(it.cover) + '" alt="" loading="lazy" onerror="this.parentNode.classList.add(\'noimg\');this.remove()"></div>'
-        : '') +
-      '<div class="top">' +
-        '<div class="nm">' + esc(it.name) + '</div>' +
-        (hot ? '<div class="cnt"><b>' + esc(hot) + '</b><span>热度</span></div>' : '<div class="cnt up-badge-wrap"><span class="up-badge ' + v.c + '">' + v.t + '</span></div>') +
-      '</div>' +
-      (hot ? '<div class="up-mc-row"><span class="up-badge ' + v.c + '">' + v.t + '</span>' +
-        (from ? '<span class="up-mc-src">要求来自 ' + esc(from) + '</span>' : '<span class="up-mc-src dim">要求来源未标注</span>') + '</div>'
-        : (from ? '<div class="up-mc-row"><span class="up-mc-src">要求来自 ' + esc(from) + '</span></div>' : '')) +
-      (tags.length ? '<div class="tags">' + tags.join('') + '</div>' : '') +
-      '<div class="up-chips">' + chips + uj + '</div>' +
-      '<div class="up-min">最低：' + esc(min.join(' · ') || '未标注') + '</div>' +
-      (it.dims.some((d) => d.state === 'fail')
-        ? '<div class="up-why">' + esc(it.dims.filter((d) => d.state === 'fail').map((d) => d.note).join('；')) + '</div>' : '') +
-      '<div class="up-mc-btns">' + dl +
-        (it.libUrl ? '<a class="up-mc-go" href="' + esc(it.libUrl) + '" target="_blank" rel="noopener">源站详情 ↗</a>' : '') +
+        ? '<div class="cov"><img src="' + esc(it.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="covErr(this,\'' + esc(covAbbr(it.name)) + '\')"></div>'
+        : '<div class="cov ph"><span>' + esc(covAbbr(it.name)) + '</span></div>') +
+      /* ★ v10.24：正文换成手机专区同款骨架 `.bd > h4 + .alt + .meta + .tgs` */
+      '<div class="bd">' +
+        '<h4 title="' + esc(it.name) + '">' + esc(it.name) + '</h4>' +
+        (it.nameEn && it.nameEn !== it.name
+          ? '<div class="alt" title="' + esc(it.nameEn) + '">' + esc(it.nameEn) + '</div>' : '') +
+        '<div class="meta">' + pills + '</div>' +
+        '<div class="tgs">' + tags.join('') + '</div>' +
+        '<div class="up-chips">' + chips + uj + '</div>' +
+        '<div class="up-min">最低：' + esc(min.join(' · ') || '未标注') + '</div>' +
+        (it.dims.some((d) => d.state === 'fail')
+          ? '<div class="up-why">' + esc(it.dims.filter((d) => d.state === 'fail').map((d) => d.note).join('；')) + '</div>' : '') +
+        '<div class="up-mc-btns">' + dl +
+          (it.libUrl ? '<a class="up-mc-go" href="' + esc(it.libUrl) + '" target="_blank" rel="noopener">源站详情 ↗</a>' : '') +
+        '</div>' +
       '</div>' +
       '</article>';
   }

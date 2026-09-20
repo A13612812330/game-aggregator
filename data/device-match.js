@@ -18,6 +18,8 @@ const fs = require('fs');
 const path = require('path');
 const tier = require('./gpu-tier');
 const dg = require('./device-gpu');
+/* ★ v10.24：仓库键 → 端游库条目（含封面）。复用既有匹配结果，不新写名称匹配。 */
+const bhcover = require('./bhcover');
 
 const D = (f) => path.join(__dirname, f);
 
@@ -352,7 +354,16 @@ function matchGames(deviceName, { limit = 300 } = {}) {
       external: !!dev.external,
     },
     total: out.length,
-    games: out.slice(0, limit),
+    /* ★ v10.24：给返回的这批挂上端游库条目（`libId/libTitle/libUrl/libCover`）。
+       前端 `dmCard` 读的就是扁平的 `g.libCover`；从前这一层没做 ⇒ 恒为 undefined
+       ⇒ `.cov.noimg` 隐藏封面区 ⇒ 24 张卡一张图都没有（用户反馈的原始现象）。
+       只挂 `slice` 后的这一页（`out` 可能上千条，没必要全算）。
+       取不到就留空 —— **不编造**，前端按手游专区同款走 `.cov.noimg`。 */
+    games: (() => {
+      const page = out.slice(0, limit);
+      try { bhcover.attachAll(page); } catch (e) { /* 库文件缺失 → 卡片退回无图，不阻断查询 */ }
+      return page;
+    })(),
     summary: {
       smooth: out.filter((x) => x.verdict === 'smooth').length,
       ok: out.filter((x) => x.verdict === 'ok').length,

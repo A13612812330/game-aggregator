@@ -157,4 +157,6 @@ function configs(key) {
   }));
 }
 
-module.exports = { load, ensure, normKey, titleKeys, lookup, attach, stats, list, configs, configCount: () => (ensure().games || []).length };
+/* ★ `libMatch` 必须导出：机型兼容的卡片要显示封面（`data/bhcover.js` 在用它），
+   原来只是模块内部的私有函数。**不要再写第二份「键 → 库内条目」的匹配** —— 那就漂移了。 */
+module.exports = { load, ensure, normKey, titleKeys, lookup, attach, stats, list, configs, libMatch, configCount: () => (ensure().games || []).length };
