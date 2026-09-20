@@ -1377,6 +1377,14 @@
   .dl-grp>.h .src.jidi{background:rgba(230,65,93,.1);color:var(--c-jidi)}
   .dl-grp>.h .n{margin-left:auto;font:700 11px/1 var(--font-num);color:var(--c-t3)}
   .dl-grp .l{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:8px}
+  /* ★ v10.26 机地在组内按「本体 / mod / 修改器」再分小节 —— 源站那三个 tab 的对应物。
+     不新开 .dl-grp：那一层自带「机地」源标签与总条数，分成三块会让同一个来源徽标出现三次。 */
+  .dl-secs{display:flex;flex-direction:column;gap:13px}
+  .dl-sec>.sh{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+  .dl-sec>.sh>b{font-size:11.5px;font-weight:800;color:var(--c-t1)}
+  .dl-sec>.sh>.c{font:700 10.5px/1 var(--font-num);color:var(--c-t3);background:#F1F3F8;border-radius:5px;padding:3px 6px}
+  .dl-sec>.sh>.go{margin-left:auto;font-size:10.5px;font-weight:750;color:var(--c-primary);text-decoration:none;white-space:nowrap}
+  .dl-sec>.sh>.go:hover{text-decoration:underline}
   .dl-it{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--c-border);border-radius:var(--r-md);
     background:#fff;transition:.14s;min-width:0}
   .dl-it:hover{border-color:var(--c-primary);background:var(--c-primary-soft)}
@@ -4099,6 +4107,54 @@ function dlSection(title, srcCls, srcName, items, cap) {
     '<div class="l">' + shown.map(dlRow).join('') + '</div>' + more + '</div>';
 }
 /**
+ * 机地：**按「本体 / mod / 修改器」三个专区分别成块**。★ v10.26 新增
+ *
+ * 用户口径：「现在没有抓取到机地的下载链接…（有导航栏进行划分 本体/mod/修改器）」。
+ * 源站的话题页就是把资源分成这三个 tab，接口按 `resource_type`（1/2/3）给全；
+ * 而在此之前我们只吃详情页 SSR 的首屏 10 条（几乎只有本体）—— 实测同一款游戏
+ * 剑星：老链路 25 条链接且全是本体，新链路 **210 条**，三个专区齐。
+ *
+ * ★ 为什么必须同时显示 `s.count`（源站报的专区总数）与 `items.length`（本次取回）：
+ *   mod 专区实测 190 条，而一次只取回 50 条。只显示「50 条」会让人以为源站就这么点，
+ *   只显示「190 条」又和眼见的条数对不上。两个都写，并说明差在哪。
+ *
+ * ★ 兜底：拿不到 `sections`（老服务 / 走了 SSR 兜底）就退回原来那一整块 ——
+ *   不能让一个新增的分区逻辑把「本来能显示的链接」变成空白。
+ */
+const DL_SEC_CAP = 6;
+function dlJidiGroups(jd) {
+  const all = (jd.items || []).filter((i) => i.real);
+  const secs = Array.isArray(jd.sections) ? jd.sections.filter((s) => s && s.key) : [];
+  if (!secs.length) return dlSection('机地社区分享（按帖子热度）', 'jidi', '机地', all, 12);
+
+  const topicUrl = jd.url || 'https://jidiyouxi.com/';
+  const parts = [];
+  for (const s of secs) {
+    const items = all.filter((i) => i.section === s.key);
+    if (!items.length) continue;                  // 该专区这次没取到可点开的链接 → 不占版面
+    const shown = items.slice(0, DL_SEC_CAP);
+    const total = s.count || 0;                   // 源站该专区的**帖子**数
+    const got = s.returned || 0;                  // 本次取回的**帖子**数
+    const hidden = items.length - shown.length;   // 未展示的**地址**数
+    /* ★ 单位必须写清：这个专区里「帖」与「网盘地址」是两套数（一帖常带 2~3 个盘口）。
+       混用「条」会让「另有 134 条 / 源站共 190 条」读起来自相矛盾（前者是地址、后者是帖）。 */
+    const tail = hidden > 0
+      ? '本专区另有 ' + hidden + ' 个地址未展示（已取回 ' + got + ' 帖' + (total > got ? '，源站共 ' + total + ' 帖' : '') + '）'
+      : (total > got ? '源站该专区共 ' + total + ' 帖，本次取回 ' + got + ' 帖' : '');
+    parts.push('<div class="dl-sec"><div class="sh"><b>' + esc(s.name) + '</b>' +
+      '<span class="c">' + (total || items.length) + ' 帖</span>' +
+      '<a class="go" href="' + esc(topicUrl) + '" target="_blank" rel="noopener">源站专区 ↗</a></div>' +
+      '<div class="l">' + shown.map(dlRow).join('') + '</div>' +
+      (tail ? '<div class="dl-note" style="margin:7px 0 0">' + esc(tail) + '</div>' : '') +
+      '</div>');
+  }
+  if (!parts.length) return dlSection('机地社区分享（按帖子热度）', 'jidi', '机地', all, 12);
+  return '<div class="dl-grp"><div class="h"><b>机地社区分享</b>' +
+    '<span class="src jidi">机地</span>' +
+    '<span class="n">' + all.length + ' / ' + (jd.count || all.length) + ' 条可用</span></div>' +
+    '<div class="dl-secs">' + parts.join('') + '</div></div>';
+}
+/**
  * 一整组都取不到地址时的说明块。
  * ★ 为什么必须区分「源站要权限」与「解析失败」：前者是源站策略，重试一万次也没用 ——
  *   用户看到的如果是「稍后重试」，他会一直重试；告诉他「去源站登录后获取」才是对的。
@@ -4207,10 +4263,11 @@ async function openDownload(ctx) {
     else secs.push(dlBlocked('XDGAME 官方盘口', 'xd', 'XD', xd.d));
   }
   if (ji) {
-    /* 机地同一款游戏常有多份分享帖，全铺出来会很长 —— 取前 12 条，
-       按帖子热度（服务端已排序）优先，并如实告知还有多少条未展示。 */
+    /* ★ v10.26：机地不再是一个混排列表 —— 服务端已按源站的话题专区
+       （本体 / mod / 修改器）分组返回，这里交给 dlJidiGroups 逐区分块。
+       老服务（没有 sections 字段）会走它内部的兜底分支，行为与改造前一致。 */
     const items = (ji.d.items || []).filter((i) => i.real);
-    if (items.length) { usable += items.length; secs.push(dlSection('机地社区分享（按帖子热度）', 'jidi', '机地', items, 12)); }
+    if (items.length) { usable += items.length; secs.push(dlJidiGroups(ji.d)); }
     else secs.push(dlBlocked('机地社区分享', 'jidi', '机地', ji.d));
   }
   $('#dlBody').innerHTML = secs.length

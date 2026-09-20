@@ -89,12 +89,23 @@ async function getEnv(path = '/modify/list', { force = false, host = 'https://ji
  * 通用带签名 POST。
  * @param {object} o
  * @param {string} o.api     接口路径，如 '/api/topic/get_topics'
- * @param {string} o.referer 取 env 的页面路径（同时用作 Referer），如 '/topic/list'
+ * @param {string} o.referer 取 env 的页面路径（默认同时用作 Referer），如 '/topic/list'
+ * @param {string} [o.envPath] 只用于取 env 的页面路径；给了它就以它为准，Referer 头仍用 referer
  * @param {object} o.body    业务参数（env 会自动合并进来）
  * @param {string} [o.host]
+ *
+ * ★ v10.26 为什么要拆出 `envPath`：**详情页的 env 结构与列表页不同**。
+ *   实测 `/topic/detail/<tid>` 的 appState.env 只有
+ *   `{h_m, h_ts, h_dt, h_did, token, h_app, enable_etag}` —— **没有 `host`**，
+ *   而 `getEnv()` 的健全性校验正是 `if (!env || !env.host) throw`，
+ *   于是「拿详情页当 env 来源」会直接抛「机地页面未内嵌 env（可能改版）」，
+ *   把人往「源站改版了」的方向带 —— 实际只是取错了页面。
+ *   而 `post_list`（话题资源列表）需要的是**列表页那份带 host 的 env**，
+ *   Referer 用详情页更贴切。两者本可以不同，所以分开传。
+ *   （实测：env 取 `/topic/list` + Referer 用 `/topic/detail/<tid>` → ret:1 正常返回。）
  */
-async function signedPost({ api, referer, body = {}, host = 'https://jidiyouxi.com', timeout = REQ_TIMEOUT }) {
-  const env = await getEnv(referer, { host });
+async function signedPost({ api, referer, envPath, body = {}, host = 'https://jidiyouxi.com', timeout = REQ_TIMEOUT }) {
+  const env = await getEnv(envPath || referer, { host });
   const full = Object.assign({}, env, body, { h_ts: Date.now(), h_ch: body.h_ch || 'other' });
   full.h_did = full.h_did || '';
   const sign = websign(full);

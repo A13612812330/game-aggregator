@@ -1578,7 +1578,10 @@ app.get('/api/jiditopics/list', (req, res) => {
 //   或  /api/download?source=jidi|xdgamer&id=…&host=xdgamer|xdgame
 //   —— 「这游戏去哪下」：返回**可直接点开的网盘地址**（v10.22 新增）
 //
-//   · jidi   ：解析话题详情页 SSR 的 topic.ssrData.postsMap/postList，取帖子正文里的网盘直链
+//   · jidi   ：★ v10.26 优先走话题资源接口 /api/misc/post_list（本体/mod/修改器三专区，
+//              实测剑星 22+190+4=216 条）；接口不可用时退回解析详情页 SSR 的
+//              topic.ssrData.postsMap/postList（只覆盖首屏 ~10 条，几乎只有本体）。
+//              走哪条路如实回在 `engine` 里；`sections` 给各专区条数。
 //   · xdgamer：解析详情页 .article-down 的 a.downbtn，再跟随 /plus/download.php 的 302 拿真实地址
 //   详见 fetchers/download.js 头部说明。
 //
@@ -1619,6 +1622,12 @@ app.get('/api/download', async (req, res) => {
       subtitle: data.subtitle || null,
       version: data.version || null,
       url: data.url || null,
+      /** ★ v10.26 机地：这次走的是接口还是 SSR 兜底（api / ssr），不静默降级 */
+      engine: data.engine || null,
+      fallbackReason: data.fallbackReason || null,
+      /** ★ v10.26 机地：专区汇总 [{key,name,count,returned,withLinks,links}]
+       *  —— 本体 / mod / 修改器各自的条数，前端据此分区。XD 侧没有这个维度，为 null。 */
+      sections: data.sections || null,
       /** ★ 源站要求登录 / 权限才能取（XD 对部分游戏如此）→ 前端给出明确原因 + 去源站的出口 */
       needAuth: !!data.needAuth,
       /** 只报「有真实地址」的条数，避免前端把解析失败的也算进去 */

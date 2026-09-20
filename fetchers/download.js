@@ -23,9 +23,16 @@
  *       就说明原本就是合法文本，退回原值（避免把正常带重音符号的 URL 弄坏）。
  *
  * ② 机地（jidiyouxi.com）
- *    没有独立的下载按钮，**下载链接写在帖子的正文里**（社区制）。
- *    详情页 SSR 的 appState 已嵌好首屏帖子：`topic.ssrData.postsMap.list`
- *    每条 post 的 `content` 就是网盘直链 + 使用说明。见 jidiTopics.postsOf()。
+ *    ★ v10.26 起**优先走列表接口**（`/api/misc/post_list`，见 fetchers/jidiPosts.js）：
+ *      机地的话题页把资源分成「本体 / mod / 修改器」三个专区，各自的条数实时可取。
+ *      实测（剑星 tid=171085167）：本体 22 / mod 190 / 修改器 4 = **216 条**。
+ *      靠返回里的 `resource_type`（1/2/3）分区，`folder_id` 是死参数（服务端不看，见 jidiPosts）。
+ *
+ *    兜底（接口挂了/改版）才退回老路：解析话题详情页 SSR 的
+ *      `topic.ssrData.postsMap` / `postList`，取帖子正文里的网盘直链。
+ *      那条路有**结构性上限**：SSR 只嵌首屏 **10 条**、且几乎只有本体 ——
+ *      实测同款游戏 SSR 10 条 vs 接口 33 条，且 mod/修改器一条都取不到。
+ *      所以它只能当兜底，报文里用 `engine` 如实标出这次是走哪条路（api / ssr）。
  *
  * ★ 设计取舍：
  *   · 只返回「能直接点开的链接」，不返回「需要再点两下的中间页」。
@@ -35,6 +42,7 @@
 const cheerio = require('cheerio');
 const { UA } = require('../shared');
 const jt = require('./jidiTopics');
+const jp = require('./jidiPosts');
 
 const XD_HOSTS = {
   xdgamer: 'https://www.xdgamer.com',
@@ -252,37 +260,105 @@ async function xd(id, { host = 'xdgamer', resolve = true } = {}) {
  *  ② 机地
  * ============================================================ */
 
-async function jidi(tid) {
-  const d = await jt.postsOf(tid);
+/** 把「接口 / SSR」两种形态统一成扁平条目 —— 前端只认这一份字段 */
+function flatFrom(sections) {
   const items = [];
-  for (const p of d.posts) {
-    for (const l of p.links) {
-      items.push({
-        server: l.kind,
-        real: l.url,
-        pwd: splitPwd(l.url).pwd,
-        postTitle: p.title,
-        postId: p.id,
-        postUrl: p.url,
-        author: p.author,
-        tags: p.tags,
-        dpv: p.dpv,
-        ut: p.ut,
-        note: p.content ? p.content.slice(0, 160) : null,
-        kind: 'post',
-      });
+  for (const g of sections) {
+    for (const p of (g.items || [])) {
+      for (const l of (p.links || [])) {
+        items.push({
+          server: l.kind,
+          real: l.url,
+          pwd: splitPwd(l.url).pwd,
+          postTitle: p.title,
+          postId: p.id,
+          postUrl: p.url,
+          author: p.author,
+          tags: p.tags,
+          dpv: p.dpv,
+          ut: p.ut,
+          note: p.note,
+          kind: 'post',
+          /* ★ v10.26：专区归属（本体 / mod / 修改器）—— 前端据此分区展示 */
+          section: g.key,
+          sectionName: g.name,
+          cover: p.cover,
+        });
+      }
     }
   }
-  return {
-    source: 'jidi',
-    id: String(tid),
-    title: d.title,
-    subtitle: d.subtitle,
-    url: 'https://jidiyouxi.com/topic/detail/' + tid,
-    from: 'jidi',
-    posts: d.posts.length,
-    items,
-  };
+  return items;
+}
+
+/**
+ * 取机地某话题的资源。
+ *
+ * ★ v10.26 起走 `jidiPosts`（三专区接口），**失败才退 SSR**。
+ *   为什么要保底：接口依赖 websign 签名 + env（服务端校验 h_did），
+ *   任一环被源站调整都会整条链失效；而 SSR 那条只依赖页面结构，两者坏法不同。
+ *   `engine` 字段如实告知这次走的哪条路，**不要静默降级** ——
+ *   否则下次出问题会以为一直在用接口。
+ *
+ * @param {string|number} tid
+ * @param {object} [o]
+ * @param {string} [o.sort='hot']         hot | new | reply
+ * @param {number} [o.perSection=50]      每个专区最多取多少条
+ */
+async function jidi(tid, { sort = 'hot', perSection = 50 } = {}) {
+  try {
+    const r = await jp.topicPosts({ tid, sort, perSection });
+    const groups = r.sections.map((g) => ({
+      key: g.key,
+      name: g.name,
+      /** 源站报的专区总数（可能大于本次取回） */
+      count: g.count,
+      returned: g.returned,
+      withLinks: g.withLinks,
+      /** 本次真正能拼出的网盘链接条数 */
+      links: (g.items || []).reduce((n, p) => n + (p.links || []).length, 0),
+      error: g.error || null,
+    }));
+    const items = flatFrom(r.sections);
+    /* 任意一条帖子都能给出话题名（topic 是 JSON 字符串，jidiPosts.gameOf 已解析） */
+    const first = r.items[0] || null;
+    return {
+      source: 'jidi',
+      id: String(tid),
+      title: (first && first.game) || null,
+      subtitle: null,
+      url: 'https://jidiyouxi.com/topic/detail/' + tid,
+      from: 'jidi',
+      engine: 'api',
+      /** 帖子总数（不是链接数）—— 与老字段同名同义 */
+      posts: r.items.length,
+      /** ★ 专区汇总：UI 用它出「本体 N / mod N / 修改器 N」 */
+      sections: groups,
+      items,
+    };
+  } catch (e) {
+    /* 兜底：解析话题详情页 SSR（只覆盖首屏 ~10 条，且几乎只有本体） */
+    const d = await jt.postsOf(tid);
+    const sections = [{
+      key: 'body', name: '本体', count: d.posts.length, returned: d.posts.length,
+      withLinks: d.posts.length,
+      links: d.posts.reduce((n, p) => n + (p.links || []).length, 0),
+      error: '接口不可用，已退回 SSR 首屏',
+    }];
+    const items = flatFrom([{ key: 'body', name: '本体', items: d.posts }]);
+    return {
+      source: 'jidi',
+      id: String(tid),
+      title: d.title,
+      subtitle: d.subtitle,
+      url: 'https://jidiyouxi.com/topic/detail/' + tid,
+      from: 'jidi',
+      engine: 'ssr',
+      fallbackReason: String((e && e.message) || e),
+      posts: d.posts.length,
+      sections,
+      items,
+    };
+  }
 }
 
 /* ============================================================
