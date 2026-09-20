@@ -5,6 +5,7 @@
  */
 const cheerio = require('cheerio');
 const { HOST_JIDI, getHtml } = require('../shared');
+const shotsLib = require('./shots');
 
 const GENRE_SET = new Set([
   '动作','冒险','角色扮演','射击','竞速','模拟','策略','休闲','体育','独立','恐怖','多人',
@@ -142,21 +143,21 @@ async function detail(id) {
   if (!req.storage && gi.storage) req.storage = gi.storage;
   if (req.storage && /^\d+(?:\.\d+)?\s*(GB|MB)$/i.test(String(req.storage))) size = String(req.storage).toUpperCase();
 
-  // 截图：优先已渲染 DOM 中的 https 图
-  const $ = cheerio.load(html);
-  const shots = [];
-  $('img').each((_, el) => {
-    const src = $(el).attr('src') || '';
-    if (/^https?:/.test(src) && shots.length < 6) shots.push(src);
-  });
-  const shotSet = new Set(shots);
-  if (Array.isArray(gi.movie_covers)) {
-    for (const mc of gi.movie_covers) {
-      const u = typeof mc === 'string' && /^https?:/.test(mc) ? mc : null;
-      if (u && !shotSet.has(u)) { shotSet.add(u); shots.push(u); }
-      if (shots.length >= 6) break;
-    }
-  }
+  /* ★ v10.25：截图改为读**结构化字段** `gi.screenshots`（原写法是抓整页 img）。
+   *
+   *   原写法为什么是错的：`$('img')` 抓到的第一批是 `img2.52jidi.com/topic/cover/id/<n>/sz/420`，
+   *   那是**详情页下半部分「相关推荐」里别的游戏的封面** —— 与本游戏毫无关系。
+   *   2026-09-20 用户看到「游戏预览」里一团不相干的图，根因就是这一行。
+   *
+   *   正确数据本来就在 appState 里：
+   *     gi.screenshots[i].urls.default.urls[0]
+   *       = https://shared.cdn.queniuqe.com/store_item_assets/steam/apps/1245620/ss_943bf6…600x338.jpg
+   *   艾尔登法环实测 **9 张**，URL 与用户提供的参考站**逐字符相同** ⇒ 这就是 Steam 官方截图。
+   *
+   *   ⚠️ 别再拿 `gi.movie_covers` 当截图：那是**预告片封面**（293x165 的小海报），不是截图。
+   *      旧代码把它 append 进 shots，等于把视频封面混进截图条里。
+   *   ⚠️ 尺寸后缀由 fetchers/shots.js 统一升到 1920x1080（同 CDN 实测 200 / 573KB）。 */
+  const shots = shotsLib.list(gi.screenshots, 12);
 
   return {
     source: 'jidi', id, title: ct.topic, nameEn: gi.name_en || null,

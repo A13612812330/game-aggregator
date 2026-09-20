@@ -206,6 +206,29 @@
   /* 云存档结果行直接把「存档路径」亮出来 —— 这是用户搜索时最想看到的信息 */
   .sm-row .pth{font-size:10.5px;color:var(--c-t2);font-family:var(--font-num);line-height:1.3;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  /* ★ v10.25：同款聚拢 —— 源站（尤其 XDGAME）把同一款游戏拆成多个页面，
+   *   后缀差异如「/支持网络联机」。平铺出来搜「艾尔登」6 行里「艾尔登法环」占 3 行，
+   *   看着像同一款被搜出好几遍。归并后其余条目落成主行下方的小 chip，照样一点进详情。 */
+  .sm-alt{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:0 10px 9px 97px;margin-top:-3px}
+  /* 从封面右缘垂下来的一段虚线：把 chip 明确「挂」在主行上，
+   * 不然它看着像另一行的开头（实测第一版就是这个问题）。 */
+  .sm-alt::before{content:'';position:absolute;left:86px;top:-4px;bottom:9px;border-left:1px dashed var(--c-border)}
+  .sm-alt-h{flex:none;font-size:10.5px;font-weight:700;color:var(--c-t3)}
+  .sm-alt-h .ic{font-weight:800;color:var(--c-t2)}
+  .sm-alt-b{display:inline-flex;align-items:center;gap:5px;max-width:100%;font-family:inherit;
+    font-size:10.5px;font-weight:650;padding:2.5px 8px;border-radius:7px;cursor:pointer;transition:.13s;
+    border:1px dashed var(--c-border);background:#fff;color:var(--c-t2)}
+  .sm-alt-b:hover{border-style:solid;border-color:var(--c-primary);color:var(--c-primary);background:var(--c-primary-soft)}
+  .sm-alt-b .sb{font-weight:800}
+  .sm-alt-b.xd .sb{color:var(--c-xd)}
+  .sm-alt-b.jidi .sb{color:var(--c-jidi)}
+  .sm-alt-b .ar{opacity:.6;font-weight:700}
+  .sm-alt-b:hover .ar{opacity:1}
+  /* ★ v10.25：评分分级 —— 原先 9.3 与 5 共用同一个琥珀底，一列扫过去分不出哪款值得点。
+   *   三档：≥9 绿（高分抬起来）/ ≥7.5 蓝 / 其余灰（低分退下去）。 */
+  .sm-row .pill.score.s-hi{color:#15803D;background:#DCFCE7}
+  .sm-row .pill.score.s-mid{color:#0369A1;background:#E0F2FE}
+  .sm-row .pill.score.s-lo{color:var(--c-t3);background:#F1F5F9}
   .sm-sec{display:flex;align-items:center;gap:8px;padding:9px 11px 7px;font-size:11.5px;font-weight:750;color:var(--c-t2)}
   .sm-sec .tag{font-size:10px;font-weight:700;padding:1.5px 7px;border-radius:6px}
   .sm-sec .tag.local{color:var(--c-primary);background:var(--c-primary-soft)}
@@ -529,6 +552,42 @@
     border-radius:4px;padding:1px 5px;font-family:var(--font);margin-top:1px;white-space:nowrap}
   .d-sv .p.reg i{color:#7C2D12;background:#FFEDD5}
   .d-blk .more{font-size:10px;color:var(--c-t3);margin-top:5px}
+  /* ★ v10.25 双源合并的「来源小徽标」—— 比 .d-tg / .src-badge 小一号，
+     用在区块标题行内（「版本介绍〔来自XDGAME〕」「游戏预览〔含机地 3 张〕」），
+     不抢标题的视觉权重。 */
+  .src-mini{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:5px;
+    font-size:9.5px;font-weight:800;font-style:normal;vertical-align:1px;white-space:nowrap;
+    color:#0B7BFF;background:#E7F1FF}
+  .src-mini.jidi{color:#E6415D;background:#FFE9EE}
+  .src-mini.xd{color:#0B7BFF;background:#E7F1FF}
+  /* ★ v10.25「查看全部」按钮 —— 取代原来那句「另有 N 条未展示，去手机专区看全部」。
+     用户口径：「详情页中如果数量较大，则增加一个按钮（更多）查看该专区的全部内容弹窗」。
+     数据本来就在手上（有的就在当前响应里、有的只是把 limit 放大一次），
+     不该把用户赶去别的页面自己找。 */
+  .d-more-btn{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;margin-top:8px;
+    padding:8px;border:1px dashed var(--c-border2);border-radius:9px;background:#F7F9FF;
+    font-family:inherit;font-size:11.5px;font-weight:700;color:var(--c-primary);cursor:pointer;transition:.15s}
+  .d-more-btn:hover{background:#EAF1FF;border-style:solid;border-color:var(--c-primary)}
+  .d-more-btn .ar{font-size:10px;transition:.15s}
+  .d-more-btn:hover .ar{transform:translateX(2px)}
+  /* 「全部内容」弹窗里的行：比 .d-dl-it 更松，允许长标题与路径换行（存档路径必须完整可见） */
+  .df-note{font-size:11px;line-height:1.7;color:var(--c-t3);margin:-2px 0 10px}
+  .df-note b{color:var(--c-t2)}
+  .df-sect{margin:13px 0 3px;font-size:11.5px;font-weight:750;color:var(--c-t2)}
+  .df-sect:first-child{margin-top:0}
+  .df-row{display:flex;align-items:flex-start;gap:9px;padding:8px 0;border-top:1px dashed var(--c-border)}
+  .df-row:first-of-type{border-top:0}
+  .df-row .ix{flex:none;min-width:20px;height:20px;padding:0 4px;border-radius:6px;display:grid;place-items:center;
+    font:700 9.5px/1 var(--font-num);color:var(--c-t3);background:#EEF1F7;margin-top:1px}
+  .df-row .bd{flex:1 1 auto;min-width:0}
+  .df-row .t{display:block;font-size:12px;font-weight:650;line-height:1.5;color:var(--c-t1);word-break:break-word}
+  .df-row .m{display:block;margin-top:2px;font-size:10.5px;line-height:1.65;color:var(--c-t3);word-break:break-word}
+  .df-row .m code{font-size:10.5px;background:#F1F3F8;border-radius:4px;padding:1px 5px;color:var(--c-t2);word-break:break-all}
+  .df-row .go2{flex:none;font-size:10.5px;font-weight:750;color:var(--c-primary);white-space:nowrap;margin-top:2px}
+  .df-row .tagx{display:inline-block;font-size:9.5px;font-weight:800;border-radius:5px;padding:1px 6px;
+    color:#0B7BFF;background:#E7F1FF;margin-right:5px;vertical-align:1px}
+  .df-row .tagx.mf{color:#B45309;background:#FEF3C7}
+  .df-row .tagx.dim{color:var(--c-t3);background:#EEF1F7}
   /* ============ ★ v10.13「配置要求」区块（抽屉内） ============
    *   最低 / 推荐两栏。窄屏并成一栏（长显卡名不能撑破抽屉）。
    *   为什么单独做：XDGAME 源站详情页**没有**配置要求数据，这块要用 Steam 官方接口补，
@@ -1035,8 +1094,36 @@
   .req .k{font-size:10px;color:var(--c-t3)}
   .req .v{font-size:11.5px;font-weight:600;word-break:break-all}
   /* ★ v10.7：与加宽后的抽屉配套，预览图 2 列 → 3 列（移动端另覆盖回 2 列） */
-  .shots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-  .shots img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:9px;background:#EDF0F6;border:1px solid var(--c-border)}
+   /* ★ v10.25：`.shots` 三列小图网格 → `.gal` 画廊（见 paintDetail 里的注释）。
+      旧规则整段删除，避免留下「没人用的样式」（那类死 CSS 会让人以为还在用）。
+      `.cov.noimg` 仍保留 —— 卡片封面位用它。 */
+   .gal-vp{position:relative;border-radius:10px;overflow:hidden;background:#EDF0F6;
+     border:1px solid var(--c-border);aspect-ratio:16/9}
+   .gal-trk{display:flex;height:100%;transition:transform .3s cubic-bezier(.4,0,.2,1)}
+   .gal-sld{flex:0 0 100%;height:100%;min-width:0}
+   .gal-sld img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
+   .gal-nav{position:absolute;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;
+     border:1px solid var(--c-border);background:rgba(255,255,255,.92);color:var(--c-t1);
+     font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;
+     cursor:pointer;z-index:2;padding:0;transition:background .15s}
+   .gal-nav:hover:not(:disabled){background:#fff;border-color:var(--c-primary)}
+   .gal-nav:disabled{opacity:.28;cursor:default}
+   .gal-nav.prev{left:8px}
+   .gal-nav.next{right:8px}
+   .gal-num{position:absolute;right:8px;bottom:8px;padding:2px 8px;border-radius:999px;
+     background:rgba(17,24,39,.62);color:#fff;font:600 11px/1.7 var(--font-num);z-index:2;pointer-events:none}
+   .gal-thumbs{display:flex;gap:6px;margin-top:8px;overflow-x:auto;padding-bottom:2px}
+   .gal-th{flex:0 0 64px;border-radius:7px;overflow:hidden;border:1px solid var(--c-border);
+     background:#EDF0F6;padding:0;cursor:pointer;line-height:0;transition:border-color .15s}
+   .gal-th img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
+   .gal-th.is-on{border-color:var(--c-primary);box-shadow:0 0 0 1px var(--c-primary)}
+   .gal-lb{position:fixed;inset:0;z-index:90;background:rgba(9,13,22,.92);
+     display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+   .gal-lb img{max-width:92vw;max-height:80vh;object-fit:contain;border-radius:8px;cursor:zoom-out}
+   .gal-lb .n{color:#fff;font:500 12px/1 var(--font-num);opacity:.72}
+   .gal-lb-x{position:absolute;top:16px;right:18px;width:34px;height:34px;border-radius:50%;border:0;
+     background:rgba(255,255,255,.14);color:#fff;font-size:15px;cursor:pointer;line-height:1}
+   .gal-lb-x:hover{background:rgba(255,255,255,.26)}
   .no-dl{margin:16px 0 4px;text-align:center;font-size:12px;color:var(--c-t3);border-top:1px dashed var(--c-border);padding-top:14px}
   .no-dl b{color:var(--c-danger)}
   .d-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
@@ -1044,13 +1131,51 @@
   .d-actions.one{grid-template-columns:1fr}
   .go{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px;font-weight:700;padding:12px;border-radius:12px;transition:.15s}
   .go svg{width:15px;height:15px}
-  /* v10.22：⬇ 网盘下载 —— 详情页的**主操作**（取回真实网盘地址，弹窗展示）。
-     独占一整行：它和「前往源站详情」不是同一类动作（一个拿资源、一个看信息），
-     并排会让人以为二者等价。syncDActions() 只数 `a.go`，所以这个 <button> 不参与列数计算。 */
-  .go.dl{grid-column:1/-1;width:100%;background:linear-gradient(135deg,#0F9D58,#22C55E);
-    color:#fff;box-shadow:0 6px 16px rgba(15,157,88,.28)}
-  .go.dl:hover{filter:brightness(1.07)}
-  .go.dl:disabled{opacity:.6;filter:none;cursor:default}
+  /* ★ v10.25：下载动作条 —— 「下载本体 / 修改器 / Mod」三个并排，取代 v10.22 那个
+     独占一行的单个「⬇ 网盘下载」。
+     用 flex 而不是 grid 是有原因的：修改器 / Mod 的条数要等 /api/mods/match 回来才
+     知道，条数为 0 时按钮要**直接隐藏** —— flex:1 会让剩下的按钮自动把整行铺满，
+     不需要像 .d-actions 那样再养一个 syncDActions() 去改列数。
+     ⚠️ `[hidden]` 必须显式写 display:none：本文件的 .ds 是 display:flex，
+        会盖掉浏览器默认的 `[hidden]{display:none}`（本项目在 .dm-info 上踩过同款坑）。 */
+  .dl-strip{display:flex;gap:9px;margin-top:16px}
+  .dl-strip[hidden],.dl-strip > .ds[hidden]{display:none}
+  .dl-strip > .ds{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;
+    font-family:inherit;font-size:13.5px;font-weight:700;padding:12px 9px;border:0;border-radius:12px;
+    cursor:pointer;transition:.15s;white-space:nowrap;overflow:hidden}
+  .dl-strip > .ds > em{font-style:normal;overflow:hidden;text-overflow:ellipsis}
+  .dl-strip > .ds > i{flex:none;font-style:normal;font-family:var(--font-num);font-size:11px;font-weight:800;
+    padding:1px 6px;border-radius:999px;background:rgba(255,255,255,.26)}
+  .dl-strip > .ds:hover{filter:brightness(1.07)}
+  .dl-strip > .ds:active{transform:translateY(1px)}
+  .ds-main{background:linear-gradient(135deg,#0F9D58,#22C55E);color:#fff;box-shadow:0 6px 16px rgba(15,157,88,.28)}
+  .ds-mf{background:linear-gradient(135deg,#7C3AED,#A855F7);color:#fff;box-shadow:0 6px 16px rgba(124,58,237,.26)}
+  .ds-mo{background:linear-gradient(135deg,#0B7BFF,#38BDF8);color:#fff;box-shadow:0 6px 16px rgba(11,123,255,.26)}
+  /* ★ v10.25：详情页**竖向定位条**（用户口径：「详情页弹窗能有个定位条（竖着的）」，
+     位置选了「右侧固定」）。默认只露序号圆点、悬停整条展开标签，避免长期遮住正文。
+     ⚠️ 它必须是 `.drawer` 的**兄弟节点**而不是子节点：抽屉隐藏时是
+        `transform:translateX(103%)`，而 transform≠none 的元素会成为 `position:fixed`
+        后代的**包含块** —— 放里面的话定位条会跟着抽屉一起滑出屏幕。
+     ⚠️ 窄屏（≤760px）不显示：抽屉那时占满整屏，没有多余横向空间。 */
+  .d-rail{position:fixed;top:50%;transform:translateY(-50%);z-index:101;
+    display:flex;flex-direction:column;gap:3px;padding:7px;border-radius:14px;
+    background:rgba(255,255,255,.95);border:1px solid var(--c-border);
+    box-shadow:0 10px 30px rgba(15,23,42,.14);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+  .d-rail[hidden]{display:none}
+  .dr-it{display:flex;align-items:center;height:26px;padding:0;border:0;border-radius:9px;
+    background:transparent;cursor:pointer;font-family:inherit;transition:.16s;white-space:nowrap}
+  .dr-n{flex:none;width:22px;height:22px;margin-left:3px;border-radius:50%;display:grid;place-items:center;
+    font:700 10px/1 var(--font-num);color:var(--c-t3);background:#EEF1F7;transition:.16s}
+  .dr-t{font-size:11.5px;font-weight:650;color:var(--c-t2);text-align:left;
+    max-width:0;opacity:0;overflow:hidden;
+    transition:max-width .22s cubic-bezier(.4,0,.2,1),opacity .16s}
+  .d-rail:hover .dr-t{max-width:104px;opacity:1;margin:0 8px 0 7px}
+  .dr-it:hover .dr-n{background:#DFE7F5}
+  .dr-it.on .dr-n{background:var(--c-primary);color:#fff;box-shadow:0 0 0 3px rgba(11,123,255,.16)}
+  .dr-it.on .dr-t{color:var(--c-t1);font-weight:750}
+  /* 视口太矮时收起：定位条本身约 250px，矮于 520px 会顶到上下边缘 */
+  @media(max-height:520px){.d-rail{display:none}}
   .go.jidi{background:linear-gradient(135deg,#E6415D,#F26D4F);color:#fff;box-shadow:0 6px 16px rgba(230,65,93,.3)}
   .go.jidi:hover{filter:brightness(1.07)}
   .go.xd{background:linear-gradient(135deg,#0B7BFF,#38BDF8);color:#fff;box-shadow:0 6px 16px rgba(11,123,255,.3)}
@@ -1124,6 +1249,7 @@
     .smodal.show{transform:translate(-50%,0)}
     .sm-row img,.sm-row .ph2{width:66px;height:39px}
     .sm-row .go2{display:none}
+    .sm-alt{padding-left:87px}
     .topbar .in{height:54px}
     :root{--topbar-h:54px}
     body{padding-bottom:66px}
@@ -1167,8 +1293,12 @@
     .bh-cfg .r .gp{display:none}
     .cat{flex:none;padding:6px 14px}
     .drawer{width:100vw}
+    /* v10.25：窄屏不显示详情页定位条（抽屉占满整屏，没有横向空间给它） */
+    .d-rail{display:none}
     .kv{grid-template-columns:1fr}
-    .shots{grid-template-columns:repeat(2,1fr)}
+    .gal-th{flex:0 0 52px}
+    .gal-nav{width:26px;height:26px}
+    .gal-num{font-size:11px}
     .d-hint{font-size:12px}
     /* ★ v10.13：窄屏首图定高同步下调；配置要求两栏并一栏（长显卡名换行而不是撑破） */
     .d-hero{height:190px}
@@ -1386,6 +1516,11 @@
 
 <div class="mask" id="mask"></div>
 <aside class="drawer" id="drawer" aria-label="游戏详情"><div id="drawerBody"></div></aside>
+<!-- ★ v10.25：详情页竖向定位条。必须在 `.drawer` **外面**（抽屉自己带 transform，
+     会成为 position:fixed 后代的包含块，放里面会跟着抽屉一起滑走），
+     但仍在 #mask 与 .tabbar 之间 —— 这一段正是 tools/page-assets.js 抽取的 OVERLAY，
+     所以 /emulator.html 与 /unpack.html 会自动带上同一个定位条。 -->
+<nav class="d-rail" id="dRail" hidden aria-label="详情页分区导航"></nav>
 <div class="toast" id="toast"></div>
 
 <!-- ===== 📥 网盘下载弹窗（v10.22 新增 · 三页共享资产，勿在派生页单独改） =====
@@ -2046,7 +2181,7 @@ function quickSearch(k) { const inp = $('#searchInput'); inp.value = k; $('#smCl
 function smRow(it) {
   const n = splitName(it.title);
   const meta = [];
-  if (okScoreV(it.score)) meta.push(`<span class="pill score">★ ${it.score}</span>`);
+  if (okScoreV(it.score)) meta.push(`<span class="pill score ${smScoreCls(it.score)}">★ ${it.score}</span>`);
   if ((it.genres || []).length) meta.push(`<span class="pill type">${esc(it.genres.slice(0, 2).join(' / '))}</span>`);
   if (it.size) meta.push(`<span class="pill size">${esc(it.size)}</span>`);
   if (it.dateLabel) meta.push(`<span class="pill time">${esc(normTime(it.dateLabel))}</span>`);
@@ -2059,6 +2194,56 @@ function smRow(it) {
   </div>`;
 }
 function smSkeleton(n) { return `<div class="sm-load">${'<div class="sk"></div>'.repeat(n || 4)}</div>`; }
+
+/* ★ v10.25：评分分级（≥9 绿 / ≥7.5 蓝 / 其余灰）—— 理由见 CSS 注释。
+ *   用函数声明（不用 const 箭头）—— 它在 smRow 之后才出现，函数声明会被提升，
+ *   免得将来有人在 script 里同步调用 smRow 时撞上 TDZ。 */
+function smScoreCls(v) { return v >= 9 ? 's-hi' : (v >= 7.5 ? 's-mid' : 's-lo'); }
+
+/* ★ v10.25：同款聚拢（搜索弹窗）—— 修「同一款游戏在结果里出现好几遍」
+ *
+ *  根因不是数据重复，是**源站把同一款拆成多个页面**：XDGAME 上「艾尔登法环」有
+ *  `/game/3668.html`（标准版）与 `/game/4156.html`（支持网络联机）两条独立条目，
+ *  加上机地主源那条，搜「艾尔登」6 行里「艾尔登法环」就占了 3 行 —— 看着像 bug。
+ *
+ *  归并键 = `splitName(title).zh`，即标题**第一个「/」之前**那段，完全相等才归并：
+ *    「艾尔登法环/ELDEN RING」与「艾尔登法环/ELDEN RING/支持网络联机」→ 同键 ✓
+ *    「艾尔登法环 黑夜君临/ELDEN RING NIGHTREIGN」        → 不同键 ✓（那是另一款，不能并）
+ *  ⚠️ 刻意**不用子串匹配** —— 子串会把上面两者并成一条（跨源名称匹配的老坑）。
+ *
+ *  归并只影响**展示**：每个条目都还在，其余收进主行下方的 chip，点了同样进详情。
+ *  主行 = 该键**首次出现**的那条（接口已按「标题↔关键词」贴合度排好序，这里不重排）。 */
+function smKeyOf(it) { return splitName(it.title).zh.toLowerCase().replace(/\s+/g, ''); }
+function smGroup(list) {
+  const map = new Map();
+  for (const it of (list || [])) {
+    const k = smKeyOf(it);
+    const g = map.get(k);
+    if (g) g.rest.push(it); else map.set(k, { main: it, rest: [] });
+  }
+  return [...map.values()];
+}
+/* 非主行条目的区分标签：标题第 2 段起里**带中文**的那一截
+ * （`/ELDEN RING/支持网络联机` → 「支持网络联机」）；一截都没有就叫「原版」。 */
+function smVariant(it) {
+  const cn = String(it.title || '').split('/').slice(1).find((s) => /[\u4e00-\u9fa5]/.test(s));
+  return cn ? cn.trim() : '原版';
+}
+/* 主行下方「另 N 个条目」那一行；只有一个条目时返回空串（大多数情况） */
+function smAltHtml(g) {
+  if (!g.rest.length) return '';
+  const chips = g.rest.map((it) => {
+    const s = SRC[it.source] || { nm: 'XDGAME', cls: 'xd' };
+    const sc = okScoreV(it.score) ? ` ★${it.score}` : '';
+    return `<button type="button" class="sm-alt-b ${s.cls}" data-url="${esc(it.url)}" data-fb="${rankFb(it)}"><span class="sb">${esc(s.nm)}</span> ${esc(smVariant(it))}${sc} <span class="ar">↗</span></button>`;
+  }).join('');
+  return `<div class="sm-alt"><span class="sm-alt-h"><span class="ic">↳</span> 另 ${g.rest.length} 个条目</span>${chips}</div>`;
+}
+/* 列表 → HTML：主行 + 其余条目 chips。limit 是**条目**上限（沿用旧口径，聚合后再收窄行数）。 */
+function smRows(list, limit) {
+  const arr = limit ? (list || []).slice(0, limit) : (list || []);
+  return smGroup(arr).map((g) => smRow(g.main) + smAltHtml(g)).join('');
+}
 
 /* ★ 手游中心结果行（统一搜索的第二个分组）
  *   与端游行的区别：手游走**手游中心合并索引**，标注「N 套配置 / M 条实测 / 实测 XX 帧」，
@@ -2083,6 +2268,9 @@ function smMobileRow(it) {
 }
 function bindSmRows() {
   $$('#smBody .sm-row').forEach(r => r.addEventListener('click', () => openDetailFromSearch(r)));
+  /* ★ v10.25：同款聚拢后主行下方的「另 N 个条目」chip —— 与主行**同一条路**进详情
+   *   （同样带 data-url/data-fb，所以直接复用 openDetailFromSearch，不另写一套跳转）。 */
+  $$('#smBody .sm-alt-b').forEach(r => r.addEventListener('click', () => openDetailFromSearch(r)));
   /* 手游结果行：点了开抽屉（有 libId 用 libId，没有再退回按名字找） */
   $$('#smBody .sm-row[data-mlib]').forEach(r => r.addEventListener('click', () => {
     const body = $('#smBody');
@@ -2256,7 +2444,7 @@ function paintSearchResult(q, j) {
       rows: svHit.length ? svHit.map(smSaveRow).join('') : `<div class="sm-empty" style="padding:14px">云存档库无命中</div>` },
     { i: 3, icon: '🖥️', name: '端游库 · 全站收录', tag: 'LOCAL', tagCls: 'local', cnt: pc.count, unit: '款',
       score: pcFit + (pcFit >= 2 ? 1 : 0),
-      rows: pcHit.length ? pcHit.map(smRow).join('') : `<div class="sm-empty" style="padding:14px">端游库无命中</div>` },
+      rows: pcHit.length ? smRows(pcHit) : `<div class="sm-empty" style="padding:14px">端游库无命中</div>` },
   ];
   groups.sort((a, b) => b.score - a.score || a.i - b.i);
 
@@ -2283,11 +2471,11 @@ async function searchLive(q) {
     html += `<div class="sm-sec" style="padding-top:4px">XDGAME 站内<span class="tag real">LIVE</span><span class="cnt">${xd && xd.ok ? (xd.items || []).length + ' 款' : '不可用'}</span></div>`;
     if (!xd || !xd.ok) html += `<div class="sm-empty" style="padding:14px">XDGAME 站内搜索不可用：${esc((xd && xd.error) || '网络异常')}</div>`;
     else if (!(xd.items || []).length) html += `<div class="sm-empty" style="padding:14px">XDGAME 站内无结果</div>`;
-    else html += (xd.items || []).map(smRow).join('');
+    else html += smRows(xd.items || []);
     html += `<div class="sm-sec" style="padding-top:12px">机地站内<span class="tag match">LIVE</span><span class="cnt">${ji && ji.ok ? (ji.items || []).length + ' 款' : '不可用'}</span></div>`;
     if (!ji || !ji.ok) html += `<div class="sm-empty" style="padding:14px">机地搜索不可用：${esc((ji && ji.error) || '网络异常')}</div>`;
     else if (!(ji.items || []).length) html += `<div class="sm-empty" style="padding:14px">机地站内无结果</div>`;
-    else html += (ji.items || []).map(smRow).join('');
+    else html += smRows(ji.items || []);
     html += `<div class="sm-acts" style="padding-top:12px">
       <a class="mini-btn" style="flex:1;text-decoration:none" href="${esc((j.searchUrl && j.searchUrl.xdgamer) || 'https://www.xdgame.com/')}" target="_blank" rel="noopener">前往 XDGAME 站内搜 ↗</a>
       <a class="mini-btn" style="flex:1;text-decoration:none;background:rgba(230,65,93,.07);border-color:rgba(230,65,93,.3);color:var(--c-jidi)" href="${esc((j.searchUrl && j.searchUrl.jidi) || 'https://jidiyouxi.com/')}" target="_blank" rel="noopener">前往机地站内搜 ↗</a>
@@ -2379,7 +2567,12 @@ function showSug(items) {
     return;
   }
   sugIdx = -1;
-  $('#smBody').innerHTML = `<div class="sm-sec">本地库联想<span class="tag local">SUGGEST</span><span class="cnt">${items.length} 款</span></div>` + items.slice(0, 8).map(smRow).join('');
+  /* ★ v10.25：同款聚拢后显示「款数」而不是「条目数」—— 6 条里其实只有 3 款，
+   *   写 6 款会让用户以为丢数据（所以并了多少条也一并说明）。 */
+  const hit = items.slice(0, 8);
+  const gs = smGroup(hit);
+  const cntTxt = gs.length + ' 款' + (gs.length < hit.length ? ` · 合并 ${hit.length} 条` : '');
+  $('#smBody').innerHTML = `<div class="sm-sec">本地库联想<span class="tag local">SUGGEST</span><span class="cnt">${cntTxt}</span></div>` + smRows(hit);
   bindSmRows();
   const its = sugItems();
   its.forEach((x, i) => x.addEventListener('mousemove', () => {
@@ -2489,6 +2682,7 @@ function closeDetail() {
   if (!d.classList.contains('show')) return;
   d.classList.remove('show');
   $('#mask').classList.remove('show');
+  const rail = $('#dRail'); if (rail) rail.hidden = true;   // ★ v10.25 定位条随详情页收起
   $$('.on-drawer').forEach(x => x.classList.remove('on-drawer'));
   if (drawerMode !== 'game') { drawerMode = 'game'; unlockBody(); return; }  // 配置面板：关掉即回页面
   if (detailFromSearch) restoreSearch(); // 从搜索进入 → 原样回到搜索结果
@@ -2550,15 +2744,116 @@ function openDetail(url, fbEnc, fromSearch) {
       ${pre ? `<div class="d-hint" style="margin-top:${fb.cover ? '0' : '16px'}"><b>${esc(pre.zh)}</b>${fb.cover ? ' · ' : ''}本地库记录${preChip ? '：' + preChip : '已就绪'} · 正在同步源站最新详情…</div>` : `<div class="d-hint">正在抓取源站详情…</div>`}
       <div class="d-load"><div class="spin"></div></div>
     </div>`;
-  fetch(api('/api/detail?url=' + encodeURIComponent(url)))
+  /* ★ v10.25：改打 /api/detail/merged —— 它在服务端把「另一源同名条目」的
+     **截图去重相加 + 版本介绍 + 游戏介绍**并进同一份 detail，并回一个 `merge` 溯源块。
+     为什么不在前端拿两份 detail 自己拼：
+       ① 去重口径必须与 fetchers/shots.js 的 idOf 同一份（铁律 10），前端拿不到那个模块；
+       ② 前端「先渲染再打补丁」要防「等待期间用户点了下一款游戏」的竞态。
+     `merge` 作为**第三个参数**单独传下去，不塞进 fb —— fb 是库内记录，
+     混进合并溯源信息后，下次有人读 fb.xxx 会以为那是库字段。 */
+  fetch(api('/api/detail/merged?url=' + encodeURIComponent(url)))
     .then(r => r.json())
-    .then(j => { if (!j.ok) throw new Error(j.error || '解析失败'); paintDetail(j.detail, fb); })
+    .then(j => { if (!j.ok) throw new Error(j.error || '解析失败'); paintDetail(j.detail, fb, j.merge || null); })
     .catch(e => {
       body.innerHTML = `<div class="d-err"><div style="font-size:30px;margin-bottom:10px">⚠️</div><p>详情抓取失败</p><p style="font-size:12px;margin:6px 0 14px">${esc(e.message)}</p><a class="go xd" href="${esc(url)}" target="_blank" rel="noopener">前往源站查看完整详情 ↗</a></div>`;
     });
 }
-function paintDetail(d, fb) {
+/* ================= 🖼 游戏预览画廊（v10.25） =================
+ * 用户口径：「游戏截图应该是（参考站那种）大图 + 左右翻页 + 计数器 + 缩略图条」。
+ *
+ * ★ 为什么用**事件委托**而不是给每个按钮绑一次：
+ *   `paintDetail` 每次打开详情都会整段替换 #drawerBody 的 innerHTML。
+ *   逐个 addEventListener 的话，旧节点被回收、新节点根本没绑上 ——
+ *   表现为「第一次打开能点、第二次点不动」，而且**不报任何错**。
+ *   委托挂在 document 上只绑一次，与节点生命周期彻底解耦。
+ *
+ * ★ 键盘：只在「灯箱打开时」接管 ←/→。
+ *   详情页本来就用 ←/→ 切「上一款 / 下一款游戏」（switchDetail），
+ *   无条件下接管会把翻游戏变成翻截图 —— 那是功能退化，不是新功能。
+ */
+function galGo(root, i) {
+  const n = +(root.dataset.n || 0);
+  if (!n) return;
+  const k = Math.max(0, Math.min(n - 1, i));
+  root.dataset.i = String(k);
+  const trk = root.querySelector('.gal-trk');
+  if (trk) trk.style.transform = 'translateX(' + (-k * 100) + '%)';
+  root.querySelectorAll('.gal-sld').forEach((el, j) => el.setAttribute('aria-hidden', j === k ? 'false' : 'true'));
+  root.querySelectorAll('.gal-th').forEach((el, j) => el.classList.toggle('is-on', j === k));
+  const num = root.querySelector('.gal-num');
+  if (num) num.textContent = (k + 1) + ' / ' + n;
+  const p = root.querySelector('.gal-nav.prev'), x = root.querySelector('.gal-nav.next');
+  if (p) p.disabled = k === 0;
+  if (x) x.disabled = k === n - 1;
+  const on = root.querySelector('.gal-th.is-on');
+  if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  /* ★ 只靠 `loading="lazy"` 不够：slide 是横向位移的，浏览器视口判定不到那几张，
+   *   实测 9 张里只有 2 张真加载 ⇒ 用户点「下一张」会先看到一片空白底。
+   *   这里把「当前 + 下一张」显式改成 eager（改属性会立刻触发加载）。
+   *   ★ 也不能全设 eager：单张大图 573KB，12 张就是 6.9MB，首屏会被拖死。
+   *   ⇒ 只预载一张，兼顾「不白屏」与「不拖慢」。 */
+  root.querySelectorAll('.gal-sld img').forEach((im, j) => {
+    if (j <= k + 1 && im.getAttribute('loading') !== 'eager') im.setAttribute('loading', 'eager');
+  });
+}
+
+let galLbEl = null;
+let galLbImgs = [];
+let galLbI = 0;
+function galLbPaint() {
+  if (!galLbEl) return;
+  const im = galLbEl.querySelector('img');
+  if (im) im.src = galLbImgs[galLbI] || '';
+  const n = galLbEl.querySelector('.n');
+  if (n) n.textContent = (galLbI + 1) + ' / ' + galLbImgs.length;
+}
+function galLbClose() {
+  if (galLbEl && galLbEl.parentNode) galLbEl.parentNode.removeChild(galLbEl);
+  galLbImgs = [];
+}
+function galLbOpen(root, i) {
+  galLbImgs = Array.prototype.slice.call(root.querySelectorAll('.gal-sld img'))
+    .map((im) => im.getAttribute('src')).filter(Boolean);
+  if (!galLbImgs.length) return;
+  galLbI = Math.max(0, Math.min(galLbImgs.length - 1, i));
+  if (!galLbEl) {
+    galLbEl = document.createElement('div');
+    galLbEl.className = 'gal-lb';
+    galLbEl.innerHTML = '<button type="button" class="gal-lb-x" aria-label="关闭大图">✕</button><img alt="游戏截图"><div class="n"></div>';
+  }
+  document.body.appendChild(galLbEl);
+  galLbPaint();
+}
+document.addEventListener('click', (e) => {
+  const go = e.target.closest && e.target.closest('[data-gal-go]');
+  if (go) { const r = go.closest('[data-gal]'); if (r) galGo(r, +go.dataset.galGo); return; }
+  const st = e.target.closest && e.target.closest('[data-gal-step]');
+  if (st) { const r = st.closest('[data-gal]'); if (r) galGo(r, (+r.dataset.i || 0) + (+st.dataset.galStep)); return; }
+  if (galLbEl && galLbEl.contains(e.target)) {            // 灯箱内：点图翻下一张、点空白/✕ 关闭
+    if (e.target === galLbEl) { galLbClose(); return; }
+    if (e.target.tagName === 'IMG') { galLbI = (galLbI + 1) % galLbImgs.length; galLbPaint(); }
+    return;
+  }
+  const im = e.target.closest && e.target.closest('.gal-sld img');
+  if (im) {
+    const r = im.closest('[data-gal]');
+    if (r) galLbOpen(r, +r.dataset.i || 0);
+  }
+});
+document.addEventListener('keydown', (e) => {
+  if (!galLbEl || !galLbEl.parentNode) return;            // 只在灯箱打开时接管
+  if (e.key === 'Escape') { galLbClose(); e.stopPropagation(); }
+  else if (e.key === 'ArrowRight') { galLbI = (galLbI + 1) % galLbImgs.length; galLbPaint(); e.stopPropagation(); }
+  else if (e.key === 'ArrowLeft') { galLbI = (galLbI - 1 + galLbImgs.length) % galLbImgs.length; galLbPaint(); e.stopPropagation(); }
+}, true);
+
+function paintDetail(d, fb, merge) {
   fb = fb || {};
+  merge = merge || null;
+  /* ★ v10.25：换一款游戏 → 上一份的「查看全部」载荷全部作废。
+     不清空的话，旧 token 会指向**上一款游戏**的源存档路径 / 机型清单，
+     点开会串台（而且看起来完全正常，最危险的那种 bug）。 */
+  dFullStore = Object.create(null);
   const body = $('#drawerBody');
   // 库内字段兜底：源站解析缺 cover/score/size/genres/dateLabel 时用本地库记录补全
   const okScore = (v) => v != null && v > 0 && v <= 10;
@@ -2595,9 +2890,47 @@ function paintDetail(d, fb) {
    *   现在统一交给 #reqSlot 的 loadReqBlock()：源站有就用源站的，
    *   没有就去 Steam 官方接口补（本库 97.2% 的封面带 Steam appid）。
    *   位置也从「版本介绍之后」提到抽屉前段 —— 能不能跑是打开详情页最先想知道的事。 */
-  const versionHtml = d.version ? `<div class="block"><h4><span class="ic"></span>版本介绍</h4><p>${esc(d.version)}</p></div>` : '';
-  const descHtml = d.desc || d.description ? `<div class="block"><h4><span class="ic"></span>游戏介绍</h4><p>${esc(d.desc || d.description)}</p></div>` : '';
-  const shotsHtml = (d.shots && d.shots.length) ? `<div class="block"><h4><span class="ic"></span>游戏预览</h4><div class="shots">${d.shots.slice(0, 6).map(u => `<img src="${esc(u)}" loading="lazy" alt="预览" onerror="this.style.display='none'">`).join('')}</div></div>` : '';
+  /* ★ v10.25：版本介绍 / 游戏介绍可能是**另一源补来的**（机地页面本来没有版本介绍，
+     XD 页面没有源站配置要求）。补来的必须在标题上标出来源 ——
+     否则用户无法判断这段文案是哪个站的口径。 */
+  const fromTag = (src) => {
+    if (!src) return '';
+    const m = SRC[src] || { nm: '另一源', cls: 'xd' };
+    return `<span class="src-mini ${m.cls}">来自${m.nm}</span>`;
+  };
+  const versionHtml = d.version ? `<div class="block"><h4><span class="ic"></span>版本介绍${fromTag(d.versionFrom)}</h4><p>${esc(d.version)}</p></div>` : '';
+  const descHtml = d.desc || d.description ? `<div class="block"><h4><span class="ic"></span>游戏介绍${fromTag(d.descFrom)}</h4><p>${esc(d.desc || d.description)}</p></div>` : '';
+  /* ★ v10.25：游戏预览由「三列小图网格」改成**画廊**（大图 + 左右翻页 + 计数 + 缩略图条）。
+   *   旧版 `.shots` 把截图压到 1/3 宽、一张 16:9 只占 90px 高，等于看不清；
+   *   而且没有「点开看大图」的路径。新结构对齐用户给的参考站语义：
+   *   viewport + track + slide / prev-next / counter / thumbs，外加点图放大（灯箱）。
+   *   ★ 数据形态同时变了：`shots` 从 `['url']` 变成 `[{t,f}]`（缩略图/大图两个尺寸），
+   *     所以这里**不再做任何 URL 改写** —— 尺寸规则只存在于服务端 fetchers/shots.js。 */
+  const shotsHtml = (() => {
+    const list = (d.shots || [])
+      .map((s) => (typeof s === 'string' ? { t: s, f: s } : s))     // 兼容旧形态
+      .filter((s) => s && s.t && s.f);
+    if (!list.length) return '';                                    // 没图就整块不占版面
+    const slides = list.map((s, i) =>
+      `<div class="gal-sld" aria-hidden="${i ? 'true' : 'false'}"><img src="${esc(s.f)}" alt="游戏截图 ${i + 1}" loading="${i ? 'lazy' : 'eager'}" decoding="async" referrerpolicy="no-referrer"></div>`).join('');
+    const thumbs = list.map((s, i) =>
+      `<button type="button" class="gal-th${i ? '' : ' is-on'}" data-gal-go="${i}" aria-label="查看第 ${i + 1} 张截图"><img src="${esc(s.t)}" alt="" loading="lazy" referrerpolicy="no-referrer"></button>`).join('');
+    /* ★ v10.25：并进来的张数如实标注（「双源有则合并去重显示」的可见凭证）——
+       不标的话用户只会觉得「图怎么变多了」，不知道多出来的来自另一源。 */
+    const mg = (merge && merge.shotsAdded > 0 && merge.twin) ? merge.twin : null;
+    const ms = mg ? (SRC[mg.source] || { nm: '另一源', cls: 'xd' }) : null;
+    const mergeTag = ms ? `<span class="src-mini ${ms.cls}">含${ms.nm} ${merge.shotsAdded} 张</span>` : '';
+    return `<div class="block gal" data-gal data-n="${list.length}" data-i="0">
+      <h4><span class="ic"></span>游戏预览${mergeTag}<span class="cnt">${list.length} 张</span></h4>
+      <div class="gal-vp">
+        <div class="gal-trk">${slides}</div>
+        <button type="button" class="gal-nav prev" data-gal-step="-1" aria-label="上一张截图" disabled>❮</button>
+        <button type="button" class="gal-nav next" data-gal-step="1" aria-label="下一张截图">❯</button>
+        <div class="gal-num" aria-live="polite">1 / ${list.length}</div>
+      </div>
+      <div class="gal-thumbs">${thumbs}</div>
+    </div>`;
+  })();
   body.innerHTML = `
     <div class="d-hero">
       <div class="d-top">${closeBtnHtml()}<span class="src-badge ${s.cls}" style="color:#fff;background:${s.cls === 'jidi' ? 'rgba(230,65,93,.8)' : 'rgba(11,123,255,.8)'};align-self:center">${s.nm} 来源</span></div>
@@ -2623,19 +2956,27 @@ function paintDetail(d, fb) {
            本站仍定位信息聚合站，资源与文件都在源站社区帖内。 -->
       <div id="dlSlot"></div>
       <div class="no-dl">🚫 仅聚合 <b>详情页与更新内容</b>，不含任何下载资源</div>
-      <div class="d-actions">
-        <!-- ★ v10.22：把「跳转到源站」升级成**取回下载链接**。
-             用户口径：「将游戏详情页的跳转链接变成获取到对应游戏的下载链接（弹窗展示，
-             大部分 XD 都是有多个下载链接，最好是获取到完整的标题）」。
-             ⇒ 下载升为主操作（独占一行），源站详情退为次操作 —— 但**仍然保留**：
-               更新日志 / 版本介绍 / 评论只在源站有，删掉会丢信息。
-             ★ 双源一起取：data-dl-url 给当前源详情页，data-dl-jidi 给机地详情页 URL
-               （XD 库里合并进来的 13,448 条都带 jidiUrl）。
-               两个都给 → 弹窗里分「XD 官方盘口」「机地社区分享」两组展示，
-               比只给一边更接近「把这个游戏的下载链接都拿到」。 -->
-        ${(d.url || fb.jidiUrl) ? `<button class="go dl" type="button" id="dlBtn"
+      <!-- ★ v10.25：下载动作条 —— 三个并排按钮（下载本体 / 修改器 / Mod）。
+           用户口径：「我需要你将下载按钮优化（①下载本体，②下载修改器，③下载Mod）」。
+           ⚠️ 修改器 / Mod 的**条数**来自 /api/mods/match 的 counts（下面 loadDlBlock 回填），
+              未知期间保持 hidden；回填后条数为 0 也保持 hidden —— 宁可少一个按钮，
+              也不给一个点开是空列表的按钮（同 PITFALLS：#11 宁可退回未收录）。
+           ★ 「下载本体」故意不带数字：/api/download 要跟随 302 逐个解析（XD 约 3-8 秒），
+              不能在打开详情页时就预取，所以它的条数只能点开才知道。 -->
+      <div class="dl-strip" id="dlStrip"${(d.url || fb.jidiUrl) ? '' : ' hidden'}>
+        ${(d.url || fb.jidiUrl) ? `<button class="ds ds-main" type="button" id="dlBtn"
            data-dl-open data-dl-title="${esc(n.zh)}" data-dl-sub="${esc(n.en || '')}"
-           data-dl-url="${esc(d.url || '')}" data-dl-jidi="${esc(fb.jidiUrl || '')}">⬇ 网盘下载</button>` : ''}
+           data-dl-url="${esc(d.url || '')}" data-dl-jidi="${esc(fb.jidiUrl || '')}">⬇ <em>下载本体</em></button>` : ''}
+        <button class="ds ds-mf" type="button" hidden data-dlmod-open="modifier"
+          data-dlmod-title="${esc(title)}" data-dlmod-id="${esc(fb.id || d.id || '')}">🛠 <em>修改器</em><i>0</i></button>
+        <button class="ds ds-mo" type="button" hidden data-dlmod-open="mod"
+          data-dlmod-title="${esc(title)}" data-dlmod-id="${esc(fb.id || d.id || '')}">🧩 <em>Mod</em><i>0</i></button>
+      </div>
+      <div class="d-actions">
+        <!-- ★ v10.22：「前往源站详情」**仍然保留** ——
+               更新日志 / 版本介绍 / 评论只在源站有，删掉会丢信息。
+               v10.25 把下载从这块挪到上面的 .dl-strip（三个下载动作归一条，
+               与「看信息」的跳转动作分开，避免「资源」和「信息」两个动作长得一样）。 -->
         ${d.url ? `<a class="go ${s.cls}" href="${esc(d.url)}" target="_blank" rel="noopener">前往${s.nm}详情 ↗</a>` : ''}
         <!-- ★ v10.15：跨源按钮**默认隐藏**，只有 linkCounterpart() 查到「这款游戏在另一源的详情页」
              时才显形；查不到就保持不显示。
@@ -2655,6 +2996,9 @@ function paintDetail(d, fb) {
   loadSvBlock(d, title);     // 💾 云存档位置（v10.1）
   loadRelated(d, fb);        // 同分类推荐（库内数据 · 多因子打分）
   loadDlBlock(d, fb, title); // 📥 下载入口（机地社区 MOD / 修改器帖）
+  /* ★ v10.25：先按「此刻已经渲染出来的区块」建一次定位条；
+     后面那些懒加载分区（配置要求 / 修改器 / 云存档 / 下载条）靠 MutationObserver 补。 */
+  railSync();
 }
 /* ★ v10.1：端游详情抽屉的三个「外部资源」区块（懒加载 —— 抽屉打开后才请求，不进首包）
  *
@@ -2890,6 +3234,28 @@ function resolveCounterpart(d, fb) {
  * 前端留一份副本就等于有两个「同款判定」实现 —— 改一处忘一处时，
  * 详情页的跨源按钮会与接口给出的结论不一致（项目铁律 10：同一语义只留一种写法）。 */
 
+/* 机型 → 展示字段的唯一映射（★ v10.25 抽出来：详情页清单与「查看全部」弹窗
+ * 必须给出**同一台机器同一个名字**，两处各写一遍必然漂移 —— 本项目 PITFALLS #10）。
+ * @param {string} m 机型串（可能带内部编号，如 `HONOR MTN-NX3`）
+ * @param {object|null} s /api/device/specs 的该条记录 */
+function bhDevRow(m, s) {
+  const mk = (s && s.mkt) || null;
+  const disp = (mk && mk.display) || '';
+  const w0 = disp.split(' ')[0] || '';
+  const codeShort = (w0 && m.toLowerCase().startsWith(w0.toLowerCase() + ' ')) ? m.slice(w0.length + 1).trim() : m;
+  return {
+    m,
+    name: disp || m,
+    code: (mk && mk.resolved && disp && disp.toLowerCase() !== m.toLowerCase()) ? codeShort : '',
+    hwq: (mk && (mk.market || mk.display)) || m,
+    /* ★ v10.18：芯片由服务端三级降级的**本地两级**给出（配对索引 → 串内芯片号），
+       拿不到就是空 —— 空的那批下面会自动联网补（fillMissingDevChips）。 */
+    chip: (s && s.chip) || '',
+    chipSrc: (s && s.chipSrc) || '',
+    score: (s && s.score) || 0,
+    approx: !!(s && s.approx),
+  };
+}
 async function loadBhBlock(d, title, fb) {
   const slot = $('#bhSlot');
   if (!slot) return;
@@ -2956,25 +3322,7 @@ async function loadBhBlock(d, title, fb) {
         const sr = await fetch(api('/api/device/specs?models=' + encodeURIComponent(devs.join('|')))).then((r) => r.json());
         specs = (sr && sr.specs) || {};
       } catch (e) { specs = {}; }
-      const arr = devs.map((m) => {
-        const s = specs[m] || null;
-        const mk = (s && s.mkt) || null;
-        const disp = (mk && mk.display) || '';
-        const w0 = disp.split(' ')[0] || '';
-        const codeShort = (w0 && m.toLowerCase().startsWith(w0.toLowerCase() + ' ')) ? m.slice(w0.length + 1).trim() : m;
-        return {
-          m,
-          name: disp || m,
-          code: (mk && mk.resolved && disp && disp.toLowerCase() !== m.toLowerCase()) ? codeShort : '',
-          hwq: (mk && (mk.market || mk.display)) || m,
-          /* ★ v10.18：芯片由服务端三级降级的**本地两级**给出（配对索引 → 串内芯片号），
-             拿不到就是空 —— 空的那批下面会自动联网补（fillMissingDevChips）。 */
-          chip: (s && s.chip) || '',
-          chipSrc: (s && s.chipSrc) || '',
-          score: (s && s.score) || 0,
-          approx: !!(s && s.approx),
-        };
-      });
+      const arr = devs.map((m) => bhDevRow(m, specs[m] || null));
       const sorted = arr.slice().sort((a, b) => (a.score || 1e9) - (b.score || 1e9));
       const gate = sorted.find((x) => x.score > 0) || null;   // 有性能分的最弱一台 = 门槛
       /* ★ v10.18：门槛不再单起一行摘要（那行与清单首行是同一台，读起来像重复）。
@@ -2984,9 +3332,27 @@ async function loadBhBlock(d, title, fb) {
         cntEl.innerHTML = esc(cntTxt)
           + `<span class="d-devlist-lg" title="橙色那台是实测跑通过的最弱机型 —— 比它强的机型基本也能跑">门槛机型</span>`;
       }
-      const hiddenDev = allDevs.length - devs.length;
-      const more = hiddenDev > 0
-        ? `<span class="dv more">还有 ${hiddenDev} 台机型未展开（上游共汇总 ${h.configs} 套配置）</span>` : '';
+    /* ★ v10.25：机型清单最多铺 24 台，多出来的给「查看全部」按钮。
+       点击时才补取其余机型的规格 —— /api/device/specs 的机型是塞在 URL 里的，
+       全量一次性发请求有 414（URI Too Long）风险，所以按 40 台分块串行发。 */
+    const hiddenDev = allDevs.length - devs.length;
+    const more = hiddenDev > 0
+      ? dFullBtn(dFullPut({
+        type: 'dv', title: '机型清单 · 全部', sub: t, total: allDevs.length,
+        load: async () => {
+          const out = [];
+          for (let i = 0; i < allDevs.length; i += 40) {
+            const chunk = allDevs.slice(i, i + 40);
+            let sp = {};
+            try {
+              sp = ((await fetch(api('/api/device/specs?models=' + encodeURIComponent(chunk.join('|')))).then((r) => r.json())) || {}).specs || {};
+            } catch (e) { sp = {}; }
+            for (const m of chunk) out.push(bhDevRow(m, sp[m] || null));
+          }
+          return { items: out };
+        },
+      }), `查看全部 ${allDevs.length} 台机型`).replace('class="d-more-btn"', 'class="d-more-btn" style="grid-column:1/-1"')
+      : '';
       /* 芯片名太长（如 `Dimensity 8350 (MT6897 MT6897Z_B/ZA MT8792Z/NA)`、
          `Samsung Exynos 2200 (国际版本) / Qualcomm Snapdragon 8 Gen 1 (美国)`）徽标里放不下，
          只留**主名**（第一个 `(` 或第一个 ` / ` 之前），完整值挂在 title 上、详情面板里也有。 */
@@ -3088,7 +3454,15 @@ async function loadBhBlock(d, title, fb) {
     if (!items.length) { ps.innerHTML = ''; return; }
     ps.innerHTML = items.map(bhParamCard).join('')
       + (h.configs > items.length
-        ? `<div class="more">共 ${h.configs} 份配置，这里显示最近的 ${items.length} 份 —— 去 <a href="${BH_EMU_URL}">手游中心</a> 点「📋 社区配置」看全部</div>`
+        ? `<div class="more" style="margin-bottom:6px">共 ${h.configs} 份配置，这里显示最近的 ${items.length} 份</div>`
+          /* ★ v10.25：「全部」点击时才取（limit 3 → 100），沿用同一套 store+渲染器 */
+          + dFullBtn(dFullPut({
+            type: 'bp', title: '逐条游玩参数 · 全部配置', sub: t, total: h.configs,
+            load: async () => {
+              const jj = await fetch(api('/api/bh/params?k=' + encodeURIComponent(keys) + '&limit=100')).then((r) => r.json());
+              return { items: (jj && jj.items) || [], total: h.configs };
+            },
+          }), `查看全部 ${h.configs} 份配置`)
         : '');
   } catch (e) { /* 静默：区块是锦上添花，失败不打扰用户 */ }
 }
@@ -3119,9 +3493,39 @@ async function loadReqBlock(d, fb) {
   const title = String(d.title || (fb && fb.title) || '').trim();
   /* ① 源站自带（机地详情页有 game_sys_reqs）—— 不再等到网络回包，立刻渲染 */
   if (d.requirements && Object.keys(d.requirements).length) {
+    /* ★ v10.25 双源合并：机地给的是**一整组**最低配置（`{os,cpu,ram,gpu,storage}`，
+       没有「推荐配置」这一栏），而 Steam 官方接口能给推荐配置。
+       原先这里直接 return —— 于是机地来源的约 3,600 款游戏**永远只有一栏配置**。
+       现在并行问一次 Steam，只为补第二栏；Steam 也没有就照旧一栏（那确实是没有）。
+       ⚠️ 表格结构不动：最低配置永远来自源站那份，Steam **只补「推荐配置」这一栏**，
+          不做逐字段混搭 —— 两套口径混进一张表，用户没法判断哪一行可信。 */
     slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>配置要求<span class="cnt">源站提供</span></h4>
       <div class="d-req">${reqCol('最低配置', d.requirements)}</div>
       <div class="d-hint2">来自源站详情页的最低配置要求，供参考；实际体验受画质设置与驱动影响。</div></div>`;
+    (async () => {
+      try {
+        const id = (fb && fb.id) || d.id || '';
+        const t = String(d.title || (fb && fb.title) || '').trim();
+        /* ★ cover 要挑**带 Steam appid 的那张**：机地详情页的 cover 是
+           `img2.52jidi.com/topic/cover/...`，里面没有 appid，直接用会命中不到 Steam 接口。
+           库内封面（fb.cover）才是带 appid 的那份（PITFALLS #7 同款坑）。 */
+        const cov = [d.cover, (fb && fb.cover)]
+          .find((u) => /\/steam\/apps\/\d+\//.test(String(u || ''))) || d.cover || (fb && fb.cover) || '';
+        const qs = '?t=' + encodeURIComponent(t) + (id ? '&id=' + encodeURIComponent(id) : '') + (cov ? '&cover=' + encodeURIComponent(cov) : '');
+        const j = await fetch(api('/api/pcreq' + qs)).then((r) => r.json());
+        const rec = j && j.hit && (j.rec || (j.hit && j.hit.rec));
+        if (!rec || !Object.keys(rec).length) return;
+        /* ★ 二次校验「还是同一份详情页」：用户可能已经换到别的游戏了。
+           抽屉重渲染会把旧节点摘出文档 ⇒ contains() 为假，此时**绝不能**再写进去。 */
+        const box = slot.querySelector('.d-req');
+        if (!box || !document.body.contains(box)) return;
+        box.insertAdjacentHTML('beforeend', reqCol('推荐配置', rec, 'rec'));
+        const hint = slot.querySelector('.d-hint2');
+        if (hint) hint.insertAdjacentHTML('afterbegin', '<span class="src-mini xd" style="margin-left:0">推荐配置来自 Steam 官方</span><br>');
+        const cnt = slot.querySelector('.d-blk .cnt');
+        if (cnt) cnt.textContent = '源站 + Steam 官方';
+      } catch (e) { /* 补不到就维持一栏 —— 不报错、不占版面 */ }
+    })();
     return;
   }
   const id = (fb && fb.id) || d.id || '';
@@ -3168,7 +3572,12 @@ async function loadTrBlock(d, title) {
         <span class="nm" title="${esc(it.name || nm)}">${esc(nm)}</span>
         ${it.version ? `<span class="ver">v ${esc(it.version)}</span>` : ''}</div>`;
     }).join('');
-    const more = items.length > 8 ? `<div class="more">另有 ${items.length - 8} 个来源未展示，去手机专区「修改器」页看全部</div>` : '';
+    /* ★ v10.25：原来这里是一句「另有 N 个来源未展示，去手机专区「修改器」页看全部」——
+       数据就在**当前这个响应**里（/api/trainers/match 返回全量，没截断），
+       直接把整份存进 dFullStore，按钮只带 token。 */
+    const more = items.length > 8
+      ? dFullBtn(dFullPut({ type: 'tr', title: '修改器 · 全部来源', sub: t, items }), `查看全部 ${items.length} 个来源`)
+      : '';
     slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>修改器<span class="cnt">${items.length} 个来源</span></h4>${rows}${more}
       <div class="d-hint2">修改器文件放到<b>游戏安装根目录</b>（与主程序 .exe 同级）后再启动；CE 修改表需先运行 Cheat Engine 再加载表格。<br>
         清单聚合自 Game Cheats Manager 公开数据，<a href="${D_GCM_URL}" target="_blank" rel="noopener">打开 GCM 下载页 ↗</a></div></div>`;
@@ -3196,7 +3605,11 @@ async function loadSvBlock(d, title) {
     }
     for (const r of regs.slice(0, MAXR)) rows.push(`<div class="p reg"><i>注册表</i><span>${esc(r.raw)}</span></div>`);
     const hidden = (paths.length - Math.min(paths.length, MAXP)) + (regs.length - Math.min(regs.length, MAXR));
-    const more = hidden > 0 ? `<div class="more">另有 ${hidden} 条存档位置未展示，去手机专区「云存档」页看全部</div>` : '';
+    /* ★ v10.25：同上 —— /api/saves/match 返回的 hit 就是全量，直接整份存进 store */
+    const more = hidden > 0
+      ? dFullBtn(dFullPut({ type: 'sv', title: '云存档位置 · 全部记录', sub: t, hit: h }),
+        `查看全部 ${paths.length + regs.length} 条记录`)
+      : '';
     const tags = [];
     (h.cloud || []).forEach(c => tags.push(`<span class="d-tg cloud">☁ ${esc(String(c).toUpperCase())}</span>`));
     if (h.phone) tags.push('<span class="d-tg phone">手机能玩</span>');
@@ -3283,6 +3696,29 @@ function syncDActions() {
   box.classList.toggle('one', n <= 1);
   box.style.display = n ? '' : 'none';
 }
+/** 回填底部下载条里「修改器 / Mod」两个按钮的条数（v10.25）。
+ *  @param {{mod?:number, modifier?:number}|null} counts 来自 /api/mods/match 的 counts
+ *
+ *  三条规则，都是为了「不让用户点到一个空弹窗」：
+ *    ① 条数为 0（或拿不到 counts）→ 保持 hidden，不显示这个按钮；
+ *    ② 按钮是 `hidden` 属性 + `.dl-strip > .ds[hidden]{display:none}` —— 必须显式写，
+ *       因为 `.ds` 自己声明了 display:flex 会盖掉浏览器默认的 `[hidden]`；
+ *    ③ 三个按钮全部隐藏时，把整条 `.dl-strip` 也收起来，不留一段空 margin。
+ *  不去改列数：.dl-strip 是 flex，剩下的按钮自动铺满。 */
+function setDlCounts(counts) {
+  const strip = $('#dlStrip');
+  if (!strip) return;
+  const pair = [['modifier', '.ds-mf'], ['mod', '.ds-mo']];
+  for (const [k, sel] of pair) {
+    const b = strip.querySelector(sel);
+    if (!b) continue;
+    const n = (counts && Number(counts[k])) || 0;
+    b.hidden = !n;
+    const i = b.querySelector('i');
+    if (i) i.textContent = String(n);
+  }
+  strip.hidden = !strip.querySelector('.ds:not([hidden])');
+}
 /* 同分类推荐 ★ v10.11：改走后端多因子打分（类型 IDF + 系列名 + 评分接近度 + 容量接近度）
  *
  *  旧做法：取 genres[0] → /api/library/browse?g=…&sort=score → 取 100 条随机洗牌 6 条。
@@ -3348,6 +3784,10 @@ async function loadDlBlock(d, fb, title) {
     if (id) qs.push('id=' + encodeURIComponent(id));
     if (t) qs.push('t=' + encodeURIComponent(t));
     const j = await fetch(api('/api/mods/match?' + qs.join('&'))).then(r => r.json());
+    /* ★ v10.25：先回填底部「修改器 / Mod」两个下载按钮的条数。
+       ⚠️ 这一步必须在 items 空判**之前**：社区只收了 Mod 没收修改器（很常见），
+          或摘要列表为空而计数不为 0，两种情况下按钮都要能正确显形（默认 hidden）。 */
+    setDlCounts(j && j.counts);
     const items = (j && j.items) || [];
     if (!items.length) { slot.innerHTML = ''; return; }   // 社区没收录就不占版面
     const rows = items.slice(0, 4).map(it => {
@@ -3362,7 +3802,19 @@ async function loadDlBlock(d, fb, title) {
         <span class="m">${meta}</span></span>
         <span class="go">打开帖子 ↗</span></a>`;
     }).join('');
-    const rest = j.count > 4 ? `<div class="more">另有 ${j.count - 4} 条未展示，去机地社区搜「${esc(t ? splitName(t).zh : '')}」看全部</div>` : '';
+    /* ★ v10.25：这条的「全部」**点击时才取**（一次最多 200 条）——
+       详情页只铺 4 条，没必要为了一个可能没人点的按钮先把 200 条拉下来。 */
+    const rest = j.count > 4 ? dFullBtn(dFullPut({
+      type: 'md', title: '下载入口 · 全部资源帖', sub: t, count: j.count,
+      load: async () => {
+        const q2 = [];
+        if (id) q2.push('id=' + encodeURIComponent(id));
+        if (t) q2.push('t=' + encodeURIComponent(t));
+        q2.push('limit=200');
+        const jj = await fetch(api('/api/mods/match?' + q2.join('&'))).then((r) => r.json());
+        return { items: (jj && jj.items) || [], count: (jj && jj.count) || 0 };
+      },
+    }), `查看全部 ${j.count} 条资源帖`) : '';
     slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>下载入口<span class="cnt">机地社区 ${j.count} 条</span></h4>
       ${rows}${rest}
       <div class="d-dl-links">
@@ -3594,6 +4046,236 @@ async function openDownload(ctx) {
   $('#dlFoot').innerHTML = '<b>链接来自源站</b>：XD 的地址由 <code>/plus/download.php</code> 跳转解析，' +
     '机地的来自社区帖正文。本站只做聚合与解析，<b>不转存、不提供文件</b>；下载前请自行核对文件安全。';
 }
+/* ============ 📚 「查看全部」弹窗（v10.25 新增） ============
+ * 用户口径：「详情页中如果数量较大，则增加一个按钮（更多）查看该专区的全部内容弹窗」。
+ *
+ * 五个专区都会截断展示（都是实测出来的上限）：
+ *   🛠 修改器 #trBlock        8 个来源 / 共 N
+ *   💾 云存档 #svBlock        3 条路径 + 2 条注册表 / 共 N
+ *   📱 机型清单 #bhDevSlot    24 台 / 共 N
+ *   📋 逐条参数 #bhParamSlot  3 份 / 共 N
+ *   📥 下载入口 #dlSlot       4 条 / 共 N
+ * ★ 实测（2026-09-20，全库离线统计）：**当前真正会触发按钮的只有三个** ——
+ *     云存档（6,604 条里 1,019 条超过 3+2）、逐条参数、下载入口；
+ *   另外两个是**守卫**，现状下不会出现，但保留（不是死代码，是阈值保护）：
+ *     · 修改器：全库单款最多 **4** 个来源 < 上限 8
+ *     · 机型清单：全库单款最多 **22** 台 < 上限 24（另有 1 条脏数据 35 台，name 为 `+`）
+ *   要激活它们只需下调对应上限；本次**不动上限**（改了会缩短默认展示，属于用户没要求的退化）。
+ * 改之前这些位置各写一句「另有 N 条未展示，去手机专区「xx」页看全部」——
+ * 把用户赶去另一个页面自己找。而数据**本来就在手上**：前两个就在当前响应里，
+ * 后三个只是把请求的 limit 放大一次。
+ *
+ * ★ 做法：把「完整载荷」按 token 存进 dFullStore，按钮上只带 token。
+ *   为什么用 token 而不是把参数写进 data-*：
+ *     弹窗之间要展示的东西差别很大（来源清单 / 路径 / 机型 / 卡片式配置 / 帖子），
+ *     统一成一个「载荷 + 渲染器」的入口，就不用每个按钮各写一遍取数逻辑 ——
+ *     也不会出现「按钮写着 24 台、弹窗里 20 台」这种数字对不上。
+ *   ⚠️ token 只在**当前这一份详情页渲染**内有效：paintDetail 会把 store 清空。
+ *      所以绝不能让 token 跨详情页复用（换一款游戏后旧 token 必须失效）。
+ * ★ 载荷可以带 `load()`：需要二次请求的（参数 / 机型 / 下载入口）在点击时才发，
+ *   不在打开详情页时就预取（下载入口一次要跟随 302 解析，最贵）。
+ * ★ 复用 #dlPop 外壳，理由同下（三页共享资产，不抄第二份样式）。
+ */
+let dFullStore = Object.create(null);
+let dFullSeq = 0;
+function dFullPut(p) { const k = 'f' + (++dFullSeq); dFullStore[k] = p; return k; }
+/** 「查看全部」按钮。label 里自带条数，避免和载荷里的数字两处维护。 */
+function dFullBtn(k, label) {
+  return '<button type="button" class="d-more-btn" data-full="' + esc(k) + '">' +
+    esc(label) + ' <span class="ar">→</span></button>';
+}
+const D_DF_KIND = { mod: 'MOD', modifier: '修改器' };
+const D_FULL_RENDER = {
+  /* 🛠 修改器（Game Cheats Manager 公开数据，没有下载地址，只给来源与版本） */
+  tr(p) {
+    const items = p.items || [];
+    return '<div class="df-note">共 <b>' + items.length + '</b> 个来源 · 清单聚合自 Game Cheats Manager 公开数据，' +
+      '本站不提供文件；<a href="' + D_GCM_URL + '" target="_blank" rel="noopener">打开 GCM 下载页 ↗</a></div>' +
+      items.map((it, i) => {
+        const src = it.source || 'gcm';
+        const nm = it.zh || it.name || '';
+        const en = (it.name && it.name !== nm) ? it.name : '';
+        const meta = [en, it.version ? 'v ' + it.version : ''].filter(Boolean).join(' · ');
+        return '<div class="df-row"><span class="ix">' + (i + 1) + '</span><span class="bd">' +
+          '<span class="t"><span class="tagx">' + esc(D_TR_SRC[src] || src) + '</span>' + esc(nm) + '</span>' +
+          (meta ? '<span class="m">' + esc(meta) + '</span>' : '') + '</span></div>';
+      }).join('');
+  },
+  /* 💾 云存档：路径**不截断**（这是用户真正要抄的东西），注册表单列一组 */
+  sv(p) {
+    const h = p.hit || {};
+    const paths = h.paths || [], regs = h.regs || [];
+    const out = ['<div class="df-note">共 <b>' + (paths.length + regs.length) + '</b> 条记录 · 数据来自 ' +
+      'Ludusavi 开源清单（MIT）。路径里的 <code>&lt;用户名&gt;</code> / <code>&lt;平台账号ID&gt;</code> ' +
+      '是占位符，按自己的账号替换；<b>存档前请先退出游戏</b>。</div>'];
+    const tagOf = (t) => (t === 'config' ? '配置' : (t === 'save' ? '存档' : (t || '存档')));
+    if (paths.length) {
+      out.push('<div class="df-sect">存档 / 配置路径（' + paths.length + '）</div>');
+      paths.forEach((x, i) => out.push('<div class="df-row"><span class="ix">' + (i + 1) + '</span><span class="bd">' +
+        '<span class="t">' + esc(tagOf((x.tags || [])[0])) + '</span>' +
+        '<span class="m"><code>' + esc(x.shown || x.raw || '') + '</code></span></span></div>'));
+    }
+    if (regs.length) {
+      out.push('<div class="df-sect">注册表项（' + regs.length + '）</div>');
+      regs.forEach((x, i) => out.push('<div class="df-row"><span class="ix">R' + (i + 1) + '</span><span class="bd">' +
+        '<span class="m"><code>' + esc(x.raw || '') + '</code></span></span></div>'));
+    }
+    return out.join('');
+  },
+  /* 📥 下载入口：机地社区资源帖（MOD ∩ 修改器混排，用徽标区分） */
+  md(p) {
+    const items = p.items || [];
+    const out = ['<div class="df-note">机地社区共 <b>' + (p.count || items.length) + '</b> 条资源帖 · ' +
+      '点任意一条去源站帖子取件。本站只做聚合与跳转，<b>不转存、不提供文件</b>。</div>'];
+    items.forEach((it) => {
+      const nets = [...new Set((it.links || []).map((l) => l.kind).filter(Boolean))].slice(0, 3).join(' / ');
+      const cn = (it.links || []).length;
+      const when = it.ut ? new Date(it.ut * 1000).toISOString().slice(0, 10) : '';
+      const meta = [nets || '', cn ? cn + ' 个直链' : '未见直链', when].filter(Boolean).join(' · ');
+      out.push('<div class="df-row"><span class="ix">' + esc(D_DF_KIND[it.kind] === 'MOD' ? 'M' : '修') + '</span>' +
+        '<span class="bd"><span class="t"><span class="tagx' + (it.kind === 'modifier' ? ' mf' : '') + '">' +
+        esc(D_DF_KIND[it.kind] || '资源') + '</span>' + esc(it.title || '') + '</span>' +
+        '<span class="m">' + esc(meta) + '</span></span>' +
+        '<a class="go2" href="' + esc(it.url || D_JIDI_MODS) + '" target="_blank" rel="noopener">打开 ↗</a></div>');
+    });
+    if ((p.count || 0) > items.length) {
+      out.push('<div class="df-note" style="margin:10px 0 0">另有 ' + (p.count - items.length) +
+        ' 条超出单页上限（一次最多 200 条），去 <a href="' + D_JIDI_MODS + '" target="_blank" rel="noopener">机地 MOD / 修改器区 ↗</a> 看全部</div>');
+    }
+    return out.join('');
+  },
+  /* 📋 逐条游玩参数：直接复用详情页同一张卡片（bhParamCard），不另做一套版式 */
+  bp(p) {
+    const items = p.items || [];
+    return '<div class="df-note">社区共 <b>' + (p.total || items.length) + '</b> 份配置 · 本页展示 ' +
+      items.length + ' 份。参数为玩家在安卓机上跑通本作后导出的实际配置（驱动 / DXVK / 容器 / 翻译层）。</div>' +
+      items.map(bhParamCard).join('');
+  },
+  /* 📱 机型清单：全量机型 + 性能分 + 芯片。★ 此处不做「点开硬件面板」——
+     那个交互要按机型再发一次 /api/device/hardware，放进弹窗会与抽屉里的面板状态打架；
+     弹窗只回答「哪些机型跑过、各自多强」，看硬件参数回抽屉里点同一台。 */
+  dv(p) {
+    const items = p.items || [];
+    return '<div class="df-note">共 <b>' + (p.total || items.length) + '</b> 台机型跑通过本作（按性能分从弱到强）· ' +
+      '点机型展开完整硬件参数请在详情页「手机模拟器配置」里操作。</div>' +
+      items.map((x, i) => '<div class="df-row"><span class="ix">' + (i + 1) + '</span><span class="bd">' +
+        '<span class="t">' + esc(x.name) + (x.score ? ' <span class="tagx dim">' + Math.round(x.score) + '</span>' : '') + '</span>' +
+        '<span class="m">' + (x.code ? esc(x.code) + ' · ' : '') + (x.chip ? esc(x.chip) : '芯片未收录') + '</span></span></div>').join('');
+  },
+};
+async function openFullPop(token) {
+  const pop = $('#dlPop');
+  const src = dFullStore[token];
+  if (!pop || !src) return;
+  const R = D_FULL_RENDER[src.type];
+  if (!R) return;
+  $('#dlTitle').textContent = src.title || '全部内容';
+  $('#dlSub').textContent = src.sub || '';
+  $('#dlFoot').innerHTML = src.foot || '';
+  pop.hidden = false;
+  requestAnimationFrame(() => pop.classList.add('on'));
+  const needLoad = typeof src.load === 'function';
+  $('#dlBody').innerHTML = '<div class="dlpop-load"><i></i><span>正在读取全部内容…</span></div>';
+  let p = src;
+  try {
+    if (needLoad) p = Object.assign({}, src, (await src.load()) || {});
+    $('#dlBody').innerHTML = R(p) || '<div class="dlpop-empty">没有可展示的内容</div>';
+  } catch (e) {
+    $('#dlBody').innerHTML = '<div class="dlpop-empty">读取失败：' + esc(e.message) +
+      '<br><span style="font-size:11.5px">稍后重试</span></div>';
+  }
+}
+
+/* ============ 🛠 修改器 / 🧩 Mod 下载弹窗（v10.25 新增） ============
+ * 用户口径：「我需要你将下载按钮优化（①下载本体，②下载修改器，③下载Mod）」。
+ *
+ * ★ 为什么复用 #dlPop 外壳而不是新开一个弹层：
+ *   两个弹层结构完全一样（标题 + 副标题 + 可滚列表 + 脚注），新开一个就要把
+ *   `.dlpop-*` 那十几条样式再抄一遍 —— 而 #dlPop 是**三页共享资产**（index /
+ *   emulator / unpack 三页同一份），抄第二份必然样式漂移。复用后只有渲染分支不同。
+ *
+ * ★ 与详情页里那个「🛠 修改器」区块是**两套数据**，别混淆（loadDlBlock 上方注释已记）：
+ *     #trBlock（/api/trainers/match）= Game Cheats Manager 元数据，**没有下载地址**；
+ *     本弹窗（/api/mods/match?kind=）      = 机地社区帖，99.9% 带网盘直链，真能取件。
+ *
+ * ★ 检索词必须和 loadDlBlock 的 counts **同源**：按钮上的数字是 loadDlBlock 用
+ *   `title`（完整标题，可能含「中文/English」拼接串）查出来的，这里也用同一个 `title`。
+ *   若这里改用简体中文名去查，就会出现「按钮写着 97 条、点开说 0 条」——
+ *   数字对不上比没有数字更糟。
+ */
+const D_MOD_META = {
+  mod: { nm: 'Mod', hint: '社区自制内容：模型 / 皮肤 / 玩法扩展等，安装方式见源站帖子' },
+  modifier: { nm: '修改器', hint: '内存修改 / 训练器；单机可用，联机使用有封号风险' },
+};
+const D_MOD_CAP = 60;
+function dModLinks() {
+  return '<a href="' + D_JIDI_MODS + '" target="_blank" rel="noopener">机地 MOD / 修改器区 ↗</a>' +
+    '<a href="/emulator.html#tr">修改器库</a><a href="/emulator.html#sv">云存档位置</a>';
+}
+/**
+ * 打开「修改器 / Mod」列表弹窗。
+ * @param {{kind?:string, title?:string, id?:string}} ctx
+ *   kind  —— 'mod' | 'modifier'（其余值一律当 mod）
+ *   title —— 完整游戏标题（与 loadDlBlock 的查询串一致）
+ *   id    —— 机地 libId（fb.id）；有它就能只按库内配对取，比按名检索准
+ */
+async function openModList(ctx) {
+  const pop = $('#dlPop');
+  if (!pop) return;
+  const o = ctx || {};
+  const kind = o.kind === 'modifier' ? 'modifier' : 'mod';
+  const M = D_MOD_META[kind];
+  const t = String(o.title || '').trim();
+  const id = String(o.id || '').trim();
+  const shown = splitName(t).zh || t;
+  $('#dlTitle').textContent = shown ? shown + ' · ' + M.nm : M.nm;
+  $('#dlSub').textContent = M.hint;
+  $('#dlFoot').innerHTML = '<b>来源</b>：机地社区帖（MOD / 修改器区）。本站只做聚合与跳转，' +
+    '网盘链接与文件都在源站帖子内，<b>不转存、不提供文件</b>；下载前请自行核对文件安全。';
+  pop.hidden = false;
+  requestAnimationFrame(() => pop.classList.add('on'));
+  if (t.length < 2 && !id) {
+    $('#dlBody').innerHTML = '<div class="dlpop-empty">这一条拿不到可检索的游戏名，无法在机地社区定位帖子</div>';
+    return;
+  }
+  $('#dlBody').innerHTML = '<div class="dlpop-load"><i></i><span>正在读取机地社区的 ' + M.nm + ' 帖…</span></div>';
+  try {
+    const qs = [];
+    if (id) qs.push('id=' + encodeURIComponent(id));
+    if (t) qs.push('t=' + encodeURIComponent(t));
+    qs.push('kind=' + kind, 'limit=' + D_MOD_CAP);
+    const j = await fetch(api('/api/mods/match?' + qs.join('&'))).then((r) => r.json());
+    const items = (j && j.items) || [];
+    const cnt = (j && j.count) || items.length;
+    if (!items.length) {
+      $('#dlBody').innerHTML = '<div class="dlpop-empty">这款游戏在机地社区没有收录 ' + M.nm +
+        '<br><span style="font-size:11.5px">可以点下面的按钮到机地 MOD / 修改器区自己搜</span></div>' +
+        '<div class="d-dl-links">' + dModLinks() + '</div>';
+      return;
+    }
+    const rows = items.map((it) => {
+      const nets = [...new Set((it.links || []).map((l) => l.kind).filter(Boolean))].slice(0, 3).join(' / ');
+      const cn = (it.links || []).length;
+      const when = it.ut ? new Date(it.ut * 1000).toISOString().slice(0, 10) : '';
+      const meta = [nets || '', cn ? cn + ' 个直链' : '未见直链', when].filter(Boolean).join(' · ');
+      return '<a class="d-dl-it" href="' + esc(it.url || D_JIDI_MODS) + '" target="_blank" rel="noopener">' +
+        '<span class="k' + (kind === 'modifier' ? ' mf' : '') + '">' + esc(M.nm) + '</span>' +
+        '<span class="bd"><span class="t" title="' + esc(it.title || '') + '">' + esc(it.title || '') + '</span>' +
+        '<span class="m">' + esc(meta) + '</span></span>' +
+        '<span class="go">打开帖子 ↗</span></a>';
+    }).join('');
+    const rest = cnt > items.length
+      ? '<div class="dl-note" style="margin:10px 0 0">另有 ' + (cnt - items.length) + ' 条未展示（本页只铺 ' +
+        items.length + ' 条），去机地搜「' + esc(shown) + '」看全部</div>' : '';
+    $('#dlBody').innerHTML = '<div class="dl-note">机地社区共 <b>' + cnt + '</b> 条 ' + M.nm +
+      ' 帖 · 点任意一条去源站帖子取件</div>' + rows + rest +
+      '<div class="d-dl-links">' + dModLinks() + '</div>';
+  } catch (e) {
+    $('#dlBody').innerHTML = '<div class="dlpop-empty">读取失败：' + esc(e.message) + '<br>' +
+      '<span style="font-size:11.5px">稍后重试，或直接去机地 MOD / 修改器区</span></div>' +
+      '<div class="d-dl-links">' + dModLinks() + '</div>';
+  }
+}
 /* 绑定一次（弹层与 Toggle 都是共享资产的常驻节点）。
    ★ 用**事件委托**而不是给每个按钮绑：解包匹配页的卡片是动态重绘的，
      逐个绑定会在重绘后全部失效（本项目在机型清单上踩过同类坑）。 */
@@ -3613,6 +4295,29 @@ async function openDownload(ctx) {
     closeDownload();
   }, true);
   document.addEventListener('click', (e) => {
+    /* ★ v10.25：「查看全部」按钮 —— 与下面两个下载按钮共用同一个 #dlPop 外壳，
+       所以绑在同一处委托里（分散绑三处，改一次外壳要改三处）。 */
+    const fb = e.target.closest('[data-full]');
+    if (fb) {
+      e.preventDefault();
+      e.stopPropagation();
+      openFullPop(fb.dataset.full);
+      return;
+    }
+    /* ★ v10.25：Mod / 修改器按钮 —— **必须先于** data-dl-open 判（两者都可能是
+       button.ds，且 data-dlmod-open 的按钮不带 data-dl-open，顺序其实无所谓；
+       但显式分开判，避免以后有人给同一个按钮挂两个属性时行为不确定）。 */
+    const mb = e.target.closest('[data-dlmod-open]');
+    if (mb) {
+      e.preventDefault();
+      e.stopPropagation();
+      openModList({
+        kind: mb.dataset.dlmodOpen || 'mod',
+        title: mb.dataset.dlmodTitle || '',
+        id: mb.dataset.dlmodId || '',
+      });
+      return;
+    }
     const b = e.target.closest('[data-dl-open]');
     if (!b) return;
     e.preventDefault();
@@ -3625,6 +4330,129 @@ async function openDownload(ctx) {
     });
   });
 })();
+
+/* ================= 🧭 详情页竖向定位条（v10.25 新增） =================
+ * 用户口径：「我希望游戏详情页弹窗能有个定位条（竖着的）」；
+ *           位置选定「右侧固定」，收录项选定「8 项，按可信度排序」。
+ *
+ * 「按可信度排序」的落地方式：**选**的是实测存在率最高、最常被找的 8 个分区；
+ *   但它们在条上的**排列顺序按正文顺序**（不是按我写的顺序）—— 见 railSync 里的排序。
+ *   定位条的顺序与正文不一致时，滚动高亮会来回跳，那比少一项更难受。
+ *
+ * ★ 为什么用 MutationObserver 重扫，而不是在 paintDetail 里扫一次就完事：
+ *   详情页分区是**懒加载**的（#reqSlot / #trBlock / #svBlock / #dlStrip 都是异步回填），
+ *   paintDetail 渲染那一刻它们还是空的。只扫一次的话定位条会永远缺几项。
+ *   观察 #drawerBody 子树 + rAF 去抖，任何回填都会自动重扫。
+ *   ⚠️ 所以定位条**不能**放在 #drawerBody 里，否则重扫会触发自己 → 死循环。
+ *   ⚠️ 也不能靠 Promise.all 等那 6 个 loadXxx：它们内部有各自的 try/catch 与提前 return，
+ *      有的还不返回 promise，用「等所有懒加载完成」来定时机一定会漏。
+ */
+const D_RAIL = [
+  { k: 'req', nm: '配置要求', sel: ['#reqSlot'] },
+  { k: 'bh', nm: '手机配置', sel: ['#bhSlot'] },
+  { k: 'shot', nm: '游戏预览', sel: ['#drawerBody .gal'] },
+  { k: 'tr', nm: '修改器', sel: ['#trBlock'] },
+  { k: 'sv', nm: '云存档', sel: ['#svBlock'] },
+  /* `.block` 同时被「版本介绍」用着 → 必须按标题文字过滤，否则会定位到版本介绍 */
+  { k: 'desc', nm: '游戏介绍', sel: ['#drawerBody .block'], txt: '游戏介绍' },
+  { k: 'rel', nm: '同分类', sel: ['#relSlot'] },
+  /* 下载优先指向底部那条三按钮动作条（最常被点的落点）；
+     该条存在但三个按钮全隐藏时它会 hidden → 自动退到「下载入口」区块。 */
+  { k: 'dl', nm: '下载', sel: ['#dlStrip', '#dlSlot'] },
+];
+let dRailItems = [];
+let dRailScrollPend = 0;
+/** 解析一个定位项对应的**真实可见**目标节点；不可见（存在但没内容）一律当没有。 */
+function railTarget(spec) {
+  const body = $('#drawerBody');
+  if (!body) return null;
+  for (const s of spec.sel) {
+    for (const el of $$(s)) {
+      if (!body.contains(el)) continue;
+      if (spec.txt && !String(el.textContent || '').includes(spec.txt)) continue;
+      if (el.offsetWidth > 0 && el.offsetHeight > 0) return el;
+    }
+  }
+  return null;
+}
+/** 定位条横向让位：抽屉贴右，且抽屉自己有竖向滚动条 → 右偏移要算上滚动条宽度。 */
+function railPos() {
+  const rail = $('#dRail'), dr = $('#drawer');
+  if (!rail || rail.hidden || !dr) return;
+  const r = dr.getBoundingClientRect();
+  const sb = dr.offsetWidth - dr.clientWidth;      // 抽屉自己的滚动条宽度（叠加滚动条时为 0）
+  const gap = Math.round(window.innerWidth - r.right + sb + 12);
+  rail.style.right = Math.max(4, gap) + 'px';
+}
+/** 滚动高亮：以「滚动视口顶部往下 90px」为判据，取最后一个越过该线的分区。 */
+function railSpy() {
+  const rail = $('#dRail'), dr = $('#drawer');
+  if (!rail || rail.hidden || !dr || !dRailItems.length) return;
+  const line = dr.getBoundingClientRect().top + 90;
+  let cur = 0;
+  dRailItems.forEach((it, i) => { if (it.el.getBoundingClientRect().top <= line) cur = i; });
+  /* ★ 滚到底时**强制高亮最后一项**（实测踩到：艾尔登法环的「同分类」与「下载」
+     都挤在最后一屏里，滚动被 `scrollHeight - clientHeight` 夹住，怎么也顶不到
+     那条线 —— 不给这个兜底，最后两项点了等于没反馈）。 */
+  if (dr.scrollTop + dr.clientHeight >= dr.scrollHeight - 4) cur = dRailItems.length - 1;
+  rail.querySelectorAll('.dr-it').forEach((b, i) => b.classList.toggle('on', i === cur));
+}
+/** 重建定位条。可反复调用（paintDetail 后一次 / MutationObserver 每次回填后一次）。 */
+function railSync() {
+  const rail = $('#dRail'), dr = $('#drawer');
+  if (!rail || !dr) return;
+  if (!dr.classList.contains('show')) { rail.hidden = true; dRailItems = []; return; }
+  const found = [];
+  for (const spec of D_RAIL) {
+    const el = railTarget(spec);
+    if (el) found.push({ nm: spec.nm, el });
+  }
+  /* 按正文顺序排（用视口内 top 相对抽屉顶的距离）—— 回填是乱序的，
+     不能信任 D_RAIL 里的书写顺序。 */
+  const base = dr.getBoundingClientRect().top;
+  found.sort((a, b) => (a.el.getBoundingClientRect().top - base) - (b.el.getBoundingClientRect().top - base));
+  if (!found.length) {
+    /* 一个分区都没渲染出来（比如详情抓取失败只剩错误页）→ 整条收起，不留空壳 */
+    rail.hidden = true; rail.innerHTML = ''; dRailItems = [];
+    return;
+  }
+  rail.innerHTML = found.map((it, i) =>
+    '<button type="button" class="dr-it" data-rail="' + i + '" title="' + esc(it.nm) + '">' +
+    '<span class="dr-n">' + (i + 1) + '</span>' +
+    '<span class="dr-t">' + esc(it.nm) + '</span></button>').join('');
+  dRailItems = found;
+  rail.hidden = false;
+  railPos();
+  railSpy();
+}
+/** 一次性启动：观察 #drawerBody + 抽屉滚动 + 窗口尺寸。 */
+function railBoot() {
+  const body = $('#drawerBody'), dr = $('#drawer');
+  if (!body || !dr || !window.MutationObserver) return;
+  let pend = 0;
+  new MutationObserver(() => {
+    if (pend) return;
+    pend = requestAnimationFrame(() => { pend = 0; railSync(); });
+  }).observe(body, { childList: true, subtree: true });
+  dr.addEventListener('scroll', () => {
+    if (dRailScrollPend) return;
+    dRailScrollPend = requestAnimationFrame(() => { dRailScrollPend = 0; railSpy(); });
+  }, { passive: true });
+  window.addEventListener('resize', () => { railPos(); railSpy(); });
+  /* 点击跳转：用 document 级委托（与下载弹窗同理 —— #dRail 的 innerHTML 每次重扫
+     都会整体替换，逐个 addEventListener 会在第二次重扫后全部失效且不报错）。 */
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-rail]');
+    if (!b) return;
+    const it = dRailItems[+b.dataset.rail];
+    if (!it) return;
+    e.preventDefault();
+    const dy = it.el.getBoundingClientRect().top - dr.getBoundingClientRect().top;
+    dr.scrollTo({ top: Math.max(0, dr.scrollTop + dy - 14), behavior: 'smooth' });
+  });
+  railSync();
+}
+railBoot();   // 定位条：绑一次观察器/滚动监听（常驻节点，不进 #drawerBody）
 
 init();
 </script>

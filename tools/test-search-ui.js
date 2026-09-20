@@ -157,12 +157,21 @@ const DEFAULT_ORDER = ['📱', '🛠', '💾', '🖥️'];
     return p.evaluate(() => {
       const body = document.getElementById('drawerBody');
       const host = document.createElement('div');
+      /* ★ v10.25：预览区从 `.shots`（三列小图网格）改成 `.gal` 画廊。
+       *   这条随之改查画廊本体 —— 意图不变：**预览区不该是多列网格**，
+       *   而是 16:9 单幅铺满（每张 slide 宽度 == viewport 宽度）。 */
       host.innerHTML = '<div class="kv">' + '<div class="it"><div class="k">k</div><div class="v">v</div></div>'.repeat(5) + '</div>'
-        + '<div class="shots">' + '<img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="">'.repeat(5) + '</div>';
+        + '<div class="gal" data-gal><div class="gal-vp"><div class="gal-trk">'
+        + '<div class="gal-sld"></div>'.repeat(3) + '</div></div>'
+        + '<div class="gal-thumbs">' + '<button class="gal-th"></button>'.repeat(5) + '</div></div>';
       body.appendChild(host);
-      const kv = host.querySelector('.kv'), sh = host.querySelector('.shots');
-      const n = (el) => getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length;
-      const res = { kv: n(kv), shots: n(sh), kvPx: Math.round(kv.querySelector('.it').getBoundingClientRect().width) };
+      const kv = host.querySelector('.kv'), vp = host.querySelector('.gal-vp'), th = host.querySelector('.gal-th');
+      const n = (el) => el ? getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length : 0;
+      const px = (el) => el ? Math.round(el.getBoundingClientRect().width) : 0;
+      const res = {
+        kv: n(kv), kvPx: px(kv.querySelector('.it')),
+        galW: px(vp), slideW: px(vp && vp.querySelector('.gal-sld')), thW: px(th),
+      };
       host.remove();
       return res;
     });
@@ -170,10 +179,15 @@ const DEFAULT_ORDER = ['📱', '🛠', '💾', '🖥️'];
   const g1440 = await gridAt(1440);
   t(g1440.kv === 3, `[抽屉] 桌面 KV 三列`, `实际 ${g1440.kv} 列，单列宽 ${g1440.kvPx}px`);
   t(g1440.kvPx >= 190, `[抽屉] 桌面 KV 单列宽 ≥ 190px（不被压窄）`, `实际 ${g1440.kvPx}px`);
-  t(g1440.shots === 3, `[抽屉] 桌面游戏预览三列`, `实际 ${g1440.shots} 列`);
+  /* 画廊的判据：**每张 slide 与 viewport 等宽**（单幅铺满），而不是「同一个 viewport 里并排 N 张」。
+   *  ⚠️ 留 4px 容差：`.gal-vp` 有 1px 边框，而 `.gal-sld` 的 `flex-basis:100%` 是相对**内容盒**的
+   *     —— 实测 720 的 viewport 里 slide 是 718。写严格等号会假红。 */
+  t(g1440.slideW > 0 && g1440.slideW >= g1440.galW - 4,
+    `[抽屉] 桌面游戏预览是单幅铺满的 16:9 画廊`, `slide=${g1440.slideW} viewport=${g1440.galW}`);
   const g375 = await gridAt(375);
   t(g375.kv === 1, `[抽屉] 移动端 KV 回退单列`, `实际 ${g375.kv} 列`);
-  t(g375.shots === 2, `[抽屉] 移动端游戏预览回退两列`, `实际 ${g375.shots} 列`);
+  t(g375.thW > 0 && g375.thW < g1440.thW,
+    `[抽屉] 移动端画廊缩略图收窄（桌面 64px → 窄屏 52px）`, `${g375.thW}px < ${g1440.thW}px`);
 
   /* ——— ⑦ 窄视口不横向溢出 ——— */
   await p.setViewport({ width: 820, height: 900, deviceScaleFactor: 1 });

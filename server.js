@@ -10,6 +10,9 @@ const express = require('express');
 const jidi = require('./fetchers/jidi');
 const xdgamer = require('./fetchers/xdgamer');
 const download = require('./fetchers/download');
+/* ★ v10.25：/api/detail/merged 的截图去重要用**与两个 fetcher 同一份** idOf/merge ——
+   抄一份到这里就等于「同一语义两份实现」，下次改尺寸策略必然漂移。 */
+const shotsLib = require('./fetchers/shots');
 const specDict = require('./data/spec-dict');
 const specMatch = require('./data/spec-match');
 
@@ -113,6 +116,117 @@ app.get('/api/detail', async (req, res) => {
       target.source === 'jidi' ? jidi.detail(target.id) : xdgamer.detail(target.id, target.host === 'xdgame.com' ? 'https://www.xdgame.com' : undefined)
     );
     res.json({ ok: true, fetchedAt: Date.now(), detail: data });
+  } catch (e) {
+    res.status(502).json({ ok: false, error: String((e && e.message) || e) });
+  }
+});
+
+/* ================= 🔀 双源详情合并（v10.25 新增） =================
+ * 用户口径：「双源有则合并去重显示」。
+ *
+ * ★ 实测字段互补性（2026-09-20，8 款双源游戏逐个比对 /api/detail）：
+ *     字段            机地             XDGAME
+ *     游戏截图        6~9 张           5~8 张      ← 同一套 Steam CDN ⇒ 可**去重相加**
+ *     PC 配置要求     **有**（最低）    **无**
+ *     版本介绍        **无**           **有**      ← 机地页面**从来没有**版本介绍块
+ *     游戏介绍        有               有
+ *   8 款里 7 款有孪生条目（f12=「无」的那款是黑神话）⇒ 合并的收益是实打实的。
+ *
+ * ★ 为什么放在服务端，而不是前端拿到两份 detail 自己拼：
+ *   ① 去重口径必须与 `fetchers/shots.js` 的 `idOf` **同处一地**（项目铁律 10：
+ *      同一语义只留一份实现）。前端拿不到那个模块，抄一份到浏览器必然漂移 ——
+ *      而这里的代价是「同一张图出现两次」，肉眼很难发现。
+ *   ② 前端「先渲染再补丁」要防「等待期间用户点了下一款游戏」的竞态；
+ *      服务端一次给全，没有这个窗口。
+ *   ③ 两源都走 `cached(600s)`，第二次打开同一款游戏零成本。
+ *
+ * ★ 刻意**不做**的合并（都是试过之后否掉的，不是没做）：
+ *   · **游戏介绍不做拼接**：两边是同一段文案（长度相近、差异只在排版与本作别名），
+ *     拼起来用户看到的是两段几乎一样的话。这类字段的正确做法是「一边有就用那边」。
+ *   · **配置要求不做字段级合并**：机地给的是**一整组** `{os,cpu,ram,gpu,storage}`，
+ *     没有「最低/推荐」之分；Steam 给的是 `{min,rec}` 两栏。两套结构对不上，
+ *     硬合会让这张表变成三种颜色的补丁。⇒ 配置要求的双源合并放在前端
+ *     `loadReqBlock`：源站那组当「最低配置」，再向 Steam 补一栏「推荐配置」。
+ *
+ * 返回：与 /api/detail 同形状的 `detail`（合并后）+ `merge` 溯源块
+ *   merge = { on, twin:{source,url,title}, sources:[...], shotsAdded, filled:[...] }
+ *   前端只按 `merge` 显示小徽标，**不再自己判**哪些字段是补来的。
+ */
+app.get('/api/detail/merged', async (req, res) => {
+  const target = parseDetailUrl(String(req.query.url || ''));
+  if (!target) return res.status(400).json({ ok: false, error: '仅支持机地/XDGAME 详情页链接' });
+  if (req.query.refresh === '1') cache.delete('detail:' + target.source + ':' + (target.host || '') + ':' + target.id);
+  const loadOne = (t) => cached(
+    'detail:' + t.source + ':' + (t.host || '') + ':' + t.id, 600_000,
+    () => (t.source === 'jidi'
+      ? jidi.detail(t.id)
+      : xdgamer.detail(t.id, t.host === 'xdgame.com' ? 'https://www.xdgame.com' : undefined))
+  );
+  try {
+    const d = await loadOne(target);
+    const merged = Object.assign({}, d);
+    const prov = { on: false, twin: null, sources: [d.source], shotsAdded: 0, filled: [], idOk: false };
+
+    /* 孪生条目：**复用 /api/library/twin 的同一份对齐逻辑**（data/twin.js），
+       不在这里另写一套名称匹配 —— 那正是 v10.18 串台两次的根因。
+     *
+     * ★ 防串台闸门（PITFALLS #11 口径：宁可退回「未合并」，也不安一条错的内容）
+     *   `xd-<URL 里的数字>` 与库内 id 实测 20/20 一致，但**不能只靠这个假设**：
+     *   twinOf 内部是 `gamesDb.byIdGet(id)`，只要这个 id 落在**别的条目**上，
+     *   它会自信地返回那款游戏的机地详情页 —— 表现是「截图 / 版本介绍里混进了
+     *   另一款游戏的内容」，界面完全正常、零报错，是最难发现的一类错。
+     *   ⇒ 闸门设在**「这个 id 可不可信」**这一步：byIdGet 回来标题对不上就不带 id 去问，
+     *      退到纯名称匹配（那条路 twinOf 内部自带 sameGame + 打分闸门）。
+     *
+     * ⚠️ 一开始我把闸门设在**twin 的标题复核**上，实测**误杀 10%（5/50）**且几乎全是
+     *   真同款，已改掉：
+     *     · 机地话题标题是**纯英文**时（`Dinocop` / `nophenia`），splitName 把它归进 zh 段，
+     *       与当前标题的中文段自然对不上；
+     *     · `Train Sim World® 7` 的 `®` 不在 twin.js 的 normTitle 清洗范围内。
+     *   教训：闸门要设在**能证伪的那一步**（id → 记录 是一一对应的，可精确验证），
+     *   设在模糊的标题相似度上就变成「宁可错杀」了。
+     */
+    const libId = (target.source === 'jidi' ? 'jidi-' : 'xd-') + target.id;
+    let idOk = false;
+    try {
+      const rec = gamesDb.byIdGet(libId);
+      idOk = !!(rec && rec.title && twin.sameGame(d.title || '', rec.title));
+    } catch (e) { idOk = false; }
+    /* 排查用：id 假设不成立时把推出来的 id 记下来（前端不显示，只在 /api/detail/merged 的
+       merge 块里可见）—— 出现这条就说明 URL 里的数字与库内 id 不再一一对应，
+       要么是上游改了 URL 规则、要么是库内 id 生成规则变了，两种都得查。 */
+    if (!idOk) prov.idMismatch = libId;
+    let tw = null;
+    try { tw = twin.twinOf({ id: idOk ? libId : '', title: d.title || '', src: target.source }); } catch (e) { tw = null; }
+    prov.idOk = idOk;
+
+    if (tw && tw.url) {
+      prov.twin = { source: tw.source, url: tw.url, title: tw.title || '' };
+      const tt = parseDetailUrl(tw.url);
+      let t2 = null;
+      if (tt) { try { t2 = await loadOne(tt); } catch (e) { t2 = null; } }
+      /* 只要拿到另一源**不同源**的详情，就算合并成立（哪怕一个字段都没补到）——
+         前端靠 merge.on 决定要不要显示「已合并 N 张截图」这类小结。 */
+      if (t2 && t2.source !== d.source) {
+        prov.on = true;
+        prov.sources.push(t2.source);
+
+        /* ① 截图：去重相加 */
+        const m = shotsLib.merge(d.shots, t2.shots, 24);
+        const had = Array.isArray(d.shots) ? d.shots.length : 0;
+        if (m.length > had) { merged.shots = m; prov.shotsAdded = m.length - had; }
+
+        /* ② 版本介绍：一边没有就整段拿另一边的（XD 有、机地没有） */
+        if (!merged.version && t2.version) { merged.version = t2.version; merged.versionFrom = t2.source; prov.filled.push('version'); }
+
+        /* ③ 游戏介绍：同上，**不拼接**（理由见文件头） */
+        if (!(merged.desc || merged.description) && (t2.desc || t2.description)) {
+          merged.desc = t2.desc || null; merged.description = t2.description || null;
+          merged.descFrom = t2.source; prov.filled.push('desc');
+        }
+      }
+    }
+    res.json({ ok: true, fetchedAt: Date.now(), detail: merged, merge: prov });
   } catch (e) {
     res.status(502).json({ ok: false, error: String((e && e.message) || e) });
   }
@@ -611,20 +725,31 @@ app.get('/api/mods/top', (req, res) => {
 
 // GET /api/mods/match?t=<游戏名>&id=<端游库id>&kind= — 某款游戏的 MOD/修改器（详情抽屉）
 //   同 trainers/saves：精确优先，不中退回子串检索。
+//   ★ v10.25：额外返回 `counts`（按 kind 分开的条数）。详情页底部要出
+//   「下载本体 / 修改器 N / Mod N」三个并排按钮，两个数字必须各自独立 ——
+//   之前只有一个 `count`（mod + modifier 混在一起），拿它当「修改器数」是错的：
+//   实测「艾尔登法环」`count=98`，而其中真正的修改器只有个位数。
 app.get('/api/mods/match', (req, res) => {
   const t = String(req.query.t || '').trim();
   const id = String(req.query.id || '').trim();
   const kind = String(req.query.kind || '').trim();
-  let list = id ? mods.byLib(id, kind) : [];
-  if (!list.length && t) {
+  let all = id ? mods.byLib(id, '') : [];
+  if (!all.length && t) {
     let byName = mods.byGame(t);
     if (!byName.length) {
-      const r = mods.list({ q: t, all: '1', sort: 'new', limit: 24 });
+      const r = mods.list({ q: t, all: '1', sort: 'new', limit: 60 });
       byName = r.items || [];
     }
-    list = kind ? byName.filter((x) => x.kind === kind) : byName;
+    all = byName;
   }
-  res.json({ ok: true, t, id, count: list.length, items: list.slice(0, 12) });
+  const counts = { mod: 0, modifier: 0 };
+  for (const x of all) if (counts[x.kind] != null) counts[x.kind]++;
+  const list = kind ? all.filter((x) => x.kind === kind) : all;
+  /* limit：详情页的「下载入口」摘要只要 12 条，但 v10.25 的「Mod / 修改器」弹窗
+     要铺一屏能滚的列表（赛博朋克2077 单类就有 717 条），所以开出口但**封顶 200**，
+     避免一次把整库吐给前端。不传 = 12，老调用点行为不变。 */
+  const lim = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 12));
+  res.json({ ok: true, t, id, kind: kind || '', count: list.length, counts, items: list.slice(0, lim) });
 });
 
 /* ================= 💾 云存档（存档位置库 · Ludusavi 开源清单） =================
@@ -687,9 +812,29 @@ app.get('/api/pcreq', async (req, res) => {
    *   里面没有 Steam appid；而本地库的 cover 是 Steam CDN 形态（97.2% 命中）。
    *   谁先解析出 appid 就用谁 —— 只信 d.cover 会让一大半游戏白白判成「无配置」。 */
   const coverCands = [];
-  if (id) {
-    const it = gamesDb.byIdGet(id);
-    if (it) coverCands.push(it.cover || '');
+  const selfRec = id ? gamesDb.byIdGet(id) : null;
+  if (selfRec) coverCands.push(selfRec.cover || '');
+  /* ★ v10.25b：机地条目**0% 带 Steam appid**（实测 3,609 条全是 img2.52jidi.com 形态），
+   *   而库里 XD 侧 97.4% 带 appid（14,956 / 15,352）—— 于是「补推荐配置」这一栏
+   *   对机地来源的 3,609 款游戏**整个失效**（原先只有一行注释承诺，实际一次都没生效）。
+   *   这里补一步：借**孪生条目**的封面去问 Steam。
+   *
+   *   ⚠️ 两道护栏，缺一不可 —— 配置要求是具体数值，安错比不显示更糟：
+   *     ① twinOf 自带的 sameGame 闸门 + 分数阈值（TWIN_MIN_SCORE）；
+   *     ② 这里再加一道「中文段完全相等」复核，挡住
+   *        「艾尔登法环」↔「艾尔登法环 黑夜君临」这类**同系列不同作品**
+   *        （它们是两款游戏，推荐配置完全不同）。
+   *   任何一步不确定就**不加候选**，退回「只有源站最低配置」那一栏。 */
+  if (id && selfRec && !coverCands.some((c) => pcreq.appidOf(c))) {
+    try {
+      const zhOf = (s) => String(s || '').split('/')[0].trim().toLowerCase();
+      const tw = twin.twinOf({ id, title: t || selfRec.title || '', src: selfRec.source || '' });
+      const tt = tw && tw.url ? parseDetailUrl(tw.url) : null;
+      const sib = tt ? gamesDb.byIdGet((tt.source === 'jidi' ? 'jidi-' : 'xd-') + tt.id) : null;
+      if (sib && sib.source !== selfRec.source && zhOf(sib.title) === zhOf(selfRec.title)) {
+        coverCands.push(sib.cover || '');
+      }
+    } catch (e) { /* 找不到孪生就照旧 —— 宁可一栏，也不安一个错的 */ }
   }
   coverCands.push(String(req.query.cover || '').trim());
   const cover = coverCands.find((c) => pcreq.appidOf(c)) || coverCands[0] || '';

@@ -230,7 +230,22 @@ eq(dl.serverOf('https://store.steampowered.com/app/1/'), '其他链接',
   ok(zPop > zMask, '弹窗层级高于遮罩 #mask', zPop + ' > ' + zMask);
 
   /* 详情页必须把「跳转链接」升级成下载入口，且带双源参数 */
-  ok(/class="go dl"[^>]*data-dl-open/.test(idx), '★ 详情页底部有「⬇ 网盘下载」主按钮');
+  /* ★ v10.25：下载从「详情页底部一个 go dl 按钮」升级成**三个并排按钮**
+   *   （下载本体 / 修改器 / Mod）。这条随之改查动作条的第一个按钮。 */
+  ok(/class="ds ds-main"[^>]*id="dlBtn"[\s\S]{0,320}?data-dl-open/.test(idx),
+    '★ 详情页底部有「⬇ 下载本体」主按钮（v10.25 三按钮动作条的第一个）');
+  /* ★ v10.25 ⑥：动作条 = 三个并排 + 后两个按 counts 显隐 */
+  ok(/\.dl-strip\{[^}]*display:flex/.test(idx) && /\.dl-strip > \.ds\{[^}]*flex:1 1 0/.test(idx),
+    '★ 下载动作条 .dl-strip 是横向 flex 且三个按钮等宽并排');
+  ok(/hidden[^>]*data-dlmod-open="modifier"/.test(idx) && /hidden[^>]*data-dlmod-open="mod"/.test(idx),
+    '★ 修改器 / Mod 两个按钮**默认 hidden** —— 条数未知期间不出现（不给「点开是空列表」的按钮）');
+  ok(/data-dlmod-open="modifier"[\s\S]{0,200}?<i>0<\/i>/.test(idx)
+    && /data-dlmod-open="mod"[\s\S]{0,200}?<i>0<\/i>/.test(idx),
+    '★ 两个按钮各带条数占位 <i>（回填前是 0）');
+  ok(/function setDlCounts\(/.test(idx), '★ 有 setDlCounts() 按 counts 回填条数并显隐');
+  ok(/setDlCounts\(j && j\.counts\)/.test(idx), '★ counts 在 loadDlBlock 里回填（不是别处）');
+  ok(/kind=' \+ kind/.test(idx) && /limit=' \+ D_MOD_CAP/.test(idx),
+    '★ openModList 按 kind 拉**分类**列表（mod / modifier 分别取，不是混合 count）');
   ok(/data-dl-url="\$\{esc\(d\.url/.test(idx), '下载按钮把当前源详情页 URL 传给弹窗');
   ok(/data-dl-jidi="\$\{esc\(fb\.jidiUrl/.test(idx), '下载按钮把机地详情页 URL 也带上（双源一次取全）');
   /* ★ v10.23：跨源那处的取值口径改了 —— 目标是机地时就是 hit.url；

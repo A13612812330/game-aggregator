@@ -5,6 +5,49 @@
  */
 const cheerio = require('cheerio');
 const { HOST_XD, getHtml, abs } = require('../shared');
+const shotsLib = require('./shots');
+
+/**
+ * 截图解析（★ v10.25 新增，抽出成纯函数便于直接测）
+ *
+ * 站点真实结构（xdgame.com 实测 2026-09-20）：
+ *   <h3>游戏截图</h3>
+ *   <p><img loading="lazy" data-src="…/steam/apps/1605850/<hash>/ss_<hash>.1920x1080.jpg?t=…"
+ *           src="data:image/gif;base64,R0lGOD…"></p>
+ *   <p><img …></p> …
+ *
+ * ⚠️ 真地址在 `data-src`，`src` 是 base64 占位 gif（懒加载）——
+ *    只读 `src` 会得到一张 1x1 透明图，看起来「有 img 元素」但没有任何画面。
+ *
+ * 原实现用 `img.lazy[data-original]` 且要求路径含 `/uploads/`
+ *   ⇒ 命中的是**文章配图**（不是截图），且第一张恰好是封面 ⇒ 预览区显示封面重复。
+ *
+ * 兜底：整页扫「Steam 资源路径」形态的图（`/store_item_assets/steam/apps/<id>/`）。
+ *   这条兜底**只认截图形态**（判定在 fetchers/shots.js 的 SHOT_RE），
+ *   不会把 logo / 头图 / 表情混进来 —— 所以它是安全的，不是「抓到就算」。
+ */
+function parseShots($, base) {
+  const out = [];
+  $('h3, h4').each((_, el) => {
+    if (!/游戏截图|游戏预览|^截图/.test($(el).text().trim())) return;
+    let n = $(el).next();
+    let guard = 0;
+    while (n.length && guard++ < 20 && !/^h[1-4]$/i.test(n.prop('tagName') || '')) {
+      n.find('img').each((__, im) => {
+        const u = $(im).attr('data-src') || $(im).attr('data-original') || $(im).attr('src') || '';
+        if (/^https?:/i.test(u)) out.push(abs(base, u));
+      });
+      n = n.next();
+    }
+  });
+  if (!out.length) {
+    $('img[data-src], img[data-original], img').each((_, im) => {
+      const u = $(im).attr('data-src') || $(im).attr('data-original') || $(im).attr('src') || '';
+      if (/^https?:/i.test(u) && shotsLib.SHOT_RE.test(u)) out.push(abs(base, u));
+    });
+  }
+  return out;
+}
 
 async function feed() {
   const html = await getHtml(HOST_XD + '/');
@@ -88,20 +131,35 @@ async function detail(id, host) {
     updateLabel = `${Y}-${String(Mo).padStart(2, '0')}-${String(D).padStart(2, '0')} ${String(H).padStart(2, '0')}:${String(Mi).padStart(2, '0')}`;
   }
 
-  // 封面 + 截图：文章大图（data-original 中含 /uploads/）
+  /* 封面：文章正文大图（`/uploads/`）。
+   *
+   * ★ v10.25 修：原写法会把「随机推荐」侧栏里**别的游戏**的封面当成自己的封面。
+   *   XD 详情页的 `/uploads/` 图**只有随机推荐在用** —— 实测 id=15022 全页 5 处，
+   *   5 处全是 `<img class="random-recommend-img" data-cover="/uploads/…">`。
+   *   即：详情页 hero 区会显示成一款**完全不相干**的游戏。
+   *   之所以一直没暴露，是因为前端 `paintDetail` 有 `d.cover || fb.cover` 兜底，
+   *   库内封面把它盖住了 —— 也就是说这是个「躺在兜底后面」的错值。
+   *
+   *   现在显式排除，并且**取不到就返回 null**，让调用方用库内封面兜底
+   *   （宁可退回库内那张对的，也不安一张错的 —— 同 PITFALLS 11 的口径）。
+   *   ⚠️ 别放宽成「整页扫」：一放宽就会把推荐位/侧栏一起带进来。 */
   const imgs = [];
-  $('img.lazy[data-original], img[data-original]').each((_, el) => {
+  const NOT_REC = 'img.random-recommend-img, img[data-cover], .random-recommend img, .side img, .sidebar img';
+  $('img.lazy[data-original], img[data-original]').not(NOT_REC).each((_, el) => {
     const u = $(el).attr('data-original') || '';
     if (/\/uploads\//.test(u) && imgs.length < 8) imgs.push(abs(base, u));
   });
   if (!imgs.length) {
-    $('img').each((_, el) => {
+    $('img').not(NOT_REC).each((_, el) => {
       const u = $(el).attr('src') || '';
       if (/\/uploads\//.test(u) && imgs.length < 8) imgs.push(abs(base, u));
     });
   }
   const cover = imgs[0] || null;
-  const shots = imgs.slice(0, 6);
+  /* ★ v10.25：截图**不能**复用 `imgs` —— 那是 `/uploads/` 文章配图，
+   *   而且它的第一张就是封面本身，所以「游戏预览」里看到的常是封面重复。
+   *   真实截图在正文 `<h3>游戏截图</h3>` 之后，而且是 **1920x1080 高清图**。见 parseShots()。 */
+  const shots = shotsLib.list(parseShots($, base), 12);
 
   // 版本介绍 / 游戏介绍：找 h4（可能带内联样式）后的段落
   const pickAfterH4 = (kw) => {
@@ -261,4 +319,4 @@ async function category(slug) {
   return { slug, category: catName(slug), items };
 }
 
-module.exports = { feed, detail, search, category, CATEGORIES };
+module.exports = { feed, detail, search, category, CATEGORIES, parseShots };

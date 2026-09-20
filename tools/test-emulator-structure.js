@@ -303,11 +303,18 @@ const sec2 = fs.readFileSync(path.join(root, 'tools/emulator-sections.js'), 'utf
 /* ① 详情抽屉宽度：基准 680 + 宽屏 50vw + 上限 1040，且外层再套 min(...,100vw) 防溢出 */
 t('详情抽屉宽度改为 clamp(680px,50vw,1040px) 并套 min(...,100vw)',
   /\.drawer\{[^}]*width:min\(clamp\(680px,50vw,1040px\),100vw\)/.test(idx));
-t('抽屉加宽配套：桌面 KV 三列 / 游戏预览三列',
+/* ★ v10.25：游戏预览从「三列网格」改成 16:9 画廊（viewport/track/slide/prev-next/counter/thumbs），
+ *   所以这条不再查 .shots 的列数，改查画廊本体 —— 但**意图不变**：
+ *   抽屉既然加宽了，预览区就得吃满宽度（16:9 单幅铺满）而不是继续挤成小格子。 */
+t('抽屉加宽配套：桌面 KV 三列 / 游戏预览吃满宽度的 16:9 画廊',
   /\.kv\{display:grid;grid-template-columns:repeat\(3,1fr\)/.test(idx)
-  && /\.shots\{display:grid;grid-template-columns:repeat\(3,1fr\)/.test(idx));
-t('移动端（≤760px）KV 仍单列、预览回退两列',
-  /\.drawer\{width:100vw\}\s*\n\s*\.kv\{grid-template-columns:1fr\}\s*\n\s*\.shots\{grid-template-columns:repeat\(2,1fr\)\}/.test(idx));
+  && /\.gal-vp\{[^}]*aspect-ratio:16\/9/.test(idx));
+/* ★ v10.25：移动端预览控件同样要收窄（缩略图 64→52、翻页钮 30→26），
+ *   并新增「窄屏不显示定位条」—— 抽屉占满整屏时没有横向空间给它。 */
+t('移动端（≤760px）KV 仍单列、画廊控件收窄、定位条隐藏',
+  /\.drawer\{width:100vw\}[\s\S]{0,220}?\.kv\{grid-template-columns:1fr\}[\s\S]{0,160}?\.gal-th\{flex:0 0 52px\}[\s\S]{0,80}?\.gal-nav\{width:26px;height:26px\}/
+    .test(idx)
+  && /@media\(max-width:760px\)[\s\S]{0,4000}?\.d-rail\{display:none\}/.test(idx));
 
 /* ② 「同分类更多」不再抢在游戏本体信息之前 —— DOM 源码里 relSlot 必须排在 shotsHtml 之后
  *  ⚠️ 不能按「第一个 <div class="d-body">」去切模板：页面里有两处 d-body，

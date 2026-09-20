@@ -138,12 +138,15 @@ ok(/devicesSummaryCnt/.test(srv) && /devicesAdded/.test(srv), '返回里带上�
   const html = read('public/index.html');
   const emu = read('public/emulator.html');
   ok(!/上游共汇总 \$\{devCnt\} 款机型/.test(html), '★ 删掉了「上游共汇总 N 款机型」这种易误读的文案');
-  ok(/还有 \$\{hiddenDev\} 台机型未展开/.test(html), '改成「还有 N 台未展开」——只在真被截断时出现');
+  /* ★ v10.25：截断处的表达方式从「一行灰字：还有 N 台未展开」升级成**可点的「更多」按钮**
+   *   （点开是全部机型的弹窗）。这条随之改查按钮的挂载条件 ——
+   *   守护的意图没变：**只在真被截断时才出现**，不再用「上游共汇总 N 款」那种误导文案。 */
+  ok(/const more = hiddenDev > 0\s*\?\s*dFullBtn\(/.test(html), '★ 截断处改成「更多」按钮，且只在真被截断时出现');
   ok(/const allDevs = h\.devices \|\| \[\];/.test(html), '用全量清单算截断数');
   ok(/const devs = allDevs\.slice\(0, 24\);/.test(html), '展示仍按 24 台上限');
   ok(/hiddenDev > 0/.test(html), 'more 行有「真的截断才显示」的条件');
   ok(!/上游共汇总 \$\{devCnt\} 款机型/.test(emu), '[派生页] 同步去掉了误导文案');
-  ok(/还有 \$\{hiddenDev\} 台机型未展开/.test(emu), '[派生页] 同步了新文案');
+  ok(/const more = hiddenDev > 0\s*\?\s*dFullBtn\(/.test(emu), '[派生页] 同步了「更多」按钮');
   ok(/const allDevs = h\.devices \|\| \[\];/.test(emu), '[派生页] 同步了全量清单变量');
 
   console.log('\n' + '='.repeat(62));
