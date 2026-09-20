@@ -5,7 +5,7 @@ Option Explicit
 '  If the port is already listening it just opens the browser.
 ' ===================================================================
 Const PORT = 8123
-Dim shell, fso, root, nodeExe, cmd
+Dim shell, fso, root, nodeExe, cmd, vbase, best, f
 Set shell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 
@@ -18,7 +18,21 @@ If PortBusy(PORT) Then
 End If
 
 ' ---- locate node ----
-nodeExe = "C:\Users\komo\.workbuddy\binaries\node\versions\22.22.2-2\node.exe"
+'   Prefer the managed runtime, but NEVER hard-code its version folder: the
+'   name carries a build suffix (22.22.2-3) that changes on update, and a stale
+'   literal fails silently. Scan the folder, take the newest name.
+nodeExe = ""
+vbase = shell.ExpandEnvironmentStrings("%USERPROFILE%") & "\.workbuddy\binaries\node\versions"
+If fso.FolderExists(vbase) Then
+  best = ""
+  For Each f In fso.GetFolder(vbase).SubFolders
+    If fso.FileExists(f.Path & "\node.exe") Then
+      If f.Name > best Then best = f.Name
+    End If
+  Next
+  If best <> "" Then nodeExe = vbase & "\" & best & "\node.exe"
+End If
+
 If fso.FileExists(nodeExe) Then
   cmd = Chr(34) & nodeExe & Chr(34) & " server.js"
 Else

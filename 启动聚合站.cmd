@@ -5,6 +5,7 @@ cd /d "%~dp0"
 
 set "PORT=8123"
 set "URL=http://localhost:%PORT%"
+set "WEB=https://gamehub-agg-v4.app.workbuddy.host/"
 
 REM ============ 1) already running? just open the browser ============
 set "RUNPID="
@@ -18,9 +19,14 @@ if defined RUNPID (
 )
 
 REM ============ 2) locate node ============
+REM   PATH first, then the managed runtime. NEVER hard-code the version folder:
+REM   it carries a build suffix (22.22.2-3) that changes whenever the runtime is
+REM   updated, and a stale literal makes this fallback fail SILENTLY (the old
+REM   22.22.2-2 no longer exists). Scan the folder, newest name first.
 set "NODE="
+set "VBASE=%USERPROFILE%\.workbuddy\binaries\node\versions"
 where node >nul 2>nul && set "NODE=node"
-if not defined NODE if exist "C:\Users\komo\.workbuddy\binaries\node\versions\22.22.2-2\node.exe" set "NODE=C:\Users\komo\.workbuddy\binaries\node\versions\22.22.2-2\node.exe"
+if not defined NODE for /f "delims=" %%D in ('dir /b /ad /o-n "%VBASE%" 2^>nul') do if not defined NODE if exist "%VBASE%\%%D\node.exe" set "NODE=%VBASE%\%%D\node.exe"
 if not defined NODE (
   echo [GameHub] ERROR: Node.js not found.
   echo          Install Node 18+ or edit the NODE path in this file.
@@ -40,6 +46,7 @@ echo ------------------------------------------------------------
 echo   local :  %URL%
 if defined LANIP echo   LAN   :  http://%LANIP%:%PORT%
 echo   node  :  %NODE%
+echo   web   :  %WEB%
 echo   stop  :  run "stop-gamehub.cmd"  (or close this window)
 echo ============================================================
 echo.
