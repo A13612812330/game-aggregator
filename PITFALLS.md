@@ -543,6 +543,29 @@ v10.18 起每条带 `chip`/`chipSrc`/`needFill`）→ 缺芯片走
     ② 断言不要只查「字符串存在」，要**把探测算法在测试里真跑一遍**，断言选出的路径
     `fs.existsSync` 为真 —— 这类「版本漂移」只有实跑才抓得住。
 
+46. ★ **清理 `.cache/` 前必须读源码 —— 字符串搜索会漏判「拼出来的路径」**（2026-09-20 实测）：
+    `.cache/` 里混着两类东西：**源码写死依赖的离线重跑缓存** 与 **历史调试残留**。
+    第一遍用「把文件名丢进全库文本里搜」判定，把 `.cache/nanoreview-soclist-1~4.html`
+    判成「零引用可清」—— 因为 `fetch-soc-map.js:38` 的写法是
+    `cacheFile(p) => path.join(CACHE_DIR, 'nanoreview-soclist-' + p + '.html')`，
+    **完整文件名在源码里根本不存在**。
+    ⇒ 判定「能不能删」只能**读源码里的 `path.join` 拼接**，不能靠搜字符串。
+    **权威清单（4 类，删了不报错、只是 `--offline` 悄悄退化成联网重抓）**：
+    `.cache/chrome-preview/`（`browser.js:61`）· `.cache/soc-cpu/`（`fetch-soc-cpu.js:38`）·
+    `.cache/nanoreview-soclist-1~4.html`（`fetch-soc-cpu.js:49` + `fetch-soc-map.js:38`）·
+    `.cache/ludusavi-manifest.yaml`（`build-saves.js:43`）。
+
+47. ★ **本机沙箱没有可用的回收站**（2026-09-20，三路实测全封）：
+    `Add-Type -AssemblyName Microsoft.VisualBasic` → 拦（compiles and loads .NET code）；
+    `New-Object -ComObject Shell.Application` → 拦（COM object instantiation can run arbitrary code）；
+    `trash` / `trash-put` / `gio` → 系统里一个都没装。
+    而 `Remove-Item` / `fs.rmSync` 都是**永久删除**，没有中间态。
+    ⇒ 清理项目内可重跑产物时**默认走「归档」不走「删除」**：
+    移到 `_archived/<用途>-<日期>/`，并写一份 `README.md` 交代
+    **内容清单 / 为什么归档 / 怎么逐项还原 / 怎么彻底删（含精确命令）**。
+    **归档目录本身就是回退路径** —— 没有回收站时，它替代回收站。
+    实测：`.cache` 568.5 MB → 120.1 MB（移出 448.3 MB / 55 项），防线 24 套 1573 条全绿。
+
 ---
 
 ## 附：已沉淀 skills（勿在本文件重复）

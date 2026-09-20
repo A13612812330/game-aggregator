@@ -1720,11 +1720,37 @@ game-aggregator/
 │   └── test-emuhub.js       # 已废弃，转调 test-emulator-page.js（保留兼容旧命令）
 ├── shared.js            # 抓取工具（UA / 超时 / 图片补全）
 ├── public/
-│   ├── index.html       # ★ 单页聚合主站（`/` 直达；v9.1 顶栏 2 入口，无引导卡）
-│   └── emulator.html    # ★ v7：手机专区独立页（`/emulator.html`；v9.3：一条切换条 3 个平级页签）
-├── _archived/v1/        # v1 旧版多页备份（home/search/library/快照），可随时还原
-└── DESIGN.md            # 页面设计规范
+│   ├── index.html       # ★ 单页聚合主站（`/` 直达）—— **主源**，改它必须重建两个派生页
+│   ├── emulator.html    # ★ 手机专区独立页（`/emulator.html`）—— 派生自 index.html，勿手改
+│   └── unpack.html      # ★ v10.20 解包配置匹配（`/unpack.html`）—— 同样派生
+├── _archived/           # 废弃版本 / 清理归档（gitignore；**可随时还原，勿直接删**）
+│   ├── v1/              # v1 旧版多页备份（home/search/library/快照）
+│   ├── index-v2/v3-20260910.html
+│   ├── launcher-v1-20260904.bat
+│   └── cache-purge-20260920/   # 09-20 缓存清理归档（还原方法见其内 README.md）
+├── DESIGN.md            # 页面设计规范
 ```
+
+### 输出 / 缓存目录（都不进 Git —— 可按需重建，不是项目数据）
+
+| 目录 | 体积 | 作用 | 谁产出 |
+|---|---|---|---|
+| **`.cache/`** | 120 MB | 抓取 + 浏览器缓存 | `browser.js` / `fetch-soc-*.js` / `build-saves.js` |
+| **`_preview/`** | 54 MB / 122 文件 | 浏览器实拍截图（改动验收的「效果图」） | 26 个 `preview-v*.js` / `test-v1025-*.js` |
+| **`_bak/`** | 17 MB | 改动前的**时间戳备份**（回滚点） | `fix-bad-score.js` / `migrate-dates.js` |
+| **`_archived/`** | 449 MB | 废弃版本 + 清理归档（回退路径） | 手工归档 |
+| **`_test-out/`** | ~0 MB | 测试隔离落盘（不污染真实缓存） | `test-v1018.js` |
+| `_online/` | — | 线上页面抓取比对 | 按需生成（当前不存在） |
+
+> **⚠️ `.cache/` 清理红线** —— 里面有 4 类**源码写死依赖**的离线重跑缓存，
+> 删掉不会报错，只会让 `--offline` 悄悄退化成联网重抓：
+> `.cache/chrome-preview/`（`tools/browser.js:61` 的 `--user-data-dir`）·
+> `.cache/soc-cpu/`（`tools/fetch-soc-cpu.js:38` 的 `PAGES`）·
+> `.cache/nanoreview-soclist-1~4.html`（`fetch-soc-cpu.js:49` + `fetch-soc-map.js:38`）·
+> `.cache/ludusavi-manifest.yaml`（`tools/build-saves.js:43`）。
+>
+> ★ `fetch-soc-map.js` 的缓存文件名是**拼出来的**（`'nanoreview-soclist-' + p + '.html'`），
+> 所以「搜完整文件名」会**漏判** ⇒ **清理前必须读源码，不能靠字符串搜索**。
 
 ## API
 
