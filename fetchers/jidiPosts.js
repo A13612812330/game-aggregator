@@ -173,6 +173,58 @@ async function fetchSectionAll({ tid, resourceType, sort = 'hot', max = 0 }) {
   return { list: out, count: count || out.length, pages: page };
 }
 
+/**
+ * 取一个专区，并在**源站总数 > 本次取回**时补抓一页 `sort=new` 合并。
+ *
+ * ★ 为什么值得多花一次请求（实测 剑星 tid=171085167，2026-09-20）：
+ *
+ *   | 专区 | 源站总数 | hot 前 50 | new 前 50 | 并集 | 交集 |
+ *   |---|---|---|---|---|---|
+ *   | 本体 | 22 | 22（取满） | 22（一模一样） | 22 | 22 |
+ *   | mod | 190 | 50 | 50 | **63** | 37 |
+ *   | 修改器 | 4 | 4（取满） | 4（一模一样） | 4 | 4 |
+ *
+ *   ⇒ 只有 **mod** 是真不一样。不补抓的话，前端那个「最近发布」开关
+ *     只是把同一批帖子重排一遍（最新几帖根本不在数据里）——
+ *     一个看着能用、其实骗人的开关，比没有这个开关更糟。
+ *   ⇒ 补抓条件卡在 `count > 已取回`：取满了就不存在「最新还不在里面」的问题，
+ *     本体 22 帖、修改器 4 帖都不会多发一次请求（实测这两类 hot/new 结果**完全相同**）。
+ *
+ * ★ 合并用 id 去重；补抓失败**不影响主结果**，但必须留痕（`newError`），
+ *   否则「排序切到最近发布没变化」会被当成前端 bug 查半天。
+ */
+async function fetchSectionSmart({ tid, resourceType, sort = 'hot', max = 0, mergeNew = true }) {
+  const base = await fetchSectionAll({ tid, resourceType, sort, max });
+  const out = {
+    list: base.list,
+    count: base.count,
+    pages: base.pages,
+    /** 是否真的补抓并合并了 `sort=new` 那批 */
+    merged: false,
+    added: 0,
+    newError: null,
+  };
+  if (mergeNew === false) return out;
+  if (!(base.count > base.list.length)) return out;      // 已取满 → 无需补抓
+
+  try {
+    const n = await fetchSection({ tid, resourceType, sort: 'new', limit: PAGE_LIMIT, offset: 0 });
+    const seen = new Set(base.list.map((p) => String((p && p.id))));
+    for (const p of n.list) {
+      if (!p || p.id == null) continue;
+      const k = String(p.id);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      base.list.push(p);
+      out.added++;
+    }
+    out.merged = out.added > 0;
+  } catch (e) {
+    out.newError = String((e && e.message) || e);
+  }
+  return out;
+}
+
 /* ============================================================
  *  ③ 归一化（纯函数，便于离线断言）
  * ============================================================ */
@@ -290,9 +342,10 @@ function sortPosts(items, sort) {
  * @param {string} [o.sort='hot']   hot | new | reply
  * @param {number} [o.perSection=50]  每专区最多取多少条（<=0 表示取满）
  * @param {Array}  [o.sections]       只取指定专区（测试用）
+ * @param {boolean} [o.mergeNew=true] 未取满的专区补抓一页 `sort=new`（见 fetchSectionSmart）
  * @returns {Promise<{tid:number, sort:string, sections:Array, total:number, items:Array}>}
  */
-async function topicPosts({ tid, sort = 'hot', perSection = 50, sections = SECTIONS } = {}) {
+async function topicPosts({ tid, sort = 'hot', perSection = 50, sections = SECTIONS, mergeNew = true } = {}) {
   const s = SORTS.includes(sort) ? sort : 'hot';
   const list = Array.isArray(sections) && sections.length ? sections : SECTIONS;
 
@@ -300,11 +353,12 @@ async function topicPosts({ tid, sort = 'hot', perSection = 50, sections = SECTI
      用 allSettled —— 某一个专区挂掉（或该专区被源站关权限）不该让整轮白跑，
      但**失败必须有痕迹**：该专区返回 `error` 而不是假装「这个专区没有资源」。 */
   const settled = await Promise.allSettled(
-    list.map((sec) => fetchSectionAll({
+    list.map((sec) => fetchSectionSmart({
       tid,
       resourceType: sec.resourceType,
       sort: s,
       max: perSection > 0 ? perSection : 0,
+      mergeNew,
     }))
   );
 
@@ -316,6 +370,7 @@ async function topicPosts({ tid, sort = 'hot', perSection = 50, sections = SECTI
       out.push({
         key: sec.key, name: sec.name, resourceType: sec.resourceType,
         count: 0, returned: 0, pages: 0, error: String((r.reason && r.reason.message) || r.reason),
+        merged: false, mergedAdded: 0, newError: null,
         items: [],
       });
       return;
@@ -332,6 +387,10 @@ async function topicPosts({ tid, sort = 'hot', perSection = 50, sections = SECTI
       /** 本次真正取回的条数（count > returned ⇒ UI 要提示「另有 N 条」） */
       returned: items.length,
       pages: v.pages,
+      /** 是否补抓合并了 `sort=new` 那批（前端据此说明「最近发布」的数据来源） */
+      merged: !!v.merged,
+      mergedAdded: v.added || 0,
+      newError: v.newError || null,
       /** 有网盘直链的条数 —— 下载场景真正能用的那部分 */
       withLinks: items.filter((x) => x.links.length).length,
       items,
@@ -357,5 +416,6 @@ async function countsOf(tid) {
 
 module.exports = {
   SECTIONS, C_TYPES, PAGE_LIMIT, SORTS, NOTE_MAX,
-  fetchSection, fetchSectionAll, tagsOf, coverOf, gameOf, shapePost, sortPosts, topicPosts, countsOf,
+  fetchSection, fetchSectionAll, fetchSectionSmart,
+  tagsOf, coverOf, gameOf, shapePost, sortPosts, topicPosts, countsOf,
 };

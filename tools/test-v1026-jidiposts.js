@@ -196,25 +196,31 @@ ok(/engine: data\.engine \|\| null/.test(srv), '★ server.js 透传 engine');
  * ============================================================ */
 console.log('\n=== ⑥ 前端下载弹窗的专区展示 ===');
 const idx = read('public/index.html');
-ok(/function dlJidiGroups\(jd\)/.test(idx), '★ 有 dlJidiGroups() 按专区分块');
+ok(/function dlBlock\(o\)/.test(idx), '★ 有 dlBlock() 画一个可折叠专区（本体 / mod / 修改器共用同一骨架）');
+ok(/const secs = jiSecs\.length \? jiSecs/.test(idx),
+  '★ 专区清单以服务端 sections 为权威口径（拿不到才把条目当成「本体」一块）');
+ok(/ji\.d\.sections\.filter\(\(s\) => s && s\.key\)/.test(idx), 'openDownload 从 sections 分区');
 ok(/\.dl-secs\{[^}]*display:flex/.test(idx), '★ .dl-secs 有样式（只加 JS 不加 CSS 会挤成一行）');
 ok(/\.dl-sec>\.sh\{/.test(idx), '.dl-sec 的小标题行有样式');
 ok(/\.dl-sec>\.sh>\.c\{/.test(idx), '专区条数徽标 .c 有样式');
 ok(/\.dl-sec>\.sh>\.go\{/.test(idx), '去源站专区的出口 .go 有样式');
-ok(/const DL_SEC_CAP = 6;/.test(idx), '★ 每专区展示上限 DL_SEC_CAP（有上限才不会一屏铺 200 条）');
-ok(/showParts|secs\.push\(dlJidiGroups\(ji\.d\)\)/.test(idx),
-  '★ openDownload 的机地分支改走 dlJidiGroups');
-ok(/if \(!secs\.length\) return dlSection\('机地社区分享（按帖子热度）'/.test(idx),
-  '★ 拿不到 sections 时退回原来的一整块（新增分区逻辑不能把能显示的链接变成空白）');
-/* ★ 排序只在服务端做一份。前端再写一份「同语义的第二实现」= 本项目反复踩的那条坑，
-   而且一旦两处漂移，界面显示的先后顺序会和「更多」弹窗里不一致。 */
-ok(!/function sortPosts/.test(idx), '★ 前端不重复实现排序（排序只留服务端一份）');
+ok(/' 帖'/.test(idx) && /个地址/.test(idx),
+  '★ 徽标写「N 帖」，元信息另写「M 个地址」—— 帖 ≠ 网盘地址，混用会让数字自相矛盾');
+/* ★ v10.27 起前端**确实**自己排一份序（用户要即时切「最热 / 最近发布」，等一次网络往返会卡）。
+   v10.26 那条「前端不许实现排序」的禁令随之作废，但不能就这么放开 ——
+   改成「必须有一份跨实现对照护着」，否则两份实现迟早漂移。 */
+ok(/function dlSorted\(/.test(idx), '★ 前端有 dlSorted（即时切换排序用）');
+ok(/function sortPosts/.test(read('fetchers/jidiPosts.js')),
+  '后端 sortPosts 仍在（前端那份是它的镜像，不是替代）');
+ok(fs.existsSync(path.join(ROOT, 'tools/test-v1027-dlpop.js'))
+  && /前端 dlSorted 与后端 sortPosts 顺序一致/.test(read('tools/test-v1027-dlpop.js')),
+  '★★ 前端那份排序**必须**有跨实现对照护着（同一个输入喂两份实现，顺序不一致即红）');
 
 /* 三页共享：派生页必须重建 */
 for (const page of ['public/emulator.html', 'public/unpack.html']) {
   let t = '';
   try { t = read(page); } catch (e) { t = ''; }
-  ok(/function dlJidiGroups\(jd\)/.test(t) && /\.dl-secs\{/.test(t),
+  ok(/function dlBlock\(o\)/.test(t) && /\.dl-secs\{/.test(t),
     '★ ' + page + ' 已重建并带上分块逻辑（改了主源不重建派生页，那边就没有且不报错）');
 }
 
@@ -233,7 +239,15 @@ for (const page of ['public/emulator.html', 'public/unpack.html']) {
       const mod = r.sections.find((s) => s.key === 'mod');
       ok(body && body.count > 0, '本体专区有资源', String(body && body.count));
       ok(mod && mod.count > 0, '★ mod 专区有资源（老 SSR 链路这里是 0）', String(mod && mod.count));
-      ok(mod.returned <= 20, '★ perSection 上限真的生效（截断写晚一步会整页带出 100 条）', String(mod.returned));
+      /* ★ v10.27 起 perSection 只约束**基础排序**那一路，没取满的专区会再并入一页 sort=new。
+         所以上限是 perSection + PAGE_LIMIT，不是 perSection。 */
+      ok(mod.returned <= 20 + jp.PAGE_LIMIT,
+        '★ perSection 的截断仍生效（补抓那页最多再加一页 100 条）', String(mod.returned));
+      ok(body.merged === false, '★ 本体取满 22 帖 → 不补抓 sort=new（省一次请求；实测这两类 hot/new 结果完全相同）',
+        'returned=' + body.returned + ' count=' + body.count);
+      ok(mod.merged === true && mod.mergedAdded > 0,
+        '★ mod（190 帖，取不满）确实补抓并合并了 sort=new —— 「最近发布」那个开关才不是假开关',
+        JSON.stringify({ returned: mod.returned, added: mod.mergedAdded }));
       ok(!r.sections.some((s) => s.error), '三个专区都没有 error');
     } catch (e) {
       ok(false, '在线冒烟失败', e.message);

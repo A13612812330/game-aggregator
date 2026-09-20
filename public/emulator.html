@@ -1325,10 +1325,14 @@
     /* v10.16：窄屏下硬件参数改单列（两列会把值挤到换行，反而更难读） */
     .d-hw .kvs2{grid-template-columns:1fr}
     .d-hw .kvs2 div span{width:70px}
-    /* v10.22：窄屏下下载弹窗铺满、列表改单列 */
+    /* v10.22：窄屏下下载弹窗铺满
+       ★ v10.27 起列表本来就是单列宽行（见 .dl-grp .l），这里不再需要改列数；
+         但工具栏会换行，把行距收一点，别让它在小屏上吃掉半屏。 */
     .dlpop{padding:10px}
     .dlpop-box{max-height:86vh}
-    .dl-grp .l{grid-template-columns:1fr}
+    .dl-bar .rw+.rw{margin-top:6px}
+    .dl-it{padding:8px 10px}
+    .dl-it .act{padding:5px 8px}
   }
 
   /* ============ 📥 网盘下载弹窗（v10.22） ============
@@ -1344,7 +1348,7 @@
   .dlpop-bg{position:absolute;inset:0;background:rgba(12,18,38,.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
     opacity:0;transition:.18s}
   .dlpop.on .dlpop-bg{opacity:1}
-  .dlpop-box{position:relative;width:min(580px,100%);max-height:min(80vh,760px);display:flex;flex-direction:column;
+  .dlpop-box{position:relative;width:min(760px,100%);max-height:min(80vh,760px);display:flex;flex-direction:column;
     background:var(--c-surface);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);overflow:hidden;
     transform:translateY(12px) scale(.985);opacity:0;transition:.2s cubic-bezier(.2,.8,.3,1)}
   .dlpop.on .dlpop-box{transform:none;opacity:1}
@@ -1374,39 +1378,92 @@
   .dl-grp>.h .src.xd{background:rgba(11,123,255,.1);color:var(--c-xd)}
   .dl-grp>.h .src.jidi{background:rgba(230,65,93,.1);color:var(--c-jidi)}
   .dl-grp>.h .n{margin-left:auto;font:700 11px/1 var(--font-num);color:var(--c-t3)}
-  .dl-grp .l{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:8px}
+  /* XD 那组的折叠开关排在 .n 后面（.n 已经把内容推右，这里别再抢 auto，否则中间空一大截） */
+  .dl-grp>.h .dl-tg{margin-left:0}
+  .dl-grp.off>.h{margin-bottom:0}
+  /* ★ v10.27：列表从「两列 232px 卡片」改成**单列宽行** —— 弹窗加宽到 760px 就是为它腾地方。
+     实测改前一条标题只剩「【亲测可玩】…」：源站帖子的区分度恰恰在后半段
+     （版本 / 联机 / 是否虚拟化 / FIX 号），截掉等于给用户一列没有名字的按钮。 */
+  .dl-grp .l{display:flex;flex-direction:column;gap:6px}
   /* ★ v10.26 机地在组内按「本体 / mod / 修改器」再分小节 —— 源站那三个 tab 的对应物。
      不新开 .dl-grp：那一层自带「机地」源标签与总条数，分成三块会让同一个来源徽标出现三次。 */
-  .dl-secs{display:flex;flex-direction:column;gap:13px}
-  .dl-sec>.sh{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+  .dl-secs{display:flex;flex-direction:column;gap:12px}
+  .dl-sec>.sh{display:flex;align-items:center;gap:7px;margin-bottom:7px;flex-wrap:wrap}
   .dl-sec>.sh>b{font-size:11.5px;font-weight:800;color:var(--c-t1)}
   .dl-sec>.sh>.c{font:700 10.5px/1 var(--font-num);color:var(--c-t3);background:#F1F3F8;border-radius:5px;padding:3px 6px}
-  .dl-sec>.sh>.go{margin-left:auto;font-size:10.5px;font-weight:750;color:var(--c-primary);text-decoration:none;white-space:nowrap}
+  .dl-sec>.sh>.m{font:650 10.5px/1 var(--font-num);color:var(--c-t3)}
+  /* 折叠开关：展开态写「收起」，折叠态写「展开 N 个地址」—— 条数在按钮上，不用点开才知道值不值 */
+  .dl-tg{margin-left:auto;flex:none;font-size:10.5px;font-weight:750;color:var(--c-t2);background:#F3F5F9;
+    border:1px solid var(--c-border);border-radius:6px;padding:3px 8px;white-space:nowrap;transition:.14s}
+  .dl-tg:hover{background:#E9EDF5;color:var(--c-t1)}
+  .dl-sec>.sh>.go{flex:none;font-size:10.5px;font-weight:750;color:var(--c-primary);text-decoration:none;white-space:nowrap}
   .dl-sec>.sh>.go:hover{text-decoration:underline}
-  .dl-it{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--c-border);border-radius:var(--r-md);
+  /* 折叠态：只把标题行留下的下边距收掉。
+     ★ 这里**故意不写 `.dl-sec.off>.l{display:none}`** —— 折叠时 `.l` 根本不会被渲染，
+       那条规则永远不生效（死 CSS 会让下一个人以为走的是「渲染后隐藏」，进而把不渲染改回去）。 */
+  .dl-sec.off>.sh{margin-bottom:0}
+  .dl-it{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;border:1px solid var(--c-border);border-radius:var(--r-md);
     background:#fff;transition:.14s;min-width:0}
   .dl-it:hover{border-color:var(--c-primary);background:var(--c-primary-soft)}
   .dl-it .bd{width:26px;height:26px;flex:none;border-radius:8px;display:grid;place-items:center;font-size:11px;font-weight:800;
-    color:#fff;background:#8892A6}
-  .dl-it .bd.bd-baidu{background:#2B6DE5}
-  .dl-it .bd.bd-xunlei{background:#2A6FD6}
-  .dl-it .bd.bd-quark{background:#5A6BF5}
-  .dl-it .bd.bd-189{background:#1A73E8}
-  .dl-it .bd.bd-139{background:#0FA968}
-  .dl-it .bd.bd-ali{background:#5B6BF0}
-  .dl-it .bd.bd-123{background:#3C7DF5}
-  .dl-it .bd.bd-lanzou{background:#4C8BF5}
-  .dl-it .bd.bd-steam{background:#1B2838}
-  .dl-it .bd.bd-pikpak{background:#3D5AFE}
-  .dl-it .bd.bd-other{background:#9AA3B5}
+    color:#fff;background:#8892A6;margin-top:1px}
+  /* 盘口按钮组：一行一帖，帖子带的几个盘口并排挂在右侧（源站话题页就是这结构）。
+     颜色规则不再挂 `.bd`，让「缩略徽标」与「盘口按钮」共用同一份配色 —— 一处定义两处用。 */
+  .dl-it .acts{flex:none;display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-end;max-width:300px;margin-top:1px}
+  .dl-it .lk{font-size:10.5px;font-weight:750;color:#fff;background:#8892A6;border-radius:6px;
+    padding:5px 8px;text-decoration:none;white-space:nowrap;transition:.14s}
+  .dl-it .lk:hover{filter:brightness(1.12)}
+  .dl-it .bd-baidu,.dl-it .lk.bd-baidu{background:#2B6DE5}
+  .dl-it .bd-xunlei,.dl-it .lk.bd-xunlei{background:#2A6FD6}
+  .dl-it .bd-quark,.dl-it .lk.bd-quark{background:#5A6BF5}
+  .dl-it .bd-189,.dl-it .lk.bd-189{background:#1A73E8}
+  .dl-it .bd-139,.dl-it .lk.bd-139{background:#0FA968}
+  .dl-it .bd-ali,.dl-it .lk.bd-ali{background:#5B6BF0}
+  .dl-it .bd-123,.dl-it .lk.bd-123{background:#3C7DF5}
+  .dl-it .bd-lanzou,.dl-it .lk.bd-lanzou{background:#4C8BF5}
+  .dl-it .bd-steam,.dl-it .lk.bd-steam{background:#1B2838}
+  .dl-it .bd-pikpak,.dl-it .lk.bd-pikpak{background:#3D5AFE}
+  .dl-it .bd-other,.dl-it .lk.bd-other{background:#9AA3B5}
   .dl-it .tx{flex:1;min-width:0}
-  .dl-it .tx b{display:block;font-size:12.5px;font-weight:750;color:var(--c-t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .dl-it .tx span{display:block;font-size:10.5px;color:var(--c-t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .dl-it .tx .pw{color:#8A6100;font-weight:700}
-  .dl-it .act{flex:none;font-size:11px;font-weight:750;color:var(--c-primary);border:1px solid rgba(46,107,255,.3);
+  /* ★ 标题最多 2 行、不再一刀切断；完整文本仍在 title 属性里（悬停可读全文） */
+  .dl-it .tx b{display:-webkit-box;font-size:12.5px;font-weight:750;line-height:1.45;color:var(--c-t1);
+    overflow:hidden;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
+  /* 副信息一条行铺开：盘口 · 提取码 · 作者 · 发布时间 · 热度（改前挤成一串还被截断） */
+  .dl-it .mt{display:flex;flex-wrap:wrap;align-items:center;gap:2px 9px;margin-top:3px;font-size:10.5px;color:var(--c-t3)}
+  .dl-it .mt i{font-style:normal;white-space:nowrap}
+  .dl-it .mt .pw{color:#8A6100;font-weight:750}
+  .dl-it .mt .dpv{font-family:var(--font-num);font-weight:700}
+  .dl-it .mt a{color:var(--c-primary);font-weight:700;text-decoration:none;white-space:nowrap}
+  .dl-it .mt a:hover{text-decoration:underline}
+  .dl-it .act{flex:none;margin-top:2px;font-size:11px;font-weight:750;color:var(--c-primary);border:1px solid rgba(46,107,255,.3);
     background:var(--c-primary-soft);border-radius:7px;padding:5px 9px;white-space:nowrap}
   .dl-it .act:hover{background:var(--c-primary);color:#fff;border-color:transparent}
   .dl-it.done .act{color:var(--c-ok);border-color:rgba(22,163,74,.35);background:#EDF7F0}
+  /* 每个专区的页脚：还有多少条没铺出来 + 一键铺全 */
+  .dl-ft{margin-top:7px}
+  .dl-more{font-size:10.5px;font-weight:750;color:var(--c-primary);background:none;
+    border:1px dashed rgba(46,107,255,.42);border-radius:7px;padding:4px 10px;transition:.14s}
+  .dl-more:hover{background:var(--c-primary-soft)}
+  /* ★ v10.27 顶部工具条（专区锚点 / 排序 / 盘口筛选）。
+     sticky 常驻：滚到第 40 条想换盘口或切排序时，不必先滚回顶部。 */
+  .dl-bar{position:sticky;top:-12px;z-index:3;margin:-12px -15px 10px;padding:9px 15px 8px;
+    background:var(--c-surface);border-bottom:1px solid var(--c-border)}
+  .dl-bar .rw{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .dl-bar .rw+.rw{margin-top:7px}
+  .dl-lb{flex:none;font-size:10.5px;font-weight:750;color:var(--c-t3)}
+  .dl-sp{margin-left:auto}
+  .dl-an{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:750;color:var(--c-t2);
+    background:#F3F5F9;border:1px solid var(--c-border);border-radius:20px;padding:4px 9px;transition:.14s}
+  .dl-an:hover{border-color:var(--c-primary);color:var(--c-primary)}
+  .dl-an i{font-style:normal;font-family:var(--font-num);font-weight:800;color:var(--c-t3)}
+  .dl-an.on{background:var(--c-primary-soft);border-color:rgba(46,107,255,.34);color:var(--c-primary)}
+  .dl-an.on i{color:var(--c-primary)}
+  .dl-tab,.dl-chip{font-size:10.5px;font-weight:750;color:var(--c-t2);background:#F3F5F9;
+    border:1px solid var(--c-border);border-radius:7px;padding:4px 9px;transition:.14s;white-space:nowrap}
+  .dl-tab:hover,.dl-chip:hover{border-color:var(--c-primary);color:var(--c-primary)}
+  .dl-tab.on,.dl-chip.on{background:var(--c-primary);border-color:transparent;color:#fff}
+  .dl-tab.on i,.dl-chip.on i{color:rgba(255,255,255,.82)}
+  .dl-chip i{font-style:normal;font-family:var(--font-num);font-weight:800;margin-left:3px;color:var(--c-t3)}
   .dl-note{font-size:11px;line-height:1.7;color:var(--c-t3);margin:-2px 0 11px}
   .dl-note b{color:var(--c-t2)}
   .dl-posts{margin-top:3px}
@@ -5513,86 +5570,311 @@ function dlBrand(s) {
   for (const [re, cls, ab] of DL_BRAND) if (re.test(t)) return { cls, ab };
   return { cls: 'other', ab: t.slice(0, 1) || '?' };
 }
-function dlHost(u) {
-  try { return new URL(u).host.replace(/^www\./, ''); } catch (e) { return ''; }
-}
-/** 单条链接行。★ `real` 为空的一律显式标「不可用」——不要把中间页当结果给用户点。 */
-function dlRow(it) {
-  const real = it.real || '';
-  const b = dlBrand(it.server);
-  const bits = [];
-  const h = real ? dlHost(real) : '';
-  if (h) bits.push(h);
-  if (it.pwd) bits.push('提取码 ' + String(it.pwd).replace(/^访问码[：:]\s*/, ''));
-  if (!real && it.error) bits.push('解析失败：' + it.error);
-  const name = it.postTitle || it.server || '下载';
-  const sub = [it.server, bits.join(' · ')].filter(Boolean).join(' · ');
-  const act = real
-    ? '<a class="act" href="' + esc(real) + '" target="_blank" rel="noopener">打开 ↗</a>' +
-      '<button class="act" type="button" data-dl-copy="' + esc(real) + '">复制</button>'
-    : '<span class="act" style="color:var(--c-t3);border-color:var(--c-border);background:#F3F5F9">不可用</span>';
-  return '<div class="dl-it' + (real ? '' : ' bad') + '">' +
-    '<span class="bd bd-' + b.cls + '">' + esc(b.ab) + '</span>' +
-    '<div class="tx"><b title="' + esc(name) + '">' + esc(name) + '</b>' +
-    '<span title="' + esc(real) + '">' + esc(sub) + '</span></div>' + act + '</div>';
-}
-function dlSection(title, srcCls, srcName, items, cap) {
-  const n = items.filter((x) => x.real).length;
-  const shown = cap && items.length > cap ? items.slice(0, cap) : items;
-  const more = items.length > shown.length
-    ? '<div class="dl-note" style="margin:8px 0 0">另有 ' + (items.length - shown.length) + ' 条未展示（同一款游戏的重复分享帖）</div>' : '';
-  return '<div class="dl-grp"><div class="h"><b>' + esc(title) + '</b>' +
-    '<span class="src ' + srcCls + '">' + esc(srcName) + '</span>' +
-    '<span class="n">' + n + ' / ' + items.length + ' 条可用</span></div>' +
-    '<div class="l">' + shown.map(dlRow).join('') + '</div>' + more + '</div>';
-}
-/**
- * 机地：**按「本体 / mod / 修改器」三个专区分别成块**。★ v10.26 新增
- *
- * 用户口径：「现在没有抓取到机地的下载链接…（有导航栏进行划分 本体/mod/修改器）」。
- * 源站的话题页就是把资源分成这三个 tab，接口按 `resource_type`（1/2/3）给全；
- * 而在此之前我们只吃详情页 SSR 的首屏 10 条（几乎只有本体）—— 实测同一款游戏
- * 剑星：老链路 25 条链接且全是本体，新链路 **210 条**，三个专区齐。
- *
- * ★ 为什么必须同时显示 `s.count`（源站报的专区总数）与 `items.length`（本次取回）：
- *   mod 专区实测 190 条，而一次只取回 50 条。只显示「50 条」会让人以为源站就这么点，
- *   只显示「190 条」又和眼见的条数对不上。两个都写，并说明差在哪。
- *
- * ★ 兜底：拿不到 `sections`（老服务 / 走了 SSR 兜底）就退回原来那一整块 ——
- *   不能让一个新增的分区逻辑把「本来能显示的链接」变成空白。
- */
-const DL_SEC_CAP = 6;
-function dlJidiGroups(jd) {
-  const all = (jd.items || []).filter((i) => i.real);
-  const secs = Array.isArray(jd.sections) ? jd.sections.filter((s) => s && s.key) : [];
-  if (!secs.length) return dlSection('机地社区分享（按帖子热度）', 'jidi', '机地', all, 12);
+/** 盘口筛选用的中文名（键与 dlBrand 的 cls 一一对应，别各写一套） */
+const DL_BRAND_NAME = {
+  baidu: '百度', xunlei: '迅雷', quark: '夸克', '189': '天翼', '139': '移动', ali: '阿里',
+  '123': '123', lanzou: '蓝奏', pikpak: 'PikPak', steam: 'Steam', other: '其他',
+};
+/** 展开态默认铺几行，其余靠「展开全部」（数据已在手上，不再发请求） */
+const DL_CAP = 12;
+/** 「最热 / 最近发布」—— 与源站话题页右上角那两个排序同名同义 */
+const DL_SORTS = [['hot', '最热'], ['new', '最近发布']];
 
-  const topicUrl = jd.url || 'https://jidiyouxi.com/';
-  const parts = [];
-  for (const s of secs) {
-    const items = all.filter((i) => i.section === s.key);
-    if (!items.length) continue;                  // 该专区这次没取到可点开的链接 → 不占版面
-    const shown = items.slice(0, DL_SEC_CAP);
-    const total = s.count || 0;                   // 源站该专区的**帖子**数
-    const got = s.returned || 0;                  // 本次取回的**帖子**数
-    const hidden = items.length - shown.length;   // 未展示的**地址**数
-    /* ★ 单位必须写清：这个专区里「帖」与「网盘地址」是两套数（一帖常带 2~3 个盘口）。
-       混用「条」会让「另有 134 条 / 源站共 190 条」读起来自相矛盾（前者是地址、后者是帖）。 */
-    const tail = hidden > 0
-      ? '本专区另有 ' + hidden + ' 个地址未展示（已取回 ' + got + ' 帖' + (total > got ? '，源站共 ' + total + ' 帖' : '') + '）'
-      : (total > got ? '源站该专区共 ' + total + ' 帖，本次取回 ' + got + ' 帖' : '');
-    parts.push('<div class="dl-sec"><div class="sh"><b>' + esc(s.name) + '</b>' +
-      '<span class="c">' + (total || items.length) + ' 帖</span>' +
-      '<a class="go" href="' + esc(topicUrl) + '" target="_blank" rel="noopener">源站专区 ↗</a></div>' +
-      '<div class="l">' + shown.map(dlRow).join('') + '</div>' +
-      (tail ? '<div class="dl-note" style="margin:7px 0 0">' + esc(tail) + '</div>' : '') +
+/**
+ * 发布时间：近期说相对量，久了给日期。
+ * ★ 不复用 humanAgo()：那个是给「上次同步」用的，对半年前的帖子会写出「400 天前」，
+ *   放进列表里既占宽又读不出到底是哪个月。
+ */
+function dlWhen(ts) {
+  const n = Number(ts);
+  if (!n || !isFinite(n)) return null;
+  const d = new Date(n);
+  if (isNaN(d.getTime())) return null;
+  const mins = Math.round((Date.now() - n) / 60000);
+  if (mins < 1) return '刚刚';
+  if (mins < 60) return mins + ' 分钟前';
+  if (mins < 1440) return Math.round(mins / 60) + ' 小时前';
+  const days = Math.round(mins / 1440);
+  if (days <= 6) return days + ' 天前';
+  const y = d.getFullYear();
+  return (y === new Date().getFullYear() ? '' : y + '年') + (d.getMonth() + 1) + '月' + d.getDate() + '日';
+}
+/** 浏览量：5 位以上折成「5.1万」，否则数字本身 */
+function dlNum(n) {
+  const v = Number(n) || 0;
+  return v >= 10000 ? (v / 10000).toFixed(1).replace(/\.0$/, '') + '万' : String(v);
+}
+
+/**
+ * **把「一行一个网盘地址」归成「一行一个帖子」**：同一帖的多个盘口并成右侧的按钮组。
+ *
+ * ★ 为什么非归不可（实测剑星「本体」首屏）：12 个地址其实只来自 **4 个帖子** ——
+ *   一帖带 2~3 个盘口。不归的话用户在屏幕上看到的是同一个标题**重复 5 遍**
+ *   （「已测试丨风灵月影丨v1.4.1」× 迅雷/百度/夸克/UC/移动），每行只差一个徽标，
+ *   这正是他说的「分不清」；而源站话题页本来就是一帖一行、右侧挂三个盘口按钮。
+ *
+ * ★ 键取 `postId`；XD 那侧没有帖子概念（`kind:'downbtn'` 无 postId）⇒
+ *   退到地址本身，一个盘口一行，与改造前一致。
+ */
+function dlGroupByPost(items) {
+  const m = new Map();
+  for (const it of items) {
+    const k = it.postId || it.postUrl || ('u:' + it.real);
+    let g = m.get(k);
+    if (!g) {
+      g = {
+        key: k, title: it.postTitle || null, postUrl: it.postUrl || null,
+        author: it.author || null, ct: it.ct || null, ut: it.ut || null, dpv: Number(it.dpv) || 0,
+        section: it.section || null, links: [],
+      };
+      m.set(k, g);
+    }
+    g.links.push({ server: it.server, real: it.real, pwd: it.pwd });
+    /* 同帖多条地址时取信息最全的那份做主（有的行没带作者或时间） */
+    if (!g.title && it.postTitle) g.title = it.postTitle;
+    if (!g.author && it.author) g.author = it.author;
+    if (!g.ct && it.ct) g.ct = it.ct;
+    if (!g.ut && it.ut) g.ut = it.ut;
+    if ((Number(it.dpv) || 0) > g.dpv) g.dpv = Number(it.dpv) || 0;
+  }
+  return [...m.values()];
+}
+
+/**
+ * 单帖行：标题 + 副信息（作者 / 时间 / 浏览 / 提取码 / 源帖）+ 右侧盘口按钮组。
+ * ★ 提取码按盘口分别写（同一帖不同盘口的码可能不同，混着写会让人抄错码）。
+ */
+function dlRow(g) {
+  const mt = [];
+  if (g.author) mt.push('<i>@' + esc(g.author) + '</i>');
+  const when = dlWhen(g.ct || g.ut);
+  if (when) mt.push('<i>' + esc(when) + '</i>');
+  if (g.dpv) mt.push('<i class="dpv">' + esc(dlNum(g.dpv)) + ' 浏览</i>');
+  const pwds = [];
+  const seenPwd = new Set();
+  for (const l of g.links) {
+    if (!l.pwd) continue;
+    const code = String(l.pwd).replace(/^访问码[：:]\s*/, '');
+    const tag = (g.links.length === 1 ? '' : (DL_BRAND_NAME[dlBrand(l.server).cls] || l.server) + ' ');
+    const k = tag + code;
+    if (seenPwd.has(k)) continue;
+    seenPwd.add(k);
+    pwds.push(tag + code);
+  }
+  if (pwds.length) mt.push('<i class="pw">提取码 ' + esc(pwds.join(' / ')) + '</i>');
+  if (g.postUrl) mt.push('<a href="' + esc(g.postUrl) + '" target="_blank" rel="noopener">源帖 ↗</a>');
+
+  const links = g.links.map((l) => {
+    const b = dlBrand(l.server);
+    const code = l.pwd ? String(l.pwd).replace(/^访问码[：:]\s*/, '') : '';
+    const tip = (l.server || '网盘') + (code ? ' · 提取码 ' + code : '') + ' · 打开';
+    return l.real
+      ? '<a class="lk bd-' + b.cls + '" href="' + esc(l.real) + '" target="_blank" rel="noopener" title="' + esc(tip) + '">' +
+        esc(DL_BRAND_NAME[b.cls] || l.server || '网盘') + '</a>'
+      : '<span class="lk bd-other" title="' + esc((l.server || '网盘') + ' · 这条没解析出地址') + '">' +
+        esc(DL_BRAND_NAME[b.cls] || l.server || '网盘') + '</span>';
+  }).join('');
+  const first = g.links.find((l) => l.real);
+  const copy = first
+    ? '<button class="act" type="button" data-dl-copy="' + esc(first.real) + '" title="复制' +
+      esc(first.server || '首个') + '链接">复制</button>' : '';
+
+  return '<div class="dl-it">' +
+    '<span class="bd bd-' + (first ? dlBrand(first.server).cls : 'other') + '">' +
+      esc(first ? dlBrand(first.server).ab : '?') + '</span>' +
+    '<div class="tx"><b title="' + esc(g.title || '') + '">' + esc(g.title || '（无标题资源帖）') + '</b>' +
+    '<div class="mt">' + mt.join('') + '</div></div>' +
+    '<div class="acts">' + links + copy + '</div></div>';
+}
+/* ============ 下载弹窗的视图状态（v10.27） ============
+ * 用户口径：「还需要优化下下载的弹窗」（并给了源站话题页的 tab 与排序结构）。
+ *
+ * ★ 为什么要有 dlView 这一层：弹窗里现在有**三个会改变输出的开关** ——
+ *   排序（最热 / 最近发布）、盘口筛选、每个专区的展开/收起。任何一个变化都要整块重渲染。
+ *   把「用户选了什么」（dlView）与「怎么渲染」（paintDownload 一个出口）分开，
+ *   就不必在三个地方各写一遍 innerHTML —— 本项目踩过「同一份 UI 有两个独立渲染分支、
+ *   只改了其中一个，界面自相矛盾」的坑（PITFALLS 16）。
+ * ★ 每次 openDownload 重置：上一款游戏的选择不能带到下一款。
+ */
+let dlView = null;
+
+/** 按盘口统计**帖数**（筛选 chip 上的数字）。★ 用帖数而不是地址数：
+ *  列表一行就是一帖，chip 写着 25 却点出 12 行会让人以为丢数据。 */
+function dlBrandCounts(items) {
+  const m = new Map();
+  for (const g of dlGroupByPost(items)) {
+    for (const cls of new Set(g.links.map((l) => dlBrand(l.server).cls))) {
+      m.set(cls, (m.get(cls) || 0) + 1);
+    }
+  }
+  return [...m.entries()].map(([cls, n]) => ({ cls, n })).sort((a, b) => b.n - a.n);
+}
+
+/**
+ * 组内排序（作用在**帖子**上）。**与后端 jidiPosts.sortPosts 同规则**：有标题的优先，再按主键降序。
+ * ★ 无标题的那批是 `resource_type=0` 混进来的帖子（源站自己也有），不删 —— 它确实带链接；
+ *   但也不许排在有名字的资源前面，否则第一屏全是「没有名字的下载」。
+ * ★ XD 那些条目没有 dpv/ct（都是 0）⇒ 全部并列 ⇒ 保持源站给的原顺序（Array.sort 稳定）。
+ */
+function dlSorted(items, sort) {
+  const key = sort === 'new' ? 'ct' : 'dpv';
+  return items.slice().sort((a, b) => {
+    const at = a.title ? 1 : 0, bt = b.title ? 1 : 0;
+    if (at !== bt) return bt - at;
+    return (Number(b[key]) || 0) - (Number(a[key]) || 0);
+  });
+}
+function dlFiltered(items, filt) {
+  return filt ? items.filter((i) => dlBrand(i.server).cls === filt) : items;
+}
+/** 过滤 + 归帖 + 排序 —— 从「地址列表」到「可渲染的帖子列表」的唯一一条路 */
+function dlPosts(items, filt, sort) {
+  return dlSorted(dlGroupByPost(dlFiltered(items, filt)), sort);
+}
+function dlIsOpen(key) {
+  const s = dlView && dlView.sec[key];
+  return !!(s && s.open);
+}
+
+/**
+ * 一个可折叠区块（机地三个专区共用；XD 那组是同样的骨架挂在 .dl-grp 上）。
+ * ★ 折叠时**不渲染行**（不是 display:none 藏起来）：DOM 里少掉上百个节点，
+ *   而且「看到几行 = 取到几行」—— 不靠隐藏内容制造「已经看全」的错觉。
+ * ★ 「展开」按钮上写明还有多少个地址：点之前就知道值不值。
+ * ★ 单位仍然分开写：「N 帖」是源站的帖子数，「M 个地址」是本次真正能点开的链接数
+ *   （一帖常带 2~3 个盘口，混用会让「22 帖 / 60 个地址」读起来自相矛盾）。
+ */
+function dlBlock(o) {
+  const cap = o.cap || DL_CAP;
+  const rows = o.open ? (o.all ? o.items : o.items.slice(0, cap)) : [];
+  const rest = o.items.length - rows.length;
+  const foot = [];
+  if (rows.length) {
+    if (o.all && o.items.length > cap) {
+      foot.push('<button type="button" class="dl-more" data-dl-all="' + esc(o.key) + '">收起，只看前 ' + cap + ' 帖</button>');
+    } else if (rest > 0) {
+      foot.push('<button type="button" class="dl-more" data-dl-all="' + esc(o.key) + '">展开全部 ' +
+        o.items.length + ' 帖（还有 ' + rest + ' 帖）</button>');
+    }
+  }
+  if (o.tail) foot.push('<div class="dl-note" style="margin:7px 0 0">' + esc(o.tail) + '</div>');
+  const head = '<div class="sh"><b>' + esc(o.name) + '</b>' +
+    '<span class="c">' + esc(o.countLabel) + '</span>' +
+    (o.metaLabel ? '<span class="m">' + esc(o.metaLabel) + '</span>' : '') +
+    '<button type="button" class="dl-tg" data-dl-sec="' + esc(o.key) + '">' +
+      (o.open ? '收起' : '展开 ' + o.items.length + ' 帖') + '</button>' +
+    (o.url ? '<a class="go" href="' + esc(o.url) + '" target="_blank" rel="noopener">' +
+      esc(o.urlLabel || '源站 ↗') + '</a>' : '') +
+    '</div>';
+  return '<div class="dl-sec' + (o.open ? '' : ' off') + '" data-sec="' + esc(o.key) + '">' + head +
+    (rows.length ? '<div class="l">' + rows.map(dlRow).join('') + '</div>' : '') +
+    (foot.length ? '<div class="ft">' + foot.join('') + '</div>' : '') + '</div>';
+}
+
+/** 顶部工具条：专区锚点 + 排序 + 盘口筛选（sticky —— 滚到第 40 条也能换盘口）
+ *  ★ 锚点与 chip 上的数字一律是**帖数**（列表一行就是一帖），不是地址数。 */
+function dlBarHtml() {
+  const v = dlView;
+  const cnt = (arr) => dlGroupByPost(dlFiltered(arr, v.filt)).length;
+  const an = [];
+  if (v.xdItems.length) an.push({ key: 'xd', name: 'XD', n: cnt(v.xdItems) });
+  for (const s of v.secs) an.push({ key: s.key, name: s.name, n: cnt(s.items) });
+  const anchors = an.map((a) => '<button type="button" class="dl-an' + (dlIsOpen(a.key) ? ' on' : '') +
+    '" data-dl-go="' + esc(a.key) + '">' + esc(a.name) + ' <i>' + a.n + '</i></button>').join('');
+  /* 排序只对机地那侧有效（XD 条目没有 dpv/ct）—— 只有 XD 时不摆这个开关，别给无效控件 */
+  const sorts = v.secs.length
+    ? '<span class="dl-sp"></span><span class="dl-lb">排序</span>' + DL_SORTS.map(([k, label]) =>
+      '<button type="button" class="dl-tab' + (v.sort === k ? ' on' : '') + '" data-dl-sort="' + k + '">' +
+      esc(label) + '</button>').join('')
+    : '';
+  const chips = ['<button type="button" class="dl-chip' + (v.filt === '' ? ' on' : '') +
+    '" data-dl-filt="">全部<i>' + cnt(v.items) + '</i></button>']
+    .concat(dlBrandCounts(v.items).map((b) => '<button type="button" class="dl-chip' +
+      (v.filt === b.cls ? ' on' : '') + '" data-dl-filt="' + esc(b.cls) + '">' +
+      esc(DL_BRAND_NAME[b.cls] || b.cls) + '<i>' + b.n + '</i></button>')).join('');
+  return '<div class="dl-bar"><div class="rw">' + anchors + sorts + '</div>' +
+    '<div class="rw"><span class="dl-lb">盘口</span>' + chips + '</div></div>';
+}
+
+/** 唯一渲染出口：把 dlView 画进 #dlBody */
+function paintDownload() {
+  const body = $('#dlBody');
+  if (!body || !dlView) return;
+  const v = dlView;
+  const keep = body.scrollTop;
+
+  /* 筛选键失效（换了游戏 / 该盘口这次一条都没有）→ 回到「全部」，
+     否则会渲染出一片「当前筛选下没有地址」，看着像坏了。 */
+  if (v.filt && !dlBrandCounts(v.items).some((b) => b.cls === v.filt)) v.filt = '';
+
+  const pass = (arr) => dlPosts(arr, v.filt, v.sort);
+  const grp = [];
+
+  if (v.xdItems.length) {
+    const its = pass(v.xdItems);
+    const open = dlIsOpen('xd');
+    /* 不筛选时不写「N / N」—— 两个一样的数并排只会让人怀疑哪个才是真的 */
+    grp.push('<div class="dl-grp' + (open ? '' : ' off') + '" data-sec="xd">' +
+      '<div class="h"><b>XDGAME 官方盘口</b><span class="src xd">XD</span>' +
+      '<span class="n">' + (v.filt ? '筛后 ' + its.length + ' / ' : '共 ') + v.xdItems.length + ' 条</span>' +
+      '<button type="button" class="dl-tg" data-dl-sec="xd">' +
+        (open ? '收起' : '展开 ' + its.length + ' 条') + '</button></div>' +
+      (open ? '<div class="l">' + its.map(dlRow).join('') + '</div>' : '') +
       '</div>');
   }
-  if (!parts.length) return dlSection('机地社区分享（按帖子热度）', 'jidi', '机地', all, 12);
-  return '<div class="dl-grp"><div class="h"><b>机地社区分享</b>' +
-    '<span class="src jidi">机地</span>' +
-    '<span class="n">' + all.length + ' / ' + (jd.count || all.length) + ' 条可用</span></div>' +
-    '<div class="dl-secs">' + parts.join('') + '</div></div>';
+  if (v.secs.length) {
+    const blocks = v.secs.map((s) => dlBlock({
+      key: s.key,
+      name: s.name,
+      items: pass(s.items),
+      open: dlIsOpen(s.key),
+      all: !!(v.sec[s.key] && v.sec[s.key].all),
+      countLabel: (s.count || s.items.length) + ' 帖',
+      metaLabel: s.items.length + ' 个地址' + (s.merged ? '（含最近发布）' : ''),
+      url: v.topicUrl,
+      urlLabel: '源站专区 ↗',
+      tail: s.count > s.returned
+        ? '源站该专区共 ' + s.count + ' 帖，本次取回 ' + s.returned + ' 帖' +
+          (s.merged ? '（已并入「最近发布」那批）' : '') + '，其余请去源站专区看'
+        : '',
+    })).join('');
+    grp.push('<div class="dl-grp"><div class="h"><b>机地社区分享</b>' +
+      '<span class="src jidi">机地</span>' +
+      '<span class="n">' + (v.filt ? '筛后 ' + pass(v.jiItems).length + ' / ' : '共 ') +
+        dlGroupByPost(v.jiItems).length + ' 帖</span></div>' +
+      '<div class="dl-secs">' + blocks + '</div></div>');
+  }
+
+  const usable = dlPosts(v.items, v.filt, v.sort).length;
+  const note = '<div class="dl-note">共 <b>' + v.items.length + '</b> 个可直接打开的网盘地址（来自 <b>' +
+    dlGroupByPost(v.items).length + '</b> 个资源帖）' +
+    (v.filt ? '，筛选 <b>' + esc(DL_BRAND_NAME[v.filt] || v.filt) + '</b> 后剩 <b>' + usable + '</b> 帖' : '') +
+    ' · 链接均为源站实时解析</div>';
+  body.innerHTML = dlBarHtml() + note +
+    (usable ? grp.join('') : '<div class="dlpop-empty">当前筛选下没有可用的网盘地址<br>' +
+      '<span style="font-size:11.5px">点上面的「全部」看所有盘口</span></div>');
+  body.scrollTop = keep;
+}
+
+/**
+ * 展开/收起一个区块。
+ * @param {string} key
+ * @param {boolean} [jump] true = 锚点跳转（一定展开并把标题滚到工具条下方，不折叠）
+ */
+function dlOpenSec(key, jump) {
+  const s = dlView && dlView.sec[key];
+  if (!s) return;
+  s.open = jump ? true : !s.open;
+  paintDownload();
+  if (!jump || !s.open) return;
+  const b = $('#dlBody');
+  const el = b && b.querySelector('[data-sec="' + key + '"]');
+  if (!el) return;
+  /* 用 rect 差值而不是 offsetTop：.dl-sec 的 offsetParent 是 .dlpop-box（更外层），
+     直接减会少算弹窗头部那一段，跳过去总是偏上。（工具条 sticky 高约 56px，留出来） */
+  const r = el.getBoundingClientRect();
+  const br = b.getBoundingClientRect();
+  b.scrollTop += r.top - br.top - 56;
 }
 /**
  * 一整组都取不到地址时的说明块。
@@ -5639,6 +5921,8 @@ function closeDownload() {
   const pop = $('#dlPop');
   if (!pop || pop.hidden) return;
   pop.classList.remove('on');
+  /* ★ 关掉就丢状态：否则「查看全部」那类弹窗复用 #dlBody 时，上一次的排序/筛选还在 */
+  dlView = null;
   setTimeout(() => { pop.hidden = true; const b = $('#dlBody'); if (b) b.innerHTML = ''; }, 180);
 }
 /**
@@ -5693,28 +5977,49 @@ async function openDownload(ctx) {
     return;
   }
 
-  const secs = [];
-  let usable = 0;
   const xd = good.find((x) => x.tag === 'xd');
   const ji = good.find((x) => x.tag === 'jidi');
-  if (xd) {
-    const items = (xd.d.items || []).filter((i) => i.real);
-    if (items.length) { usable += items.length; secs.push(dlSection('XDGAME 官方盘口', 'xd', 'XD', items, 0)); }
-    else secs.push(dlBlocked('XDGAME 官方盘口', 'xd', 'XD', xd.d));
+  const xdItems = xd ? (xd.d.items || []).filter((i) => i.real) : [];
+  const jiItems = ji ? (ji.d.items || []).filter((i) => i.real) : [];
+  /* ★ v10.26：机地按源站的话题专区（本体 / mod / 修改器）分区；服务端给的 sections 是权威口径
+     （带源站总帖数与「是否并入最近发布」）。老服务没有 sections 时把条目当成「本体」一块，
+     行为与改造前一致 —— 不能让一个新增的分区逻辑把「本来能显示的链接」变成空白。 */
+  const jiSecs = (ji && Array.isArray(ji.d.sections) ? ji.d.sections.filter((s) => s && s.key) : [])
+    .map((s) => ({ ...s, items: jiItems.filter((i) => i.section === s.key) }))
+    .filter((s) => s.items.length);
+  const secs = jiSecs.length ? jiSecs
+    : (jiItems.length ? [{ key: 'body', name: '本体', count: jiItems.length, returned: jiItems.length, merged: false, items: jiItems }] : []);
+
+  if (!xdItems.length && !jiItems.length) {
+    dlView = null;
+    const blocks = [];
+    if (xd) blocks.push(dlBlocked('XDGAME 官方盘口', 'xd', 'XD', xd.d));
+    if (ji) blocks.push(dlBlocked('机地社区分享', 'jidi', '机地', ji.d));
+    $('#dlBody').innerHTML = '<div class="dl-note">这款游戏暂时<b>没有可直接打开的网盘地址</b>，下面是原因与出口</div>' +
+      (blocks.length ? blocks.join('') : '<div class="dlpop-empty">这些条目在源站也可能只是话题、尚无资源帖</div>');
+    $('#dlFoot').innerHTML = '<b>链接来自源站</b>：XD 的地址由 <code>/plus/download.php</code> 跳转解析，' +
+      '机地的来自社区帖正文。本站只做聚合与解析，<b>不转存、不提供文件</b>；下载前请自行核对文件安全。';
+    return;
   }
-  if (ji) {
-    /* ★ v10.26：机地不再是一个混排列表 —— 服务端已按源站的话题专区
-       （本体 / mod / 修改器）分组返回，这里交给 dlJidiGroups 逐区分块。
-       老服务（没有 sections 字段）会走它内部的兜底分支，行为与改造前一致。 */
-    const items = (ji.d.items || []).filter((i) => i.real);
-    if (items.length) { usable += items.length; secs.push(dlJidiGroups(ji.d)); }
-    else secs.push(dlBlocked('机地社区分享', 'jidi', '机地', ji.d));
-  }
-  $('#dlBody').innerHTML = secs.length
-    ? (usable
-      ? '<div class="dl-note">共 <b>' + usable + '</b> 条可直接打开的网盘地址 · 链接均为源站实时解析</div>' + secs.join('')
-      : '<div class="dl-note">这款游戏暂时<b>没有可直接打开的网盘地址</b>，下面是原因与出口</div>' + secs.join(''))
-    : '<div class="dlpop-empty">没有取到可用的下载链接<br><span style="font-size:11.5px">这些条目在源站也可能只是话题、尚无资源帖</span></div>';
+
+  /* ===== 初始化视图状态（每次打开重置）===== */
+  const sec = {};
+  for (const s of secs) sec[s.key] = { open: false, all: false };
+  if (xdItems.length) sec.xd = { open: true, all: false };
+  /* 本体优先：用户点「下载」多半是冲本体来的（源站那三个 tab 里本体也是默认页）。
+     本体这次没有条目时开第一个有内容的专区 —— 否则打开就是一片折叠标题，等于什么都没看到。 */
+  const firstOpen = secs.some((s) => s.key === 'body') ? 'body' : (secs[0] && secs[0].key);
+  if (firstOpen) sec[firstOpen] = { open: true, all: false };
+
+  dlView = {
+    sort: 'hot',
+    filt: '',
+    xdItems, jiItems,
+    items: xdItems.concat(jiItems),
+    secs, sec,
+    topicUrl: (ji && ji.d.url) || 'https://jidiyouxi.com/',
+  };
+  paintDownload();
   $('#dlFoot').innerHTML = '<b>链接来自源站</b>：XD 的地址由 <code>/plus/download.php</code> 跳转解析，' +
     '机地的来自社区帖正文。本站只做聚合与解析，<b>不转存、不提供文件</b>；下载前请自行核对文件安全。';
 }
@@ -5967,6 +6272,25 @@ async function openModList(ctx) {
     closeDownload();
   }, true);
   document.addEventListener('click', (e) => {
+    /* ★ v10.27：下载弹窗内部的四个开关（锚点 / 排序 / 盘口筛选 / 折叠）全部走委托。
+       为什么必须委托：#dlBody 每次都是整块 innerHTML 重建，直接绑在按钮上的监听会全掉
+       （v10.25 已记过这条）。这里先判，命中就 return，不再往下走下载入口的分支。 */
+    if (dlView) {
+      const go = e.target.closest('[data-dl-go]');
+      if (go) { dlOpenSec(go.dataset.dlGo, true); return; }
+      const st = e.target.closest('[data-dl-sort]');
+      if (st) { dlView.sort = st.dataset.dlSort || 'hot'; paintDownload(); return; }
+      const fl = e.target.closest('[data-dl-filt]');
+      if (fl) { dlView.filt = fl.dataset.dlFilt || ''; paintDownload(); return; }
+      const tg = e.target.closest('[data-dl-sec]');
+      if (tg) { dlOpenSec(tg.dataset.dlSec); return; }
+      const al = e.target.closest('[data-dl-all]');
+      if (al) {
+        const s = dlView.sec[al.dataset.dlAll];
+        if (s) { s.all = !s.all; s.open = true; paintDownload(); }
+        return;
+      }
+    }
     /* ★ v10.25：「查看全部」按钮 —— 与下面两个下载按钮共用同一个 #dlPop 外壳，
        所以绑在同一处委托里（分散绑三处，改一次外壳要改三处）。 */
     const fb = e.target.closest('[data-full]');

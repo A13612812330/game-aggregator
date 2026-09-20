@@ -276,6 +276,9 @@ function flatFrom(sections) {
           author: p.author,
           tags: p.tags,
           dpv: p.dpv,
+          /* ★ v10.27：发布时间（毫秒）。此前只透传了 `ut`（更新时间）→ 前端**无法按时间排**
+             （实测 items 里 ct 覆盖 0/210）。弹窗的「最近发布」排序就靠它。 */
+          ct: p.ct || null,
           ut: p.ut,
           note: p.note,
           kind: 'post',
@@ -314,6 +317,9 @@ async function jidi(tid, { sort = 'hot', perSection = 50 } = {}) {
       count: g.count,
       returned: g.returned,
       withLinks: g.withLinks,
+      /* ★ v10.27：该专区是否补抓并合并了 `sort=new` 那批（弹窗说明「最近发布」的数据来源用） */
+      merged: !!g.merged,
+      mergedAdded: g.mergedAdded || 0,
       /** 本次真正能拼出的网盘链接条数 */
       links: (g.items || []).reduce((n, p) => n + (p.links || []).length, 0),
       error: g.error || null,
@@ -341,6 +347,8 @@ async function jidi(tid, { sort = 'hot', perSection = 50 } = {}) {
     const sections = [{
       key: 'body', name: '本体', count: d.posts.length, returned: d.posts.length,
       withLinks: d.posts.length,
+      /* SSR 这条只解析首屏、不按专区、也没有 hot/new 两套 —— 如实标 false，别让前端以为有 */
+      merged: false, mergedAdded: 0,
       links: d.posts.reduce((n, p) => n + (p.links || []).length, 0),
       error: '接口不可用，已退回 SSR 首屏',
     }];
