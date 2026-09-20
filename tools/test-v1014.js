@@ -149,13 +149,18 @@ console.log('\n=== ① 跨源按钮不再指向站点首页 ===');
   ok('跨源按钮默认 hidden（渲染时就不露出）', /id="crossGo" hidden/.test(h));
   /* ★ v10.14 补：检索词必须剥掉标点 —— 否则「生化危机4：重制版」剥版本词后留下
      尾随冒号（`生化危机4：`），检索不到机地的「生化危机4重置版」，两源都有却仍退到站内搜索。 */
-  ok('检索词剥标点（PUNCT 常量）', /const PUNCT = \/\[/.test(h) && /\.replace\(PUNCT, ''\)/.test(h));
+  /* ★ v10.23：这套逻辑整体搬到后端 data/twin.js（前端只调 /api/library/twin）。
+     断言改指新位置 —— 意图不变：「检索词必须剥掉标点」这件事实仍然被守住。 */
+  ok('[v10.23 迁移] 剥标点在后端 twin.normTitle',
+    /x\.replace\(\/\[[^\n]*\]\+\/g, ''\)/.test(read('data/twin.js')));
   /* ★ v10.15：v10.14 里这句是 `cand.find(...)`，现在先过一道 hasDetailUrl 过滤（只留能跳的），
      再在同款候选里优先取「归一后完全相等」的那条 —— 意图没变，只是候选集多了一层筛。 */
-  ok('命中优先取「归一后完全相等」的那条',
-    /const want = normGameTitle\(zh\)/.test(h)
-    && /const ok = cand\.filter\(hasDetailUrl\);/.test(h)
-    && /return ok\.find\(\(it\) => normGameTitle\(splitName\(it\.title\)\.zh\) === want\) \|\| ok\[0\] \|\| null;/.test(h));
+  /* ★ v10.23：择优从「取第一条归一相等的」升级为**打分取最高**
+     （中文段相等 100 / 包含 30；英文段相等 80 / 包含 20；英文段双方都有却互不匹配 → 一票否决）。
+     实测这么改才拦住「GTA5 传承版(Legacy) → 机地增强版(Enhanced)」这类真错配。 */
+  ok('[v10.23 迁移] 命中打分择优在后端 twin（matchScore + TWIN_MIN_SCORE）',
+    /zhScore = 100/.test(read('data/twin.js')) && /sc > bestScore/.test(read('data/twin.js'))
+    && /TWIN_MIN_SCORE/.test(read('data/twin.js')));
 }
 
 /* ★ 行为级：检索词三轮推导（正则与 index.html 内的 PUNCT 一致，这里锁住不变量） */
@@ -181,10 +186,11 @@ console.log('\n=== 抽屉渲染结构 ===');
   ok('参数卡有芯片规格行', /\.d-param \.spec/.test(h) && /const specRow/.test(h));
   ok('手机配置区块有机型清单槽位', /id="bhDevSlot"/.test(h) && /\.d-devlist/.test(h));
   ok('计数改为「机型 · GPU」', /\$\{devCnt\} 款机型/.test(h));
-  ok('match 请求带上另一源的 libId 与别名', /qs\.set\('alts'/.test(h) && /resolveCounterpart\(d\)/.test(h));
+  ok('match 请求带上另一源的 libId 与别名', /qs\.set\('alts'/.test(h) && /resolveCounterpart\(d, fb\)/.test(h));
   ok('跨源解析只查一次（cpCache）', /let cpCache/.test(h));
-  ok('sameGame 有防误配闸门（两边都有中文则不退英文）',
-    /两边\*\*都有\*\*中文段却不相等时/.test(h) || /return false;\s*\n\s*\}\s*\n\s*const enA/.test(h));
+  ok('[v10.23 迁移] sameGame 防误配闸门仍在（后端 twin.js）',
+    /都有中文段却不相等时/.test(read('data/twin.js'))
+    || /return false;\s*\n\s*\}\s*\n\s*const enA/.test(read('data/twin.js')));
 }
 
 {

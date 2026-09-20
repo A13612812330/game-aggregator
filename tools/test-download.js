@@ -233,7 +233,10 @@ eq(dl.serverOf('https://store.steampowered.com/app/1/'), '其他链接',
   ok(/class="go dl"[^>]*data-dl-open/.test(idx), '★ 详情页底部有「⬇ 网盘下载」主按钮');
   ok(/data-dl-url="\$\{esc\(d\.url/.test(idx), '下载按钮把当前源详情页 URL 传给弹窗');
   ok(/data-dl-jidi="\$\{esc\(fb\.jidiUrl/.test(idx), '下载按钮把机地详情页 URL 也带上（双源一次取全）');
-  ok(/jidiUrl: it\.jidiUrl/.test(idx) && /jidiUrl: hit\.jidiUrl/.test(idx),
+  /* ★ v10.23：跨源那处的取值口径改了 —— 目标是机地时就是 hit.url；
+     目标是 XD 时机地详情页是**当前这一页**（d.url）。原先写死 hit.jidiUrl 只会取到空串。 */
+  ok(/jidiUrl: it\.jidiUrl/.test(idx)
+    && /jidiUrl: hitSource === 'jidi' \? hit\.url : \(d\.source === 'jidi' \? d\.url : ''\)/.test(idx),
     '★ 三处 fb 兜底都补了 jidiUrl（列表行 / 热榜 / 搜索跨源），漏一处那条链路就取不到机地侧');
 
   for (const page of ['public/emulator.html', 'public/unpack.html']) {

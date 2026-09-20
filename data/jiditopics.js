@@ -126,4 +126,34 @@ function top(n = 20) {
   return r.ok ? r.items : [];
 }
 
-module.exports = { FILE, load, stats, list, top };
+/* ─────────────────────────────────────────────────────────────
+ * ★ v10.23：按 tid 取单条（`byTid`）
+ *
+ * 为什么需要它：端游库里 13,448 条 XDGAME 记录的 `jidiUrl` 指向
+ * `jidiyouxi.com/topic/detail/<tid>` —— 这个 `<tid>` **就是本文件 items 的 `tid`**
+ * （实测逐一对照：`detail/338824746` → 「玩偶冒名者」、`detail/2134035682` → 「让它去死」…）。
+ *
+ * ⇒ 「这款游戏在机地的详情页」这个问题，用 `tid` 一次 Map 查询就能答，
+ *   不必按名称模糊检索（那正是过去跨源匹配出错的老路）。
+ *
+ * 索引按 mtime 失效 —— 重跑 `tools/build-jidi-topics.js` 后无需重启服务。
+ */
+let _tidIdx = null;
+let _tidIdxMtime = 0;
+
+function byTid(tid) {
+  const d = load();
+  if (d.error) return null;
+  const k = String(tid == null ? '' : tid).trim();
+  if (!k) return null;
+  if (!_tidIdx || _tidIdxMtime !== _mtime) {
+    _tidIdx = new Map();
+    for (const t of d.items) {
+      if (t && t.tid != null && t.tid !== '') _tidIdx.set(String(t.tid), t);
+    }
+    _tidIdxMtime = _mtime;
+  }
+  return _tidIdx.get(k) || null;
+}
+
+module.exports = { FILE, load, stats, list, top, byTid };

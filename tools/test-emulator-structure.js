@@ -117,7 +117,7 @@ t('mobilehub 后端支持 only=both 双料筛选（sources 长度为 2）',
  *   paintDetail 执行到该行抛 ReferenceError → 其后的「另一源也有收录」「同分类更多」从未渲染。
  *   本断言专门防它回归：定义与调用必须同时存在。 */
 t('详情抽屉 loadBhBlock 既有定义又有调用（防「孤儿调用」回归）',
-  /(?:async\s+)?function loadBhBlock/.test(idx) && /loadBhBlock\(d, title\)/.test(idx));
+  /(?:async\s+)?function loadBhBlock/.test(idx) && /loadBhBlock\(d, title(?:, fb)?\)/.test(idx));
 t('详情抽屉有修改器 / 云存档两个槽位', idx.includes('id="trBlock"') && idx.includes('id="svBlock"'));
 t('抽屉三区块函数均已定义（bh / tr / sv）',
   /function loadBhBlock/.test(idx) && /function loadTrBlock/.test(idx) && /function loadSvBlock/.test(idx));

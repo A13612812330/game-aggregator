@@ -15,7 +15,7 @@
  * 退出码：0 = 全绿；1 = 有失败或套件异常退出。
  *
  * ★ 为什么要有这个脚本（2026-09-19 新增）：
- *   静态套件已有 20 套，手敲 `node tools/test-*.js` 容易漏跑（漏跑的那套往往就是
+ *   静态套件已有 21 套，手敲 `node tools/test-*.js` 容易漏跑（漏跑的那套往往就是
  *   被改坏的那套）。这里把清单固化，避免"以为跑全了"。
  *   ⚠️ 新增静态套件时**必须**加进下面的 SUITES，否则它会永远不被防线覆盖。
  */
@@ -48,6 +48,7 @@ const SUITES = [
   'test-v1018.js',
   'test-spec.js',
   'test-download.js',
+  'test-twin.js',
   'test-pages-sync.js',
   'test-report.js',
   'test-match-release.js',

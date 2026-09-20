@@ -259,6 +259,13 @@ app.get('/snapshot.html', async (req, res) => {
 const gamesDb = require('./data/gamesDb');
 const bannerhub = require('./data/bannerhub');
 const phonecfg = require('./data/phonecfg');
+/* ★ v10.23：跨源「孪生条目」解析（详情页的「另一源也有收录 / 跨源跳转」用它）。
+ *   在这之前那件事长在前端 —— 靠 `/api/library?q=<中文名>` 检索 + 前端 sameGame() 过滤，
+ *   也就是**纯名称模糊匹配**；而 v10.22 把 13,448 条机地话题合并进 XD 条目后，
+ *   库里独立的 jidi 条目只剩 3,609 条，按名检索命中率掉到 3.5%，
+ *   按钮因此几乎永远不显示（用户口径：「机地找同名 ↗ 连按钮都点击不了」）。
+ *   现在改成**先按精确键（jidiUrl/jidiId）取**，名称匹配只作兜底且必须过防误配闸门。 */
+const twin = require('./data/twin');
 /* ★ 手游中心统一索引：社区库 + 实测库**合并成一张表**（v9.2）
  *   前端手游专区默认走它，而不是再分两个页签各查各的。 */
 const mobilehub = require('./data/mobilehub');
@@ -1282,6 +1289,36 @@ app.get('/api/library/item', (req, res) => {
   const it = gamesDb.byIdGet(id);
   if (!it) return res.status(404).json({ ok: false, error: '本地库未收录该 id' });
   res.json({ ok: true, item: withBh(it) });
+});
+
+/* GET /api/library/twin?id=&t=&src= — ★ v10.23：这款游戏在「另一源」的详情页
+ *
+ * 详情抽屉里两处要用它：
+ *   · 「另一源也有收录」卡片
+ *   · 底部跨源按钮（机地 ↔ XD 互跳）—— 用户口径：**直接链到游戏详情页**，
+ *     查不到就**不显示按钮**（不给「点过去找不到」的中间态）。
+ *
+ * 为什么单开一个端点，而不是继续用 `/api/library?q=<名>`：
+ *   v10.22 把机地全量话题合并进 XD 条目后（机地信息挂在 `jidiUrl`/`jidiId` 上），
+ *   名字检索命中率只有 3.5% —— 也就是说 13,000 多款游戏**库里明明有机地详情页**，
+ *   前端却查不到。详情页这一处的取数口径必须与「按名模糊搜索」分开。
+ *
+ * 返回 `twin`（保证带可跳的详情页 URL）或 `null`；`via` 字段如实标注命中路径：
+ *   jidiUrl+tid → XD 条目自带的机地 id，精确（占 97% 的命中）
+ *   jidiId      → 机地条目反查 XD，精确
+ *   name        → 名称兜底（带防误配闸门），**不是**可靠键，排查时以它为准
+ */
+app.get('/api/library/twin', (req, res) => {
+  const id = String(req.query.id || '').trim().slice(0, 64);
+  const t = String(req.query.t || '').trim().slice(0, 120);
+  const src = String(req.query.src || '').trim().slice(0, 16);
+  if (!id && !t) return res.status(400).json({ ok: false, error: '至少需要 id 或 t' });
+  try {
+    const hit = twin.twinOf({ id, title: t, src });
+    res.json({ ok: true, twin: hit || null, via: hit ? hit.via : null });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 // GET /api/library/index/state — 索引状态(断点/校准/机地同步)

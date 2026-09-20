@@ -20,6 +20,16 @@
     --font:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Roboto,sans-serif;
     --font-num:"DIN Alternate","Segoe UI",ui-monospace,SFMono-Regular,monospace;
   }
+  /* ★ v10.23：`hidden` 属性必须真的能藏住元素。
+     浏览器给 `[hidden]` 的默认样式是 `display:none`，但它写在 **UA 样式表**里，
+     作者样式表里任何一条 `display` 都会把它压过去（同权重下作者样式胜出）。
+     实测后果：跨源跳转按钮 `<a id="crossGo" hidden>` 的样式是 `.go{display:flex}`，
+     于是它**声明了 hidden 却始终可见**，而 `href` 还没被赋值 —— 用户看到的就是
+     一个点了没反应的死按钮（原话：「机地找同名 ↗ 连按钮都点击不了」）。
+     这里统一用 `!important` 把控制权拿回来。
+     ★ 原先只给 `.dlpop` 单独打过这条补丁（下面那处，已指向本规则）——
+       同一个语义散在两个地方，正是「改一处忘一处」的温床，故收成全局一处。 */
+  [hidden]{display:none!important}
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
   body{font-family:var(--font);background:var(--c-bg);color:var(--c-t1);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
@@ -1190,7 +1200,7 @@
        而「元素存在、占版面、可点」都还成立，属于最难发现的那类假绿。
        定 110：压在抽屉之上，但仍低于搜索弹层(130)与 toast(150)。 */
   .dlpop{position:fixed;inset:0;z-index:110;display:flex;align-items:center;justify-content:center;padding:22px}
-  .dlpop[hidden]{display:none!important}
+  /* `[hidden]{display:none!important}` 已在 CSS 开头全局声明（v10.23 收口），此处不再重复。 */
   .dlpop-bg{position:absolute;inset:0;background:rgba(12,18,38,.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
     opacity:0;transition:.18s}
   .dlpop.on .dlpop-bg{opacity:1}
@@ -2096,7 +2106,8 @@ function bindRankUI() {
   $('#rankPills').addEventListener('click', (e) => {
     const b = e.target.closest('.stage-pill'); if (!b || b.dataset.p === rankPeriod) return;
     rankPeriod = b.dataset.p;
-    $$('#rankPills .stage-pill').forEach(x => x.classList.toggle('on', x === b));  /* refreshRank：独立页无热榜分区，跳过 */
+    $$('#rankPills .stage-pill').forEach(x => x.classList.toggle('on', x === b));
+  /* refreshRank：独立页无热榜分区，跳过 */
   });
   $('#rankRefresh').addEventListener('click', () => { toast('正在刷新榜单…'); refreshRank(true); });
 }
@@ -4204,9 +4215,9 @@ function paintDetail(d, fb) {
            target="_blank" rel="noopener">${s.cls === 'jidi' ? 'XDGAME' : '机地'}找同名 ↗</a>
       </div>
     </div>`;
-  linkCounterpart(d);        // 异步检测另一源同名收录 → 一键互跳 + 决定底部跨源按钮显不显示
+  linkCounterpart(d, fb);    // 异步检测另一源同名收录 → 一键互跳 + 决定底部跨源按钮显不显示（★ v10.23 带上 fb：fb.id 是精确孪生键）
   syncDActions();            // ★ v10.15：先按「当前可见按钮数」定列数（跨源按钮默认隐藏，查到详情页才显形）
-  loadBhBlock(d, title);     // 📱 手机模拟器配置（命中则给逐条参数，未命中给入口）
+  loadBhBlock(d, title, fb); // 📱 手机模拟器配置（命中则给逐条参数，未命中给入口）
   loadReqBlock(d, fb);       // 🖥 PC 配置要求（源站优先，缺则 Steam 官方接口补）★ v10.13
   loadTrBlock(d, title);     // 🛠 修改器（v10.1）
   loadSvBlock(d, title);     // 💾 云存档位置（v10.1）
@@ -4408,89 +4419,46 @@ async function toggleDevHardware(btn) {
  */
 let cpCache = { key: '', p: null };
 
-function resolveCounterpart(d) {
+function resolveCounterpart(d, fb) {
   const key = String((d && (d.url || d.id || d.title)) || '');
   if (cpCache.key === key && cpCache.p) return cpCache.p;
   const p = (async () => {
-    if (!d || !d.title || !d.source) return null;
-    const n = splitName(d.title);
-    const zh = (n.zh || d.title).trim();
-    if (zh.length < 2) return null;
-    /* ★ 查三轮：整名 → 去版本词 → 再去标点。
-     *   机地叫「生化危机4**重置版**」、XD 叫「生化危机4**：**重制版」——
-     *   直接拿整名去搜本地库往往 0 结果，于是这个区块几乎永远为空。
-     *   ⚠️ v10.14 补第三轮：光剥版本词会留下**尾随冒号**（`生化危机4：`），
-     *      检索词对不上机地的「生化危机4重置版」，于是这款明明两源都有、
-     *      却仍然退到站内搜索。剥掉标点后的 `生化危机4` 才检索得到。
-     *   放宽的只是**检索词**，最终是否算同款仍由 sameGame() 把关（带防误配闸门）。 */
-    const qs = [zh];
-    const PUNCT = /[\s\u3000:：·・\-–—_/／|｜,，.。!！?？'"“”‘’()（）\[\]【】《》<>~～+*&]/g;
-    const loose = zh.replace(/重置版|重製版|重制版|重置|高清版|终极版|决定版|完全版|豪华版|年度版/gi, '')
-      .replace(PUNCT, '').trim();
-    if (loose.length >= 2 && loose !== zh) qs.push(loose);
-    const curSrc = d.source === 'jidi' ? 'jidi' : 'xdgamer';
-    const otherSrc = curSrc === 'jidi' ? 'xdgamer' : 'jidi';
-    const seen = new Set();
-    const pool = [];
-    for (const q of qs) {
-      let j = null;
-      try { j = await fetch(api('/api/library?q=' + encodeURIComponent(q) + '&limit=30')).then((r) => r.json()); }
-      catch (e) { continue; }
-      for (const it of (j && j.items) || []) {
-        if (!it || it.source !== otherSrc || seen.has(it.id)) continue;
-        seen.add(it.id);
-        pool.push(it);
-      }
-    }
-    /* ★ 命中里优先挑「归一后完全相等」的那条 ——
-     *   同一检索词常带出一串同系列（生化危机4 → 重制版 / 高清项目2022 / 终极高清版），
-     *   若只取 find() 首条，结果会随检索返回顺序漂移。 */
-    const want = normGameTitle(zh);
-    const cand = pool.filter((it) => sameGame(d.title, it.title));
-    /* ★ v10.15：命中里还要**带详情页**才作数。
-     *   库内两个源的详情页形态固定（机地 /topic/detail/<id>、XD /game/<id>.html），
-     *   实测 15,354 条**无一缺 url**；这里做一次形态校验是为了兜住源站改版后
-     *   可能混进来的列表页 / 首页地址 —— 那种地址点过去到不了这款游戏，
-     *   按用户口径「无详情页链接则不显示」，不如让按钮不出现。 */
-    const ok = cand.filter(hasDetailUrl);
-    return ok.find((it) => normGameTitle(splitName(it.title).zh) === want) || ok[0] || null;
+    if (!d || (!d.title && !(fb && fb.id))) return null;
+    /* ★ v10.23：改问后端 /api/library/twin —— 跨源对齐用**精确键**，不再按名字猜。
+     *
+     *   旧实现（v10.15~v10.22）在这里发 `/api/library?q=<中文名>` 再用本地 sameGame() 过滤。
+     *   v10.22 之前这还能用（机地条目都是独立条目）；v10.22 把 13,448 条机地话题
+     *   **合并进 XD 条目**（机地信息挂在 jidiUrl / jidiId 上）之后，库里独立的 jidi 条目
+     *   只剩 3,609 条 —— 实测 15,352 条 XD 记录按名只命中 535 条（3.5%），
+     *   于是「机地找同名」按钮几乎永远不显示，用户看到的正是「连按钮都点击不了」。
+     *
+     *   现在这件事交给后端 data/twin.js：先按 jidiUrl / jidiId 精确取（覆盖率 90.1%），
+     *   名称匹配只作兜底且必须过防误配闸门；前端只负责显示。
+     *   ★ 同一个语义（两个标题是不是同一款）只留一份实现 —— 原先它在本文件里，
+     *     现在收到后端，前端不再自己判（项目铁律 10）。 */
+    const qs = new URLSearchParams();
+    const id = (fb && fb.id) || d.id || '';
+    if (id) qs.set('id', id);
+    const t = d.title || (fb && fb.title) || '';
+    if (t) qs.set('t', t);
+    if (d.source) qs.set('src', d.source);
+    try {
+      const j = await fetch(api('/api/library/twin?' + qs.toString())).then((r) => r.json());
+      return (j && j.ok && j.twin) ? j.twin : null;
+    } catch (e) { return null; }
   })();
   cpCache = { key, p };
   return p;
 }
 
-/** 该条目是否有「可跳的详情页」（两个源的详情页 URL 里都带数字 id） */
-function hasDetailUrl(it) {
-  return !!(it && it.url) && /\/(topic\/detail|game)\/\d+/i.test(String(it.url));
-}
+/* ★ v10.23 移除：`hasDetailUrl` / `normGameTitle` / `sameGame` 三个函数。
+ *
+ * 它们负责「另一源有没有这款的同款、且那条带详情页」，原先只在本文件里用。
+ * 现在这套判定整体搬到后端 `data/twin.js`（那里还要被 /api/library/twin 用），
+ * 前端留一份副本就等于有两个「同款判定」实现 —— 改一处忘一处时，
+ * 详情页的跨源按钮会与接口给出的结论不一致（项目铁律 10：同一语义只留一种写法）。 */
 
-/** 标题归一化：版本词收敛 + 去标点空白（两源命名习惯不同，直接比原文匹配率极低） */
-function normGameTitle(s) {
-  let x = String(s || '').toLowerCase();
-  x = x.replace(/重置版|重製版|重制版|重置/gi, '重制版');
-  const junk = /高清版|终极版|决定版|完全版|豪华版|年度版|中文版|重制版|remastered|definitive|ultimate|deluxe|complete|remake|(^|[^a-z])hd([^a-z]|$)/gi;
-  let prev;
-  do { prev = x; x = x.replace(junk, '$1$2'); } while (x !== prev);   // 反复剥（「终极高清版」要剥两次）
-  return x.replace(/[\s\u3000·・:：\-–—_/／|｜,，.。!！?？'"“”‘’()（）\[\]【】《》<>~～+*&]+/g, '');
-}
-
-/** 两源标题是否同一款（★ 带防误配闸门） */
-function sameGame(a, b) {
-  const A = splitName(a), B = splitName(b);
-  const zhA = normGameTitle(A.zh), zhB = normGameTitle(B.zh);
-  if (zhA && zhB) {
-    if (zhA === zhB) return true;
-    /* 包含匹配（「生化危机4重制版」⊃「生化危机4」）—— 两边都要够长，否则短名会吸走一堆 */
-    if (zhA.length >= 3 && zhB.length >= 3 && (zhA.includes(zhB) || zhB.includes(zhA))) return true;
-    /* ⚠️ 防误配闸门：两边**都有**中文段却不相等时，**不退到英文段** ——
-       否则「古墓丽影：崛起」和「古墓丽影：暗影」会因为共享英文前缀 Tomb Raider 而互认。 */
-    return false;
-  }
-  const enA = normGameTitle(A.en), enB = normGameTitle(B.en);
-  return !!(enA && enB && enA === enB);
-}
-
-async function loadBhBlock(d, title) {
+async function loadBhBlock(d, title, fb) {
   const slot = $('#bhSlot');
   if (!slot) return;
   const t = String(title || (d && d.title) || '').trim();
@@ -4499,7 +4467,7 @@ async function loadBhBlock(d, title) {
     /* ★ v10.14：把「另一源的同款条目」一起带上 —— 它的 libId 与标题（常含英文名）用于跨中英桥接。
        不这么做的话，机地源的中文标题（「生化危机4重置版」）对不上 mobilehub 的英文名（`Resident Evil 4`），
        会显示「暂无记录」的**假阴性**（同一款游戏从 XD 入口看却有 63 套配置）。 */
-    const cp = await resolveCounterpart(d);
+    const cp = await resolveCounterpart(d, fb);
     const qs = new URLSearchParams({ t });
     const ownId = String((d && d.id) || '').trim();
     if (ownId) qs.set('id', ownId);
@@ -4808,15 +4776,23 @@ async function loadSvBlock(d, title) {
   } catch (e) {}
 }
 
-/* 详情内双源互链：机地话题 ↔ XD 版本（用现有本地库搜索端点实现,不动后端）
+/* 详情内双源互链：机地话题 ↔ XD 版本
  *
  *  ★ v10.14 两处改动：
  *   ① 匹配改用 sameGame()（版本词收敛 + 去标点）—— 旧实现直接比原文，
  *      机地「生化危机4重置版」对不上 XD「生化危机4：重制版」，所以这个区块**几乎总是空的**。
  *   ② 顺带修正底部那个跨源按钮的落点：查到同名 → 指向该条详情页；
  *      查不到 → 保持站内搜索页（渲染时已给），**不再**是写死的站点首页。
- *   匹配结果与 loadBhBlock 共用（resolveCounterpart 只查一次）。 */
-async function linkCounterpart(d) {
+ *   匹配结果与 loadBhBlock 共用（resolveCounterpart 只查一次）。
+ *
+ *  ★ v10.23：取数改走 `/api/library/twin`（精确键），并且**只有真的查到详情页才显示按钮**。
+ *    用户口径：「机地找同名 ↗ 我的要求是直接链接到游戏详情页，现在连按钮都点击不了」。
+ *    查下来是两个 bug 叠加，都在这一处汇合：
+ *      · 取数：按名模糊匹配命中率 3.5%（详见 resolveCounterpart 的注释）
+ *      · 显示：`hidden` 属性被 `.go{display:flex}` 压过去 → 按钮一直可见但 href 为空
+ *        ⇒ 「点了没反应」。CSS 侧已在全局补 `[hidden]{display:none!important}`。
+ *    这条链路补了浏览器实拍断言：按钮**要么不显示，要么 href 必须是指向详情页的绝对地址**。 */
+async function linkCounterpart(d, fb) {
   const slot = $('#crossSrc');
   if (!slot || !d || !d.title || !d.source) return;
   const go = $('#crossGo');
@@ -4824,30 +4800,40 @@ async function linkCounterpart(d) {
     slot.innerHTML = '<div class="x-none">正在检查另一源收录…</div>';
     /* ★ v10.15：resolveCounterpart 现在只认「另一源**有详情页**」的命中（见那里的注释），
        所以这里不必再区分「详情页 / 搜索页」—— 有 hit 就是详情页，没有就保持按钮隐藏。 */
-    const hit = await resolveCounterpart(d);
+    const hit = await resolveCounterpart(d, fb);
     if (!hit || !hit.url) {
       slot.innerHTML = '';
       if (go) go.hidden = true;          // 无详情页可跳 → 不显示（用户口径）
       syncDActions();
       return;
     }
-    const otherSrc = d.source === 'jidi' ? 'xdgamer' : 'jidi';
-    const s = SRC[otherSrc] || { nm: 'XDGAME', cls: 'xd' };
+    /* ★ v10.23：源名与配色跟着**命中结果**走，不再按当前源反推。
+       twin 是后端按精确键算出来的，`hit.source` 就是它的真实归属；
+       反推在「当前源判定不准」时会显示成另一个源的名字。 */
+    const hitSource = hit.source === 'jidi' ? 'jidi' : 'xdgamer';
+    const s = SRC[hitSource] || { nm: 'XDGAME', cls: 'xd' };
     /* 底部按钮改指「这款游戏在另一源的详情页」 */
     if (go) {
       go.setAttribute('href', hit.url);
+      go.className = 'go ' + s.cls;
       go.textContent = `前往${s.nm}详情 ↗`;
       go.hidden = false;
     }
     syncDActions();
-    const fb = encodeURIComponent(JSON.stringify({
+    /* ⚠️ 这个变量原名就叫 `fb`，与本函数的参数 `fb` 撞名 ——
+       `const` 重复声明会直接 SyntaxError，整段脚本不执行（详情页连基础渲染都没了）。
+       改名为 cpFb：它是「跳过去的那个条目」的回传快照，与进入本页时的 fb 不是一回事。 */
+    const cpFb = encodeURIComponent(JSON.stringify({
       id: hit.id || '', title: hit.title, cover: hit.cover || '', score: okScoreV(hit.score) ? hit.score : null,
       size: hit.size || '', genres: (hit.genres || []).slice(0, 4), dateLabel: hit.dateLabel || '',
-      jidiUrl: hit.jidiUrl || '',    /* v10.22：跨源跳转进详情后，下载弹窗也能取双源 */
+      /* v10.22：跨源跳转进详情后，下载弹窗也要能取双源。
+         ★ v10.23 修正取值口径：目标是机地 → 机地详情页就是 hit.url；
+           目标是 XD → 机地详情页是**当前这一页**（d.url 本来就是机地详情页）。 */
+      jidiUrl: hitSource === 'jidi' ? hit.url : (d.source === 'jidi' ? d.url : ''),
     }));
     slot.innerHTML = `<div class="block" style="margin-bottom:12px"><h4><span class="ic" style="background:linear-gradient(135deg,#E6415D,#0B7BFF)"></span>另一源也有收录
         <a href="${esc(hit.url || '#')}" target="_blank" rel="noopener" style="margin-left:auto;font-size:11px;font-weight:700;color:var(--c-t3);text-decoration:none">去源站 ↗</a></h4>
-      <div class="x-src"><button class="x-it" onclick="openDetail('${esc(hit.url)}','${fb}',detailFromSearch)">
+      <div class="x-src"><button class="x-it" onclick="openDetail('${esc(hit.url)}','${cpFb}',detailFromSearch)">
         <span class="src-badge ${s.cls}">${s.nm}</span><span class="bd"><span class="t">${esc(hit.title)}</span></span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </button></div></div>`;
@@ -4959,7 +4945,11 @@ async function loadDlBlock(d, fb, title) {
 $('#mask').addEventListener('click', closeDetail);
 
 /* ================= 启动 ================= */
-async function init() {  /* bindRankUI：独立页无榜单 UI，跳过 */  /* renderSide：独立页无右栏，跳过 */  /* renderCats：独立页无分类行，跳过 */  /* renderList：独立页无最新收录列表，跳过 */
+async function init() {
+  /* bindRankUI：独立页无榜单 UI，跳过 */
+  /* renderSide：独立页无右栏，跳过 */
+  /* renderCats：独立页无分类行，跳过 */
+  /* renderList：独立页无最新收录列表，跳过 */
   refreshRank(false); // 首页主体：热榜（缓存秒显 / 首次拉取）
   // 手机三个分区（社区配置 / 实测配置 / 指南）已拆到 /emulator.html，
   // 首页只保留入口卡（数字由上面的专区跳转块异步回填），此处不再初始化。

@@ -13,7 +13,7 @@
   },
   {
     "name": "2K_Sports_NBA_2K14",
-    "count": 9
+    "count": 10
   },
   {
     "name": "33_Immortals",
@@ -385,7 +385,7 @@
   },
   {
     "name": "Assassin_s_Creed__Unity",
-    "count": 17
+    "count": 18
   },
   {
     "name": "Assassin_s_Creed___Director_s_Cut_Edition",
@@ -409,7 +409,7 @@
   },
   {
     "name": "AssassinsCreedIIGame",
-    "count": 3
+    "count": 5
   },
   {
     "name": "Assetto_Corsa",
@@ -457,7 +457,7 @@
   },
   {
     "name": "Autopatch",
-    "count": 4
+    "count": 5
   },
   {
     "name": "Autorun",
@@ -640,6 +640,10 @@
     "count": 11
   },
   {
+    "name": "Battletoads",
+    "count": 1
+  },
+  {
     "name": "Bayonetta",
     "count": 2
   },
@@ -669,7 +673,7 @@
   },
   {
     "name": "Bendy_and_the_Ink_Machine",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Beyond__Two_Souls",
@@ -993,6 +997,10 @@
   },
   {
     "name": "Cairn",
+    "count": 1
+  },
+  {
+    "name": "Call_Of_Duty_MW2",
     "count": 1
   },
   {
@@ -1617,7 +1625,7 @@
   },
   {
     "name": "DRAGON_BALL_FighterZ",
-    "count": 39
+    "count": 40
   },
   {
     "name": "DRAGON_BALL_Sparking__ZERO",
@@ -1896,6 +1904,10 @@
     "count": 1
   },
   {
+    "name": "Delta_Force_Alpha_Test",
+    "count": 1
+  },
+  {
     "name": "Deluge",
     "count": 1
   },
@@ -1953,7 +1965,7 @@
   },
   {
     "name": "Devil_May_Cry_5",
-    "count": 34
+    "count": 35
   },
   {
     "name": "Dex",
@@ -2213,7 +2225,7 @@
   },
   {
     "name": "EA_SPORTS_FC__26",
-    "count": 3
+    "count": 4
   },
   {
     "name": "EA_SPORTS_FC__26_SHOWCASE",
@@ -2397,7 +2409,7 @@
   },
   {
     "name": "Euro_Truck_Simulator_2",
-    "count": 221
+    "count": 224
   },
   {
     "name": "Euro_Truck_Simulator_2_Demo",
@@ -2657,7 +2669,7 @@
   },
   {
     "name": "FINAL_FANTASY__XIII",
-    "count": 2
+    "count": 3
   },
   {
     "name": "FNaFIntoThePit",
@@ -2741,7 +2753,7 @@
   },
   {
     "name": "Fallout__New_Vegas",
-    "count": 12
+    "count": 13
   },
   {
     "name": "FantasyLife_i",
@@ -2761,7 +2773,7 @@
   },
   {
     "name": "Far_Cry_3",
-    "count": 92
+    "count": 93
   },
   {
     "name": "Far_Cry_3___________________________________________________",
@@ -3221,7 +3233,7 @@
   },
   {
     "name": "GTA_V_Launcher",
-    "count": 13
+    "count": 14
   },
   {
     "name": "GTA_V_Launcher_Done",
@@ -3369,7 +3381,7 @@
   },
   {
     "name": "God_of_War",
-    "count": 141
+    "count": 143
   },
   {
     "name": "God_of_War_1_de_ps2_",
@@ -3381,11 +3393,11 @@
   },
   {
     "name": "God_of_War_III______________________________________________",
-    "count": 2
+    "count": 3
   },
   {
     "name": "God_of_War_Ragnar_k",
-    "count": 11
+    "count": 12
   },
   {
     "name": "God_of_War__________________________________________________",
@@ -3489,7 +3501,7 @@
   },
   {
     "name": "Grand_Theft_Auto_IV__The_Complete_Edition",
-    "count": 360
+    "count": 362
   },
   {
     "name": "Grand_Theft_Auto_IV__The_Complete_Edition_",
@@ -3529,7 +3541,7 @@
   },
   {
     "name": "Grand_Theft_Auto_V_Legacy",
-    "count": 1252
+    "count": 1283
   },
   {
     "name": "Grand_Theft_Auto_V_Legacy22",
@@ -3673,7 +3685,7 @@
   },
   {
     "name": "Hades_II",
-    "count": 9
+    "count": 10
   },
   {
     "name": "Hajwala",
@@ -4577,7 +4589,7 @@
   },
   {
     "name": "Little_Nightmares",
-    "count": 8
+    "count": 10
   },
   {
     "name": "Little_Nightmares_2",
@@ -4593,7 +4605,7 @@
   },
   {
     "name": "Little_Nightmares_III",
-    "count": 6
+    "count": 7
   },
   {
     "name": "Little_Nightmares_II_Demo",
@@ -5117,11 +5129,11 @@
   },
   {
     "name": "Microsoft_Visual_C___v14_Redistributable__x64__-_14_50_35719",
-    "count": 9
+    "count": 10
   },
   {
     "name": "Microsoft_Visual_C___v14_Redistributable__x86__-_14_50_35719",
-    "count": 5
+    "count": 6
   },
   {
     "name": "Microsoft_Windows_Desktop_Runtime_-_6_0_36__x64_",
@@ -5297,7 +5309,7 @@
   },
   {
     "name": "Mortal_Kombat_Komplete_Edition",
-    "count": 42
+    "count": 43
   },
   {
     "name": "Mortal_Kombat_Project_",
@@ -5393,7 +5405,7 @@
   },
   {
     "name": "My_Friend_Pedro_-_Blood_Bullets_Bananas",
-    "count": 5
+    "count": 6
   },
   {
     "name": "My_Life_with_my_syster",
@@ -5445,7 +5457,7 @@
   },
   {
     "name": "NARUTO_SHIPPUDEN__Ultimate_Ninja_STORM_4",
-    "count": 59
+    "count": 60
   },
   {
     "name": "NARUTO_SHIPPUDEN__Ultimate_Ninja_STORM_Revolution",
@@ -5537,6 +5549,10 @@
   },
   {
     "name": "NFS_Most_Wanted_Black_Edition_2005",
+    "count": 1
+  },
+  {
+    "name": "NFS_UNDERGROUND_2_",
     "count": 1
   },
   {
@@ -5673,7 +5689,7 @@
   },
   {
     "name": "Need_for_Speed_9",
-    "count": 106
+    "count": 107
   },
   {
     "name": "Need_for_Speed_MONST_WANTEND",
@@ -5745,7 +5761,7 @@
   },
   {
     "name": "Need_for_Speed__Most_Wanted",
-    "count": 28
+    "count": 29
   },
   {
     "name": "Need_for_Speed__Most_Wanted_________________________________",
@@ -5777,6 +5793,10 @@
   },
   {
     "name": "Need_for_Speed_moster_wanted",
+    "count": 1
+  },
+  {
+    "name": "Need_for_Speed_mw",
     "count": 1
   },
   {
@@ -5940,6 +5960,10 @@
     "count": 1
   },
   {
+    "name": "Omega_Strike",
+    "count": 2
+  },
+  {
     "name": "One-armed_cook",
     "count": 1
   },
@@ -6057,7 +6081,7 @@
   },
   {
     "name": "PEAK",
-    "count": 6
+    "count": 11
   },
   {
     "name": "PES",
@@ -6261,7 +6285,7 @@
   },
   {
     "name": "Persona_5_Royal",
-    "count": 3
+    "count": 4
   },
   {
     "name": "Pes2013",
@@ -6345,7 +6369,7 @@
   },
   {
     "name": "PlayGTAV",
-    "count": 96
+    "count": 99
   },
   {
     "name": "PlayGTAVOptiJuegos7Z",
@@ -6525,7 +6549,7 @@
   },
   {
     "name": "Pro_Evolution_Soccer_2013",
-    "count": 2798
+    "count": 2807
   },
   {
     "name": "Pro_Evolution_Soccer_20132",
@@ -6593,7 +6617,7 @@
   },
   {
     "name": "Pro_Evolution_Soccer_2016",
-    "count": 6
+    "count": 7
   },
   {
     "name": "Pro_Evolution_Soccer_2016__c__Konami_Digital_Entertainment__",
@@ -6605,7 +6629,7 @@
   },
   {
     "name": "Pro_Evolution_Soccer_2017",
-    "count": 167
+    "count": 170
   },
   {
     "name": "Pro_Evolution_Soccer_2017seting",
@@ -6629,7 +6653,7 @@
   },
   {
     "name": "Pro_Evolution_Soccer_6",
-    "count": 7
+    "count": 8
   },
   {
     "name": "Pro_Evolution_Soccer_6_DEMO__________________________________________",
@@ -6681,7 +6705,7 @@
   },
   {
     "name": "Prototype_",
-    "count": 31
+    "count": 32
   },
   {
     "name": "Prototype_2",
@@ -6893,11 +6917,11 @@
   },
   {
     "name": "Red_Dead_Redemption",
-    "count": 38
+    "count": 42
   },
   {
     "name": "Red_Dead_Redemption_2",
-    "count": 46
+    "count": 48
   },
   {
     "name": "Redout_2",
@@ -6977,7 +7001,7 @@
   },
   {
     "name": "Resident_Evil_4__2005_",
-    "count": 32
+    "count": 33
   },
   {
     "name": "Resident_Evil_4___Biohazard_4",
@@ -6989,7 +7013,7 @@
   },
   {
     "name": "Resident_Evil_5",
-    "count": 88
+    "count": 89
   },
   {
     "name": "Resident_Evil_5_",
@@ -7149,7 +7173,7 @@
   },
   {
     "name": "Roblox_Bootstrapper",
-    "count": 15
+    "count": 16
   },
   {
     "name": "RockNES_X",
@@ -7417,7 +7441,7 @@
   },
   {
     "name": "Schedule_I",
-    "count": 5
+    "count": 6
   },
   {
     "name": "Scrap_Mechanic",
@@ -7732,6 +7756,10 @@
     "count": 1
   },
   {
+    "name": "Softnyx_Game_Launcher",
+    "count": 1
+  },
+  {
     "name": "Solateria",
     "count": 4
   },
@@ -7801,7 +7829,7 @@
   },
   {
     "name": "Sons_Of_The_Forest",
-    "count": 4
+    "count": 6
   },
   {
     "name": "South_Park___The_Stick_of_Truth_",
@@ -7826,6 +7854,10 @@
   {
     "name": "Spider-Man_Shattered_Dimensions",
     "count": 2
+  },
+  {
+    "name": "Spider-Man__Web_of_Shadows",
+    "count": 1
   },
   {
     "name": "Spider_man_shattered_dimensions",
@@ -8657,7 +8689,7 @@
   },
   {
     "name": "Tomb_Raider",
-    "count": 127
+    "count": 129
   },
   {
     "name": "Tomb_Raider_-_Definitive_Edition",
@@ -8709,7 +8741,7 @@
   },
   {
     "name": "Toontown_Rewritten",
-    "count": 1
+    "count": 2
   },
   {
     "name": "TormentedSouls",
@@ -9400,6 +9432,10 @@
     "count": 1
   },
   {
+    "name": "YoutubersLife",
+    "count": 1
+  },
+  {
     "name": "Ys_VI_-_The_Ark_of_Napishtim",
     "count": 2
   },
@@ -9509,7 +9545,7 @@
   },
   {
     "name": "____2016",
-    "count": 33
+    "count": 41
   },
   {
     "name": "____33____",
@@ -10061,7 +10097,7 @@
   },
   {
     "name": "mhf",
-    "count": 1
+    "count": 2
   },
   {
     "name": "mi_1_1",
@@ -10521,7 +10557,7 @@
   },
   {
     "name": "unins000",
-    "count": 41
+    "count": 43
   },
   {
     "name": "unins003",

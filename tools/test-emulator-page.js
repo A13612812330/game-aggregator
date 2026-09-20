@@ -454,7 +454,15 @@ async function main() {
       .join(',') === 'devmatch');
   ok('切换后只有一个页签处于 on', qaCtrl(d5d, '#emuTabs .emu-tab.on').length === 1);
   /* jsdom 不实现 innerText，用 textContent（含 <style> 文本，正合适：能验出 CSS 泄漏） */
-  const BODY_TXT = (d5d.body.textContent || '');
+  /* ★ v10.23：先把 <style>/<script> 摘掉再取文本。
+     原先直接取 body.textContent 会把整段 CSS（含注释）算进来 ——
+     本轮给 CSS 加了一条说明性注释，里面引用了 `.go{display:flex}` 这种片段，
+     就让这条「不残留裸 CSS 文本」的断言当场假红（断言打了注释的又一例）。
+     这条断言真正要盯的是**掉到 </style> 外面的** CSS（那才是泄漏），
+     style 元素内部的 CSS 本来就应该待在那儿。 */
+  const _bt = d5d.body.cloneNode(true);
+  [..._bt.querySelectorAll('style,script')].forEach((n) => n.remove());
+  const BODY_TXT = (_bt.textContent || '');
   ok('页面上不残留裸 CSS 文本（专属 CSS 未掉到 </style> 外）',
     !/[.#][\w-]+\s*\{[^}]*\}/.test(BODY_TXT), BODY_TXT.slice(0, 60).replace(/\s+/g, ' '));
 

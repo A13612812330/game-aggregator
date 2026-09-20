@@ -35,14 +35,16 @@ console.log('\n=== ① 跨源按钮：另一源无详情页 → 不显示 ===');
     /if \(!hit \|\| !hit\.url\)[\s\S]{0,160}?go\.hidden = true;/.test(IDX));
   ok('查到详情页才 hidden = false 并改写 href',
     /go\.setAttribute\('href', hit\.url\);[\s\S]{0,120}?go\.hidden = false;/.test(IDX));
-  ok('新增 hasDetailUrl() 形态校验', /function hasDetailUrl\(it\)/.test(IDX));
-  ok('resolveCounterpart 用 hasDetailUrl 过滤命中',
-    /const ok = cand\.filter\(hasDetailUrl\);/.test(IDX));
+  /* ★ v10.23：形态校验搬到了后端 data/twin.js（"只留可跳的详情页"这条意图不变）。 */
+  ok('[v10.23 迁移] 详情页形态校验在后端 twin.js',
+    read('data/twin.js').includes('(topic\\/detail|game)'));
+  ok('[v10.23 迁移] resolveCounterpart 改走 /api/library/twin（形态校验在后端）',
+    /api\/library\/twin/.test(IDX));
   ok('已删除没人用的站内搜索 URL 构造器（定义与调用都没了）',
     !/function (JIDI_SEARCH|XD_SEARCH)/.test(IDX) && !/(JIDI_SEARCH|XD_SEARCH)\s*\(/.test(IDX)
     && !/function (JIDI_SEARCH|XD_SEARCH)/.test(EMU) && !/(JIDI_SEARCH|XD_SEARCH)\s*\(/.test(EMU));
   ok('新增 syncDActions() 同步按钮列数', /function syncDActions\(\)/.test(IDX));
-  ok('paintDetail 结束时调用 syncDActions', /linkCounterpart\(d\);[\s\S]{0,80}?syncDActions\(\);/.test(IDX));
+  ok('paintDetail 结束时调用 syncDActions', /linkCounterpart\(d, fb\);[\s\S]{0,80}?syncDActions\(\);/.test(IDX));
   ok('只剩一个按钮时铺满整行（.d-actions.one）', /\.d-actions\.one\{grid-template-columns:1fr\}/.test(IDX));
   ok('本源无 url 时首个按钮也不渲染', /\$\{d\.url \? `<a class="go \$\{s\.cls\}"/.test(IDX));
 
