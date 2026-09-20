@@ -122,6 +122,15 @@ ok(/Chr\(34\) & nodeExe & Chr\(34\)/.test(VBS), '.vbs 用 `Chr(34)` 给 node 路
 ok(/cd \/d "%~dp0"/.test(CMD) && /cd \/d "%~dp0"/.test(STOP),
   '.cmd / stop 用 `%~dp0` 定位自身目录（双击时工作目录未必是项目根）');
 
+/* 实测教训：Edit/Write 这类工具改写 Windows 脚本后会留下 **LF**（2026-09-20 撞到）。
+   cmd.exe 解析 LF-only 的 `(...)` 块与 goto 有已知边界问题 ⇒ 一律要求 CRLF。 */
+const eol = (s) => ({ crlf: (s.match(/\r\n/g) || []).length, lf: (s.match(/(?<!\r)\n/g) || []).length });
+for (const [nm, txt] of [['.cmd', CMD], ['.vbs', VBS], ['stop .cmd', STOP], ['.url', URLF]]) {
+  const e = eol(txt);
+  ok(e.crlf > 0 && e.lf === 0, '\u2605 ' + nm + ' 换行是 CRLF（工具改写后容易静默变 LF）',
+    'CRLF=' + e.crlf + ' 裸LF=' + e.lf);
+}
+
 /* ==================== D. 停止脚本 ==================== */
 console.log('\n=== D. 停止脚本（按端口杀 PID，且幂等）===');
 ok(/tokens=5/.test(STOP) && /taskkill \/PID %%P \/F/.test(STOP),
