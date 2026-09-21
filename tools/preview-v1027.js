@@ -1,6 +1,6 @@
-/* 实拍 + 交互验证：下载弹窗的「归帖 / 排序 / 盘口筛选 / 折叠 / 条目可辨识度」（v10.27）
+/* 实拍 + 交互验证：下载弹窗的「归帖 / 排序 / 盘口筛选 / 展开 / 切分区」（v10.27，v10.29 改写）
  *
- * 用户口径：「还需要优化下下载的弹窗」。
+ * 用户口径（v10.27）：「还需要优化下下载的弹窗」。
  *
  * ★ 这一版最要紧的一条断言是「**标题真的看得见、且一行一帖**」。
  *   改前两个病，症状完全不同、都不要脸地是绿的：
@@ -10,11 +10,21 @@
  *     ② 一行一个网盘地址 —— 12 行其实只来自 4 个帖子，同一标题（只差一个盘口徽标）
  *        重复 5 遍 ⇒「有没有标题」也是绿的。判据是**行数 == 去重后的源帖数**。
  *
- * ★ 交互项（排序 / 筛选 / 折叠 / 锚点）全部**驱动真实点击**再断言，
+ * ★ 交互项（排序 / 筛选 / 展开 / 切分区）全部**驱动真实点击**再断言，
  *   不直接调内部函数 —— 走委托的那段线才是最容易被 innerHTML 重建冲掉的地方。
+ *
+ * ★★ v10.29 改写两段（这两段守的 UI 已经换掉了，旧断言会变成**假红**）：
+ *   · 原「⑥ 展开全部 / 折叠」里的「点某块折叠区的 `.dl-tg` 展开它」——
+ *     折叠语义已废（用户要求「分开显示」），改成**点分区签**切块。
+ *   · 原「⑦ 锚点跳转（折叠的专区被锚点点到要展开并滚到位）」——
+ *     同一条链路现在叫「切签」，另外它多了一件必做的事：**滚动位置归零**。
+ *     ⚠️ 判「归零」之前必须先**证明真的滚动过**（scrollTop > 0），
+ *        否则「切完是 0」在压根没滚动的情况下也成立 —— 典型的恒真断言。
+ *   · 顺带把 `onTab` 改名成 `sortOn`：v10.29 起「tab」这个词专指分区签，
+ *     排序按钮再叫 onTab 会让两次「tab」判据互相读错对象。
  */
 const path = require('path');
-const { connectBrowser, newPage } = require('./browser');
+const { connectBrowser, newPage, sleep } = require('./browser');
 
 const OUT = path.join(__dirname, '..', '_test-out');
 require('fs').mkdirSync(OUT, { recursive: true });
@@ -22,7 +32,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
 let pass = 0, fail = 0;
 const ok = (c, n, d) => { if (c) { pass++; console.log('  PASS  ' + n + (d ? '  — ' + d : '')); } else { fail++; console.log('  × FAIL  ' + n + (d ? '  — ' + d : '')); } };
 
-const TID = 'https://jidiyouxi.com/topic/detail/171085167';   // 剑星：本体 22 帖 / mod 190 帖 / 修改器 4 帖
+const TID = 'https://jidiyouxi.com/topic/detail/171085167';   // 剑星：本体 29 帖 / mod 2 帖 / 修改器 2 帖
 
 (async () => {
   const h = await connectBrowser();
@@ -34,7 +44,7 @@ const TID = 'https://jidiyouxi.com/topic/detail/171085167';   // 剑星：本体
       window.__dl = new Promise((res) => {
         const t = setTimeout(() => res('timeout'), 60000);
         const w = setInterval(() => {
-          if (document.querySelector('#dlBody .dl-bar') && document.querySelector('.dl-sec .dl-it')) {
+          if (document.querySelector('#dlBody .dl-bar') && document.querySelector('#dlBody .dl-sec .dl-it')) {
             clearInterval(w); clearTimeout(t); res('ok');
           }
         }, 300);
@@ -45,25 +55,29 @@ const TID = 'https://jidiyouxi.com/topic/detail/171085167';   // 剑星：本体
     ok(st === 'ok', '弹窗渲染出工具条与行', String(st));
 
     const snap = () => p.evaluate(() => {
-      const secs = [...document.querySelectorAll('.dl-sec')];
-      const body = document.querySelector('#dlBody');
+      const secs = [...document.querySelectorAll('#dlBody .dl-sec')];
+      const tabs = [...document.querySelectorAll('#dlBody .dl-bar .dl-an')];
+      const cur = (tabs.find((x) => x.classList.contains('on')) || { dataset: {} }).dataset.dlGo || '';
+      const body = document.getElementById('dlBody');
       const bb = body.getBoundingClientRect();
       return {
         w: Math.round(document.querySelector('.dlpop-box').getBoundingClientRect().width),
         barRows: document.querySelectorAll('.dl-bar .rw').length,
         anchors: [...document.querySelectorAll('.dl-bar [data-dl-go]')].map((x) => x.dataset.dlGo),
-        tabs: [...document.querySelectorAll('.dl-bar [data-dl-sort]')].map((x) => x.dataset.dlSort),
+        sortTabs: [...document.querySelectorAll('.dl-bar [data-dl-sort]')].map((x) => x.dataset.dlSort),
         chips: [...document.querySelectorAll('.dl-bar [data-dl-filt]')].map((x) => x.dataset.dlFilt),
-        onTab: (document.querySelector('.dl-bar .dl-tab.on') || { dataset: {} }).dataset.dlSort,
-        onChip: (document.querySelector('.dl-bar .dl-chip.on') || { dataset: {} }).dataset.dlFilt,
-        secs: secs.map((s) => ({
-          key: s.dataset.sec,
-          open: !s.classList.contains('off'),
-          rows: s.querySelectorAll('.l .dl-it').length,
-          h: Math.round(s.getBoundingClientRect().height),
-        })),
-        /* ★ 只看**当前展开**的区块里的行 —— 所有条目断言都打在它上面 */
-        rows: [...document.querySelectorAll('.dl-sec:not(.off) .l .dl-it')].map((r) => {
+        sortOn: (document.querySelector('.dl-bar .dl-tab.on') || { dataset: {} }).dataset.dlSort,
+        filtOn: (document.querySelector('.dl-bar .dl-chip.on') || { dataset: {} }).dataset.dlFilt,
+        secTab: cur,
+        secKeys: secs.map((s) => s.dataset.sec),
+        /* ★ v10.29：非当前分区**必须零节点**（不是 .off 藏起来）——「分开显示」的硬判据 */
+        otherSecNodes: [...document.querySelectorAll('#dlBody [data-sec]')]
+          .filter((x) => x.classList.contains('dl-sec') && x.dataset.sec !== cur).length,
+        secH: secs.map((s) => Math.round(s.getBoundingClientRect().height)),
+        scrollTop: body.scrollTop,
+        bodyH: Math.round(bb.height),
+        /* ★ 只看**当前分区**里的行 —— 所有条目断言都打在它上面 */
+        rows: [...document.querySelectorAll('#dlBody .dl-sec .l .dl-it')].map((r) => {
           const b = r.querySelector('.tx b');
           const cs = getComputedStyle(b);
           const src = r.querySelector('.mt a');
@@ -81,7 +95,6 @@ const TID = 'https://jidiyouxi.com/topic/detail/171085167';   // 剑星：本体
             purl: src ? src.href.replace(/\D+$/, '') : null,
           };
         }),
-        offDomRows: [...document.querySelectorAll('.dl-sec.off')].reduce((n, s) => n + s.querySelectorAll('.dl-it').length, 0),
         overflow: document.documentElement.scrollWidth - window.innerWidth,
       };
     });
@@ -90,23 +103,20 @@ const TID = 'https://jidiyouxi.com/topic/detail/171085167';   // 剑星：本体
     let r = await snap();
     ok(r.w >= 700, '★ 弹窗已加宽（≥700px，改前 580）', r.w + 'px');
     ok(r.overflow <= 1, '★ 无横向溢出', String(r.overflow));
-    ok(r.barRows === 2, '工具条两行（锚点+排序 / 盘口）', String(r.barRows));
-    ok(r.anchors.join(',') === 'body,mod,modifier', '★ 三个专区锚点齐（本体 / mod / 修改器）', r.anchors.join(','));
-    ok(r.tabs.join(',') === 'hot,new', '★ 有「最热 / 最近发布」两个排序', r.tabs.join(','));
-    ok(r.onTab === 'hot', '默认排序 = 最热（与源站话题页默认一致）', String(r.onTab));
+    ok(r.barRows === 2, '工具条两行（分区签+排序 / 盘口）', String(r.barRows));
+    ok(r.anchors.join(',') === 'body,mod,modifier', '★ 三个分区签齐（本体 / mod / 修改器）', r.anchors.join(','));
+    ok(r.sortTabs.join(',') === 'hot,new', '★ 有「最热 / 最近发布」两个排序', r.sortTabs.join(','));
+    ok(r.sortOn === 'hot', '默认排序 = 最热（与源站话题页默认一致）', String(r.sortOn));
     ok(r.chips.length >= 2 && r.chips[0] === '', '★ 盘口筛选 chip 存在且第一项是「全部」', r.chips.join(' | '));
-    ok(r.onChip === '', '默认不筛选', String(r.onChip));
+    ok(r.filtOn === '', '默认不筛选', String(r.filtOn));
 
-    /* ---------- ② 默认视图：本体优先 ---------- */
-    const byKey = Object.fromEntries(r.secs.map((s) => [s.key, s]));
-    ok(byKey.body && byKey.body.open === true, '★ 默认展开「本体」（用户选的本体优先）', JSON.stringify(byKey.body));
-    ok(byKey.mod && byKey.mod.open === false && byKey.modifier.open === false,
-      '★ mod / 修改器默认折叠', 'mod=' + byKey.mod.open + ' modifier=' + byKey.modifier.open);
-    ok(byKey.body.h > 150, '★ 展开的区块真占版面', byKey.body.h + 'px');
-    ok(byKey.mod.h > 0 && byKey.mod.h < byKey.body.h / 3,
-      '折叠的区块只剩标题行（>0 说明仍可见可点；远矮于展开态说明没铺开）',
-      byKey.mod.h + 'px（展开态 ' + byKey.body.h + 'px）');
-    ok(r.offDomRows === 0, '★★ 折叠区块里**没有任何行节点**（不渲染而非 display:none 藏起来）', String(r.offDomRows));
+    /* ---------- ② 默认视图：本体优先，且只有一块 ---------- */
+    ok(r.secTab === 'body', '★ 默认停在「本体」（用户选的本体优先）', String(r.secTab));
+    ok(r.secKeys.length === 1 && r.secKeys[0] === 'body',
+      '★★ 正文只渲染一块（v10.29 改前：三块叠放，本体下面还压着 mod / 修改器）', r.secKeys.join(','));
+    ok(r.otherSecNodes === 0, '★★ 非当前分区**零节点**（display:none 藏起来也会被读到，不算「分开」）',
+      String(r.otherSecNodes));
+    ok(r.secH[0] > 150, '★ 当前分区真占版面', r.secH[0] + 'px');
 
     /* ---------- ③ 条目：一行一帖 + 标题完整可见 ---------- */
     ok(r.rows.length === 12, '展开态默认铺 12 行（DL_CAP）', String(r.rows.length));
@@ -138,24 +148,24 @@ const TID = 'https://jidiyouxi.com/topic/detail/171085167';   // 剑星：本体
 
     /* ---------- ④ 排序：最热 → 最近发布（真实点击） ---------- */
     await p.evaluate(() => document.querySelector('.dl-bar [data-dl-sort="new"]').click());
-    await new Promise((s) => setTimeout(s, 250));
+    await sleep(250);
     let r2 = await snap();
     const newOrder = r2.rows.map((x) => x.t);
-    ok(r2.onTab === 'new', '★ 点「最近发布」后按钮态切过去', String(r2.onTab));
+    ok(r2.sortOn === 'new', '★ 点「最近发布」后按钮态切过去', String(r2.sortOn));
     ok(newOrder.join('|') !== hotOrder.join('|'),
       '★★ 排序真的换了顺序（改前只有 hot 一套数据，切 new 只是同批重排 = 假开关）',
       '前 2 条 → ' + newOrder.slice(0, 2).map((t) => t.slice(0, 20)).join(' ; '));
     await p.evaluate(() => document.querySelector('.dl-bar [data-dl-sort="hot"]').click());
-    await new Promise((s) => setTimeout(s, 250));
+    await sleep(250);
 
     /* ---------- ⑤ 盘口筛选 ---------- */
     const chips = await p.evaluate(() => [...document.querySelectorAll('.dl-bar [data-dl-filt]')]
       .map((x) => ({ k: x.dataset.dlFilt, n: Number((x.textContent.match(/(\d+)\s*$/) || [])[1] || 0), label: x.textContent })));
     const pick = chips.find((c) => c.k === 'quark') || chips[1];
     await p.evaluate((k) => document.querySelector('.dl-bar [data-dl-filt="' + k + '"]').click(), pick.k);
-    await new Promise((s) => setTimeout(s, 250));
+    await sleep(250);
     let r3 = await snap();
-    ok(r3.onChip === pick.k, '★ 点盘口 chip 后筛选生效', String(r3.onChip));
+    ok(r3.filtOn === pick.k, '★ 点盘口 chip 后筛选生效', String(r3.filtOn));
     ok(r3.rows.length > 0, '筛选后仍有条目', r3.rows.length + ' 行');
     ok(r3.rows.every((x) => x.lks.length === 1 && x.lks[0] === (pick.label.replace(/\d+$/, '').trim())),
       '★★ 选「' + pick.k + '」后每行只留该盘口按钮（不是把别的盘口也列出来）',
@@ -164,57 +174,87 @@ const TID = 'https://jidiyouxi.com/topic/detail/171085167';   // 剑星：本体
       '筛选后的行数不超过 chip 上的帖数', r3.rows.length + ' 行 / chip 写 ' + pick.n);
     await p.screenshot({ path: path.join(OUT, 'v1027-dlpop-filter.png'), fullPage: true });
     await p.evaluate(() => document.querySelector('.dl-bar [data-dl-filt=""]').click());
-    await new Promise((s) => setTimeout(s, 250));
+    await sleep(250);
 
-    /* ---------- ⑥ 展开全部 / 折叠 ---------- */
+    /* ---------- ⑥ 展开全部 / 收起 ---------- */
     const before = (await snap()).rows.length;
-    await p.evaluate(() => document.querySelector('.dl-sec [data-dl-all]').click());
-    await new Promise((s) => setTimeout(s, 250));
+    await p.evaluate(() => document.querySelector('#dlBody .dl-sec [data-dl-all]').click());
+    await sleep(250);
     let r4 = await snap();
     ok(r4.rows.length > before && r4.rows.length > 12,
       '★ 点「展开全部」后行数真的涨上去了（数据本就在手上，不再发请求）', before + ' → ' + r4.rows.length);
-    await p.evaluate(() => document.querySelector('.dl-sec [data-dl-all]').click());
-    await new Promise((s) => setTimeout(s, 250));
+    await p.evaluate(() => document.querySelector('#dlBody .dl-sec [data-dl-all]').click());
+    await sleep(250);
     ok((await snap()).rows.length === 12, '再点一次收起，回到 12 行', String((await snap()).rows.length));
 
-    ok((await snap()).secs.find((s) => s.key === 'mod').rows === 0, 'mod 折叠时 0 行', '');
-    await p.evaluate(() => document.querySelector('.dl-sec[data-sec="mod"] .dl-tg').click());
-    await new Promise((s) => setTimeout(s, 250));
-    let r5 = await snap();
-    ok(r5.secs.find((s) => s.key === 'mod').open === true && r5.secs.find((s) => s.key === 'mod').rows === 12,
-      '★ 点 mod 的「展开」后该区块铺出 12 行', JSON.stringify(r5.secs.find((s) => s.key === 'mod')));
+    /* ---------- ⑦ 切分区（★ v10.29 取代旧的「折叠 / 锚点跳转」） ---------- */
+    /* ★ 第一步必须先「展开全部 + 真的滚下去」：不滚过就断言「切块后 scrollTop 归零」，
+       在压根没滚动的情况下也成立 —— 恒真断言，永远发现不了「忘了归零」。
+       展开到 29 行后内容高度足够，滚到 150 才真的滚得动。 */
+    await p.evaluate(() => document.querySelector('#dlBody .dl-sec [data-dl-all]').click());
+    await sleep(250);
+    const scrolled = await p.evaluate(() => {
+      const b = document.getElementById('dlBody');
+      b.scrollTop = 150;
+      return { top: b.scrollTop, h: b.scrollHeight, ch: b.clientHeight };
+    });
+    ok(scrolled.top > 0,
+      '★ 前置判据：切分区之前真的滚动过（否则「切完归零」是恒真的）',
+      'scrollTop=' + scrolled.top + ' 内容 ' + scrolled.h + ' / 视口 ' + scrolled.ch);
 
-    /* ---------- ⑦ 锚点跳转（折叠的专区被锚点点到要展开并滚到位） ---------- */
-    await p.evaluate(() => document.querySelector('.dl-bar [data-dl-go="modifier"]').click());
-    await new Promise((s) => setTimeout(s, 350));
+    await p.evaluate(() => {
+      const t = [...document.querySelectorAll('#dlBody .dl-bar .dl-an')].find((x) => x.dataset.dlGo === 'mod');
+      if (t) t.click();
+    });
+    await sleep(700);
+    const r5 = await snap();
+    ok(r5.secTab === 'mod', '★ 点「mod」签后按钮态切过去', String(r5.secTab));
+    ok(r5.secKeys.length === 1 && r5.secKeys[0] === 'mod',
+      '★★ 切块后正文只有 mod 一块（旧实现是「折叠起来但仍以标题行占位」）', r5.secKeys.join(','));
+    ok(r5.rows.length > 0 && r5.rows.length <= 12, '★ mod 分区铺出了条目（不多于 DL_CAP）', r5.rows.length + ' 行');
+    ok(r5.otherSecNodes === 0, '★ 切块后仍只有一块面板', String(r5.otherSecNodes));
+    ok(r5.scrollTop === 0,
+      '★★ 切块后滚动位置归零（停在上一块的滚动位置上，用户看到的是新分区中段，会误以为「这块只有这么几条」）',
+      '切前 ' + scrolled.top + ' → 切后 ' + r5.scrollTop);
+    ok(r5.rows.every((x) => x.ox <= 1 && x.oy <= 1), '★ 新分区的行同样不截断',
+      String(r5.rows.filter((x) => x.ox > 1 || x.oy > 1).length) + ' 行溢出');
+
+    /* 再切到「修改器」—— 它是最末一个分区，顺便钉「切过去是一条真链路」 */
+    await p.evaluate(() => {
+      const t = [...document.querySelectorAll('#dlBody .dl-bar .dl-an')].find((x) => x.dataset.dlGo === 'modifier');
+      if (t) t.click();
+    });
+    await sleep(700);
     const jump = await p.evaluate(() => {
-      const b = document.querySelector('#dlBody');
-      const s = document.querySelector('.dl-sec[data-sec="modifier"]');
+      const b = document.getElementById('dlBody');
+      const s = document.querySelector('#dlBody .dl-sec');
       const br = b.getBoundingClientRect(), sr = s.getBoundingClientRect();
       const row = s.querySelector('.l .dl-it');
       const rr = row ? row.getBoundingClientRect() : null;
       return {
-        open: !s.classList.contains('off'),
+        key: s.dataset.sec,
+        tab: (document.querySelector('#dlBody .dl-bar .dl-an.on') || { dataset: {} }).dataset.dlGo,
         rows: s.querySelectorAll('.l .dl-it').length,
         top: Math.round(sr.top - br.top),
         bottom: Math.round(sr.bottom - br.top),
         bodyH: Math.round(br.height),
         rowTop: rr ? Math.round(rr.top - br.top) : null,
         rowIn: rr ? (rr.top >= br.top - 2 && rr.bottom <= br.bottom + 2) : false,
+        scrollTop: b.scrollTop,
       };
     });
-    ok(jump.open && jump.rows > 0, '★ 锚点把折叠的「修改器」展开并列出条目', JSON.stringify(jump));
-    /* ★ 判据不能写成「top 必须 ≈ 56」：修改器是**最后一个**专区，它下面没有内容了，
-       滚到底时就停在那儿（top=331），这不是 bug。真正的用户诉求是
-       「点了锚点，这个专区完整落在视野里、没被 sticky 工具条挡住」。 */
-    ok(jump.top >= -4 && (jump.top <= 100 || jump.bottom <= jump.bodyH + 4),
-      '★ 锚点后该专区完整落在视野里（滚不动时停在底部也算到位，只要没被工具条挡住）',
+    ok(jump.key === 'modifier' && jump.tab === 'modifier' && jump.rows > 0,
+      '★ 切到「修改器」后该分区列出条目', JSON.stringify({ key: jump.key, tab: jump.tab, rows: jump.rows }));
+    /* ★ 判据不能写成「top 必须 ≈ 0」：修改器是**最后一个**分区，视口装得下就直接贴顶，
+       装不下时它的底部会落到视口外（用户仍能滚）。真正的用户诉求是
+       「切过去后**这个分区的头部**就在视野里、没被 sticky 工具条挡住」。 */
+    ok(jump.top >= -4 && jump.top <= 120,
+      '★ 切块后该分区的头部就在视野里（没被 sticky 工具条挡在视口外）',
       'top=' + jump.top + ' bottom=' + jump.bottom + ' 视口高=' + jump.bodyH);
-    ok(jump.rowIn, '★ 锚点后该专区的第一条就看得见', 'rowTop=' + jump.rowTop);
+    ok(jump.rowIn, '★ 该分区的第一条就看得见', 'rowTop=' + jump.rowTop);
+    await p.screenshot({ path: path.join(OUT, 'v1027-dlpop-tab-switch.png'), fullPage: true });
 
-    const el = await p.$('#dlPop');
-    if (el) await el.screenshot({ path: path.join(OUT, 'v1027-dlpop.png') });
-    console.log('  截图：_test-out/v1027-dlpop{,-default,-filter}.png');
+    console.log('  截图：_test-out/v1027-dlpop{,-default,-filter,-tab-switch}.png');
   } catch (e) {
     fail++;
     console.log('  × FAIL  实拍异常：' + e.message + '\n' + String(e.stack || '').split('\n').slice(0, 4).join('\n'));

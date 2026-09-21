@@ -53,11 +53,16 @@ async function openGame(p, q) {
   console.log('\n=== ④ 「更多」按钮 ===');
   const btns = await p.evaluate(() => {
     const out = [];
-    document.querySelectorAll('#drawerBody .d-more-btn').forEach((b) => {
+    /* ★ v10.29：按钮有两种版式，**共用同一套 data-full 委托与 token**：
+         `.d-more-btn` 正文流里的一整行（机型清单等），
+         `.d-more-hd`  卡片**右上角**（修改器 / 云存档，用户口径「其他则为卡片右上角更多按钮」）。
+       这里必须把两种都收进来 —— 只查 `.d-more-btn` 会漏掉本轮新加的那两个（实测漏成 1 个）。 */
+    document.querySelectorAll('#drawerBody .d-more-btn, #drawerBody .d-more-hd').forEach((b) => {
       const r = b.getBoundingClientRect();
       out.push({
         token: b.dataset.full || '', txt: (b.textContent || '').replace(/\s+/g, ' ').trim(),
         w: Math.round(r.width), h: Math.round(r.height),
+        kind: b.classList.contains('d-more-hd') ? 'hd' : 'row',
         /* 它在哪个区块里 —— 用于核对「按钮挂在正确的专区」 */
         blk: (() => {
           let n = b, s = '';
@@ -72,17 +77,21 @@ async function openGame(p, q) {
     });
     return out;
   });
-  btns.forEach((b) => console.log(`    [${b.blk}] ${b.txt}  (${b.w}×${b.h})`));
-  chk('① 详情页里存在「更多」按钮', btns.length >= 2, `实际 ${btns.length} 个`);
+  btns.forEach((b) => console.log(`    [${b.blk}] (${b.kind}) ${b.txt}  (${b.w}×${b.h})`));
+  /* ★ 条数是**随数据变化**的（某作可能既没有 >5 条机型、也没有 >5 条修改器/云存档），
+     所以只要求「至少有一个」。两种版式是否都在，放到两个样本都跑完后统一判（见 ①b）。 */
+  chk('① 详情页里存在「更多」按钮', btns.length >= 1, `实际 ${btns.length} 个`);
+  const kinds = new Set(btns.map((b) => b.kind));
   chk('② 每个按钮都真占版面（w>0 且 h>0）', btns.every((b) => b.w > 0 && b.h > 0),
     btns.map((b) => `${b.w}×${b.h}`).join(' '));
-  chk('③ 每个按钮文案里都有条数（查看全部 N …）', btns.every((b) => /查看全部\s*\d+/.test(b.txt)),
+  /* ★ 文案两种都合法：「查看全部 N …」（整行）/「全部 N →」（卡头，位置已经很挤） */
+  chk('③ 每个按钮文案里都有条数', btns.every((b) => /(查看全部|全部)\s*\d+/.test(b.txt)),
     btns.map((b) => b.txt).join(' | '));
 
   /* 逐一点开：行数必须**不少于**详情页里同区块已展示的行数，且 > 0 */
   for (let i = 0; i < btns.length; i++) {
     const b = btns[i];
-    await p.evaluate((k) => document.querySelectorAll('#drawerBody .d-more-btn')[k].click(), i);
+    await p.evaluate((k) => document.querySelectorAll('#drawerBody .d-more-btn, #drawerBody .d-more-hd')[k].click(), i);
     await until(p, () => {
       const x = document.getElementById('dlBody');
       return x && !x.querySelector('.dlpop-load') && x.textContent.trim().length > 0;
@@ -102,7 +111,7 @@ async function openGame(p, q) {
         head: note,
         /* 「共 N」两处必须一致：按钮上的 N 与弹窗说明里的 N */
         noteN: (note.match(/共\s*(\d+)/) || [])[1] || '',
-        btnN: (String(btnTxt).match(/查看全部\s*(\d+)/) || [])[1] || '',
+        btnN: (String(btnTxt).match(/(?:查看全部|全部)\s*(\d+)/) || [])[1] || '',
       };
     }, b.txt);
     chk(`④-${i + 1} 点开「${b.txt}」→ 弹窗打开、标题对得上`,
@@ -126,19 +135,25 @@ async function openGame(p, q) {
   const GAME2 = process.env.GAME2 || '怪物火车2';
   const g2b = await openGame(p, GAME2);
   if (g2b) {
-    const b2 = await p.evaluate(() => [...document.querySelectorAll('#drawerBody .d-more-btn')]
-      .map((b) => ({ txt: (b.textContent || '').replace(/\s+/g, ' ').trim(), blk: b.closest('.d-blk') ? (b.closest('.d-blk').querySelector('h4') || {}).textContent || '' : '' })));
-    console.log(`  ${GAME2} 的按钮:`, b2.map((x) => `[${String(x.blk).replace(/\s+/g, '').slice(0, 8)}] ${x.txt}`).join(' | ') || '（无）');
-    chk(`⑦ ${GAME2} 有「云存档」的更多按钮（路径数 > 3 的样例）`,
-      b2.some((x) => /云存档/.test(x.blk) && /查看全部/.test(x.txt)),
-      b2.map((x) => x.blk + ':' + x.txt).join(' | '));
+    const b2 = await p.evaluate(() => [...document.querySelectorAll('#drawerBody .d-more-btn, #drawerBody .d-more-hd')]
+      .map((b) => ({ txt: (b.textContent || '').replace(/\s+/g, ' ').trim(), kind: b.classList.contains('d-more-hd') ? 'hd' : 'row', blk: b.closest('.d-blk') ? (b.closest('.d-blk').querySelector('h4') || {}).textContent || '' : '' })));
+    console.log(`  ${GAME2} 的按钮:`, b2.map((x) => `[${String(x.blk).replace(/\s+/g, '').slice(0, 8)}](${x.kind}) ${x.txt}`).join(' | ') || '（无）');
+    b2.forEach((x) => kinds.add(x.kind));
+    chk(`⑦ ${GAME2} 有「云存档」的更多按钮（且是**卡头右上角**那种版式）`,
+      b2.some((x) => /云存档/.test(x.blk) && /(查看全部|全部)\s*\d+/.test(x.txt) && x.kind === 'hd'),
+      b2.map((x) => x.blk + ':' + x.kind + ':' + x.txt).join(' | '));
   } else { console.log('  （跳过 GAME2：库里找不到）'); }
+  /* ★ v10.29：两种版式都必须出现过 —— 单看一个样本会漏（艾尔登法环只有机型那一个
+     整行按钮；卡头那种要另一个样本才有）。两种版式共用同一套 data-full 委托，
+     所以这里同时是在守「没被拆成两套机制」。 */
+  chk('①b 两种版式都出现过（正文整行 + 卡片右上角，共用同一套 data-full）',
+    kinds.has('row') && kinds.has('hd'), [...kinds].join('/'));
 
   /* ---- 载荷不能串台：换一款游戏后，旧 token 必须失效 ---- */
   const firstTokens = btns.map((b) => b.token);
   const g2 = await openGame(p, '赛博朋克2077');
   const after = await p.evaluate(() => ({
-    tokens: [...document.querySelectorAll('#drawerBody .d-more-btn')].map((b) => b.dataset.full || ''),
+    tokens: [...document.querySelectorAll('#drawerBody .d-more-btn, #drawerBody .d-more-hd')].map((b) => b.dataset.full || ''),
     title: (document.querySelector('#drawerBody h2') || {}).textContent || '',
   }));
   chk('⑤ 换游戏后按钮 token 全部换新（旧载荷不串台）',
@@ -147,7 +162,7 @@ async function openGame(p, q) {
 
   /* 点新游戏的一个按钮，确认弹的是新游戏的内容（不报「没有可展示的内容」） */
   if (after.tokens.length) {
-    await p.evaluate(() => document.querySelector('#drawerBody .d-more-btn').click());
+    await p.evaluate(() => document.querySelector('#drawerBody .d-more-btn, #drawerBody .d-more-hd').click());
     await until(p, () => {
       const x = document.getElementById('dlBody');
       return x && !x.querySelector('.dlpop-load') && x.textContent.trim().length > 0;

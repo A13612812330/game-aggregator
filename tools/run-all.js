@@ -59,6 +59,7 @@ const SUITES = [
   'test-v1026-jidiposts.js',
   'test-v1027-dlpop.js',
   'test-v1028-detail.js',
+  'test-v1029-detail.js',
 ];
 /* 刻意**不登记**的：
  *   · test-search-ui.js  —— 用 puppeteer，属第二层「浏览器实拍」，本脚本跑不了

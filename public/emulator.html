@@ -568,6 +568,20 @@
   .d-more-btn:hover{background:#EAF1FF;border-style:solid;border-color:var(--c-primary)}
   .d-more-btn .ar{font-size:10px;transition:.15s}
   .d-more-btn:hover .ar{transform:translateX(2px)}
+  /* ★ v10.29：卡片**右上角**的「更多」小按钮（用户口径「其他则为卡片右上角更多按钮查看全部」）。
+     与上面那个整行按钮的分工：整行按钮用在「这一块本身就是一份清单」的末位（机型清单等）；
+     这个小按钮用在**卡头已经有一行摘要**的卡片上（修改器 / 云存档），
+     塞在 `.cnt` 之后 —— 既不另起一行，也不会把卡头撑高。
+     · `margin-left:auto` 只为兜住「没有 .cnt 时也能贴右」；
+       紧跟在 .cnt 后面时用固定间距（`.cnt+.d-more-hd`），否则两个 auto 会平分剩余空隙、
+       把条数徽标推到中间去。
+     · 尺寸刻意比 `.d-more-btn` 小一档：它是卡头的附属动作，不该比标题还抢眼。 */
+  .d-blk h4 .d-more-hd{margin-left:auto;flex:none;font:inherit;font-size:10.5px;font-weight:750;
+    color:var(--c-primary);background:#F3F7FF;border:1px solid #D6E4FF;border-radius:7px;
+    padding:2px 7px;white-space:nowrap;cursor:pointer;transition:.15s}
+  .d-blk h4 .cnt+.d-more-hd{margin-left:6px}
+  .d-blk h4 .d-more-hd:hover{background:#EAF1FF;border-color:var(--c-primary)}
+  .d-blk h4 .d-more-hd .ar{font-size:9px;margin-left:2px}
   /* 「全部内容」弹窗里的行：比 .d-dl-it 更松，允许长标题与路径换行（存档路径必须完整可见） */
   .df-note{font-size:11px;line-height:1.7;color:var(--c-t3);margin:-2px 0 10px}
   .df-note b{color:var(--c-t2)}
@@ -1137,21 +1151,43 @@
       低于 toast(150) —— 提示条仍应在最上。 */
    .gal-lb{position:fixed;inset:0;z-index:140;background:rgba(9,13,22,.92);
      display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px}
-   .gal-lb img{max-width:92vw;max-height:80vh;object-fit:contain;border-radius:8px;cursor:zoom-out}
-   .gal-lb .n{color:#fff;font:500 12px/1 var(--font-num);opacity:.72}
-   .gal-lb-x{position:absolute;top:16px;right:18px;width:34px;height:34px;border-radius:50%;border:0;
-     background:rgba(255,255,255,.14);color:#fff;font-size:15px;cursor:pointer;line-height:1}
-   .gal-lb-x:hover{background:rgba(255,255,255,.26)}
+    .gal-lb img{max-width:92vw;max-height:80vh;object-fit:contain;border-radius:8px;cursor:pointer}
+    .gal-lb .n{color:#fff;font:500 12px/1 var(--font-num);opacity:.72}
+    .gal-lb-x{position:absolute;top:16px;right:18px;width:34px;height:34px;border-radius:50%;border:0;
+      background:rgba(255,255,255,.14);color:#fff;font-size:15px;cursor:pointer;line-height:1}
+    .gal-lb-x:hover{background:rgba(255,255,255,.26)}
+    /* ★ v10.29：灯箱左右切换（用户口径「点击大图左右可以切换图片，可以增加个透明度较高的图标」）。
+       · 半透明（opacity .55）—— 不抢画面，但一眼看得出可点；hover / 键盘聚焦提到 1。
+       · 尺寸与左右间距用 clamp 而不是媒体查询：一个式子同时管住手机与桌面，少一处会漂移的断点。
+       · ⚠️ 必须 absolute：`.gal-lb` 是 flex column，不做定位的话这两个按钮会被当成
+         两个普通 flex 项排进纵向流（图被挤到中间只剩一半高）—— 这是加它们时最容易踩的坑。 */
+    .gal-lb-nav{position:absolute;top:50%;transform:translateY(-50%);z-index:2;
+      width:clamp(38px,5vw,54px);height:clamp(38px,5vw,54px);border-radius:50%;border:0;padding:0;
+      display:flex;align-items:center;justify-content:center;cursor:pointer;
+      background:rgba(255,255,255,.16);color:#fff;font-size:clamp(15px,1.7vw,21px);line-height:1;
+      opacity:.55;transition:opacity .18s,background .18s}
+    .gal-lb-nav:hover,.gal-lb-nav:focus-visible{opacity:1;background:rgba(255,255,255,.3)}
+    .gal-lb-nav.prev{left:clamp(8px,2.4vw,26px)}
+    .gal-lb-nav.next{right:clamp(8px,2.4vw,26px)}
   .no-dl{margin:16px 0 4px;text-align:center;font-size:12px;color:var(--c-t3);border-top:1px dashed var(--c-border);padding-top:14px}
   .no-dl b{color:var(--c-danger)}
   .d-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
   /* v10.15：只剩一个按钮时铺满整行（跨源按钮默认隐藏，查到另一源详情页才显形） */
   .d-actions.one{grid-template-columns:1fr}
-  /* ★ v10.28：修改器 + 云存档的**语义容器**（用户版式里这两块紧挨着，排在「手机模拟器配置」之后）。
-     故意不给视觉样式：两块各自是 `.d-blk`、自带间距；这个 div 只让「⑥ 修改器+云存档」
-     在 DOM 里能被整体定位（右侧定位条 / 回归测试需要它）。
-     写 `display:block` 是显式声明「有意为之」，而不是漏了样式。 */
-  .d-pair{display:block}
+   /* ★ v10.29：修改器 + 云存档改成**同一行**（用户口径「修改器和云存档同行固定最多5行，
+      其他则为卡片右上角更多按钮查看全部」）。
+      · 两列等宽：两块都不长（各 ≤5 行，截断由 loadTrBlock / loadSvBlock 负责），
+        并排后一屏能同时看到 —— 不必先看完修改器再往下滚去找云存档。
+      · `align-items:start`：两块行数不同时各自按内容高度收，不拉伸成等高
+        （拉齐会让行数少的那块留一大片空白，看起来像加载失败）。
+      · 只有一块有内容时加 `.solo` 收成单列（由 syncPair() 打）——
+        否则空的那一侧会留出一整列空白，用户会读成「这块坏了但还占着位置」。
+      · 窄屏（≤760px）回落单列：两块并排后每块只剩 ~150px，
+        云存档那种长路径会被挤成三四个字一行。 */
+   .d-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+   .d-pair.solo{grid-template-columns:1fr}
+   .d-pair>div>.d-blk{margin-bottom:0}
+   @media(max-width:760px){.d-pair{grid-template-columns:1fr}}
   /* ★ v10.28：操作按钮组**固定在详情页底部**（用户口径：「我的意思是固定在详情页下面（移动也可查看）」）。
      它是 `#drawerBody` 的**最后一个子元素**且位于 `.d-body` 之外 ⇒ sticky bottom 全程贴住抽屉底边，
      滚到最底时回到自然位置停住（不会盖住最后一块内容）。
@@ -1419,30 +1455,25 @@
   .dl-grp>.h .src.xd{background:rgba(11,123,255,.1);color:var(--c-xd)}
   .dl-grp>.h .src.jidi{background:rgba(230,65,93,.1);color:var(--c-jidi)}
   .dl-grp>.h .n{margin-left:auto;font:700 11px/1 var(--font-num);color:var(--c-t3)}
-  /* XD 那组的折叠开关排在 .n 后面（.n 已经把内容推右，这里别再抢 auto，否则中间空一大截） */
-  .dl-grp>.h .dl-tg{margin-left:0}
-  .dl-grp.off>.h{margin-bottom:0}
+  /* ★ v10.29：`.dl-tg`（折叠开关）、`.dl-secs`（三专区纵向叠放）、
+     `.dl-sec.off>.sh` / `.dl-grp.off>.h`（折叠态留白）**一并删除**。
+     根因：折叠态下其余专区仍以自己的标题行留在页面上 —— 用户看到的就是
+     「本体下面还压着 Mod / 修改器」，这正是他说「就分开显示」要消掉的东西。
+     现在一次只渲染一个分区，`.off` 与开关本身都没有产生者了。
+     ⚠️ 删掉而不是留着：死 CSS 会让下一个人以为「还有折叠这条路」，
+        进而把「不渲染」改回 `display:none` —— 那会把问题原样带回来。 */
   /* ★ v10.27：列表从「两列 232px 卡片」改成**单列宽行** —— 弹窗加宽到 760px 就是为它腾地方。
      实测改前一条标题只剩「【亲测可玩】…」：源站帖子的区分度恰恰在后半段
      （版本 / 联机 / 是否虚拟化 / FIX 号），截掉等于给用户一列没有名字的按钮。 */
   .dl-grp .l{display:flex;flex-direction:column;gap:6px}
-  /* ★ v10.26 机地在组内按「本体 / mod / 修改器」再分小节 —— 源站那三个 tab 的对应物。
-     不新开 .dl-grp：那一层自带「机地」源标签与总条数，分成三块会让同一个来源徽标出现三次。 */
-  .dl-secs{display:flex;flex-direction:column;gap:12px}
   .dl-sec>.sh{display:flex;align-items:center;gap:7px;margin-bottom:7px;flex-wrap:wrap}
   .dl-sec>.sh>b{font-size:11.5px;font-weight:800;color:var(--c-t1)}
   .dl-sec>.sh>.c{font:700 10.5px/1 var(--font-num);color:var(--c-t3);background:#F1F3F8;border-radius:5px;padding:3px 6px}
   .dl-sec>.sh>.m{font:650 10.5px/1 var(--font-num);color:var(--c-t3)}
-  /* 折叠开关：展开态写「收起」，折叠态写「展开 N 个地址」—— 条数在按钮上，不用点开才知道值不值 */
-  .dl-tg{margin-left:auto;flex:none;font-size:10.5px;font-weight:750;color:var(--c-t2);background:#F3F5F9;
-    border:1px solid var(--c-border);border-radius:6px;padding:3px 8px;white-space:nowrap;transition:.14s}
-  .dl-tg:hover{background:#E9EDF5;color:var(--c-t1)}
-  .dl-sec>.sh>.go{flex:none;font-size:10.5px;font-weight:750;color:var(--c-primary);text-decoration:none;white-space:nowrap}
+  /* ★ v10.29：`.go`（去源站专区）改成靠右 —— 原来把它推到右端的是它前面的 `.dl-tg`（已删）。
+     不补这条 auto，出口会紧贴在条数徽标右边，看着像被挤掉的残件。 */
+  .dl-sec>.sh>.go{margin-left:auto;flex:none;font-size:10.5px;font-weight:750;color:var(--c-primary);text-decoration:none;white-space:nowrap}
   .dl-sec>.sh>.go:hover{text-decoration:underline}
-  /* 折叠态：只把标题行留下的下边距收掉。
-     ★ 这里**故意不写 `.dl-sec.off>.l{display:none}`** —— 折叠时 `.l` 根本不会被渲染，
-       那条规则永远不生效（死 CSS 会让下一个人以为走的是「渲染后隐藏」，进而把不渲染改回去）。 */
-  .dl-sec.off>.sh{margin-bottom:0}
   .dl-it{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;border:1px solid var(--c-border);border-radius:var(--r-md);
     background:#fff;transition:.14s;min-width:0}
   .dl-it:hover{border-color:var(--c-primary);background:var(--c-primary-soft)}
@@ -4567,6 +4598,15 @@ function galLbClose() {
   if (galLbEl && galLbEl.parentNode) galLbEl.parentNode.removeChild(galLbEl);
   galLbImgs = [];
 }
+/* ★ v10.29：灯箱翻页收成一个出口（用户口径「点击大图左右可以切换图片」）。
+   ★ 为什么不让 click 与 keydown 各写一遍取模：两处写法的边界处理极易分叉
+     （左翻到第 0 张时一个用 `+len` 兜、另一个忘了，就从「最后一张」变成「第 -1 张」）。
+     取模前先 `+d+len` 保证被除数非负 —— JS 的 `%` 对负数返回负值，`-1 % 7 === -1`。 */
+function galLbStep(d) {
+  if (!galLbImgs.length) return;
+  galLbI = (galLbI + d + galLbImgs.length) % galLbImgs.length;
+  galLbPaint();
+}
 function galLbOpen(root, i) {
   galLbImgs = Array.prototype.slice.call(root.querySelectorAll('.gal-sld img'))
     .map((im) => im.getAttribute('src')).filter(Boolean);
@@ -4575,9 +4615,18 @@ function galLbOpen(root, i) {
   if (!galLbEl) {
     galLbEl = document.createElement('div');
     galLbEl.className = 'gal-lb';
-    galLbEl.innerHTML = '<button type="button" class="gal-lb-x" aria-label="关闭大图">✕</button><img alt="游戏截图"><div class="n"></div>';
+    /* ⚠️ 箭头必须在 `<img>` 前后各一个、且靠 CSS 的 absolute 定位 ——
+       它们与 ✕ / 计数 .n 同处一个 flex column 里（见 .gal-lb-nav 的注释）。 */
+    galLbEl.innerHTML = '<button type="button" class="gal-lb-x" aria-label="关闭大图">✕</button>'
+      + '<button type="button" class="gal-lb-nav prev" data-lb-step="-1" aria-label="上一张">❮</button>'
+      + '<img alt="游戏截图">'
+      + '<button type="button" class="gal-lb-nav next" data-lb-step="1" aria-label="下一张">❯</button>'
+      + '<div class="n"></div>';
   }
   document.body.appendChild(galLbEl);
+  /* 只有一张图时左右按钮没有意义 —— 藏掉，别给一个点了不动的控件（同「宁可少一个按钮」的既有口径）。 */
+  const multi = galLbImgs.length > 1;
+  galLbEl.querySelectorAll('.gal-lb-nav').forEach((b) => { b.hidden = !multi; });
   galLbPaint();
 }
 document.addEventListener('click', (e) => {
@@ -4585,13 +4634,20 @@ document.addEventListener('click', (e) => {
   if (go) { const r = go.closest('[data-gal]'); if (r) galGo(r, +go.dataset.galGo); return; }
   const st = e.target.closest && e.target.closest('[data-gal-step]');
   if (st) { const r = st.closest('[data-gal]'); if (r) galGo(r, (+r.dataset.i || 0) + (+st.dataset.galStep)); return; }
-  if (galLbEl && galLbEl.contains(e.target)) {            // 灯箱内：点图翻下一张、点空白/✕ 关闭
+  if (galLbEl && galLbEl.contains(e.target)) {            // 灯箱内：点箭头翻页、点图翻下一张、点空白/✕ 关闭
     /* ★ v10.28 修：这里原先只判了「点背景」与「点图翻页」，**漏了右上角的 ✕ 按钮** ——
        注释写的是「点空白 / ✕ 关闭」，但点 ✕ 会落进最后一个 return、什么都不做。
        用户视角就是「打开大图后点关闭没反应，只能按 Esc」（实拍确认：点 ✕ 后灯箱仍在）。
        回归判据在 tools/preview-v1028.js：「点 ✕ → 灯箱消失」。 */
     if (e.target === galLbEl || (e.target.closest && e.target.closest('.gal-lb-x'))) { galLbClose(); return; }
-    if (e.target.tagName === 'IMG') { galLbI = (galLbI + 1) % galLbImgs.length; galLbPaint(); }
+    /* ★ v10.29：左右箭头（用户口径「点击大图左右可以切换图片」）。
+       ⚠️ 必须排在「点图翻下一张」**之前**：箭头是 `<button>`，若先判 IMG 分支也没关系，
+          但它自己不是 IMG；真正要防的是反过来 —— 把 `data-lb-step` 判在最后，
+          点「上一张」时会先命中 `tagName === 'IMG'`（button 里没有 img 子节点，所以其实不会），
+          留在这里只是为了顺序直观：先处理「明确的翻页意图」，再兜「点图」。 */
+    const st = e.target.closest && e.target.closest('[data-lb-step]');
+    if (st) { galLbStep(Number(st.dataset.lbStep) || 1); return; }
+    if (e.target.tagName === 'IMG') { galLbStep(1); }
     return;
   }
   const im = e.target.closest && e.target.closest('.gal-sld img');
@@ -4603,8 +4659,8 @@ document.addEventListener('click', (e) => {
 document.addEventListener('keydown', (e) => {
   if (!galLbEl || !galLbEl.parentNode) return;            // 只在灯箱打开时接管
   if (e.key === 'Escape') { galLbClose(); e.stopPropagation(); }
-  else if (e.key === 'ArrowRight') { galLbI = (galLbI + 1) % galLbImgs.length; galLbPaint(); e.stopPropagation(); }
-  else if (e.key === 'ArrowLeft') { galLbI = (galLbI - 1 + galLbImgs.length) % galLbImgs.length; galLbPaint(); e.stopPropagation(); }
+  else if (e.key === 'ArrowRight') { galLbStep(1); e.stopPropagation(); }
+  else if (e.key === 'ArrowLeft') { galLbStep(-1); e.stopPropagation(); }
 }, true);
 
 function paintDetail(d, fb, merge) {
@@ -4706,15 +4762,17 @@ function paintDetail(d, fb, merge) {
     </div>
     <div class="d-body">
       <div class="d-hint"><b>GameHub 仅为信息聚合站：</b>以下为源站实时抓取的详情与更新信息，本站不提供下载资源。完整内容请前往源站。</div>
-      <!-- ① 游戏预览：由正文第 7 位提到封面之后（用户口径「封面 + 标题（合并游戏预览）」）。
-           截图回答的本来就是「这游戏长什么样」，和封面是同一件事，
-           隔着一整屏介绍才看到没有道理。 -->
-      ${shotsHtml}
-      <!-- ② 玩家评分 + 参数表（厂商 / 发行日期 / 游戏大小 …） -->
+      <!-- ① 玩家评分 + 参数表（厂商 / 发行日期 / 游戏大小 …） -->
       ${score ? `<div class="score-line"><span class="score-big">${score}</span><span class="score-meta">玩家评分 · 满分 10${d.steamRate ? `<i>Steam 好评率 ${esc(String(d.steamRate))}</i>` : ''}</span></div>` : ''}
       <div class="kv">${kv.map(([k, v]) => `<div class="it"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>
-      <!-- ③ 游戏介绍 / 版本介绍 -->
+      <!-- ② 游戏介绍 / 版本介绍 -->
       ${descHtml}${versionHtml}
+      <!-- ③ 游戏预览（★ v10.29：从封面之后移到**介绍块之后** —— 用户口径「游戏预览放在游戏介绍下」）。
+           截图是对介绍文字的补充说明：先读「这游戏是什么」，再往下看「它长什么样」。
+           ⚠️ v10.28 曾把它提到封面之后（当时的理由是「截图和封面是同一件事」）——
+              那是把「吸引眼球」当成了首要目的；用户在真实浏览里是**读完介绍才想看图**的。
+              两版都只动这一处顺序，区块本身与懒加载逻辑没变。 -->
+      ${shotsHtml}
       <!-- ④ 配置要求（源站有就用源站的，没有去 Steam 官方接口补 ★ v10.13） -->
       <div id="reqSlot"></div>
       <!-- ⑤ 手机模拟器配置（★ v10.28 合一：机型清单为主，点击看品牌/型号/硬件配置） -->
@@ -5352,6 +5410,19 @@ async function loadReqBlock(d, fb) {
   }
 }
 
+/* ★ v10.29：「修改器 + 云存档」在详情页里是**并排两块**（`#trSvSlot` 两列 grid）。
+ *  两块由各自独立的请求回填，谁先回来不确定 ⇒ 每次回填完都调一次本函数。
+ *  只有一块有内容时给容器加 `.solo` 收成单列：否则空的那一侧会留出一整列空白，
+ *  用户会读成「这块坏了/没数据但还占着位置」。
+ *  ⚠️ 判据是 `children.length`（有没有真渲染出 `.d-blk`），不是「#trBlock 存不存在」——
+ *     两个槽位节点是 paintDetail 里就写死的，永远存在。 */
+function syncPair() {
+  const w = $('#trSvSlot');
+  if (!w) return;
+  const n = [$('#trBlock'), $('#svBlock')].filter((el) => el && el.children.length).length;
+  w.classList.toggle('solo', n <= 1);
+}
+
 /* 🛠 修改器：这款有没有修改器、来自哪个来源、什么版本 */
 async function loadTrBlock(d, title) {
   const slot = $('#trBlock');
@@ -5362,7 +5433,10 @@ async function loadTrBlock(d, title) {
     const j = await fetch(api('/api/trainers/match?t=' + encodeURIComponent(t))).then(r => r.json());
     const items = (j && j.items) || [];
     if (!items.length) { slot.innerHTML = ''; return; }             // 无收录就不占版面
-    const rows = items.slice(0, 8).map((it) => {
+    /* ★ v10.29：上限 8 → 5（用户口径「修改器和云存档同行固定最多5行」）。
+       两块的卡头在同一横线上，行数不等会让「最多 5 行」这句话在视觉上不成立。 */
+    const MAXTR = 5;
+    const rows = items.slice(0, MAXTR).map((it) => {
       const src = it.source || 'gcm';
       const nm = it.zh || it.name || '';
       return `<div class="d-tr-it"><span class="d-tg ${esc(src)}">${esc(D_TR_SRC[src] || src)}</span>
@@ -5371,14 +5445,16 @@ async function loadTrBlock(d, title) {
     }).join('');
     /* ★ v10.25：原来这里是一句「另有 N 个来源未展示，去手机专区「修改器」页看全部」——
        数据就在**当前这个响应**里（/api/trainers/match 返回全量，没截断），
-       直接把整份存进 dFullStore，按钮只带 token。 */
-    const more = items.length > 8
-      ? dFullBtn(dFullPut({ type: 'tr', title: '修改器 · 全部来源', sub: t, items }), `查看全部 ${items.length} 个来源`)
+       直接把整份存进 dFullStore，按钮只带 token。
+       ★ v10.29：按钮从「整行」挪到**卡头右上角**（用户口径「其他则为卡片右上角更多按钮查看全部」），
+       条数写进按钮（`全部 N`），不必再写「查看全部 N 个来源」那么长。 */
+    const more = items.length > MAXTR
+      ? dMoreHd(dFullPut({ type: 'tr', title: '修改器 · 全部来源', sub: t, items }), `全部 ${items.length}`)
       : '';
-    slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>修改器<span class="cnt">${items.length} 个来源</span></h4>${rows}${more}
+    slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>修改器<span class="cnt">${items.length} 个来源</span>${more}</h4>${rows}
       <div class="d-hint2">修改器文件放到<b>游戏安装根目录</b>（与主程序 .exe 同级）后再启动；CE 修改表需先运行 Cheat Engine 再加载表格。<br>
         清单聚合自 Game Cheats Manager 公开数据，<a href="${D_GCM_URL}" target="_blank" rel="noopener">打开 GCM 下载页 ↗</a></div></div>`;
-  } catch (e) {}
+  } catch (e) {} finally { syncPair(); }
 }
 
 /* 💾 云存档：存档文件放哪（用户最想要的答案），路径不截断，直接给可抄的完整串 */
@@ -5393,29 +5469,37 @@ async function loadSvBlock(d, title) {
     if (!h) { slot.innerHTML = ''; return; }
     const paths = h.paths || [], regs = h.regs || [];
     if (!paths.length && !regs.length) { slot.innerHTML = ''; return; }
-    const MAXP = 3, MAXR = 2;
+    /* ★ v10.29：行数上限从「路径 3 + 注册表 2」改成**合计最多 5 行**（用户口径
+       「修改器和云存档同行固定最多5行，其他则为卡片右上角更多按钮查看全部」）。
+       为什么不是继续写死 3+2：路径条数少时会白白空出额度（1 条路径 + 5 条注册表
+       照样只显示 3 行）。改成「先给路径、余额给注册表」——
+       既守住 5 行上限，也不会浪费；路径优先是因为用户打开这块多半是来抄存档路径的。 */
+    const MAXROWS = 5;
+    const pTake = Math.min(paths.length, MAXROWS);
+    const rTake = Math.min(regs.length, MAXROWS - pTake);
     const rows = [];
-    for (const p of paths.slice(0, MAXP)) {
+    for (const p of paths.slice(0, pTake)) {
       const tg = (p.tags && p.tags.length) ? String(p.tags[0]) : 'save';
       const label = tg === 'save' ? '存档' : (tg === 'config' ? '配置' : tg);
       rows.push(`<div class="p"><i>${esc(label)}</i><span>${esc(p.shown || p.raw)}</span></div>`);
     }
-    for (const r of regs.slice(0, MAXR)) rows.push(`<div class="p reg"><i>注册表</i><span>${esc(r.raw)}</span></div>`);
-    const hidden = (paths.length - Math.min(paths.length, MAXP)) + (regs.length - Math.min(regs.length, MAXR));
-    /* ★ v10.25：同上 —— /api/saves/match 返回的 hit 就是全量，直接整份存进 store */
+    for (const r of regs.slice(0, rTake)) rows.push(`<div class="p reg"><i>注册表</i><span>${esc(r.raw)}</span></div>`);
+    const hidden = (paths.length - pTake) + (regs.length - rTake);
+    /* ★ v10.25：同上 —— /api/saves/match 返回的 hit 就是全量，直接整份存进 store。
+       ★ v10.29：按钮从「整行」挪到卡头右上角（同 loadTrBlock）。 */
     const more = hidden > 0
-      ? dFullBtn(dFullPut({ type: 'sv', title: '云存档位置 · 全部记录', sub: t, hit: h }),
-        `查看全部 ${paths.length + regs.length} 条记录`)
+      ? dMoreHd(dFullPut({ type: 'sv', title: '云存档位置 · 全部记录', sub: t, hit: h }),
+        `全部 ${paths.length + regs.length}`)
       : '';
     const tags = [];
     (h.cloud || []).forEach(c => tags.push(`<span class="d-tg cloud">☁ ${esc(String(c).toUpperCase())}</span>`));
     if (h.phone) tags.push('<span class="d-tg phone">手机能玩</span>');
     if (h.installDir) tags.push(`<span class="d-tg dim">安装目录 ${esc(h.installDir)}</span>`);
-    slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>云存档位置<span class="cnt">${paths.length + regs.length} 条记录</span></h4>
+    slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>云存档位置<span class="cnt">${paths.length + regs.length} 条记录</span>${more}</h4>
       ${tags.length ? `<div class="d-tg-row" style="margin-bottom:6px">${tags.join('')}</div>` : ''}
-      <div class="d-sv">${rows.join('')}</div>${more}
+      <div class="d-sv">${rows.join('')}</div>
       <div class="d-hint2">路径中的 <code>&lt;用户名&gt;</code> / <code>&lt;平台账号ID&gt;</code> 是占位符，按你自己的账号替换。<b>存档前请先退出游戏</b>，避免被覆盖。数据来自 Ludusavi 开源清单（MIT）。</div></div>`;
-  } catch (e) {}
+  } catch (e) {} finally { syncPair(); }
 }
 
 /* 详情内双源互链：机地话题 ↔ XD 版本
@@ -5905,22 +5989,38 @@ function dlFiltered(items, filt) {
 function dlPosts(items, filt, sort) {
   return dlSorted(dlGroupByPost(dlFiltered(items, filt)), sort);
 }
-function dlIsOpen(key) {
-  const s = dlView && dlView.sec[key];
-  return !!(s && s.open);
+/* ★ v10.29：把「XD 盘口 + 机地三个专区」摊成一份 tab 列表。
+ *  工具条的签与正文的面板**都从它取数** —— 两处各算一遍必然漂移
+ *  （本项目踩过「chip 写 25 帖、点开只有 12 行」这类数字对不上）。
+ *  `count` / `ret` / `merged` 只在机地那侧有（服务端 sections 的口径），
+ *  XD 没有专区概念 ⇒ 只给 name + items，其余字段留空由调用方兜。 */
+function dlTabList(v) {
+  const out = [];
+  if (v.xdItems.length) out.push({ key: 'xd', name: 'XDGAME 盘口', items: v.xdItems });
+  for (const s of v.secs) {
+    out.push({ key: s.key, name: s.name, items: s.items, count: s.count, ret: s.returned, merged: s.merged });
+  }
+  return out;
 }
 
 /**
- * 一个可折叠区块（机地三个专区共用；XD 那组是同样的骨架挂在 .dl-grp 上）。
- * ★ 折叠时**不渲染行**（不是 display:none 藏起来）：DOM 里少掉上百个节点，
- *   而且「看到几行 = 取到几行」—— 不靠隐藏内容制造「已经看全」的错觉。
- * ★ 「展开」按钮上写明还有多少个地址：点之前就知道值不值。
+ * **当前分区**的内容面板（★ v10.29：语义从「可折叠专区」改成「当前分区」）。
+ *
+ * ★ 为什么不再折叠（这是用户口径「就分开显示，而不是本体下面还有 Mod 或者修改器」的落点）：
+ *   折叠时其余专区仍以自己的标题行留在页面上 —— 用户在「本体」列表下面照样看得见
+ *   「mod 2 帖」「修改器 2 帖」两块，观感就是「本体下面还压着两个东西」。
+ *   换成 tab 后一次只渲染一个分区，其余分区**一个节点都不在 DOM 里**
+ *   （比 display:none 更彻底：不会被辅助技术读到，也不占任何版面）。
+ *   ⚠️ 折叠态的 `.off` 类与 `.dl-tg` 按钮因此一并消失 —— 不要再往回加，
+ *      否则「本体下面还有 Mod」会立刻复现（反证用例已钉住「非当前分区零节点」）。
+ * ★ `rows` 由调用方算好传入（截断策略集中在 paintDownload 一处）；
+ *   不传时按 `all` 兜底，老调用方仍能拿到一份完整面板。
  * ★ 单位仍然分开写：「N 帖」是源站的帖子数，「M 个地址」是本次真正能点开的链接数
  *   （一帖常带 2~3 个盘口，混用会让「22 帖 / 60 个地址」读起来自相矛盾）。
  */
 function dlBlock(o) {
   const cap = o.cap || DL_CAP;
-  const rows = o.open ? (o.all ? o.items : o.items.slice(0, cap)) : [];
+  const rows = Array.isArray(o.rows) ? o.rows : (o.all ? o.items : o.items.slice(0, cap));
   const rest = o.items.length - rows.length;
   const foot = [];
   if (rows.length) {
@@ -5935,27 +6035,27 @@ function dlBlock(o) {
   const head = '<div class="sh"><b>' + esc(o.name) + '</b>' +
     '<span class="c">' + esc(o.countLabel) + '</span>' +
     (o.metaLabel ? '<span class="m">' + esc(o.metaLabel) + '</span>' : '') +
-    '<button type="button" class="dl-tg" data-dl-sec="' + esc(o.key) + '">' +
-      (o.open ? '收起' : '展开 ' + o.items.length + ' 帖') + '</button>' +
     (o.url ? '<a class="go" href="' + esc(o.url) + '" target="_blank" rel="noopener">' +
       esc(o.urlLabel || '源站 ↗') + '</a>' : '') +
     '</div>';
-  return '<div class="dl-sec' + (o.open ? '' : ' off') + '" data-sec="' + esc(o.key) + '">' + head +
+  return '<div class="dl-sec" data-sec="' + esc(o.key) + '">' + head +
     (rows.length ? '<div class="l">' + rows.map(dlRow).join('') + '</div>' : '') +
     (foot.length ? '<div class="ft">' + foot.join('') + '</div>' : '') + '</div>';
 }
 
-/** 顶部工具条：专区锚点 + 排序 + 盘口筛选（sticky —— 滚到第 40 条也能换盘口）
- *  ★ 锚点与 chip 上的数字一律是**帖数**（列表一行就是一帖），不是地址数。 */
+/** 顶部工具条：分区签（tab）+ 排序 + 盘口筛选（sticky —— 滚到第 40 条也能换盘口）。
+ *  ★ 签上的数字一律是**帖数**（列表一行就是一帖），不是地址数。
+ *  ★ v10.29：签从「可折叠专区的锚点」升级成**真正的 tab**（点它 = 只显示那一块）。
+ *    只有一个分区时不摆签 —— 一个签排在那里既不切换信息、也白占一行。
+ *  ★ 排序只对机地那侧有效（XD 条目没有 dpv/ct）—— 只有 XD 时不摆这个开关，别给无效控件。 */
 function dlBarHtml() {
   const v = dlView;
   const cnt = (arr) => dlGroupByPost(dlFiltered(arr, v.filt)).length;
-  const an = [];
-  if (v.xdItems.length) an.push({ key: 'xd', name: 'XD', n: cnt(v.xdItems) });
-  for (const s of v.secs) an.push({ key: s.key, name: s.name, n: cnt(s.items) });
-  const anchors = an.map((a) => '<button type="button" class="dl-an' + (dlIsOpen(a.key) ? ' on' : '') +
-    '" data-dl-go="' + esc(a.key) + '">' + esc(a.name) + ' <i>' + a.n + '</i></button>').join('');
-  /* 排序只对机地那侧有效（XD 条目没有 dpv/ct）—— 只有 XD 时不摆这个开关，别给无效控件 */
+  const tabs = dlTabList(v);
+  const tabRow = tabs.length > 1
+    ? tabs.map((t) => '<button type="button" class="dl-an' + (v.tab === t.key ? ' on' : '') +
+      '" data-dl-go="' + esc(t.key) + '">' + esc(t.name) + ' <i>' + cnt(t.items) + '</i></button>').join('')
+    : '';
   const sorts = v.secs.length
     ? '<span class="dl-sp"></span><span class="dl-lb">排序</span>' + DL_SORTS.map(([k, label]) =>
       '<button type="button" class="dl-tab' + (v.sort === k ? ' on' : '') + '" data-dl-sort="' + k + '">' +
@@ -5966,11 +6066,12 @@ function dlBarHtml() {
     .concat(dlBrandCounts(v.items).map((b) => '<button type="button" class="dl-chip' +
       (v.filt === b.cls ? ' on' : '') + '" data-dl-filt="' + esc(b.cls) + '">' +
       esc(DL_BRAND_NAME[b.cls] || b.cls) + '<i>' + b.n + '</i></button>')).join('');
-  return '<div class="dl-bar"><div class="rw">' + anchors + sorts + '</div>' +
+  const row1 = (tabRow || sorts) ? '<div class="rw">' + tabRow + sorts + '</div>' : '';
+  return '<div class="dl-bar">' + row1 +
     '<div class="rw"><span class="dl-lb">盘口</span>' + chips + '</div></div>';
 }
 
-/** 唯一渲染出口：把 dlView 画进 #dlBody */
+/** 唯一渲染出口：把 dlView 画进 #dlBody（★ v10.29：一次只画**一个分区**） */
 function paintDownload() {
   const body = $('#dlBody');
   if (!body || !dlView) return;
@@ -5981,74 +6082,58 @@ function paintDownload() {
      否则会渲染出一片「当前筛选下没有地址」，看着像坏了。 */
   if (v.filt && !dlBrandCounts(v.items).some((b) => b.cls === v.filt)) v.filt = '';
 
-  const pass = (arr) => dlPosts(arr, v.filt, v.sort);
-  const grp = [];
-
-  if (v.xdItems.length) {
-    const its = pass(v.xdItems);
-    const open = dlIsOpen('xd');
-    /* 不筛选时不写「N / N」—— 两个一样的数并排只会让人怀疑哪个才是真的 */
-    grp.push('<div class="dl-grp' + (open ? '' : ' off') + '" data-sec="xd">' +
-      '<div class="h"><b>XDGAME 官方盘口</b><span class="src xd">XD</span>' +
-      '<span class="n">' + (v.filt ? '筛后 ' + its.length + ' / ' : '共 ') + v.xdItems.length + ' 条</span>' +
-      '<button type="button" class="dl-tg" data-dl-sec="xd">' +
-        (open ? '收起' : '展开 ' + its.length + ' 条') + '</button></div>' +
-      (open ? '<div class="l">' + its.map(dlRow).join('') + '</div>' : '') +
-      '</div>');
+  const tabs = dlTabList(v);
+  if (!tabs.length) {
+    body.innerHTML = '<div class="dlpop-empty">这款游戏没有可展示的网盘地址</div>';
+    return;
   }
-  if (v.secs.length) {
-    const blocks = v.secs.map((s) => dlBlock({
-      key: s.key,
-      name: s.name,
-      items: pass(s.items),
-      open: dlIsOpen(s.key),
-      all: !!(v.sec[s.key] && v.sec[s.key].all),
-      countLabel: (s.count || s.items.length) + ' 帖',
-      metaLabel: s.items.length + ' 个地址' + (s.merged ? '（含最近发布）' : ''),
-      url: v.topicUrl,
-      urlLabel: '源站专区 ↗',
-      tail: s.count > s.returned
-        ? '源站该专区共 ' + s.count + ' 帖，本次取回 ' + s.returned + ' 帖' +
-          (s.merged ? '（已并入「最近发布」那批）' : '') + '，其余请去源站专区看'
-        : '',
-    })).join('');
-    grp.push('<div class="dl-grp"><div class="h"><b>机地社区分享</b>' +
-      '<span class="src jidi">机地</span>' +
-      '<span class="n">' + (v.filt ? '筛后 ' + pass(v.jiItems).length + ' / ' : '共 ') +
-        dlGroupByPost(v.jiItems).length + ' 帖</span></div>' +
-      '<div class="dl-secs">' + blocks + '</div></div>');
-  }
+  /* 当前分区可能因为换游戏 / 换筛选而消失 → 退回第一个有内容的分区。
+     ⚠️ 这里**不要**因为「本分区筛完是空的」就跳到别的分区：
+        用户会以为「点了筛选结果跳到另一个专区」。空结果的提示由下面给。 */
+  if (!tabs.some((t) => t.key === v.tab)) v.tab = tabs[0].key;
+  const cur = tabs.find((t) => t.key === v.tab);
+  const items = dlPosts(cur.items, v.filt, v.sort);
+  const st = v.sec[cur.key] || (v.sec[cur.key] = { all: false });
+  const rows = st.all ? items : items.slice(0, DL_CAP);
 
-  const usable = dlPosts(v.items, v.filt, v.sort).length;
+  const panel = dlBlock({
+    key: cur.key, name: cur.name, items, rows, all: !!st.all,
+    countLabel: (cur.count || cur.items.length) + ' 帖',
+    metaLabel: cur.items.length + ' 个地址' + (cur.merged ? '（含最近发布）' : ''),
+    /* XD 条目不是机地话题，没有「源站专区」可跳 —— 给一个会 404 的出口不如不给 */
+    url: cur.key === 'xd' ? '' : v.topicUrl,
+    urlLabel: '源站专区 ↗',
+    tail: (cur.count > cur.ret)
+      ? '源站该专区共 ' + cur.count + ' 帖，本次取回 ' + cur.ret + ' 帖' +
+        (cur.merged ? '（已并入「最近发布」那批）' : '') + '，其余请去源站专区看'
+      : '',
+  });
+
+  const usable = items.length;
   const note = '<div class="dl-note">共 <b>' + v.items.length + '</b> 个可直接打开的网盘地址（来自 <b>' +
     dlGroupByPost(v.items).length + '</b> 个资源帖）' +
-    (v.filt ? '，筛选 <b>' + esc(DL_BRAND_NAME[v.filt] || v.filt) + '</b> 后剩 <b>' + usable + '</b> 帖' : '') +
+    (v.filt ? '，筛选 <b>' + esc(DL_BRAND_NAME[v.filt] || v.filt) + '</b> 后本分区剩 <b>' + usable + '</b> 帖' : '') +
     ' · 链接均为源站实时解析</div>';
   body.innerHTML = dlBarHtml() + note +
-    (usable ? grp.join('') : '<div class="dlpop-empty">当前筛选下没有可用的网盘地址<br>' +
-      '<span style="font-size:11.5px">点上面的「全部」看所有盘口</span></div>');
+    (usable ? panel : '<div class="dlpop-empty">本分区在当前筛选下没有可用的网盘地址<br>' +
+      '<span style="font-size:11.5px">点上面的「全部」看所有盘口，或换个分区</span></div>');
   body.scrollTop = keep;
 }
 
 /**
- * 展开/收起一个区块。
- * @param {string} key
- * @param {boolean} [jump] true = 锚点跳转（一定展开并把标题滚到工具条下方，不折叠）
+ * ★ v10.29：切换到某个分区（原 `dlOpenSec(key, jump)` 的「展开 + 锚点跳转」不再需要 ——
+ *   tab 语义下**点签就是切块**，没有「折叠着但看得见标题」的中间态）。
+ *
+ * ★ 为什么切块后把滚动位置清零：两块内容完全不重叠，停在上一块的滚动位置上，
+ *   用户看到的是新分区的中段（开头被卷走了），会误以为「这块只有这么几条」。
  */
-function dlOpenSec(key, jump) {
-  const s = dlView && dlView.sec[key];
-  if (!s) return;
-  s.open = jump ? true : !s.open;
+function dlGoTab(key) {
+  if (!dlView) return;
+  if (dlView.tab === key) return;
+  dlView.tab = key;
   paintDownload();
-  if (!jump || !s.open) return;
   const b = $('#dlBody');
-  const el = b && b.querySelector('[data-sec="' + key + '"]');
-  if (!el) return;
-  /* 用 rect 差值而不是 offsetTop：.dl-sec 的 offsetParent 是 .dlpop-box（更外层），
-     直接减会少算弹窗头部那一段，跳过去总是偏上。（工具条 sticky 高约 56px，留出来） */
-  const r = el.getBoundingClientRect();
-  const br = b.getBoundingClientRect();
-  b.scrollTop += r.top - br.top - 56;
+  if (b) b.scrollTop = 0;
 }
 /**
  * 一整组都取不到地址时的说明块。
@@ -6187,18 +6272,24 @@ async function openDownload(ctx) {
     return;
   }
 
-  /* ===== 初始化视图状态（每次打开重置）===== */
+  /* ===== 初始化视图状态（每次打开重置）=====
+     ★ v10.29：`sec[key]` 只留 `all`（该分区是否点了「展开全部 N 帖」）；
+       `open` 随折叠一起废掉 —— 一次只画一个分区，当前分区由 `tab` 决定。
+       ⚠️ 状态与渲染分开仍然是本块的规矩（见上方 dlView 的注释）：
+          切签 / 换排序 / 换筛选都只改 dlView 再调 paintDownload 一次。 */
   const sec = {};
-  for (const s of secs) sec[s.key] = { open: false, all: false };
-  if (xdItems.length) sec.xd = { open: true, all: false };
+  for (const s of secs) sec[s.key] = { all: false };
+  if (xdItems.length) sec.xd = { all: false };
   /* 本体优先：用户点「下载」多半是冲本体来的（源站那三个 tab 里本体也是默认页）。
-     本体这次没有条目时开第一个有内容的专区 —— 否则打开就是一片折叠标题，等于什么都没看到。 */
-  const firstOpen = secs.some((s) => s.key === 'body') ? 'body' : (secs[0] && secs[0].key);
-  if (firstOpen) sec[firstOpen] = { open: true, all: false };
+     本体这次没有条目时开第一个有内容的分区 —— 否则打开就是一片折叠标题，等于什么都没看到。
+     ★ v10.29：机地一个专区都没有时（纯 XD 条目）回落到 XD 那一块，而不是留空。 */
+  const firstTab = secs.some((s) => s.key === 'body') ? 'body'
+    : ((secs[0] && secs[0].key) || (xdItems.length ? 'xd' : ''));
 
   dlView = {
     sort: 'hot',
     filt: '',
+    tab: firstTab,
     xdItems, jiItems,
     items: xdItems.concat(jiItems),
     secs, sec,
@@ -6241,10 +6332,19 @@ async function openDownload(ctx) {
 let dFullStore = Object.create(null);
 let dFullSeq = 0;
 function dFullPut(p) { const k = 'f' + (++dFullSeq); dFullStore[k] = p; return k; }
-/** 「查看全部」按钮。label 里自带条数，避免和载荷里的数字两处维护。 */
+/** 「查看全部」按钮（整行）。label 里自带条数，避免和载荷里的数字两处维护。 */
 function dFullBtn(k, label) {
   return '<button type="button" class="d-more-btn" data-full="' + esc(k) + '">' +
     esc(label) + ' <span class="ar">→</span></button>';
+}
+/** ★ v10.29：卡片**右上角**的「更多」小按钮（用户口径「其他则为卡片右上角更多按钮查看全部」）。
+ *  与 dFullBtn 共用同一套 token + `data-full` 委托 ⇒ 弹窗侧一行都不用改。
+ *  只是版式不同（塞进卡头而不是独占一行），所以另开一个产出函数而不是给 dFullBtn 加参数 ——
+ *  两个版式的差别是**结构性**的（在 h4 里 vs 在正文流里），一个参数说不清，
+ *  以后还会长出第三个版式（比如列表行内的「更多」）。 */
+function dMoreHd(k, label) {
+  return '<button type="button" class="d-more-hd" data-full="' + esc(k) + '">' + esc(label) +
+    '<span class="ar">→</span></button>';
 }
 /* ★ v10.28：弹窗里每页帖数（用户口径「弹窗显示十个其他的翻页」）。
    取 10 是「一屏能扫完、又不用一直翻」的折中：`.dl-it` 一行约 64px，
@@ -6519,22 +6619,22 @@ async function openModList(ctx) {
     closeDownload();
   }, true);
   document.addEventListener('click', (e) => {
-    /* ★ v10.27：下载弹窗内部的四个开关（锚点 / 排序 / 盘口筛选 / 折叠）全部走委托。
+    /* ★ v10.27：下载弹窗内部的开关（分区签 / 排序 / 盘口筛选 / 展开全部）全部走委托。
        为什么必须委托：#dlBody 每次都是整块 innerHTML 重建，直接绑在按钮上的监听会全掉
-       （v10.25 已记过这条）。这里先判，命中就 return，不再往下走下载入口的分支。 */
+       （v10.25 已记过这条）。这里先判，命中就 return，不再往下走下载入口的分支。
+       ★ v10.29：原来的「折叠 / 展开专区」开关（data-dl-sec）随 tab 化一起删了 ——
+          现在没有「折叠着但标题仍留在页面上」的中间态。 */
     if (dlView) {
       const go = e.target.closest('[data-dl-go]');
-      if (go) { dlOpenSec(go.dataset.dlGo, true); return; }
+      if (go) { dlGoTab(go.dataset.dlGo); return; }
       const st = e.target.closest('[data-dl-sort]');
       if (st) { dlView.sort = st.dataset.dlSort || 'hot'; paintDownload(); return; }
       const fl = e.target.closest('[data-dl-filt]');
       if (fl) { dlView.filt = fl.dataset.dlFilt || ''; paintDownload(); return; }
-      const tg = e.target.closest('[data-dl-sec]');
-      if (tg) { dlOpenSec(tg.dataset.dlSec); return; }
       const al = e.target.closest('[data-dl-all]');
       if (al) {
         const s = dlView.sec[al.dataset.dlAll];
-        if (s) { s.all = !s.all; s.open = true; paintDownload(); }
+        if (s) { s.all = !s.all; paintDownload(); }
         return;
       }
     }
@@ -6616,8 +6716,9 @@ async function openModList(ctx) {
  * 用户口径：「我希望游戏详情页弹窗能有个定位条（竖着的）」；
  *           位置选定「右侧固定」，收录项选定「8 项，按可信度排序」。
  *
- * 「按可信度排序」的落地方式：**选**的是实测存在率最高、最常被找的 8 个分区；
- *   但它们在条上的**排列顺序按正文顺序**（不是按我写的顺序）—— 见 railSync 里的排序。
+ * 「按可信度排序」的落地方式：**选**的是实测存在率最高、最常被找的 9 个分区；
+ *   但它们在条上的**排列顺序按正文顺序**（不是按我写的顺序）—— 见 railSync 里的排序
+ *   （★ v10.29：改用 `compareDocumentPosition`，不再按视口坐标，原因见那里）。
  *   定位条的顺序与正文不一致时，滚动高亮会来回跳，那比少一项更难受。
  *
  * ★ 为什么用 MutationObserver 重扫，而不是在 paintDetail 里扫一次就完事：
@@ -6629,13 +6730,25 @@ async function openModList(ctx) {
  *      有的还不返回 promise，用「等所有懒加载完成」来定时机一定会漏。
  */
 const D_RAIL = [
+  /* ★ v10.29：评分 + 参数表（厂商 / 发行日期 / 大小）。
+     用户反馈「右侧悬浮定位条好像没更新」—— 根因就在这里：
+     v10.28 把「评分 + 参数表」排到了正文最前（封面之后第一块），
+     但 D_RAIL 里**从来没有这一项** ⇒ 滚到参数表时条上高亮的仍是上一区，
+     点回这一块也没有入口，看起来就像定位条还停在旧版式上。
+     （只加这一项就够：其余顺序是 railSync **按 DOM 顺序重排**出来的，不靠这里的书写顺序。） */
+  { k: 'kv', nm: '评分参数', sel: ['#drawerBody .d-body > .kv'] },
+  /* ⚠️ `.block` 同时被「版本介绍」用着 → 必须按标题文字过滤，否则会定位到版本介绍 */
+  { k: 'desc', nm: '游戏介绍', sel: ['#drawerBody .block'], txt: '游戏介绍' },
+  /* ★ v10.29：游戏预览挪到介绍块之后（与正文一致，由 railSync 的 DOM 排序兜住） */
+  { k: 'shot', nm: '游戏预览', sel: ['#drawerBody .gal'] },
   { k: 'req', nm: '配置要求', sel: ['#reqSlot'] },
   { k: 'bh', nm: '手机配置', sel: ['#bhSlot'] },
-  { k: 'shot', nm: '游戏预览', sel: ['#drawerBody .gal'] },
+  /* ★ v10.29：修改器 / 云存档改成**同一行**（`.d-pair` 两列）——
+     两块在同一屏里并排，滚动时它们的前后差只有几像素。
+     定位条保留两项（各自仍可点、可高亮），因为两块内容完全不同，
+     只留一项会让「云存档」在条上彻底消失。 */
   { k: 'tr', nm: '修改器', sel: ['#trBlock'] },
   { k: 'sv', nm: '云存档', sel: ['#svBlock'] },
-  /* `.block` 同时被「版本介绍」用着 → 必须按标题文字过滤，否则会定位到版本介绍 */
-  { k: 'desc', nm: '游戏介绍', sel: ['#drawerBody .block'], txt: '游戏介绍' },
   { k: 'rel', nm: '同分类', sel: ['#relSlot'] },
   /* ★ v10.28：优先指向正文里的三专区区块（`#dlSlot`）—— 它在文档流里，滚动定位准确；
      `#dlStrip` 现在躺在 sticky 的 `.d-dock` 里（视觉位置恒在视口底部），
@@ -6689,10 +6802,17 @@ function railSync() {
     const el = railTarget(spec);
     if (el) found.push({ nm: spec.nm, el });
   }
-  /* 按正文顺序排（用视口内 top 相对抽屉顶的距离）—— 回填是乱序的，
-     不能信任 D_RAIL 里的书写顺序。 */
-  const base = dr.getBoundingClientRect().top;
-  found.sort((a, b) => (a.el.getBoundingClientRect().top - base) - (b.el.getBoundingClientRect().top - base));
+  /* ★ v10.29 修：排序键从「视口 rect.top」换成**文档顺序**。
+     为什么必须换：`.d-dock` 里的 `#dlStrip` 是 `position:sticky`，它的
+     `getBoundingClientRect().top` 反映的是「此刻吸在视口底部」的位置（≈ 视口高度），
+     于是它只比「首屏之内」的元素靠后、比所有「首屏之外」的元素靠前。
+     XD 源的游戏三专区没有内容 ⇒ 兜底命中 `#dlStrip` ⇒ 「下载」被排到第 3 位，
+     而正文里它在倒数第 3。定位条顺序与正文不一致，用户会读成「这条还是旧的」。
+     实测样本：博德之门3（xd-419），条上顺序曾是
+     评分参数 → 游戏介绍 → **下载** → 游戏预览 → 配置要求 → …
+     `compareDocumentPosition` 直接给文档顺序，不受 sticky / fixed / transform 影响，
+     也正好就是注释里那句「排列顺序按正文顺序」的原意。 */
+  found.sort((a, b) => (a.el.compareDocumentPosition(b.el) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
   if (!found.length) {
     /* 一个分区都没渲染出来（比如详情抓取失败只剩错误页）→ 整条收起，不留空壳 */
     rail.hidden = true; rail.innerHTML = ''; dRailItems = [];

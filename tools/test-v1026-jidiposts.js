@@ -196,15 +196,31 @@ ok(/engine: data\.engine \|\| null/.test(srv), '★ server.js 透传 engine');
  * ============================================================ */
 console.log('\n=== ⑥ 前端下载弹窗的专区展示 ===');
 const idx = read('public/index.html');
-ok(/function dlBlock\(o\)/.test(idx), '★ 有 dlBlock() 画一个可折叠专区（本体 / mod / 修改器共用同一骨架）');
+ok(/function dlBlock\(o\)/.test(idx), '★ 有 dlBlock() 画「当前分区」的面板（本体 / mod / 修改器共用同一骨架）');
+/* ★ v10.29：工具条与正文共用同一份分区清单（两处各算一遍必然漂移） */
+ok(/function dlTabList\(v\)/.test(idx), '★ 有 dlTabList() —— 分区的唯一真源（签与面板都从它取数）');
 ok(/const secs = jiSecs\.length \? jiSecs/.test(idx),
   '★ 专区清单以服务端 sections 为权威口径（拿不到才把条目当成「本体」一块）');
 ok(/ji\.d\.sections\.filter\(\(s\) => s && s\.key\)/.test(idx), 'openDownload 从 sections 分区');
-ok(/\.dl-secs\{[^}]*display:flex/.test(idx), '★ .dl-secs 有样式（只加 JS 不加 CSS 会挤成一行）');
+/* ★ v10.29：`.dl-secs`（三专区纵向叠放）与 `.dl-tg`（折叠开关）随 tab 化一起删了 ——
+   折叠态下其余专区仍以自己的标题行留在页面上，用户看到的就是
+   「本体下面还压着 Mod / 修改器」，正是他要求「就分开显示」要消掉的东西。
+   这里改成**反向**断言：它们不许再回来（回来了说明有人把「一次只画一个分区」改回了叠放）。
+   ⚠️ 必须逐行匹配「规则行」，不能 `IDX.includes('.dl-secs')` ——
+      解释「已删除」的注释里就会出现这个串，字符串判据会当场误报（v10.29 实测踩到）。 */
+const deadDlCss = idx.split(/\r?\n/).filter((l) => /^\s*\.(dl-tg|dl-secs)\s*[>{]/.test(l));
+ok(deadDlCss.length === 0, '★ v10.29 已删 .dl-secs / .dl-tg 的规则，且不许回来',
+  deadDlCss.length ? deadDlCss.slice(0, 3).join(' | ') : '0 条规则');
 ok(/\.dl-sec>\.sh\{/.test(idx), '.dl-sec 的小标题行有样式');
 ok(/\.dl-sec>\.sh>\.c\{/.test(idx), '专区条数徽标 .c 有样式');
 ok(/\.dl-sec>\.sh>\.go\{/.test(idx), '去源站专区的出口 .go 有样式');
-ok(/' 帖'/.test(idx) && /个地址/.test(idx),
+ok(/\.dl-sec>\.sh>\.go\{[^}]*margin-left:auto/.test(idx),
+  '★ .go 靠右（原来把它推到右端的是已删的 .dl-tg，不补 auto 出口会缩在条数徽标右边）');
+/* ★ v10.29：判据收窄到**那条赋值语句**。原先写 `/' 帖'/.test(idx)` 是个恒真式 ——
+   全页还有别处写着「帖」（开放弹窗的副标题 `'…每页 ' + DF_PAGE + ' 帖'`），
+   于是把专区徽标的 `帖` 改回 `条` 这条**照样是绿的**（实测反证没变红才发现）。
+   判据必须打在承载该语义的那一处。 */
+ok(/countLabel:\s*\(cur\.count \|\| cur\.items\.length\) \+ ' 帖'/.test(idx) && /个地址/.test(idx),
   '★ 徽标写「N 帖」，元信息另写「M 个地址」—— 帖 ≠ 网盘地址，混用会让数字自相矛盾');
 /* ★ v10.27 起前端**确实**自己排一份序（用户要即时切「最热 / 最近发布」，等一次网络往返会卡）。
    v10.26 那条「前端不许实现排序」的禁令随之作废，但不能就这么放开 ——
@@ -220,8 +236,8 @@ ok(fs.existsSync(path.join(ROOT, 'tools/test-v1027-dlpop.js'))
 for (const page of ['public/emulator.html', 'public/unpack.html']) {
   let t = '';
   try { t = read(page); } catch (e) { t = ''; }
-  ok(/function dlBlock\(o\)/.test(t) && /\.dl-secs\{/.test(t),
-    '★ ' + page + ' 已重建并带上分块逻辑（改了主源不重建派生页，那边就没有且不报错）');
+  ok(/function dlBlock\(o\)/.test(t) && /function dlTabList\(/.test(t),
+    '★ ' + page + ' 已重建并带上分区 tab 逻辑（改了主源不重建派生页，那边就没有且不报错）');
 }
 
 /* ============================================================

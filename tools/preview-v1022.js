@@ -57,6 +57,14 @@ const POP_STATE = () => {
       n: g.querySelector('.h .n').textContent.trim(),
       rows: g.querySelectorAll('.dl-it').length,
     })),
+    /* ★ v10.29：弹窗里的「源分组」升级成了**分区签**。
+       v10.27/10.28 是「XD 一组 + 机地一组」同屏并列（`.dl-grp`）；
+       v10.29 按用户口径「分开显示，而不是本体下面还有 Mod 或者修改器」改成 tab ——
+       XD 与机地三个专区都变成平级签，**一次只渲一块**（实测签文字「XDGAME 盘口 6」「本体 2」）。
+       ⇒ 「双源都取到没有」从此要看签（`.dl-an`），只数 `.dl-grp` 会误判成「源丢了」。
+       （`.dl-grp` 并未废弃：权限受限路径 `dlBlocked()` 仍用它，所以下面 groups 保留。） */
+    tabs: [...document.querySelectorAll('#dlBody .dl-an')]
+      .map((x) => (x.textContent || '').replace(/\s+/g, ' ').trim()),
     links: [...document.querySelectorAll('#dlBody .dl-it a.act')].map((a) => a.getAttribute('href')).filter(Boolean),
     /* ★ v10.22：源站要求登录/权限时，整组会渲染成 .dl-blocked 说明块 + 一个去源站的出口。
        这两项必须可观测 —— 否则「弹窗里一个链接都没有」看起来和「抓取坏了」一模一样。 */
@@ -273,11 +281,20 @@ const POP_STATE = () => {
   chk('★★ 从抽屉里点开的弹窗压得住抽屉（层级 + 命中判定双证据）',
     pop2.hitInside && pop2.popZ > pop2.drawerZ,
     `命中 ${pop2.hitDesc} ｜ z=${pop2.popZ} > drawer=${pop2.drawerZ}`);
-  chk('★ 一组来自 XD、一组来自机地（双源都取到）',
-    pop2.groups.length >= 2, pop2.groups.map((g) => g.head + '（' + g.n + '）').join(' ｜ '));
-  const xdG = pop2.groups.find((g) => /XDGAME/.test(g.head));
-  chk('★★ XD 组解析出多个盘口（用户口径「大部分 XD 都是有多个下载链接」）',
-    !!xdG && /^(6|[3-9]) \/ [3-9]/.test(xdG.n), xdG ? xdG.n : '无 XD 组');
+  /* ★★ 2026-09-21 预期变更同步（原为：`pop2.groups.length >= 2` + 找 `.dl-grp` 里的 XDGAME 组）
+     判据 = 把三页回退到 HEAD 再跑本套件 → 39/5；当前版 37/7，多出的 2 条正在这里。
+     根因：v10.29 把下载弹窗的多分区改成 **tab**（用户口径「分开显示，而不是本体下面
+     还有 Mod 或者修改器」）⇒ 源分组层被分区签取代，XD 不再是同屏的一组而是**一个平级签**。
+     换成的口径不比旧的弱：旧断言只要凑够两组就算过（哪怕 XD 那组是空的、或盘口数为 0），
+     新断言还额外要求 XD 那一签**真的标出盘口数 ≥ 3**。
+     反证锚点：把 `dlTabList()` 里 XD 那一项的 name 改掉（不再写「盘口」）→ 两条都会红。 */
+  const xdTab = pop2.tabs.find((t) => /XDGAME/.test(t)) || '';
+  const jidiTab = pop2.tabs.find((t) => /本体|Mod|修改器/.test(t)) || '';
+  chk('★ 双源都在（XDGAME 与机地各自占一个分区签）',
+    !!xdTab && !!jidiTab, pop2.tabs.join(' ｜ ') || '无分区签');
+  const xdM = xdTab.match(/XDGAME\s*盘口\s*(\d+)/);
+  chk('★★ XDGAME 那一签标出的盘口数 ≥ 3（用户口径「大部分 XD 都是有多个下载链接」）',
+    !!xdM && Number(xdM[1]) >= 3, xdTab || '无 XD 签');
   chk('★ 完整标题来自源站（不是库里的短名）',
     /妈妈，我真的在学外语/.test(pop2.title), pop2.title);
   chk('★ 展示版本串（Build.…／容量／语言）', /Build\./.test(pop2.sub), pop2.sub.slice(0, 64));
@@ -333,7 +350,11 @@ const POP_STATE = () => {
     const box = pop.querySelector('.dlpop-box');
     const r = box.getBoundingClientRect();
     const hit = document.elementFromPoint(Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2));
-    const grp = document.querySelector('#dlBody .dl-grp .l');
+    /* ★ v10.29：行容器从 `.dl-grp .l`（源分组）换成 `.dl-sec > .l`（当前分区）。
+       两者都是「一行一帖」的容器，量列数的意图不变；但选择器不跟着换会量不到节点
+       → 返回 0 列，看起来像「窄屏被压成 0 列」的假红（本轮实测正是这条变红）。
+       `.dl-grp` 那条保留作兜底：权限受限路径 `dlBlocked()` 仍用它。 */
+    const grp = document.querySelector('#dlBody .dl-sec > .l') || document.querySelector('#dlBody .dl-grp .l');
     return {
       hidden: pop.hidden,
       w: Math.round(r.width), h: Math.round(r.height),

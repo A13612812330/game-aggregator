@@ -99,60 +99,89 @@ async function until(p, fn, ms = 15000, step = 250) {
     !!(st.main && st.mf && st.mo && st.main.top === st.mf.top && st.mf.top === st.mo.top && st.drawerOverflowX <= 0),
     `tops=${st.main && st.main.top}/${st.mf && st.mf.top}/${st.mo && st.mo.top} overflowX=${st.drawerOverflowX}`);
 
-  /* ---- 点击「修改器」→ 弹窗铺列表 ---- */
-  await p.evaluate(() => document.querySelector('#dlStrip .ds-mf').click());
-  await until(p, () => {
-    const b = document.getElementById('dlBody');
-    return b && !b.querySelector('.dlpop-load') && b.textContent.trim().length > 0;
-  }, 12000);
-  const mfPop = await p.evaluate(() => {
+  /* ---- 点击「修改器」→ 三专区弹窗，且必须自动切到「修改器」那一块 ----
+     ★★ 2026-09-18 既有假红判定记录（这 3 条原为 ⑧⑨⑪，在**本次详情页改版前就红**）：
+        判据 = 把 public/index.html 回退到 HEAD 再跑同一套件 → 同样 9/12，
+        报错详情**逐字相同**（{"open":false,"title":"赛博朋克2077 · 下载资源"} / rows=0）。
+        根因是 v10.28 起 `.ds-mf` / `.ds-mo` 的落点变了：
+          旧（本套件按它写的）：openModList → 标题拼 kind 名、行类 `.d-dl-it`
+          新：openDlSecPop → 标题固定「<游戏名> · 下载资源」、行类 `.df-list .dl-it`，
+                            「点的是哪个专区」体现在 `.df-tab.on` 上
+        ⇒ 标题断言与行类选择器都已过时，属**假红**而非回归。
+     顺带修掉一半真相：`open:false` 是竞态 —— `openFullPop` 走 requestAnimationFrame
+     才加 `.on`，而旧的 until 条件（`#dlBody` 文本非空）在 loading 占位符上就已成立，
+     于是抢在 rAF 之前读到了 classList。现在先显式等 `.on`。 */
+  const openSecPop = async (sel) => {
+    await p.evaluate((s) => document.querySelector(s).click(), sel);
+    await until(p, () => {
+      const pop = document.getElementById('dlPop');
+      return !!(pop && !pop.hidden && pop.classList.contains('on'));
+    }, 8000);
+    await until(p, () => {
+      const b = document.getElementById('dlBody');
+      return !!(b && b.querySelector('.df-list .dl-it'));
+    }, 12000);
+  };
+  /* 快照按**当前真实结构**取：.df-tabs 是专区切换器，.df-list .dl-it 是帖子行 */
+  const snapSecPop = () => p.evaluate(() => {
     const pop = document.getElementById('dlPop');
     const b = document.getElementById('dlBody');
-    const rows = b.querySelectorAll('.d-dl-it');
+    const onTab = b.querySelector('.df-tab.on');
+    const rows = b.querySelectorAll('.df-list .dl-it');
     const r0 = rows[0] ? rows[0].getBoundingClientRect() : null;
     return {
       open: !pop.hidden && pop.classList.contains('on'),
       title: document.getElementById('dlTitle').textContent,
+      sub: document.getElementById('dlSub').textContent,
+      onTab: onTab ? (onTab.textContent || '').replace(/\s+/g, ' ').trim() : '',
+      tabs: [...b.querySelectorAll('.df-tab')].map((x) => (x.textContent || '').replace(/\s+/g, ' ').trim()),
       rows: rows.length,
       rowVis: !!(r0 && r0.width > 0 && r0.height > 0),
-      first: rows[0] ? (rows[0].textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60) : '',
-      note: (b.querySelector('.dl-note') || {}).textContent || '',
+      first: r0 ? (rows[0].textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60) : '',
       overflow: b.scrollWidth - b.clientWidth,
     };
   });
-  chk('⑧ 点「修改器」→ 弹窗打开且标题含「修改器」', mfPop.open && /修改器/.test(mfPop.title), JSON.stringify({ open: mfPop.open, title: mfPop.title }));
+
+  await openSecPop('#dlStrip .ds-mf');
+  const mfPop = await snapSecPop();
+  chk('⑧ 点「修改器」→ 弹窗打开、标题为「<游戏名> · 下载资源」',
+    mfPop.open && /下载资源/.test(mfPop.title), JSON.stringify({ open: mfPop.open, title: mfPop.title }));
+  chk('⑧b 副标题写明三专区（本体 / Mod / 修改器）',
+    /本体\s*\/\s*Mod\s*\/\s*修改器/.test(mfPop.sub), mfPop.sub);
+  chk('⑧c ★ 自动切到刚点的「修改器」那一块（不是默认的第一个 tab）',
+    /修改器/.test(mfPop.onTab), JSON.stringify({ tabs: mfPop.tabs, onTab: mfPop.onTab }));
   chk('⑨ 弹窗里真有帖子行（条数>0 且首行真占版面）', mfPop.rows > 0 && mfPop.rowVis, `rows=${mfPop.rows} rowVis=${mfPop.rowVis} first=${mfPop.first}`);
   chk('⑩ 弹窗正文无横向溢出', mfPop.overflow <= 0, `overflow=${mfPop.overflow}`);
 
   await p.evaluate(() => document.querySelector('#dlPop [data-dl="close"]').click());
   await sleep(400);
 
-  /* ---- 点击「Mod」→ 弹窗铺列表 ---- */
-  await p.evaluate(() => document.querySelector('#dlStrip .ds-mo').click());
-  await until(p, () => {
-    const b = document.getElementById('dlBody');
-    return b && !b.querySelector('.dlpop-load') && b.textContent.trim().length > 0;
-  }, 12000);
-  const moPop = await p.evaluate(() => ({
-    open: !document.getElementById('dlPop').hidden,
-    title: document.getElementById('dlTitle').textContent,
-    rows: document.getElementById('dlBody').querySelectorAll('.d-dl-it').length,
-    first: (document.querySelector('#dlBody .d-dl-it') || {}).textContent || '',
-  }));
-  chk('⑪ 点「Mod」→ 弹窗打开、标题含「Mod」、行数>0', moPop.open && /Mod/.test(moPop.title) && moPop.rows > 0, JSON.stringify({ open: moPop.open, title: moPop.title, rows: moPop.rows }));
+  /* ---- 点击「Mod」→ 同一个弹窗，切到「mod」那一块 ---- */
+  await openSecPop('#dlStrip .ds-mo');
+  const moPop = await snapSecPop();
+  chk('⑪ 点「Mod」→ 弹窗打开、标题为「<游戏名> · 下载资源」',
+    moPop.open && /下载资源/.test(moPop.title), JSON.stringify({ open: moPop.open, title: moPop.title }));
+  chk('⑪b ★ 切到「mod」块，且与点「修改器」的结果不同（证明落点跟着点击走）',
+    /^mod/i.test(moPop.onTab) && moPop.onTab !== mfPop.onTab,
+    JSON.stringify({ modOnTab: moPop.onTab, mfOnTab: mfPop.onTab }));
+  chk('⑪c 行数>0 且首行真占版面', moPop.rows > 0 && moPop.rowVis, `rows=${moPop.rows} rowVis=${moPop.rowVis}`);
 
   await p.evaluate(() => document.querySelector('#dlPop [data-dl="close"]').click());
   await sleep(400);
 
-  /* ---- 点击「下载本体」→ 原有弹窗链路不能被破坏 ---- */
+  /* ---- 点击「下载本体」→ 独立链路不能被破坏，也不能被三专区弹窗顶替 ---- */
   await p.evaluate(() => document.getElementById('dlBtn').click());
   await sleep(900);
   const dlOpen = await p.evaluate(() => ({
     open: !document.getElementById('dlPop').hidden,
     title: document.getElementById('dlTitle').textContent,
     body: document.getElementById('dlBody').textContent.slice(0, 40),
+    rows: document.querySelectorAll('#dlBody .dl-it').length,
+    tabs: document.querySelectorAll('#dlBody .df-tab').length,
   }));
-  chk('⑫ 点「下载本体」→ 弹窗打开（未破坏 v10.22 链路）', dlOpen.open, JSON.stringify(dlOpen));
+  chk('⑫ 点「下载本体」→ 弹窗打开、标题不是「下载资源」、且不是三专区弹窗',
+    dlOpen.open && !/下载资源/.test(dlOpen.title) && dlOpen.tabs === 0,
+    JSON.stringify({ open: dlOpen.open, title: dlOpen.title, tabs: dlOpen.tabs, rows: dlOpen.rows }));
 
   /* 等解析完成再截图（本体要跟随 302，XD 约 3-8 秒） */
   await until(p, () => {

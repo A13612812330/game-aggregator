@@ -87,7 +87,11 @@ async function settle(p, ms = 3000) {
     `rail.left=${geo.box.l} drawer.left=${geo.drawer.l}`);
   chk('④ 竖直居中（条中心 ≈ 视口中心 ± 6px）', Math.abs((geo.box.top + geo.box.h / 2) - 1000 / 2) <= 6,
     `条中心 ${geo.box.top + geo.box.h / 2} vs 500`);
-  chk('⑤ 收录 8 项且不重复', geo.labels.length === 8 && new Set(geo.labels).size === 8,
+  /* ★ v10.29：8 → 9 项（补「评分参数」，用户反馈「右侧悬浮定位条好像没更新」的根因）。
+     写成 `>= 9` + 不重复，而不是 `=== 9`：分区数是**随数据变化**的
+     （手机配置 / 修改器 / 云存档都可能没有内容），钉死等号会在别的样本上假红。 */
+  chk('⑤ 收录 ≥9 项且不重复（v10.28 是 8 项，本轮补了「评分参数」）',
+    geo.labels.length >= 9 && new Set(geo.labels).size === geo.labels.length,
     `${geo.labels.length} 项: ${geo.labels.join(' / ')}`);
   chk('⑥ 序号从 1 连续到 N', geo.nums.join(',') === geo.labels.map((_, i) => i + 1).join(','), geo.nums.join(','));
   chk('⑦ 非悬停态标签是收起的（宽度 0，不长期遮正文）', geo.tagLabelW <= 1, `label w=${geo.tagLabelW}`);
@@ -110,6 +114,10 @@ async function settle(p, ms = 3000) {
   const trace = [];
   for (let i = 0; i < n; i++) {
     await p.evaluate((k) => document.querySelectorAll('#dRail .dr-it')[k].click(), i);
+    /* ★ 点击落点是**两趟**的（见 index.html 里那段注释：顶图 sticky 收窄 188px，
+       一趟算不准）。第二趟在 460ms 后发出，所以这里必须等过它再采样 ——
+       否则会在两趟之间取值，判据时对时错（首版没等，落点序列来回抖）。 */
+    await sleep(900);
     const st = await settle(p);
     const on = await p.evaluate(() => {
       const items = [...document.querySelectorAll('#dRail .dr-it')];
@@ -123,16 +131,30 @@ async function settle(p, ms = 3000) {
   /* ★ 断言必须容忍「滚动被夹住」：定位条最后几项常常都挤在最后一屏里，
      点它们只能滚到 scrollHeight - clientHeight（实测艾尔登法环的
      同分类 + 下载 都落在 2840）—— 那时高亮统一归到最后一项是**正确**行为。
-     所以只对「能真正顶到 90px 判据线」的前 n-2 项要求高亮严格等于被点项。 */
+     ★★ v10.29 再加一类必须容忍的情况：**同一行的两块**。
+     修改器与云存档现在并排在 `.d-pair` 里（用户口径「同行」），它们的
+     `getBoundingClientRect().top` **完全相同** ⇒ 落点也完全相同 ⇒
+     无论高亮哪一个，另一个的「点击项 == 高亮项」都不成立。
+     这是版式决定的，不是顺序错位。所以：先把「落点与邻居相同」的项挑出来，
+     只对**落点唯一**的项要求高亮严格等于被点项；并单独钉住「歧义项恰好是
+     修改器 / 云存档这一对」——否则这条放松会变成万能挡箭牌。 */
   const lastIdx = n - 1;
-  const strict = trace.slice(0, n - 2);
-  chk('⑨ 前 N-2 项点击后高亮严格落在被点项上（顺序不错位）',
-    strict.every((t) => t.on === t.i), trace.map((t) => `${t.i + 1}→${t.on + 1}`).join(' '));
+  const landingCount = trace.reduce((m, t) => (m[t.st] = (m[t.st] || 0) + 1, m), {});
+  const ambiguous = trace.filter((t) => landingCount[t.st] > 1).map((t) => t.i);
+  const strict = trace.slice(0, n - 2).filter((t) => landingCount[t.st] === 1);
+  console.log('  同落点（版式上并排 / 被底部夹住）的项：' +
+    (ambiguous.length ? ambiguous.map((i) => '#' + (i + 1) + ' ' + trace[i].label).join(', ') : '（无）'));
+  chk('⑨ 前 N-2 项中**落点唯一**的那些，点击后高亮严格落在被点项上（顺序不错位）',
+    strict.length > 0 && strict.every((t) => t.on === t.i),
+    trace.map((t) => `${t.i + 1}→${t.on + 1}${landingCount[t.st] > 1 ? '(同落点)' : ''}`).join(' '));
+  chk('⑨c 落点歧义只可能出现在**同一行**的两块之间（当前样本 = 修改器 + 云存档）',
+    ambiguous.length === 0 || ambiguous.map((i) => trace[i].label).sort().join('+') === '云存档+修改器',
+    ambiguous.map((i) => trace[i].label).join('+') || '（无歧义项）');
   chk('⑨b 最后一项点击后高亮落在最后一项（滚到底兜底生效）',
     trace[lastIdx].on === lastIdx, `${lastIdx + 1}→${trace[lastIdx].on + 1}`);
   const landings = trace.map((t) => t.st);
   const uniq = new Set(landings).size;
-  chk('⑩ 落点非递减 + 至少 n-1 个互不相同的落点（顺序与正文一致，无整体错位）',
+  chk('⑩ 落点非递减 + 互不相同的落点数 ≥ n-1（顺序与正文一致，无整体错位）',
     landings.every((v, i) => i === 0 || v >= landings[i - 1]) && uniq >= n - 1 && landings[0] < landings[lastIdx],
     `落点 ${landings.join(' < ')} ｜ 去重 ${uniq}/${n}`);
   chk('⑪ 第 1 项落在首屏之内（第一个有内容的分区不该在第二屏之后）',

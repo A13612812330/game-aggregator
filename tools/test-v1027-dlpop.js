@@ -175,10 +175,15 @@ ok(F.dlWhen(Date.now() - 3600e3).includes('小时前') && /月\d+日/.test(F.dlW
  *  ④ 接线、样式、死代码
  * ============================================================ */
 console.log('\n=== ④ 接线与样式 ===');
-/* 事件委托：四个开关都必须走 document 级委托（#dlBody 每次 innerHTML 重建） */
-['data-dl-go', 'data-dl-sort', 'data-dl-filt', 'data-dl-sec', 'data-dl-all'].forEach((a) => {
+/* 事件委托：三个开关都必须走 document 级委托（#dlBody 每次 innerHTML 重建）
+   ★ v10.29：'data-dl-sec'（折叠 / 展开专区）随 tab 化一起删了 ——
+     现在点签就是切分区（走 data-dl-go），没有「折叠着但标题仍留在页面上」的中间态。 */
+['data-dl-go', 'data-dl-sort', 'data-dl-filt', 'data-dl-all'].forEach((a) => {
   ok(IDX.includes("closest('[" + a + "]')"), '★ ' + a + ' 走了事件委托（直接绑在按钮上会被 innerHTML 重建冲掉）');
 });
+ok(!IDX.includes("closest('[data-dl-sec]')"),
+  '★ 折叠开关 data-dl-sec 的委托已删（留一个永远命不中的分支，比删掉更容易误导下一个人）');
+ok(/function dlGoTab\(/.test(IDX), '★ data-dl-go 现在走 dlGoTab()（切分区，而不是展开折叠）');
 ok(/function paintDownload\(\)/.test(IDX) && /function dlView = null|let dlView = null/.test(IDX),
   '★ 渲染只有一个出口 paintDownload()，状态只有一份 dlView');
 ok(/dlView = null;/.test(IDX) && /dlView = null/.test(IDX), '关窗 / 无数据时把状态清掉（否则上一款游戏的选择会串到下一款）');
@@ -188,14 +193,23 @@ ok(!/const DL_SEC_CAP/.test(IDX) && !/function dlHost/.test(IDX),
   '★ 被替换掉的 DL_SEC_CAP / dlHost 已清（死代码会让下一个人以为还有另一条路）');
 
 const CSS = [
-  ['.dl-bar{', '顶部工具条'], ['.dl-an{', '专区锚点'], ['.dl-tab,.dl-chip{', '排序与筛选项'],
-  ['.dl-tg{', '折叠开关'], ['.dl-more{', '展开全部'], ['.dl-sec.off>.sh{', '折叠态标题行收边距'],
+  ['.dl-bar{', '顶部工具条'], ['.dl-an{', '分区签（tab）'], ['.dl-tab,.dl-chip{', '排序与筛选项'],
+  ['.dl-more{', '展开全部'],
   ['.dl-it .lk{', '盘口按钮'], ['.dl-it .acts{', '盘口按钮组'], ['.dl-it .mt{', '副信息行'],
-  ['.dl-it .mt a{', '源帖链接'],
+  ['.dl-it .mt a{', '源帖链接'], ['.dl-sec>.sh>.go{', '去源站专区的出口'],
 ];
 for (const [sel, name] of CSS) {
   ok(IDX.includes(sel), '★ ' + name + ' 有样式 ' + sel + '（只写 JS 不加 CSS，控件会渲染成裸文字而存在性断言照样绿）');
 }
+/* ★ v10.29：折叠态的两条样式（`.dl-tg` 开关 / `.dl-sec.off` 的收边距）随 tab 化删除。
+   ⚠️ 反向断言**必须逐行匹配「以该选择器开头的规则行」**，不能直接 `IDX.includes('.dl-sec.off>')` ——
+      本次实测就栽在这里：解释「已删除」的那段注释里写了 `.dl-sec.off>.sh` 字样，
+      字符串判据当场命中，一条**改对了**的改动被判成红（恒假型假红）。
+      判据要打在承载该语义的东西上：这里是「有没有这条 CSS 规则」，不是「这段文字有没有出现过」。 */
+const deadCss = IDX.split(/\r?\n/).filter((l) => /^\s*\.(dl-tg|dl-secs|dl-sec\.off|dl-grp\.off)\s*[>{]/.test(l));
+ok(deadCss.length === 0,
+  '★ 折叠态的 .dl-tg / .dl-secs / .dl-sec.off 规则已清（留着会让人以为「还有折叠这条路能走」）',
+  deadCss.length ? deadCss.slice(0, 3).join(' | ') : '0 条规则');
 ok(/-webkit-line-clamp:2/.test(IDX) && /\.dl-it \.tx b\{[^}]*display:-webkit-box/.test(IDX),
   '★★ 标题是 2 行折行（改前 `.tx b` 是 nowrap+ellipsis，6 条标题全被截成「【亲测可玩】…」）');
 ok(/width:min\(760px,100%\)/.test(IDX), '★ 弹窗加宽到 760px（改前 580px，长标题没地方落脚）');
