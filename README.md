@@ -33,7 +33,8 @@ v10.27 的折叠叠放正是用户看到的「本体下面还压着 Mod / 修改
 （与整行版 `dFullBtn` **共用同一套 token + 事件委托**，弹窗侧一行都不用改），
 实测按钮挂在 `h4` 卡头内、右缘间距 **0px**、文案带真实总数（「全部 10→」）。
 
-**验证**：静态 **28 套 / 1944 条 / 0 失败**（新增 `tools/test-v1029-detail.js` **118 条**，已登记 `SUITES`）；
+**验证**：静态 **29 套 / 1951 条 / 0 失败**（新增 `tools/test-v1029-detail.js` **118 条** +
+`tools/test-shared-destructure.js` **7 条**，均已登记 `SUITES`）；
 反证 `_counterproof-v1029.js` **15 条** + `_counterproof-v1026.js` **6 条**全部「打坏即变红」；
 实拍 `preview-v1029.js` **57 / 57**、`preview-v1026` **21 / 21**、`preview-v1027` **40 / 40**、
 `preview-v1028` **43 / 43**、`test-v1025-rail` **17 / 17**、`more` **11 / 11**、
@@ -45,7 +46,17 @@ v10.27 的折叠叠放正是用户看到的「本体下面还压着 Mod / 修改
 变成 `openDlSecPop`，标题与行类都换了）。顺势把断言换成**有区分度**的
 「点哪个专区，`.df-tab.on` 就是哪个」（把 `sec: key` 写成 `sec: ''` 就变红，已反证）。
 
-⚠️ **发布未做**：线上仍是 **v10.28**，发布需**逐轮授权**。
+**★ 已发布（2026-09-21 下午）**：用户反馈「推送更新，我发现还是没变」⇒ 授权后覆盖 LIVE
+`wbapp_047aLTlMY7YdDmtVpp3BYa`（appId ↔ 域名由 `tools/apps-map.js` 读平台日志**独立佐证**），
+sandbox `445143a7b300` **复用成功**、**链接未变** `https://gamehub-agg-v4.app.workbuddy.host/`。
+线上三页 md5 **逐字节一致**（index `91ff99ba16` / emulator `a65d857a36` / unpack `d53816eac9`），
+`verify-online.js` **27/27**。改前线上 md5 `8817fbd695`（348,220B）**连一个 v10.29 特征都没有** ——
+「没变」的直接原因就是**没发布**（五个已知域名实测均非 v10.29）。
+
+**顺带修掉一个连续 6 日的既存故障**：机地源搜索恒 `normDate is not defined`
+（`fetchers/jidi.js` L7 漏解构，L47/265/288 却在调）⇒ 补一行 + 新增
+`tools/test-shared-destructure.js`（导出清单从 `shared.js` 源码求值，扫 19 个引用 shared 的文件）。
+修后实测 `jidi ok:true`。
 
 ---
 

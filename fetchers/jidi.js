@@ -4,7 +4,12 @@
  * 详情页：<script id="appState"> 内 window.APP_INITIAL_STATE JSON → topic.currentTopic
  */
 const cheerio = require('cheerio');
-const { HOST_JIDI, getHtml } = require('../shared');
+/* ★ 2026-09-21 修：原先只解构了 `{ HOST_JIDI, getHtml }`，但本文件第 47/265/288 行
+ *   都调用 `normDate(...)` —— 机地同步与机地源搜索连续 6 天抛 `normDate is not defined`
+ *   （got 0 / added 0，0.7 秒即中止）。`normDate` 早就由 shared.js 导出（L149），
+ *   只是这次「日期归一化」重构时漏了这一处导入。
+ *   防线：`tools/test-shared-destructure.js` 会扫全项目守这条，避免同类遗漏再发生。 */
+const { HOST_JIDI, getHtml, normDate } = require('../shared');
 const shotsLib = require('./shots');
 
 const GENRE_SET = new Set([

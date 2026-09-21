@@ -51,6 +51,12 @@ const MUST = [
   'eg-nav',
   /* ---- v10.24：机型兼容 / 解包统一卡片（占位块 + 图片 404 兜底） ---- */
   'covAbbr', '.emu-card .cov.ph{', 'window.covErr = covErr',
+  /* ---- v10.29：详情页三处收口 ----
+   * ⚠️ 这四条都实测「本地有 / 线上 v10.28 为 0 次」，才拿来做区分（2026-09-21 实测）：
+   *      本地 3 / 3 / 6 / 3 次   vs   线上 0 / 0 / 0 / 0 次。
+   * ★ 别把 `d-pair` 写进来：线上 v10.28 **也有 2 次**，区分不了新旧（写了等于白写）。
+   * ★ 也别只写 `df-tab`：线上 v10.28 已有 8 次（v10.28 就上了 tab）。 */
+  'galLbStep', 'compareDocumentPosition', 'd-more-hd', '评分参数',
 ];
 
 /* ★ MUST 自检：本地首页都没有的串不可能区分新旧版本，只会制造假红 */
@@ -109,7 +115,7 @@ function chk(ok, name, extra) {
 
   const html = await p.content();
   const missing = MUST.filter((k) => !html.includes(k));
-  chk(missing.length === 0, '[页面] 线上首页含全部特征串（v10.14~v10.24）', missing.length ? '缺：' + missing.join(', ') : MUST.length + ' 项齐');
+  chk(missing.length === 0, '[页面] 线上首页含全部特征串（v10.14~v10.29）', missing.length ? '缺：' + missing.join(', ') : MUST.length + ' 项齐');
   chk(LOCAL_MISSING.length === 0,
     '★ MUST 每一项在**本地首页**里都存在（本地没有的串区分不了新旧，只会假红）',
     LOCAL_MISSING.length ? '本地缺：' + LOCAL_MISSING.join(', ') : MUST.length + ' 项');

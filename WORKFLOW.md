@@ -303,6 +303,9 @@ node tools/audit-apps.js          # ★ 发布过就再跑一次：应用登记 
 
 | 项 | 结果 |
 |---|---|
+| **发布（v10.29）** | ✅ 覆盖 LIVE `wbapp_047aLTlMY7YdDmtVpp3BYa` ⇒ **同一 sandbox 复用成功**（`445143a7b300`），**链接未变** `https://gamehub-agg-v4.app.workbuddy.host/`。三页 md5 **逐字节一致**（index `91ff99ba16` / emulator `a65d857a36` / unpack `d53816eac9`）· `verify-online.js` **27/27** · 对账「与本地同版（含数据层）」 |
+| **★ 「改完没发」第 4 次复发（v10.29）** | 用户在**线上**看到旧界面来问「推送更新，我发现还是没变」。判据：改前线上 md5 `8817fbd695`（348,220B）**连一个 v10.29 特征都没有**（`评分参数`/`galLbStep`/`compareDocumentPosition`/`d-more-hd` 全 0 次），**五个已知域名实测均非 v10.29**。⇒ **GitHub 推送 ≠ 上线**，线上是**快照**，必须单独发布。★ 复核时顺手发现 `verify-online.js` 的 `MUST` **停在 v10.24**（发不发新包都会绿）⇒ 补 v10.29 独有 4 条；**别写 `d-pair`**（旧版也有 2 次）、**别只写 `df-tab`**（旧版已有 8 次） |
+| **★ 机地源搜索连续 6 日不可用（v10.29 修）** | `fetchers/jidi.js` L7 只解构 `{ HOST_JIDI, getHtml }`，而 L47/265/288 在调 `normDate` ⇒ 机地同步与机地源搜索恒 `normDate is not defined`（0.7 秒中止，连续 6 天无人发现）。补一行即修，修后实测 `jidi ok:true`。⇒ **新增 `tools/test-shared-destructure.js`**：导出清单**从 `shared.js` 源码求值**（不手抄），扫 19 个引用 shared 的文件比对「用了但没解构」；已登记 `SUITES`（总闸 28 → **29 套**） |
 | **发布（v10.28）** | ✅ 覆盖 LIVE `wbapp_047aLTlMY7YdDmtVpp3BYa` ⇒ **同一 sandbox 复用成功**（`445143a7…`），**链接未变** `https://gamehub-agg-v4.app.workbuddy.host/`。三页 md5 **逐字节一致**（`8817fbd695` / `ead2d2fb5f` / `e230eff2dd`）· 对账「与本地同版」· 线上验收 **27/27** · 实拍确认「首屏 5 台 + 弹窗 9 台 + 本站实测 1 条 + 逐条参数 12 条」 |
 | **★ 验收工具因语义变更误报（v10.28）** | `verify-online.js` 的「详情页机型清单 ≥ 9 台」在 v10.28 后**必然红** —— 首屏改成只露 5 台（`DL_DEV_SHOW`），全量进弹窗。**这是预期变更不是退化**，但它守的意图（「看到的是并集全量，不是上游摘要 6 台上限」）必须保留 ⇒ 改成三段：① 首屏 == 5 ② 入口文案「查看全部 N 台」N ≥ 9 ③ **真点开弹窗**数行 ≥ 9（**只有 ③ 等价旧口径**）。改完 25/25 → **27/27** |
 | **发布（v10.24）** | ✅ 用户选「覆盖当前 LIVE」`wbapp_047aLTlMY7YdDmtVpp3BYa` ⇒ **同一 sandbox 复用成功**（`445143a7…`），**链接未变** `https://gamehub-agg-v4.app.workbuddy.host/`。三页 md5 逐字节一致 · 对账「与本地同版（含数据层）」· 线上验收 **25/25** · 线上站实拍 **20/20**（机型兼容 **21/24 真出图**） |

@@ -54,7 +54,8 @@
 > 新增 `dMoreHd()` 卡片右上角「更多」，与整行版 `dFullBtn` **共用 token + 事件委托**
 > （实测挂在 `h4` 卡头内、右缘间距 **0px**、「全部 10→」）。
 >
-> **验证**：静态 **28 套 / 1944 条 / 0 失败**（新增 `test-v1029-detail.js` **118 条**，已登记 `SUITES`）；
+> **验证**：静态 **29 套 / 1951 条 / 0 失败**（新增 `test-v1029-detail.js` **118 条** +
+> `test-shared-destructure.js` **7 条**，均已登记 `SUITES`）；
 > 反证 **15 + 6 条全部「打坏即变红」**；实拍 `preview-v1029` **57/57** · `preview-v1026` 21/21 ·
 > `preview-v1027` 40/40 · `preview-v1028` 43/43 · `rail` 17/17 · `more` 11/11 · `gallery` 21/21 ·
 > `merge` 13/13 · `dlstrip` 16/16。
@@ -66,7 +67,19 @@
 > ★ 另修掉 3 条**预期变更引起的假红**（`preview-v1022` 的 `.dl-grp` 双源分组 → 分区签，
 > 40/4；剩 4 条为改动前既有，另排一轮清）。
 >
-> ⚠️ **发布未做**：线上仍是 **v10.28**，发布需**逐轮授权**。
+> **★ 已发布（2026-09-21 下午）**：用户反馈「推送更新，我发现还是没变」⇒ 授权后
+> 覆盖 LIVE `wbapp_047aLTlMY7YdDmtVpp3BYa`（appId ↔ 域名由 **`tools/apps-map.js` 读平台日志
+> 独立佐证**，不靠记忆），sandbox `445143a7b300` **复用成功**、**链接未变**
+> `https://gamehub-agg-v4.app.workbuddy.host/`。线上三页 md5 **逐字节一致**
+> （index `91ff99ba16` / emulator `a65d857a36` / unpack `d53816eac9`），
+> `verify-online.js` **27/27**。
+> ★ 改前线上 md5 `8817fbd695`（348,220B）连一个 v10.29 特征都没有 —— 「没变」的直接原因
+> 就是**没发布**（五个已知域名实测均非 v10.29）。
+>
+> **顺带修掉一个连续 6 日的既存故障**：机地源搜索恒 `normDate is not defined`
+> （`fetchers/jidi.js` L7 漏解构，L47/265/288 却在调）⇒ 补一行 + 新增
+> `tools/test-shared-destructure.js`（导出清单从源码求值，扫 19 个引用 shared 的文件）。
+> 修后实测 `jidi ok:true`。
 >
 > ---
 >

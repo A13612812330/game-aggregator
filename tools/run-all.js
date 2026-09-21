@@ -52,6 +52,7 @@ const SUITES = [
   'test-covers.js',
   'test-card-parity.js',
   'test-pages-sync.js',
+  'test-shared-destructure.js',
   'test-report.js',
   'test-match-release.js',
   'test-audit-apps.js',
