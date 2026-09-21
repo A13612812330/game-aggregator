@@ -137,11 +137,18 @@ GH_TOKEN=$(gh auth token) node tools/_push-via-api.js
 **并且必须用 `git cat-file blob HEAD:<path>` 取入库字节** —— 本仓库 `core.autocrlf=true`，
 磁盘字节 ≠ 入库字节，直接读磁盘会**把错内容推上去**（API 全程 201、`git status` 还干净）。
 
-推送后同步本地跟踪引用并核对：
+推送后核对：**只认 `git ls-remote` 的 sha == 本地 HEAD**。
 
 ```bash
-node -e "const fs=require('fs'),p=require('path');require('child_process').execFileSync('git',['rev-parse','HEAD'])"
-git rev-list --left-right --count main...origin/main   # 期望 0  0
+# ★ 别用 `git rev-list --left-right --count main...origin/main`：
+#   本仓库**从未有过 remote 跟踪引用**（fetch/push 都到不了 github.com），
+#   而且本环境里 `git update-ref refs/remotes/origin/main HEAD` 是**静默 no-op**
+#   —— 退出码 0、无输出，引用根本没落盘（.git/refs/remotes/ 仍为空）。
+#   实测于 v10.30，记在 PITFALLS 〇「环境怪癖」。⇒ 判远端一律走 ls-remote。
+node -e "const {execFileSync}=require('child_process');const g=(...a)=>execFileSync('git',a,{encoding:'utf8'}).trim();const l=g('rev-parse','HEAD');const r=g('ls-remote','origin','main').split(/\s+/)[0];console.log('本地 '+l.slice(0,7)+' / 远端 '+r.slice(0,7)+' → '+(l===r?'✅ 已同步':'❌ 不一致'));"
+
+# 更省事：直接跑 report.js 的 ④ 段（它就是按上面的口径做的）
+node tools/report.js --no-net
 ```
 
 ### 步骤 8 · 收尾汇报（五项，用户要求）
