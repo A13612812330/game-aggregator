@@ -61,6 +61,7 @@ const SUITES = [
   'test-v1027-dlpop.js',
   'test-v1028-detail.js',
   'test-v1029-detail.js',
+  'test-v1030-cards.js',
 ];
 /* 刻意**不登记**的：
  *   · test-search-ui.js  —— 用 puppeteer，属第二层「浏览器实拍」，本脚本跑不了
@@ -74,9 +75,19 @@ const SUITES = [
  *   一旦语法坏了（注释里出现提前闭合序列、模板串里塞了反引号），
  *   后面所有套件都会以「找不到标记 / 断言失败」的形式集体翻红 —— 看着像几十处功能坏了，
  *   实际只有一处手误。先过语法闸，报错才能**精确到行列**。
- * 判据：退出码非零 ⇒ 直接计入 crashed，最终 process.exit(1)。 */
+ * 判据：退出码非零 ⇒ 直接计入 crashed，最终 process.exit(1)。
+ *
+ * ② check-card-rules.js —— 卡片族 CSS「全量枚举」闸（2026-09-18 v10.30 新增）。
+ *   ★ 与断言套件的分工：套件只能守住**它已知的选择器**；有人新加一条断点（如
+ *     `.skeleton .sk-th{width:112px;height:66px}`），套件照样绿，样式却已漂。
+ *   本闸反过来——先枚举 2 页实际规则体，再判「图片槽有没有定高」「卡片容器圆角有没有走变量」，
+ *   所以它能抓到「测试还不知道的那条断点」。本轮实测就是靠它揪出 3 个未知选择器
+ *   （.sm-row .go2 / .emu-card .cfg-btn / .rel-row .rel-it .why）。
+ *   ⚠️ 它维护两张**显式例外表**（.emu-card .cov 顶部横幅 92px 等），并**自检陈旧**：
+ *     表里登记、代码里已不存在的选择器也会报错，避免「例外表」退化成「静默跳过」。 */
 const PREFLIGHT = [
   { name: 'check-inline-syntax.js', args: ['public/index.html', 'public/emulator.html', 'public/unpack.html'] },
+  { name: 'check-card-rules.js', args: [] },
 ];
 
 let pass = 0, fail = 0;

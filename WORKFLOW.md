@@ -81,7 +81,7 @@ curl http://localhost:8123/api/health    # 期望 ok
 ### 步骤 5 · 跑三层防线
 
 ```bash
-# 第一层：静态（前置闸 1 个 + 27 套 / 1823 条 / 必须 0 失败）
+# 第一层：静态（前置闸 2 个 + 30 套 / 2046 条 / 必须 0 失败）
 node tools/run-all.js
 
 # 第二层：浏览器实拍（puppeteer，★ 必须加大超时 + 分批跑）
@@ -93,6 +93,10 @@ node tools/verify-online.js
 
 **新增功能必须补一层防线**（写 `tools/test-xxx.js`），
 **并且必须把新套件加进 `tools/run-all.js` 的 `SUITES`** —— 否则它永远不会被覆盖。
+
+★ **「不产断言条数、只产异常清单」的工具归 `PREFLIGHT`（前置闸），不是 `SUITES`**：
+混进 `SUITES` 会把条数汇总口径搅浑（`check-inline-syntax.js` 已定为这个规矩，
+v10.30 的 `check-card-rules.js` 照此办理）。
 
 ⚠️ 跑防线的三个已知坑：
 | 坑 | 现象 | 处理 |
@@ -211,10 +215,10 @@ node tools/audit-apps.js          # ★ 发布过就再跑一次：应用登记 
 
 | 层 | 工具 | 规模 | 特点 | 何时跑 |
 |---|---|---|---|---|
-| ⓪ 语法闸 | `tools/check-inline-syntax.js`（由 `run-all` 作**前置闸**拉起） | 3 个页面 | 抽内联脚本 `node --check`，**精确到行列** | 每次改页面 |
-| ① 静态 | `tools/run-all.js` | **27 套 / 1823 条** | 秒级、无需人盯 | 每次改完 |
-| ② 行为 | `test-emulator-page.js`（jsdom，含在 27 套内） | 119 条 | 需服务在 8123 | 每次改完 |
-| ③ 实拍 | `tools/preview-v*.js`（实测 **20** 个） | 各 30~70 条 | puppeteer，**慢且脆** | 改页面时 |
+| ⓪ 前置闸 | `check-inline-syntax.js` + **`check-card-rules.js`**（由 `run-all` 拉起） | 3 页 + 卡片族 | 语法**精确到行列**；卡片族**枚举实际规则体**（抓「测试还不知道的新断点」） | 每次改页面 |
+| ① 静态 | `tools/run-all.js` | **30 套 / 2046 条** | 秒级、无需人盯 | 每次改完 |
+| ② 行为 | `test-emulator-page.js`（jsdom，含在 30 套内） | 119 条 | 需服务在 8123 | 每次改完 |
+| ③ 实拍 | `tools/preview-v*.js`（**22** 个） | 各 30~70 条 | puppeteer，**慢且脆** | 改页面时 |
 | ③' 回归 | `test-search-ui.js` + 六个 `test-v1025-*.js` | **141 条** | puppeteer + CDP，**要人盯、须分批** | 改交互后 |
 | ④ 线上 | `tools/verify-online.js` | — | 对**线上**验收 | 仅发布后 |
 
@@ -222,6 +226,13 @@ node tools/audit-apps.js          # ★ 发布过就再跑一次：应用登记 
 一旦语法坏了（注释里出现提前闭合序列、模板串里塞了反引号），
 **后面所有套件都会集体翻红** —— 看着像几十处功能坏了，实际只有一处手误。
 先过语法闸，报错才精确到行列；且它**必须验 3 个页面**（派生页各有自己的内联块，只查主源会漏）。
+
+★ **`check-card-rules.js`（v10.30 新增）为什么也归 ⓪ 而不是 ①**：
+断言套件只能守住**它已经知道的选择器**。有人新加一条断点
+（如 `.skeleton .sk-th{width:112px;height:66px}`），套件照样全绿，样式却已经漂了。
+本闸反过来做——**先枚举 2 页实际规则体，再判合规**，所以它能抓到「测试还不知道的那条断点」；
+同时它维护两张**显式例外表**（`.emu-card .cov` 顶部横幅 92px 等）并**自检陈旧**：
+登记了但代码里已不存在的选择器也报错，避免「例外表」退化成「静默跳过」。
 
 **写断言的六条硬规矩**（全是历史教训）：
 
@@ -396,11 +407,14 @@ $NODE tools/build-emulator-page.js && $NODE tools/build-unpack-page.js
 # 重启服务 / 健康检查
 $NODE tools/restart-server.js
 
-# 全量静态防线（前置闸 1 + 27 套 1823 条）
+# 全量静态防线（前置闸 2 + 30 套 2046 条）
 $NODE tools/run-all.js
 
 # 只查内联脚本语法（报错精确到行列；默认查 index/emulator/unpack 三页）
 $NODE tools/check-inline-syntax.js
+
+# 只查卡片族 CSS 合规（图片槽不许定高 / 卡片圆角必须走变量；枚举实际规则体）
+$NODE tools/check-card-rules.js
 
 # 浏览器实拍（按需换版本号）
 $NODE tools/preview-v1020.js

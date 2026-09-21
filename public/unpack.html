@@ -21,6 +21,18 @@
     --topbar-h:60px;
     --font:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Roboto,sans-serif;
     --font-num:"DIN Alternate","Segoe UI",ui-monospace,SFMono-Regular,monospace;
+    /* ★ v10.30：卡片统一规范（一处定义，全站卡片族共用）。
+       改造前**实测**（不是读源码估的）：同一屏里缩略图比例出现 1.571 / 1.682 / 1.717 /
+       1.727 / 1.879 五种以上，圆角 7/8/9px 三种，标题有的一行截断有的两行；
+       更隐蔽的一条：`.rel-it` 写了 `flex:0 0 106px`，但 flex item 默认 `min-width:auto`
+       ⇒ 卡片被「nowrap 长标题」撑到 123.2px，**同一族的卡片宽度都不一样**。
+       现在统一为：比例 16:9、缩略图圆角 9px、卡片圆角 12px、标题固定预留两行。 */
+    --cd-r:12px;            /* 卡片圆角 */
+    --cd-th-r:9px;          /* 缩略图圆角 */
+    --cd-lh:1.4;            /* 卡片标题行高 */
+    --cd-t2:2.8em;          /* 标题「固定预留两行」的高度（= 2 × --cd-lh） */
+    --th-ar:16 / 9;         /* 缩略图统一比例 */
+    --cd-s:106px;           /* 同类游戏小卡固定宽度（配合 min-width/max-width 用，防被内容撑开） */
   }
   /* ★ v10.23：`hidden` 属性必须真的能藏住元素。
      浏览器给 `[hidden]` 的默认样式是 `display:none`，但它写在 **UA 样式表**里，
@@ -108,24 +120,26 @@
   .rk-champ .sc2 small{display:block;font-size:10px;font-weight:600;color:#9A6A20;margin-top:4px;font-family:var(--font)}
   /* #2-10 榜单大卡网格 */
   .rk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-  .rk-card{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.6);border-radius:14px;padding:10px 13px;cursor:pointer;transition:.16s;min-width:0}
+  .rk-card{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.6);border-radius:var(--cd-r);padding:10px 13px;cursor:pointer;transition:.16s;min-width:0}
   .rk-card:hover{transform:translateY(-2px);box-shadow:0 14px 32px rgba(0,0,0,.3)}
   .rk-card.on{outline:2px solid var(--c-primary);outline-offset:-2px}
   .rk-card .no{flex:none;width:24px;text-align:center;font:800 16px/1 var(--font-num);color:#B9C0D2}
   .rk-card .no.r2{color:#F59E0B}
   .rk-card .no.r3{color:#2E6BFF}
-  .rk-card .th{width:74px;height:44px;border-radius:8px;overflow:hidden;flex:none;background:#EDF0F6}
+  .rk-card .th{width:74px;height:auto;aspect-ratio:var(--th-ar);border-radius:var(--cd-th-r);overflow:hidden;flex:none;background:#EDF0F6}
   .rk-card .th img{width:100%;height:100%;object-fit:cover}
   .rk-card .th .ph{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-weight:800;font-size:17px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
   .rk-card .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-  .rk-card .bd .t{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* ★ v10.30 卡片统一：标题从「单行 nowrap 截断」改「固定预留两行」（完本仍在 title 属性里） */
+  .rk-card .bd .t{font-size:13px;font-weight:700;line-height:var(--cd-lh);min-height:var(--cd-t2);
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
   .rk-card .bd .s{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--c-t3);min-width:0}
   .rk-card .bd .s .g{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rk-card .sc{flex:none;font-size:11px;font-weight:750;color:var(--c-score);font-family:var(--font-num)}
   .bdg{font-size:9px;font-weight:750;padding:1px 5px;border-radius:4px;flex:none}
   .bdg.xd{background:rgba(11,123,255,.12);color:#0B7BFF}
   .bdg.jidi{background:rgba(230,65,93,.12);color:#E6415D}
-  .rk-skel{border-radius:14px;background:linear-gradient(90deg,rgba(255,255,255,.13) 25%,rgba(255,255,255,.26) 50%,rgba(255,255,255,.13) 75%);background-size:200% 100%;animation:shimmer 1.2s infinite}
+  .rk-skel{border-radius:var(--cd-r);background:linear-gradient(90deg,rgba(255,255,255,.13) 25%,rgba(255,255,255,.26) 50%,rgba(255,255,255,.13) 75%);background-size:200% 100%;animation:shimmer 1.2s infinite}
 
   /* ============ 🔍 搜索弹窗（命令面板式） ============ */
   .smask{position:fixed;inset:0;background:rgba(9,14,30,.55);z-index:120;opacity:0;transition:.2s;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);pointer-events:none}
@@ -161,18 +175,24 @@
   /* ★ v10.7：行密度收紧 —— 行高 70px→约 58px。
    *   原来 86×50 的缩略图 + 9px 内边距，结果区 690px 只放得下 ~9 行，
    *   搜常见词（如「剑星」7 条以上）首屏就要滚动。 */
-  .sm-row{display:flex;align-items:center;gap:11px;padding:7px 10px;border-radius:11px;cursor:pointer;transition:.12s;border:1px solid transparent;position:relative}
+  .sm-row{display:flex;align-items:center;gap:11px;padding:7px 10px;border-radius:var(--cd-r);cursor:pointer;transition:.12s;border:1px solid transparent;position:relative}
   .sm-row:hover,.sm-row.on{background:var(--c-primary-soft);border-color:rgba(46,107,255,.22)}
   /* 详情抽屉打开时，弹窗内对应结果行同步高亮（返回搜索态时可见） */
   .sm-row.on-drawer{background:var(--c-primary-soft);border-color:var(--c-primary);box-shadow:inset 3px 0 0 var(--c-primary)}
-  .sm-row img{width:76px;height:44px;object-fit:cover;border-radius:8px;flex:none;background:#EEF0F6}
-  .sm-row .ph2{width:76px;height:44px;border-radius:8px;flex:none;display:grid;place-items:center;color:#fff;font-weight:800;font-size:17px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
+  .sm-row img{width:76px;height:auto;aspect-ratio:var(--th-ar);object-fit:cover;border-radius:var(--cd-th-r);flex:none;background:#EEF0F6}
+  .sm-row .ph2{width:76px;height:auto;aspect-ratio:var(--th-ar);border-radius:var(--cd-th-r);flex:none;display:grid;place-items:center;color:#fff;font-weight:800;font-size:17px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
   .sm-row .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
   /* ★ v10.7：行内文字收紧行距。全局 body 是 line-height:1.6，
    *   在 14/11px 的小字号上留白过大 —— 实测一行标题就撑 22.4px、一行英文名 17.6px、
    *   一行标签 19.6px，三行合计 64px，这才是行高降不下来的真正原因（不是缩略图）。
    *   收紧到 1.3 / 1.35 后行内三行合计 54px，行高 84→70。 */
-  .sm-row .t{font-size:14px;font-weight:700;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* ★ v10.30 卡片统一：标题从「单行 nowrap 截断」改「固定预留两行」。
+     ⚠️ 代价（已知并接受）：一行 18.2px → 两行 36.4px，搜索结果行比 v10.29 高约 18px。
+        这是「全站卡片标题统一预留两行」的必然结果，不是回归。
+     ⚠️ 行高沿用上面收紧后的 1.3（不套 --cd-lh 的 1.4）—— 搜索列表是密度优先的场景，
+        只把「行数」对齐规范，不把行距也放回去。 */
+  .sm-row .t{font-size:14px;font-weight:700;line-height:1.3;min-height:2.6em;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
   .sm-row .en{font-size:11px;color:var(--c-t3);font-family:var(--font-num);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sm-row .m{display:flex;align-items:center;gap:6px;flex-wrap:wrap;line-height:1.35}
   /* ★ v10.7：「查看详情 →」由**流内元素改为绝对定位浮出**。
@@ -349,7 +369,7 @@
   .emu-sort:hover{color:var(--c-primary)}
   .emu-sort.on{background:#fff;color:var(--c-primary);box-shadow:0 1px 4px rgba(18,26,51,.12)}
   .emu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:10px}
-  .emu-card{position:relative;display:flex;flex-direction:column;gap:7px;background:#fff;border:1px solid var(--c-border);border-radius:13px;padding:12px 13px;cursor:pointer;transition:.16s;overflow:hidden}
+  .emu-card{position:relative;display:flex;flex-direction:column;gap:7px;background:#fff;border:1px solid var(--c-border);border-radius:var(--cd-r);padding:12px 13px;cursor:pointer;transition:.16s;overflow:hidden}
   .emu-card:hover{border-color:#F5A97F;box-shadow:0 8px 22px rgba(194,65,12,.1);transform:translateY(-1px)}
   .emu-card .top{display:flex;align-items:flex-start;gap:8px}
   .emu-card .nm{flex:1;min-width:0;font-size:13.5px;font-weight:750;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -363,7 +383,7 @@
   .emu-card .lib.none{color:var(--c-t3);font-weight:600}
   .emu-card .lib.none .dot2{background:#C7CDDC}
   /* 命中本地库（XD/机地）的卡片：顶部封面 + 详情入口 */
-  .emu-card .cov{position:relative;height:92px;margin:-2px -2px 3px;border-radius:9px;overflow:hidden;background:#EEF1F7}
+  .emu-card .cov{position:relative;height:92px;margin:-2px -2px 3px;border-radius:var(--cd-th-r);overflow:hidden;background:#EEF1F7}
   .emu-card .cov img{width:100%;height:100%;object-fit:cover;display:block}
   .emu-card .cov.noimg{height:0;margin:0;display:none}
   /* ★ v10.24「无封面占位块」：
@@ -992,15 +1012,19 @@
   .src-badge.jidi{color:var(--c-jidi);background:rgba(230,65,93,.1)}
 
   .lib{display:flex;flex-direction:column;gap:10px}
-  .row-card{display:flex;gap:13px;background:var(--c-surface);border:1px solid var(--c-border);border-radius:13px;padding:10px 12px;cursor:pointer;transition:.16s;align-items:center}
+  .row-card{display:flex;gap:13px;background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--cd-r);padding:10px 12px;cursor:pointer;transition:.16s;align-items:center}
   .row-card:hover{border-color:#B9C7E8;box-shadow:0 8px 22px rgba(18,26,51,.09);transform:translateY(-1px)}
-  .row-card .th{width:158px;height:92px;border-radius:9px;overflow:hidden;flex:none;background:#EDF0F6;position:relative}
+  .row-card .th{width:158px;height:auto;aspect-ratio:var(--th-ar);border-radius:var(--cd-th-r);overflow:hidden;flex:none;background:#EDF0F6;position:relative}
   .row-card .th img{width:100%;height:100%;object-fit:cover;transition:transform .35s}
   .row-card:hover .th img{transform:scale(1.06)}
   .row-card .ph{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-weight:800;font-size:22px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
   .row-card .bd{flex:1;min-width:0;align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:5px}
   .row-card .bd .tt{display:flex;align-items:center;gap:8px;min-width:0}
-  .row-card h3{font-size:14.5px;font-weight:750;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* ★ v10.30 卡片统一：搜索结果标题改「固定预留两行」。
+     `min-width:0` 是必须的 —— 它作为 `-webkit-box` 的 flex item，
+     不归零 min-width 就不会收缩换行（`auto` 下会溢出容器、clamp 永不生效）。 */
+  .row-card h3{font-size:14.5px;font-weight:750;line-height:var(--cd-lh);min-height:var(--cd-t2);min-width:0;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
   .row-card .en{font-size:11.5px;color:var(--c-t3);font-family:var(--font-num);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:1px}
   .pill{font-size:11px;color:var(--c-t2);background:#F1F3F8;padding:1px 8px;border-radius:99px;white-space:nowrap}
@@ -1024,10 +1048,10 @@
   .date-sep .ds-bar{width:3px;height:13px;border-radius:2px;background:linear-gradient(180deg,#E6415D,#F59E0B)}
   .date-sep .ds-en{font-size:10.5px;color:var(--c-t3);font-weight:500;font-family:var(--font-num)}
 
-  .skeleton{display:flex;gap:13px;background:#fff;border:1px solid var(--c-border);border-radius:13px;padding:10px 12px;align-items:center}
+  .skeleton{display:flex;gap:13px;background:#fff;border:1px solid var(--c-border);border-radius:var(--cd-r);padding:10px 12px;align-items:center}
   .sk{background:linear-gradient(90deg,#E8EBF3 25%,#F5F6FA 50%,#E8EBF3 75%);background-size:200% 100%;animation:shimmer 1.2s infinite;border-radius:8px}
   @keyframes shimmer{to{background-position:-200% 0}}
-  .skeleton .sk-th{width:158px;height:92px;border-radius:9px;flex:none}
+  .skeleton .sk-th{width:158px;height:auto;aspect-ratio:var(--th-ar);border-radius:var(--cd-th-r);flex:none}
   .skeleton .sk-l1{height:14px;width:46%;border-radius:6px}
   .skeleton .sk-l2{height:11px;width:66%;margin-top:9px}
   .skeleton .sk-l3{height:10px;width:34%;margin-top:8px}
@@ -1067,24 +1091,42 @@
      一张 128×128 的方形缩略图会被撑成 720px 高的巨幅，而 460×215 的 Steam 头图
      只有 337px。同一份 UI，首图高度在 200~720px 之间乱跳，用户一眼就看出「不固定」。
      现在容器定高 + 图片绝对定位铺满 + object-fit:cover，任何比例的图都出同一块版。 */
-  /* ★ v10.28：封面 + 标题改为**吸顶**（用户口径：「封面 + 标题（吸顶）」）。
-     `#drawerBody` 是 `.drawer` 自己的滚动容器，而 `.d-hero` 是它的**首个子元素**
-     ⇒ sticky 相对抽屉视口全程生效，不需要额外的滚动父级。
-     滚过 90px 后收成 62px 的标题条（`.mini`）：250px 整块吸顶会吃掉近 1/4 屏，
-     而吸顶的意义只是「滚到哪儿都知道自己在看哪款游戏」。
-     压缩由 `dHeroSpy()` 挂 class 驱动（CSS 选不了「滚动位置」，`animation-timeline` 兼容性不够）。 */
-  .d-hero{position:sticky;top:0;z-index:8;background:#101A38;height:250px;overflow:hidden;
-    transition:height .24s cubic-bezier(.4,0,.2,1)}
-  .d-hero.mini{height:62px}
-  /* mini 态：标题移到与关闭键同一水平线，左让 56px（关闭键）、右让 104px（来源徽标） */
-  .d-hero.mini .d-title{left:56px;right:104px;top:0;bottom:auto;height:100%;padding:0;
-    display:flex;flex-direction:column;justify-content:center}
-  .d-hero.mini .d-title h2{font-size:15px;line-height:1.3;white-space:nowrap;overflow:hidden;
-    text-overflow:ellipsis;text-shadow:none}
-  .d-hero.mini .d-title .en{display:none}
-  .d-hero.mini .d-top{padding:13px 14px}
-  .d-hero.mini > img{filter:brightness(.44) saturate(.72)}
-  .d-hero.mini::after{background:linear-gradient(90deg,rgba(10,14,30,.9) 38%,rgba(10,14,30,.34) 100%)}
+  /* ★ v10.30：顶图从「250px sticky 大图滚过 90px 收成 62px」改成
+     「大图随滚动自然滚走 + 恒高 62px 的常驻标题条滑入」。
+     为什么要换（三条都是浏览器实拍量的，见 CODEX-DONE-v10.30）：
+       ① 单阈值：在 90px 附近来回滚 14 次 ⇒ `.mini` class 翻转 **21 次**；
+       ② 高度变化 → 浏览器**滚动锚定**自动改 scrollTop（实测设 200，700ms 后成 71）
+          → 又越过阈值 → 再翻转 ⇒ **自激振荡：不需要用户操作也会自己振**；
+       ③ +40ms 中途采样：高度还在 247.8px（过渡才走 2px），而图片亮度 / 字号 /
+          标题位置 / 渐变方向**已瞬间到位** ⇒ 观感不是「平滑缩放」而是「抽一下」。
+     新结构的要点：`.d-hero` 高度**全程恒定 250px 且不再 sticky**
+     ⇒ 布局不再影响 scrollTop（断掉 ② 的自激回路），
+     小标题条只做 `transform` 位移（合成层动画、不触发布局，消掉 ①③）。 */
+  .d-hero{position:relative;z-index:8;background:#101A38;height:250px;overflow:hidden}
+  /* 常驻小标题条：`sticky` 吸顶 + `margin-bottom:-62px` **不占文档流高度**
+     （不加负 margin 的话它会在 250px 处再顶出一块，正文整体下移 62px）。
+     未激活时缩在大图背后（`translateY(-102%)`）且 `pointer-events:none` 防误点。 */
+  .d-mini{position:sticky;top:0;z-index:7;display:flex;align-items:center;gap:9px;
+    height:62px;margin-bottom:-62px;padding:0 12px 0 13px;
+    background:#101A38;color:#fff;overflow:hidden;
+    opacity:0;visibility:hidden;transform:translateY(-102%);pointer-events:none;
+    transition:transform .26s cubic-bezier(.22,.8,.36,1),opacity .2s ease,visibility 0s .26s}
+  .d-mini.on{opacity:1;visibility:visible;transform:translateY(0);pointer-events:auto;
+    transition:transform .26s cubic-bezier(.22,.8,.36,1),opacity .2s ease,visibility 0s 0s}
+  .d-mini .d-close{flex:none;width:32px;height:32px;border-radius:10px;font-size:14px}
+  .d-mini .d-close.d-back{width:auto;height:32px;padding:0 11px 0 9px;font-size:12px}
+  .d-mini .th{flex:none;width:44px;height:44px;border-radius:var(--cd-th-r);overflow:hidden;background:#1B2745;
+    display:grid;place-items:center}
+  .d-mini .th img{width:100%;height:100%;object-fit:cover;display:block}
+  .d-mini .th.ph{font:800 15px/1 var(--font-num);color:#8DA0C6}
+  .d-mini .tt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+  .d-mini .tt b{font-size:14px;font-weight:750;line-height:1.25;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .d-mini .tt i{font-style:normal;font-size:10.5px;line-height:1.25;color:rgba(255,255,255,.6);
+    font-family:var(--font-num);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .d-mini .sb{flex:none;font-size:10px;font-weight:800;border-radius:6px;padding:3px 8px;
+    color:#fff;background:rgba(11,123,255,.8)}
+  .d-mini .sb.jidi{background:rgba(230,65,93,.85)}
   .d-hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center}
   .d-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,14,30,.08) 30%,rgba(10,14,30,.9) 100%)}
   .d-top{position:absolute;top:0;left:0;right:0;z-index:2;display:flex;justify-content:space-between;padding:12px 14px}
@@ -1272,20 +1314,32 @@
 
   /* ============ 同名跨源互链（另一源也有收录） ============ */
   .x-src{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
-  .x-src .x-it{flex:1;min-width:170px;display:flex;align-items:center;gap:9px;background:#fff;border:1px solid var(--c-border);border-radius:10px;padding:9px 11px;cursor:pointer;transition:.14s;font-size:12.5px;color:var(--c-t2);text-align:left}
+  .x-src .x-it{flex:1;min-width:170px;display:flex;align-items:center;gap:9px;background:#fff;border:1px solid var(--c-border);border-radius:var(--cd-r);padding:9px 11px;cursor:pointer;transition:.14s;font-size:12.5px;color:var(--c-t2);text-align:left}
   .x-src .x-it:hover{border-color:var(--c-primary);color:var(--c-primary);box-shadow:0 4px 12px rgba(18,26,51,.08)}
-  .x-src .x-it .bd{flex:1;min-width:0;display:flex;align-items:center;gap:7px;font-weight:650;white-space:nowrap}
-  .x-src .x-it .bd .t{overflow:hidden;text-overflow:ellipsis}
+  .x-src .x-it .bd{flex:1;min-width:0;display:flex;align-items:center;gap:7px;font-weight:650}
+  /* ★ v10.30 卡片统一：跨源链接标题从「单行 nowrap 截断」改「固定预留两行」——
+     原来 646×37 的一行卡，长标题（如「空之轨迹 the 2nd/Trails in the Sky 2nd」）被切掉，
+     用户口径里的「链接标题」正是这一处。 */
+  .x-src .x-it .bd .t{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+    line-height:var(--cd-lh);min-height:var(--cd-t2);word-break:break-word}
   .x-src .x-it svg{width:13px;height:13px;flex:none;opacity:.65}
   .x-none{font-size:11.5px;color:var(--c-t3);margin:2px 0 4px}
 
   /* ============ 同分类推荐（详情抽屉内横向小卡） ============ */
   .rel-row{display:flex;gap:8px;overflow-x:auto;padding:2px 1px 6px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
-  .rel-row .rel-it{flex:0 0 106px;display:flex;flex-direction:column;gap:6px;background:#fff;border:1px solid var(--c-border);border-radius:10px;padding:8px;cursor:pointer;transition:.14s;color:var(--c-t1);text-align:left;scroll-snap-align:start}
+  /* ★ v10.30 卡片统一。这一族原来有三处「看着写死了、其实没锁住」：
+     ① 只写 `flex:0 0 106px` —— flex item 默认 `min-width:auto`，会被内部
+        `white-space:nowrap` 的长标题撑开。**实测同一族量到 106 与 123.2 两个宽度**，
+        这正是用户说的「卡片大小不统一」。现在 flex-basis + min-width + max-width 三重锁定。
+     ② 缩略图 `width:100%;height:56px` —— 高度锁死、宽度跟卡片走 ⇒ **比例随宽度漂移**
+        （实测 1.571 / 1.879 两个值）。改成 `aspect-ratio` 定比例，高由宽推出。
+     ③ 标题 `nowrap` 单行截断，与规范（固定预留两行）不一致。 */
+  .rel-row .rel-it{flex:0 0 var(--cd-s);min-width:var(--cd-s);max-width:var(--cd-s);display:flex;flex-direction:column;gap:6px;background:#fff;border:1px solid var(--c-border);border-radius:var(--cd-r);padding:8px;cursor:pointer;transition:.14s;color:var(--c-t1);text-align:left;scroll-snap-align:start;overflow:hidden}
   .rel-row .rel-it:hover{border-color:var(--c-primary);box-shadow:0 4px 12px rgba(18,26,51,.08)}
-  .rel-row .rel-it img,.rel-row .rel-it .noimg{width:100%;height:56px;object-fit:cover;border-radius:7px;background:#F1F3F8}
+  .rel-row .rel-it img,.rel-row .rel-it .noimg{display:block;width:100%;height:auto;aspect-ratio:var(--th-ar);object-fit:cover;border-radius:var(--cd-th-r);background:#F1F3F8}
   .rel-row .rel-it .bd{display:flex;flex-direction:column;gap:2px;min-width:0}
-  .rel-row .rel-it .t{font-size:11.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rel-row .rel-it .t{font-size:11.5px;font-weight:650;line-height:var(--cd-lh);min-height:var(--cd-t2);
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
   .rel-row .rel-it .s{font-size:10.5px;color:var(--c-score);font-family:var(--font-num);
     display:flex;align-items:center;gap:4px;flex-wrap:wrap}
   /* 「同系列」这类打标 —— 让用户一眼看出推荐理由，而不是莫名冒出来一堆别的游戏 */
@@ -1302,9 +1356,9 @@
   .tabbar{display:none}
 
   @media(max-width:760px){
-    .row-card .th{width:112px;height:66px}
+    .row-card .th{width:112px;height:auto;aspect-ratio:var(--th-ar)}
     .row-card .go{display:none}
-    .skeleton .sk-th{width:112px;height:66px}
+    .skeleton .sk-th{width:112px;height:auto;aspect-ratio:var(--th-ar)}
     .grid2{grid-template-columns:1fr}
     /* 热榜舞台：单列 + 冠军卡竖排 */
     .stage .in{padding:20px 18px 24px}
@@ -1324,7 +1378,7 @@
     /* 搜索弹窗：贴顶全宽 */
     .smodal{top:0;width:100vw;max-height:88vh;border-radius:0 0 18px 18px;transform:translate(-50%,-20px)}
     .smodal.show{transform:translate(-50%,0)}
-    .sm-row img,.sm-row .ph2{width:66px;height:39px}
+    .sm-row img,.sm-row .ph2{width:66px;height:auto;aspect-ratio:var(--th-ar)}
     .sm-row .go2{display:none}
     .sm-alt{padding-left:87px}
     .topbar .in{height:54px}
@@ -1384,8 +1438,8 @@
     .load-more{width:100%}
   }
   @media(max-width:420px){
-    .row-card .th{width:96px;height:58px}
-    .skeleton .sk-th{width:96px;height:58px}
+    .row-card .th{width:96px;height:auto;aspect-ratio:var(--th-ar)}
+    .skeleton .sk-th{width:96px;height:auto;aspect-ratio:var(--th-ar)}
     .row-card{padding:8px 10px}
     .row-card h3{font-size:13.5px}
     .pill.time{display:none}
@@ -3319,6 +3373,17 @@ function paintDetail(d, fb, merge) {
       <div class="d-top">${closeBtnHtml()}<span class="src-badge ${s.cls}" style="color:#fff;background:${s.cls === 'jidi' ? 'rgba(230,65,93,.8)' : 'rgba(11,123,255,.8)'};align-self:center">${s.nm} 来源</span></div>
       ${cover ? `<img src="${esc(cover)}" alt="${esc(n.zh)}" onerror="this.remove()">` : ''}
       <div class="d-title"><h2>${esc(n.zh)}</h2>${n.en ? `<div class="en">${esc(n.en)}</div>` : ''}</div>
+    </div>
+    <!-- ★ v10.30：常驻小标题条 —— 滚过大图后靠 transform 滑入。
+         ⚠️ 关闭键必须**再给一份**：大图滚走时原关闭键跟着走了，没有它用户就关不掉抽屉。
+         ⚠️ 缩略图带 onerror 移除自身 + 外层 .ph 文字兜底，图挂了也不塌版。
+         ⚠️ 本段是模板字符串的正文，注释里**不许出现反引号** ——
+            反引号会提前终结模板字符串，整段脚本连语法都过不了（本次就踩了）。 -->
+    <div class="d-mini" id="dMini">
+      ${closeBtnHtml()}
+      ${cover ? `<span class="th"><img src="${esc(cover)}" alt="" onerror="this.remove()"></span>` : `<span class="th ph">${esc(String(n.zh || '?').slice(0, 2))}</span>`}
+      <span class="tt"><b>${esc(n.zh)}</b>${n.en ? `<i>${esc(n.en)}</i>` : ''}</span>
+      <span class="sb ${s.cls}">${s.nm}</span>
     </div>
     <div class="d-body">
       <div class="d-hint"><b>GameHub 仅为信息聚合站：</b>以下为源站实时抓取的详情与更新信息，本站不提供下载资源。完整内容请前往源站。</div>
@@ -5413,22 +5478,69 @@ function railBoot() {
     const it = dRailItems[+b.dataset.rail];
     if (!it) return;
     e.preventDefault();
-    const dy = it.el.getBoundingClientRect().top - dr.getBoundingClientRect().top;
-    dr.scrollTo({ top: Math.max(0, dr.scrollTop + dy - 14), behavior: 'smooth' });
+    const land = () => {
+      const el = it.el;
+      /* 重扫会整体替换 `.dr-it`，但 `dRailItems[i].el` 是**正文里的分区节点**，
+         详情页重渲染后它可能已经脱离文档 —— 那时 getBoundingClientRect 会全为 0，
+         `dy` 变成 -dr.top，一滚就跳到顶部。所以先确认它还在文档里。 */
+      if (!el || !el.isConnected) return;
+      const dy = el.getBoundingClientRect().top - dr.getBoundingClientRect().top;
+      dr.scrollTo({ top: Math.max(0, dr.scrollTop + dy - 14), behavior: 'smooth' });
+    };
+    land();
+    /* ★ v10.29 修，v10.30 保留双趟作为保险。
+       当时的根因：`.d-hero` 是 `position:sticky` 的，滚过 90px 会从 250px 收成 62px ——
+       正文整体上移 188px。只算一趟的话，`dy` 是用「收窄前」的布局量的，
+       落点会少一个顶图收窄量；相邻很近的两个分区之间还会出现
+       **「点靠下的分区反而往上滚」**（实测：评分参数 371 → 游戏介绍 318，
+       而两者在正文里的间距只有 ~130px < 188px）。
+       ⚠️ v10.30 起顶图**高度恒定 250px 且不再 sticky**（见下面 dHeroSpy 的注释），
+       这条一阶误差的根已经不存在了。双趟**保留**：第二趟只多量一次、代价可忽略，
+       而它挡住的是「将来又有人在顶图高度上做文章」这类回归。 */
+    setTimeout(land, 460);
   });
   railSync();
 }
-/* ★ v10.28：详情页顶图「滚动即收窄」。
- *  用户口径：「封面 + 标题（吸顶）」—— 250px 的封面**整块**吸顶会占掉近 1/4 屏，
- *  而吸顶真正的用处只是「滚到哪儿都知道自己在看哪款游戏」。
- *  所以滚过 90px 就把 `.d-hero` 收成 62px 的标题条（`.mini`），滚回顶部再还原。
- *  ⚠️ 为什么不用纯 CSS：CSS 选不了「滚动位置」，`animation-timeline:scroll()` 兼容性不够。
- *  ⚠️ 为什么只用一次 `toggle`：开关状态必须在**同一处**判定。写成 `if (t) add else remove`
- *     两行的话，快速来回滚动时两个方向各写一次、互相打架，会出现「收下去又弹回来」的抖动。 */
+/* ★ v10.30：详情页顶图改成「大图随滚动滚走 + 常驻小标题条滑入」。
+ *  （v10.28 是「250px sticky 大图滚过 90px 收窄成 62px」，用户口径：「往下拉的时候，
+ *   置顶切换会一直闪（大小切换问题）」）
+ *
+ *  旧实现的三个毛病（都是浏览器**实拍量出来的**，不是读代码推测的）：
+ *   ① **单阈值抖动**：在 90px 附近来回滚 14 次 ⇒ `.mini` class 翻转 **21 次**；
+ *   ② **滚动锚定自激**：大图 250→62 让文档少 188px 高，浏览器为「保住视觉位置」
+ *      自动改写 scrollTop（实测：设 200，700ms 后成 71）⇒ 又越过阈值 ⇒ 再翻转，
+ *      **不需要任何用户操作也会自己振** —— 这才是「一直闪」的主因；
+ *   ③ **内容瞬变**：+40ms 中途采样，高度还在 247.8px（过渡才走 2px），
+ *      而图片亮度 / 字号 / 标题位置 / 渐变方向**已全部到位** ⇒ 观感是「抽一下」而不是缩放。
+ *  新结构从**结构层**消掉这三条：`.d-hero` 高度恒定 250px 且不再 sticky
+ *  ⇒ 布局不再反过来影响 scrollTop（②消失）；小标题条只做 `transform`（不触发布局，③消失）。
+ *  剩下的 ① 用「双阈值滞后 + rAF 合帧 + 只在跨越时才算」兜住手抖。
+ *
+ *  ⚠️ 状态以 **DOM 上的 class** 为唯一事实来源（不另存模块变量）：抽屉是复用节点、
+ *     换游戏时 `#dMini` 会整块重建 —— 读 class 才能天然复位。存变量的话，
+ *     「上一款滚到一半、下一款打开还停在收窄态」这类错位得单独写代码去清。
+ *  ⚠️ 为什么不用纯 CSS：CSS 选不了「滚动位置」，`animation-timeline:scroll()` 兼容性不够。 */
+const MINI_GAP = 50;   // 双阈值之间的滞后带（专治触控板/滚轮在临界点的手抖）
+let miniPend = 0;      // rAF 句柄：滚动事件再密，一帧也只结算一次
 function dHeroSpy() {
-  const dr = $('#drawer'), h = $('#dHero');
-  if (!dr || !h) return;
-  h.classList.toggle('mini', dr.scrollTop > 90);
+  if (miniPend) return;
+  miniPend = requestAnimationFrame(() => {
+    miniPend = 0;
+    const dr = $('#drawer'), h = $('#dMini'), hero = $('#dHero');
+    if (!dr || !h || !hero) return;
+    const y = dr.scrollTop;
+    /* ★ 阈值跟着大图的**实际**高度走，不写死 200：窄屏（≤760px）大图是 190px，
+       写死 200 会让小条晚出现 10px、中间留一条空档；窗口缩放也因此自洽。
+       「大图底部刚好收到小条下沿」= heroH - 62，再加 12px 提前量，滑入时正好衔接。 */
+    const on = Math.max(60, hero.offsetHeight - 62 + 12);
+    const off = Math.max(24, on - MINI_GAP);
+    const cur = h.classList.contains('on');
+    let next = cur;
+    if (!cur && y > on) next = true;
+    else if (cur && y < off) next = false;
+    if (next === cur) return;    // 没跨越阈值 ⇒ 一个字节的 DOM 都不碰
+    h.classList.toggle('on', next);
+  });
 }
 railBoot();   // 定位条：绑一次观察器/滚动监听（常驻节点，不进 #drawerBody）
 

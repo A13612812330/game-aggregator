@@ -346,8 +346,11 @@ t('行内文字收紧行距（.t/.en 1.3 ／ .m 1.35 ／ .pth 1.3）',
   && /\.sm-row \.en\{[^}]*line-height:1\.3/.test(idx)
   && /\.sm-row \.m\{[^}]*line-height:1\.35/.test(idx)
   && /\.sm-row \.pth\{[^}]*line-height:1\.3/.test(idx));
-t('行缩略图 86×50 → 76×44（.ph2 同步）',
-  /\.sm-row img\{width:76px;height:44px/.test(idx) && /\.sm-row \.ph2\{width:76px;height:44px/.test(idx));
+/* ★ v10.30：缩略图从「定高 44px」改「定宽 76px + 16:9 比例」（卡片统一规范）。
+   判据同步 —— 仍要求**两个选择器都命中**：只改 img 不改 .ph2 会漏（占位块会高出一截）。 */
+t('行缩略图 76px 宽 · 比例走 --th-ar（.ph2 同步）',
+  /\.sm-row img\{width:76px;height:auto;aspect-ratio:var\(--th-ar\)/.test(idx)
+  && /\.sm-row \.ph2\{width:76px;height:auto;aspect-ratio:var\(--th-ar\)/.test(idx));
 
 /* ④ 分组按相关性排序（含端游库本体提权 + 别名词兜底） */
 t('paintSearchResult 里有归一化 + 贴合度打分 + 稳定排序',

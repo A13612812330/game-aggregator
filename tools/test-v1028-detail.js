@@ -105,31 +105,51 @@ console.log('=== ① 详情页版式顺序 ===');
 }
 
 /* ============================================================
- *  ② hero 吸顶（sticky）与滚动收窄
+ *  ② 顶图 + 常驻小标题条
+ *  ★ v10.30 整组换掉旧判据：v10.28/10.29 是「250px sticky 大图滚过 90px
+ *    收窄成 62px（`.d-hero.mini`）」，实测会「一直闪」，已换成
+ *    「大图随滚动滚走 + 恒高 62px 的 `.d-mini` 滑入」。
+ *    ⚠️ 这不是「实现坏了」而是「设计改了」。同步时要**同时守住新机制的要害**，
+ *       别只把旧断言删掉凑绿 —— 下面这几条都是「删了就没人发现」的点：
+ *       ① 大图定高且不 sticky（布局不再影响 scrollTop）；
+ *       ② 小条恒 62px、靠 transform 进出、负 margin 不占流；
+ *       ③ 状态以 DOM class 为唯一事实来源 + 双阈值 + rAF 合帧。
  * ============================================================ */
-console.log('\n=== ② 封面+标题吸顶 ===');
+console.log('\n=== ② 顶图 + 常驻小标题条 ===');
 {
-  ok(/\.d-hero\{[^}]*position:sticky/.test(IDX), '★ .d-hero 是 sticky（源站详情页顶部会随滚动收成一条）');
-  ok(/\.d-hero\{[^}]*top:0/.test(IDX), '.d-hero 贴顶 top:0');
-  ok(/\.d-hero\{[^}]*z-index:\s*\d+/.test(IDX), '★ 吸顶要显式给 z-index（不给会被下面的卡片盖住）');
+  ok(/\.d-hero\{[^}]*position:relative/.test(IDX), '★ .d-hero 不再 sticky（大图随滚动滚走）');
+  ok(/\.d-hero\{[^}]*height:250px/.test(IDX), '.d-hero 定高 250px（高度恒定是「不闪」的结构前提）');
+  ok(/\.d-hero\{[^}]*z-index:\s*\d+/.test(IDX), '★ 顶图要显式给 z-index（不给会被下面的卡片盖住）');
   const zHero = Number((/\.d-hero\{[^}]*z-index:\s*(\d+)/.exec(IDX) || [])[1]);
   const zDock = Number((/\.d-dock\{[^}]*z-index:\s*(\d+)/.exec(IDX) || [])[1]);
-  ok(zHero > 0 && zDock > zHero, '★ 固定底栏层级高于吸顶 hero（否则底栏会被 hero 压住）',
+  ok(zHero > 0 && zDock > zHero, '★ 固定底栏层级高于顶图（否则底栏会被压住）',
     'hero=' + zHero + ' dock=' + zDock);
 
   ok(/function dHeroSpy\(\)/.test(IDX), '新增 dHeroSpy()');
-  ok(/\.d-hero\.mini\{height:/.test(IDX), '★ 有 .d-hero.mini 收窄态（改高度的话不写这条就看不出来）');
+  ok(/\.d-mini\{[^}]*position:sticky/.test(IDX), '★ 新增 .d-mini 常驻小标题条（sticky 吸顶）');
+  ok(/\.d-mini\{[^}]*height:62px/.test(IDX), '★ 小条恒高 62px（不随滚动变化）');
+  ok(/\.d-mini\{[^}]*margin-bottom:-62px/.test(IDX),
+    '★★ 小条用负 margin **不占文档流**（不加这一条正文会整体下移 62px）');
+  ok(/\.d-mini\.on\{/.test(IDX), '★ 有 .d-mini.on 激活态');
+  ok(/\.d-mini\{[^}]*transform:translateY\(-102%\)/.test(IDX), '★ 未激活时靠 transform 收在上方（不靠改高度）');
+  ok(/\.d-mini\{[^}]*pointer-events:none/.test(IDX), '未激活时不吃点击');
   /* ★ 开关必须用一次 classList.toggle —— 写成 if/else 两行会在快速滚动时抖动。
-     判据取「函数体里 toggle('mini' 只出现一次」，锚定到 dHeroSpy 体内。 */
+     判据取「函数体里 toggle('on' 只出现一次」，锚定到 dHeroSpy 体内。 */
   const spyBody = (/function dHeroSpy\(\) \{[\s\S]*?\n\}/.exec(IDX) || [''])[0];
   ok(spyBody.length > 0, '能取到 dHeroSpy 的函数体');
-  ok((spyBody.match(/classList\.toggle\('mini'/g) || []).length === 1,
-    '★ 收窄开关只用一次 classList.toggle（写成 if/else 两行会抖）');
-  ok(/dr\.scrollTop\s*>\s*\d+/.test(spyBody), 'dHeroSpy 按抽屉滚动量判收窄');
+  ok((spyBody.match(/classList\.toggle\('on'/g) || []).length === 1,
+    '★ 开关只用一次 classList.toggle（写成 if/else 两行会抖）');
+  ok(/dr\.scrollTop/.test(spyBody), 'dHeroSpy 按抽屉滚动量判开关');
+  ok(/h\.classList\.contains\('on'\)/.test(spyBody),
+    '★★ 状态以 DOM class 为唯一事实来源（另存模块变量 ⇒ 换游戏后没法天然复位）');
+  ok(/requestAnimationFrame/.test(spyBody), '★ rAF 合帧（滚动事件再密，一帧只结算一次）');
+  ok(/MINI_GAP/.test(spyBody), '★ 双阈值滞后（单阈值在临界点反复翻转 —— 那正是「一直闪」）');
+  ok(/hero\.offsetHeight/.test(spyBody),
+    '★ 阈值跟大图**实际**高度算（窄屏大图 190px，写死阈值会留空档）');
   ok(/railSpy\(\);\s*dHeroSpy\(\);/.test(IDX),
-    '★ dHeroSpy 接进了滚动回调（只定义不接线 = 滚动时永远不收窄，而存在性断言照样绿）');
+    '★ dHeroSpy 接进了滚动回调（只定义不接线 = 滚动时永远不动，而存在性断言照样绿）');
   ok(/railSync\(\);[\s\S]{0,160}?dHeroSpy\(\);/.test(IDX),
-    '★ paintDetail 结束时也调一次（定初态：换游戏后不该残留上一次的收窄态）');
+    '★ paintDetail 结束时也调一次（定初态：换游戏后不该残留上一次的激活态）');
 }
 
 /* ============================================================
@@ -402,7 +422,10 @@ console.log('\n=== ⑪ 派生页同步 ===');
 {
   for (const [pg, t] of [['public/emulator.html', EMU], ['public/unpack.html', UNP]]) {
     ok(/<div class="d-dock">/.test(t) && /\.d-dock\{/.test(t), '  ' + pg + ' 已同步固定底栏');
-    ok(/function dHeroSpy\(\)/.test(t) && /\.d-hero\.mini\{/.test(t), '  ' + pg + ' 已同步吸顶收窄');
+    /* ★ v10.30：特征串从「dHeroSpy + .d-hero.mini」换成「dHeroSpy + .d-mini 小标题条」——
+       派生页不同步时**不报错**，只会悄悄停在旧交互上，所以这条必须跟着换、不能删。 */
+    ok(/function dHeroSpy\(\)/.test(t) && /\.d-mini\{[^}]*position:sticky/.test(t),
+      '  ' + pg + ' 已同步小标题条');
     ok(/id="bhMoreSlot"/.test(t) && !/id="bhRecSlot"/.test(t), '  ' + pg + ' 已同步手机配置合一');
     ok(/data-df-page="/.test(t) && /\.df-pager\{/.test(t), '  ' + pg + ' 已同步专区分页');
     ok(/\.gal-lb\{[^}]*z-index:\s*(1[4-9]\d|[2-9]\d\d)/.test(t), '  ' + pg + ' 已同步灯箱层级');

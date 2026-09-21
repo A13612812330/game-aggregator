@@ -138,29 +138,44 @@ function apiGet(p) {
   }
   await p.screenshot({ path: path.join(OUT, 'v1028-layout-top.png') });
 
-  /* ---------- ② 吸顶 ---------- */
-  console.log('\n=== ② 封面+标题吸顶 ===');
-  const hero0 = await p.evaluate(() => {
-    const el = document.getElementById('dHero');
-    if (!el) return null;
-    const r = el.getBoundingClientRect();
-    return { pos: getComputedStyle(el).position, top: r.top, h: r.height, mini: el.classList.contains('mini') };
+  /* ---------- ② 顶图 + 常驻小标题条（v10.30 起大图不再吸顶） ----------
+     ⚠️ v10.28/10.29 的判据是「`.d-hero` 挂 `.mini` 后变矮、且仍贴顶」。
+     v10.30 换成「大图随滚动滚走 + 恒高 62px 的 `.d-mini` 滑入」，因为旧做法实测会「一直闪」：
+       · 单阈值在 90px 附近抖 —— 来回滚 14 次触发 **21 次** class 翻转；
+       · 250→62 的高度变化让浏览器**滚动锚定**改写 scrollTop（实测设 200 → 700ms 后成 71）
+         ⇒ 又越过阈值 ⇒ 再翻转，**不需要用户操作也会自己振**；
+       · 切换瞬间高度还在过渡，而亮度/字号/位置/渐变已瞬变 ⇒ 观感是「抽一下」。
+     判据随之换成「**大图高度全程不变** + 正文零额外位移 + 小条真贴顶可见」。 */
+  console.log('\n=== ② 顶图 + 常驻小标题条 ===');
+  const heroSnap = () => ({
+    pos: getComputedStyle(document.getElementById('dHero')).position,
+    h: document.getElementById('dHero').getBoundingClientRect().height,
+    on: document.getElementById('dMini').classList.contains('on'),
+    miniH: document.getElementById('dMini').getBoundingClientRect().height,
+    miniTop: document.getElementById('dMini').getBoundingClientRect().top,
+    op: getComputedStyle(document.getElementById('dMini')).opacity,
+    bodyTop: document.querySelector('#drawerBody .d-body').getBoundingClientRect().top,
   });
-  chk('hero 存在且 position=sticky', !!hero0 && hero0.pos === 'sticky', hero0 ? hero0.pos : '');
-  chk('初始是展开态（未收窄）', !!hero0 && hero0.mini === false && hero0.h > 120,
-    hero0 ? `高 ${Math.round(hero0.h)}px` : '');
+  const hero0 = await p.evaluate(heroSnap);
+  chk('hero 存在且**不再吸顶**（position:relative）', !!hero0 && hero0.pos === 'relative', hero0 ? hero0.pos : '');
+  chk('初始：小标题条未激活、大图 250px',
+    !!hero0 && hero0.on === false && hero0.h > 200 && +hero0.op === 0,
+    hero0 ? `大图 ${Math.round(hero0.h)}px · 小条 ${Math.round(hero0.miniH)}px · opacity ${hero0.op}` : '');
 
   await p.evaluate(() => { document.getElementById('drawer').scrollTop = 600; });
-  await sleep(800);
-  const hero1 = await p.evaluate(() => {
-    const el = document.getElementById('dHero');
-    const r = el.getBoundingClientRect();
-    return { top: r.top, h: r.height, mini: el.classList.contains('mini') };
-  });
-  chk('★ 滚动后收窄（挂上 .mini）', hero1.mini === true, `高 ${Math.round(hero0.h)} → ${Math.round(hero1.h)}px`);
-  chk('★ 收窄后确实变矮（不是只加了个类名）', hero1.h < hero0.h * 0.7,
-    `${Math.round(hero0.h)} → ${Math.round(hero1.h)}px`);
-  chk('★★ 滚动后仍**贴顶**（sticky 生效，不是被滚走）', Math.abs(hero1.top) < 4, `top=${hero1.top.toFixed(1)}`);
+  await sleep(900);
+  const hero1 = await p.evaluate(heroSnap);
+  chk('★ 滚过大图后小标题条滑入（挂上 .on）', hero1.on === true, `on=${hero1.on}`);
+  chk('★ 小条 62px 高且**贴顶**（sticky 生效）',
+    Math.abs(hero1.miniH - 62) < 1 && Math.abs(hero1.miniTop) < 4,
+    `高 ${Math.round(hero1.miniH)}px · top ${hero1.miniTop.toFixed(1)}`);
+  chk('★★ 大图高度**全程不变**（v10.29 是 250→62 —— 那正是「一直闪」的根因）',
+    Math.abs(hero1.h - hero0.h) < 0.5, `${Math.round(hero0.h)} → ${Math.round(hero1.h)}px`);
+  /* 高度不变 ⇒ 正文位移应当**恰好等于滚动量**，没有任何额外跳变。
+     v10.29 时这里会多出 188px（大图收窄把正文整体往上顶），也就是用户看到的「跳/闪」。 */
+  const heroDrift = hero1.bodyTop - (hero0.bodyTop - 600);
+  chk('★★ 越阈值时正文零额外位移（高度不变 ⇒ 不触发滚动锚定自激）',
+    Math.abs(heroDrift) < 1, `额外位移 ${heroDrift.toFixed(1)}px（应为 0；v10.29 为 +188）`);
   await p.screenshot({ path: path.join(OUT, 'v1028-hero-mini.png') });
 
   /* ---------- ③ 灯箱置顶（elementFromPoint 判定）---------- */
