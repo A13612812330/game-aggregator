@@ -31,6 +31,12 @@
     --cd-t2:2.8em;          /* 标题「固定预留两行」的高度（= 2 × --cd-lh） */
     --th-ar:16 / 9;         /* 缩略图统一比例 */
     --cd-s:106px;           /* 同类游戏小卡固定宽度（配合 min-width/max-width 用，防被内容撑开） */
+    /* ★ v10.31：「修改器 / 云存档」两侧卡片的**单行槽位高**（用户口径
+       「固定显示五个，而不是如果一边只有一个那个卡片大小就变小了」）。
+       实测单行节距 = 32.7px 行高 + 4px 间距 ≈ 36.7px；×5 = 183.5px 的槽位底高，
+       保证「只有 1 条」的那一侧也占满五行的高度，两张卡不再一大一小。 */
+    --d-row-h:36.7px;
+    --d-rows:5;             /* 两侧各固定预留 5 行槽位 */
   }
   /* ★ v10.23：`hidden` 属性必须真的能藏住元素。
      浏览器给 `[hidden]` 的默认样式是 `display:none`，但它写在 **UA 样式表**里，
@@ -1098,19 +1104,29 @@
        ③ +40ms 中途采样：高度还在 247.8px（过渡才走 2px），而图片亮度 / 字号 /
           标题位置 / 渐变方向**已瞬间到位** ⇒ 观感不是「平滑缩放」而是「抽一下」。
      新结构的要点：`.d-hero` 高度**全程恒定 250px 且不再 sticky**
-     ⇒ 布局不再影响 scrollTop（断掉 ② 的自激回路），
-     小标题条只做 `transform` 位移（合成层动画、不触发布局，消掉 ①③）。 */
+     ⇒ 布局不再影响 scrollTop（断掉 ② 的自激回路）。
+     ★ v10.31 补记：小标题条那时还做了 `transform` 位移，本轮已**整条删掉**（见下方
+     `.d-mini` 注释）—— 位移+过渡正是「忽大忽小地闪」的第二条成因。 */
   .d-hero{position:relative;z-index:8;background:#101A38;height:250px;overflow:hidden}
   /* 常驻小标题条：`sticky` 吸顶 + `margin-bottom:-62px` **不占文档流高度**
      （不加负 margin 的话它会在 250px 处再顶出一块，正文整体下移 62px）。
-     未激活时缩在大图背后（`translateY(-102%)`）且 `pointer-events:none` 防误点。 */
+     ★ v10.31：**动画全部去掉，且激活阈值改成「大图整块离开视口」** ——
+     用户口径：「详情页的顶部图不要动画了，现在还是会在一定的位置游戏名忽大忽小的闪」。
+     实拍（抽屉 720px）定位到两条同时成立的原因：
+       ① 旧阈值 200（= 大图高 − 62 + 12）**早于大图离开**：`.d-title` 占视口
+          186.8~236，滚到 210 时大标题还剩 26px 在屏上（titleBottom=26），
+          而小条正在这时显形 ⇒ **一大一小两个游戏名同屏**，观感就是「忽大忽小」；
+       ② 旧实现带 `transform:translateY(-102%)` + 260ms 过渡 ⇒ 小条从大标题
+          **正上方 63px 处一边下滑一边淡入**，中途正好扫过大标题那条残留 ⇒ 「闪」。
+     ⇒ 现在：阈值 = 大图高度（200→250，大图连标题整块滚出视口才显形），
+        并且**不位移、不淡入、不留任何 transition**（整条删掉），只切 `visibility`。
+        `off` 侧仍留 `MINI_GAP` 滞后带防手抖，但收窄到 24px —— 原来 50px 会让小条
+        在「已脱离吸顶」的位置继续浮一段，反而更像还在动。 */
   .d-mini{position:sticky;top:0;z-index:7;display:flex;align-items:center;gap:9px;
     height:62px;margin-bottom:-62px;padding:0 12px 0 13px;
     background:#101A38;color:#fff;overflow:hidden;
-    opacity:0;visibility:hidden;transform:translateY(-102%);pointer-events:none;
-    transition:transform .26s cubic-bezier(.22,.8,.36,1),opacity .2s ease,visibility 0s .26s}
-  .d-mini.on{opacity:1;visibility:visible;transform:translateY(0);pointer-events:auto;
-    transition:transform .26s cubic-bezier(.22,.8,.36,1),opacity .2s ease,visibility 0s 0s}
+    opacity:0;visibility:hidden;pointer-events:none}
+  .d-mini.on{opacity:1;visibility:visible;pointer-events:auto}
   .d-mini .d-close{flex:none;width:32px;height:32px;border-radius:10px;font-size:14px}
   .d-mini .d-close.d-back{width:auto;height:32px;padding:0 11px 0 9px;font-size:12px}
   .d-mini .th{flex:none;width:44px;height:44px;border-radius:var(--cd-th-r);overflow:hidden;background:#1B2745;
@@ -1220,15 +1236,29 @@
       其他则为卡片右上角更多按钮查看全部」）。
       · 两列等宽：两块都不长（各 ≤5 行，截断由 loadTrBlock / loadSvBlock 负责），
         并排后一屏能同时看到 —— 不必先看完修改器再往下滚去找云存档。
-      · `align-items:start`：两块行数不同时各自按内容高度收，不拉伸成等高
-        （拉齐会让行数少的那块留一大片空白，看起来像加载失败）。
       · 只有一块有内容时加 `.solo` 收成单列（由 syncPair() 打）——
         否则空的那一侧会留出一整列空白，用户会读成「这块坏了但还占着位置」。
       · 窄屏（≤760px）回落单列：两块并排后每块只剩 ~150px，
-        云存档那种长路径会被挤成三四个字一行。 */
-   .d-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+        云存档那种长路径会被挤成三四个字一行。
+      ★ v10.31 改了两条（用户口径：「我需要修改器+云存档的固定显示五个的，而不是
+        如果一边只有一个那个卡片大小就变小了」）。实拍（xd-692 史莱姆牧场）：
+        修改器 336×161（1 个来源） vs 云存档 336×437 差距悬殊 —— 正是用户看到的样子。
+        ① `align-items:start` → **stretch**：两卡永远等高。
+           注意这和 v10.29 的注释正好相反 —— v10.29 选 start 是为了「不让行数少的那块
+           被拉出大片空白」，但用户实测后明确要求**两边一样大**：一大一小更像坏了。
+           ⇒ 以用户口径为准，start 的旧理由作废（保留本条说明，避免下次又改回去）。
+        ② `.d-rows` 给「固定预留 5 行」的底高（`--d-row-h × --d-rows`）：
+           只有 1 条的卡片也占满五行的高度，两张卡不会因为条数少而缩水。
+        ③ 提示文字 `.d-hint2` 用 `margin-top:auto` 沉到卡底 —— 否则预留出来的空档
+           会把提示顶到半空中，看着像两块内容。 */
+   .d-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:stretch}
    .d-pair.solo{grid-template-columns:1fr}
-   .d-pair>div>.d-blk{margin-bottom:0}
+   .d-pair>div{display:flex;min-width:0}
+   .d-pair>div>.d-blk{margin-bottom:0;flex:1 1 auto;width:100%;
+     display:flex;flex-direction:column}
+   .d-pair .d-hint2{margin-top:auto}
+   /* 两侧「单个条目」的行容器：固定预留 5 行槽位（`.d-tr-it` / `.d-sv` 共用） */
+   .d-rows{min-height:calc(var(--d-row-h) * var(--d-rows))}
    @media(max-width:760px){.d-pair{grid-template-columns:1fr}}
   /* ★ v10.28：操作按钮组**固定在详情页底部**（用户口径：「我的意思是固定在详情页下面（移动也可查看）」）。
      它是 `#drawerBody` 的**最后一个子元素**且位于 `.d-body` 之外 ⇒ sticky bottom 全程贴住抽屉底边，
@@ -1334,7 +1364,18 @@
      ③ 标题 `nowrap` 单行截断，与规范（固定预留两行）不一致。 */
   .rel-row .rel-it{flex:0 0 var(--cd-s);min-width:var(--cd-s);max-width:var(--cd-s);display:flex;flex-direction:column;gap:6px;background:#fff;border:1px solid var(--c-border);border-radius:var(--cd-r);padding:8px;cursor:pointer;transition:.14s;color:var(--c-t1);text-align:left;scroll-snap-align:start;overflow:hidden}
   .rel-row .rel-it:hover{border-color:var(--c-primary);box-shadow:0 4px 12px rgba(18,26,51,.08)}
-  .rel-row .rel-it img,.rel-row .rel-it .noimg{display:block;width:100%;height:auto;aspect-ratio:var(--th-ar);object-fit:cover;border-radius:var(--cd-th-r);background:#F1F3F8}
+  /* ★ v10.31：同类/同分类封面改 `object-fit:contain`（用户口径「同分类更多的卡片我需要
+     统一大小，而不是为了完整显示图片而拉长（按比例缩放图片比较好吧）」）。
+     实拍发现两个来源的封面**比例本来就不同**，一种 `cover` 写死必然得罪一半：
+       · 机地封面 = `img2.52jidi.com/topic/cover/id/N/sz/src` → **140×140 方图**
+         （已实测同目录下 b/big/lg/origin/src 全部 404，**没有更大的方图变体**）；
+       · XD 封面 =  Steam 官方 header，**460×215（2.14）**。
+     旧写法 `cover` 把 140×140 硬塞进 16:9（1.778）盒子 ⇒ 纵向只剩中间 56% 一条，
+     画面被放大裁切（实测「黄金之心」「Sigma Star Saga DX」的标题都被切掉）。
+     `contain` 是唯一同时满足「卡片统一大小」+「按比例缩放、不裁不拉」的写法：
+     方图两侧留 19px 浅色衬底，宽图上下留 4px，**两种都能看全**。
+     ⚠️ 衬底色就是本行的 `background`，别删 —— 没有它留白会变成刺眼的白块。 */
+  .rel-row .rel-it img,.rel-row .rel-it .noimg{display:block;width:100%;height:auto;aspect-ratio:var(--th-ar);object-fit:contain;border-radius:var(--cd-th-r);background:#F1F3F8}
   .rel-row .rel-it .bd{display:flex;flex-direction:column;gap:2px;min-width:0}
   .rel-row .rel-it .t{font-size:11.5px;font-weight:650;line-height:var(--cd-lh);min-height:var(--cd-t2);
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
@@ -4728,7 +4769,21 @@ function paintDetail(d, fb, merge) {
   // 库内字段兜底：源站解析缺 cover/score/size/genres/dateLabel 时用本地库记录补全
   const okScore = (v) => v != null && v > 0 && v <= 10;
   const score = okScore(d.score) ? d.score : (okScore(fb.score) ? fb.score : null);
-  const cover = d.cover || fb.cover || '';
+  /* ★ v10.31：**库内封面优先**（用户口径「我想要的置顶图是跟前端页面展示时一样的，
+     不是「不知道哪里的图」」）。
+     实测（xd-38 终结者莉莉）两边的图**根本不是一张**：
+       · 列表在用的封面（`fb.cover`）= `shared.cdn.queniuqe.com/store_item_assets/
+         steam/apps/1369630/header.jpg` —— Steam 官方 header，460×215；
+       · 详情页大图原来取的 `d.cover`（XDGAME 详情）= `www.xdgame.com/uploads/
+         allimg/...png` —— **128×128 的一张方形小图**，被 `object-fit:cover`
+         铺进 720×250 的顶图里 ⇒ 放大 5.6 倍 + 裁掉大半，糊成一片色块。
+         用户截图里那块「不知道哪里的图」就是它。
+     所以把优先级翻过来：库内封面 = 用户在列表上看到的那张 = 他要的那张。
+     · `d.cover` 仍作兜底：从源站链接直接开详情（没有 fb）时只有它可用；
+     · 顺带修掉一处「图会变」：搜索结果的**预览抽屉**本来就用 `fb.cover`
+       （见本文件另一处模板），详情加载完却换成 `d.cover` —— 同一张封面在两三秒内
+       自己换一次。现在两边同源，不再跳。 */
+  const cover = fb.cover || d.cover || '';
   const genres = (d.genres && d.genres.length) ? d.genres : (fb.genres || []);
   const size = d.size || fb.size || '';
   const title = d.title || fb.title || '';
@@ -4814,7 +4869,7 @@ function paintDetail(d, fb, merge) {
       ${cover ? `<img src="${esc(cover)}" alt="${esc(n.zh)}" onerror="this.remove()">` : ''}
       <div class="d-title"><h2>${esc(n.zh)}</h2>${n.en ? `<div class="en">${esc(n.en)}</div>` : ''}</div>
     </div>
-    <!-- ★ v10.30：常驻小标题条 —— 滚过大图后靠 transform 滑入。
+    <!-- ★ v10.30：常驻小标题条 —— 滚过大图后显形（v10.31 去掉了滑入位移，见 .d-mini 注释）。
          ⚠️ 关闭键必须**再给一份**：大图滚走时原关闭键跟着走了，没有它用户就关不掉抽屉。
          ⚠️ 缩略图带 onerror 移除自身 + 外层 .ph 文字兜底，图挂了也不塌版。
          ⚠️ 本段是模板字符串的正文，注释里**不许出现反引号** ——
@@ -4947,6 +5002,11 @@ const BH_DM_URL = '/emulator.html#dm';
 /* ★ v10.28：详情页里**默认露几台机型**（用户口径「默认展示5个，然后有个更多，点击弹窗可以查看全部」）。
    其余在「查看全部」弹窗里给全量 —— 那里按 40 台一批分块取规格（URL 太长会 414）。 */
 const DL_DEV_SHOW = 5;
+/* ★ v10.31：详情页「同分类更多」展示张数（用户口径「最好是显示8个」，原为 6）。
+   放在这里而不是 CSS 变量里，是因为它决定的是**取几条数据、渲染几个 DOM**，
+   属于 JS 的职责；写成 `--cd-cols` 那种「只定义不引用」的变量才是假接口
+   （v10.30 的 `:root` 断言正是在防这个：「只定义不用 = 规范没生效」）。 */
+const REL_SHOW = 8;
 
 /** 一条社区配置 → 参数芯片行（抽屉与完整面板共用同一份渲染，避免两处漂移）
  *  ★ v10.14：新增「机型 → 芯片规格」行（SoC / 品牌 / CPU 核簇 / 性能分）。
@@ -5499,7 +5559,11 @@ async function loadTrBlock(d, title) {
     const items = (j && j.items) || [];
     if (!items.length) { slot.innerHTML = ''; return; }             // 无收录就不占版面
     /* ★ v10.29：上限 8 → 5（用户口径「修改器和云存档同行固定最多5行」）。
-       两块的卡头在同一横线上，行数不等会让「最多 5 行」这句话在视觉上不成立。 */
+       两块的卡头在同一横线上，行数不等会让「最多 5 行」这句话在视觉上不成立。
+       ★ v10.31：行外面**套一层 `.d-rows`** —— 只有 1 条来源时，靠它的
+       `min-height:calc(var(--d-row-h) * var(--d-rows))` 把卡片撑到五行的高度，
+       否则 1 条的卡片会缩成一小块（用户口径「如果一边只有一个那个卡片大小就变小了」）。
+       云存档那边同样是 `.d-rows`（它本来就有容器 `.d-sv`，加个类即可）。 */
     const MAXTR = 5;
     const rows = items.slice(0, MAXTR).map((it) => {
       const src = it.source || 'gcm';
@@ -5516,7 +5580,8 @@ async function loadTrBlock(d, title) {
     const more = items.length > MAXTR
       ? dMoreHd(dFullPut({ type: 'tr', title: '修改器 · 全部来源', sub: t, items }), `全部 ${items.length}`)
       : '';
-    slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>修改器<span class="cnt">${items.length} 个来源</span>${more}</h4>${rows}
+    slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>修改器<span class="cnt">${items.length} 个来源</span>${more}</h4>
+      <div class="d-rows">${rows}</div>
       <div class="d-hint2">修改器文件放到<b>游戏安装根目录</b>（与主程序 .exe 同级）后再启动；CE 修改表需先运行 Cheat Engine 再加载表格。<br>
         清单聚合自 Game Cheats Manager 公开数据，<a href="${D_GCM_URL}" target="_blank" rel="noopener">打开 GCM 下载页 ↗</a></div></div>`;
   } catch (e) {} finally { syncPair(); }
@@ -5562,7 +5627,7 @@ async function loadSvBlock(d, title) {
     if (h.installDir) tags.push(`<span class="d-tg dim">安装目录 ${esc(h.installDir)}</span>`);
     slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>云存档位置<span class="cnt">${paths.length + regs.length} 条记录</span>${more}</h4>
       ${tags.length ? `<div class="d-tg-row" style="margin-bottom:6px">${tags.join('')}</div>` : ''}
-      <div class="d-sv">${rows.join('')}</div>
+      <div class="d-rows d-sv">${rows.join('')}</div>
       <div class="d-hint2">路径中的 <code>&lt;用户名&gt;</code> / <code>&lt;平台账号ID&gt;</code> 是占位符，按你自己的账号替换。<b>存档前请先退出游戏</b>，避免被覆盖。数据来自 Ludusavi 开源清单（MIT）。</div></div>`;
   } catch (e) {} finally { syncPair(); }
 }
@@ -5682,7 +5747,12 @@ async function loadRelated(d, fb) {
   const id = (fb && fb.id) || d.id || '';
   if (!g && !t) { slot.innerHTML = ''; return; }
   try {
-    const qs = 'limit=8'
+    /* ★ v10.31：取 12 条、展示 REL_SHOW 条（用户口径「最好是显示8个」）。
+      为什么取数要比展示多：`limit` 是**后端打分返回的条数**，下面还要
+      ① 滤掉没有详情页 url 的、② 滤掉与本条同 url 的自身回环；
+      只取 8 会让过滤后的实际张数在 5~7 之间跳（实测先前的 6 就是这样来的）。
+      ⚠️ 展示数只认 `REL_SHOW` 这一个常量，别再写成裸字面量。 */
+    const qs = 'limit=12'
       + (id ? '&id=' + encodeURIComponent(id) : '')
       + (t ? '&t=' + encodeURIComponent(t) : '')
       + (g ? '&g=' + encodeURIComponent(g) : '');
@@ -5690,7 +5760,7 @@ async function loadRelated(d, fb) {
     if (!j || !j.ok) { slot.innerHTML = ''; return; }
     const picks = (j.items || [])
       .filter(it => it && it.url && it.url !== d.url)
-      .slice(0, 6);
+      .slice(0, REL_SHOW);
     if (!picks.length) { slot.innerHTML = ''; return; }
     const head = j.genre ? `同分类更多 · ${esc(j.genre)}` : '相似推荐';
     slot.innerHTML = `<div class="block" style="margin-bottom:12px"><h4><span class="ic" style="background:linear-gradient(135deg,#0B7BFF,#6366F1)"></span>${head}</h4>
@@ -6941,7 +7011,7 @@ function railBoot() {
   });
   railSync();
 }
-/* ★ v10.30：详情页顶图改成「大图随滚动滚走 + 常驻小标题条滑入」。
+/* ★ v10.30：详情页顶图改成「大图随滚动滚走 + 常驻小标题条显形」。
  *  （v10.28 是「250px sticky 大图滚过 90px 收窄成 62px」，用户口径：「往下拉的时候，
  *   置顶切换会一直闪（大小切换问题）」）
  *
@@ -6953,14 +7023,20 @@ function railBoot() {
  *   ③ **内容瞬变**：+40ms 中途采样，高度还在 247.8px（过渡才走 2px），
  *      而图片亮度 / 字号 / 标题位置 / 渐变方向**已全部到位** ⇒ 观感是「抽一下」而不是缩放。
  *  新结构从**结构层**消掉这三条：`.d-hero` 高度恒定 250px 且不再 sticky
- *  ⇒ 布局不再反过来影响 scrollTop（②消失）；小标题条只做 `transform`（不触发布局，③消失）。
- *  剩下的 ① 用「双阈值滞后 + rAF 合帧 + 只在跨越时才算」兜住手抖。
+ *  ⇒ 布局不再反过来影响 scrollTop（②消失）。剩下的 ① 用「双阈值滞后 + rAF 合帧 +
+ *  只在跨越时才算」兜住手抖。
  *
+ *  ★ v10.31 又改了两处（用户口径：「详情页的顶部图不要动画了，现在还是会在一定的位置
+ *    游戏名忽大忽小的闪」）—— v10.30 的「小条滑入」本身就是残余的动画，且阈值取早了：
+ *    · 动画侧：`.d-mini` 的 `transform:translateY(-102%)` + 260ms 过渡**整条删掉**，
+ *      只切 `visibility`（见 CSS 里那段注释）。v10.30 说「只做 transform 不触发布局」
+ *      是对的，但**不触发布局 ≠ 没有动画** —— 用户要的是不动。
+ *    · 阈值侧：`heroH - 62 + 12` → `heroH`，让「大图离开」与「小条贴顶」同帧发生。
  *  ⚠️ 状态以 **DOM 上的 class** 为唯一事实来源（不另存模块变量）：抽屉是复用节点、
  *     换游戏时 `#dMini` 会整块重建 —— 读 class 才能天然复位。存变量的话，
  *     「上一款滚到一半、下一款打开还停在收窄态」这类错位得单独写代码去清。
  *  ⚠️ 为什么不用纯 CSS：CSS 选不了「滚动位置」，`animation-timeline:scroll()` 兼容性不够。 */
-const MINI_GAP = 50;   // 双阈值之间的滞后带（专治触控板/滚轮在临界点的手抖）
+const MINI_GAP = 24;   // 双阈值之间的滞后带（专治触控板/滚轮在临界点的手抖）
 let miniPend = 0;      // rAF 句柄：滚动事件再密，一帧也只结算一次
 function dHeroSpy() {
   if (miniPend) return;
@@ -6969,14 +7045,22 @@ function dHeroSpy() {
     const dr = $('#drawer'), h = $('#dMini'), hero = $('#dHero');
     if (!dr || !h || !hero) return;
     const y = dr.scrollTop;
-    /* ★ 阈值跟着大图的**实际**高度走，不写死 200：窄屏（≤760px）大图是 190px，
-       写死 200 会让小条晚出现 10px、中间留一条空档；窗口缩放也因此自洽。
-       「大图底部刚好收到小条下沿」= heroH - 62，再加 12px 提前量，滑入时正好衔接。 */
-    const on = Math.max(60, hero.offsetHeight - 62 + 12);
+    /* ★ v10.31：阈值 = **大图的实际高度**（不再减 62 加 12）。
+       旧式 `heroH - 62 + 12` 的用意是「大图底边收到小条下沿时开始滑入」，
+       但实拍证明它**早于大图离开视口**：抽屉 720 / 大图 250 时阈值只有 200，
+       而 `.d-title` 占 186.8~236 —— 滚到 210 时大标题还剩 26px 在屏上，
+       小条已显形 ⇒ 一大一小两个游戏名同屏，正是用户说的「忽大忽小」。
+       改成 `heroH` 后：小条的静态位就在内容偏移 250（= 紧随大图之后），
+       所以「大图整块滚出视口」与「小条正好贴顶」是**同一个瞬间**，
+       `visibility` 一切就是无缝衔接，不需要任何过渡动画。
+       阈值仍跟着 `offsetHeight` 算，窄屏（≤760px，大图 190px）自动跟随。 */
+    const on = Math.max(60, hero.offsetHeight);
     const off = Math.max(24, on - MINI_GAP);
     const cur = h.classList.contains('on');
     let next = cur;
-    if (!cur && y > on) next = true;
+    /* ⚠️ 上侧必须用 `>=`（实测：写 `>` 时 y=250 不激活、y=260 才激活 ——
+       阈值恰好等于大图高，`>` 会把「大图刚离开」那一帧漏掉，多出 1~10px 的空档）。 */
+    if (!cur && y >= on) next = true;
     else if (cur && y < off) next = false;
     if (next === cur) return;    // 没跨越阈值 ⇒ 一个字节的 DOM 都不碰
     h.classList.toggle('on', next);

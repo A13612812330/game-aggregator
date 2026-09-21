@@ -64,6 +64,14 @@ const MUST = [
    *   （2026-09-21 实际踩过，六个候选串全判成「不可用」）。
    * ★ 也别写 `dHeroSpy`：v10.29 与 v10.30 都是 4 次，区分不了新旧（写了等于白写）。 */
   'd-mini', '--cd-t2', 'MINI_GAP',
+  /* ---- v10.31：详情页四条体验修正（顶图去动画 / 顶图同源 / 固定五个 / 同类卡统一）----
+   * ★ 三条实测「v10.30 为 0 次 / v10.31 为 4 / 4 / 1 次」才拿来用。
+   *   基准 = `git show HEAD~1:public/index.html`（当前 HEAD 是 v10.31 提交 ⇒ HEAD~1 就是 v10.30，
+   *   导出后 md5 应为 `5b24a89b8e95a59c7e47a0aa0a1fad31`，可先核对再采信下面的数字）。
+   * ★ **别写 `object-fit:contain`（v10.30 已有 1 次）也别写 `align-items:stretch`（v10.30 已有 3 次）** ——
+   *   旧版本来就有的串区分不了新旧，写进去等于白写（本文件的判定是 `includes`，只看「有没有」）。
+   * ★ 也别写 `d-row-h` 以外的短串如 `d-rows`：与 `--d-row-h` 同生同灭，重复计入无意义。 */
+  '--d-row-h', 'REL_SHOW', 'Math.max(60, hero.offsetHeight)',
 ];
 
 /* ★ MUST 自检：本地首页都没有的串不可能区分新旧版本，只会制造假红 */
@@ -122,7 +130,7 @@ function chk(ok, name, extra) {
 
   const html = await p.content();
   const missing = MUST.filter((k) => !html.includes(k));
-  chk(missing.length === 0, '[页面] 线上首页含全部特征串（v10.14~v10.30）', missing.length ? '缺：' + missing.join(', ') : MUST.length + ' 项齐');
+  chk(missing.length === 0, '[页面] 线上首页含全部特征串（v10.14~v10.31）', missing.length ? '缺：' + missing.join(', ') : MUST.length + ' 项齐');
   chk(LOCAL_MISSING.length === 0,
     '★ MUST 每一项在**本地首页**里都存在（本地没有的串区分不了新旧，只会假红）',
     LOCAL_MISSING.length ? '本地缺：' + LOCAL_MISSING.join(', ') : MUST.length + ' 项');

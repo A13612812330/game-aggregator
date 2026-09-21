@@ -84,6 +84,13 @@ console.log('\n=== ② 同类游戏卡 .rel-it ===');
   ok(/border-radius:var\(--cd-th-r\)/.test(img), '缩略图圆角走 --cd-th-r');
   ok(!/height:56px/.test(img), '★★ 反向断言：不再有硬编码 height:56px');
   ok(/height:auto/.test(img), '★ 高度交给 aspect-ratio 推（留 height 会压过比例）');
+  /* ★ v10.31 新增：`contain` 是唯一同时满足「卡片一样大」+「按比例缩放」的取值。
+     用户口径「统一大小，而不是为了完整显示图片而拉长（按比例缩放图片比较好吧）」。
+     本族封面是**两种原生比例混排**：机地封面 140×140 方图、Steam header 460×215（2.14）。
+     写 cover ⇒ 方图被裁掉上下（实测「黄金之心」标题整条不见了）；
+     写 fill  ⇒ 方图被横向拉扁；只有 contain 两种都不变形、且不影响卡片尺寸。 */
+  ok(/object-fit:contain/.test(img), '★★ 图片 contain 按比例缩放（cover 会把方图裁掉标题，fill 会拉扁）');
+  ok(!/object-fit:cover/.test(img), '★★ 反向断言：同类游戏卡不再用 cover');
 
   const t = ruleOf(IDX, '.rel-row .rel-it .t');
   ok(/-webkit-line-clamp:2/.test(t), '★ 标题 2 行封顶');
@@ -183,7 +190,12 @@ console.log('\n=== ⑤ 顶图小标题条 ===');
   ok(/position:sticky/.test(mini) && /top:0/.test(mini), '小标题条 sticky 吸顶');
   ok(/height:62px/.test(mini), '小条恒高 62px');
   ok(/margin-bottom:-62px/.test(mini), '★★ 负 margin 不占文档流（不加 ⇒ 正文整体下移 62px）');
-  ok(/transform:translateY\(-102%\)/.test(mini), '★ 未激活时靠 transform 收在上方（不靠改高度）');
+  ok(/visibility:hidden/.test(mini), '★ 未激活时靠 visibility 隐藏（不靠改高度）');
+  /* ⚠️ 这里 `mini` 是**规则体**（ruleOf 的返回值），不是整份源码 ——
+     所以不能写 `\.d-mini\{[^}]*transform:`（规则体里永远不含选择器，那种写法恒真＝假绿，
+     同 v10.30 反证里抓到的那两条）。直接判规则体自身有没有 `transform:` / `transition:`。 */
+  ok(!/transform:/.test(mini), '★★ 反向断言：小条规则体里不许有 transform 位移（v10.31 用户口径「不要动画了」）');
+  ok(!/transition:/.test(mini), '★★ 反向断言：小条规则体里不许有 transition（有过渡就有「闪」）');
   ok(/pointer-events:none/.test(mini), '未激活时不吃点击');
   ok(/-62px/.test(mini), '负 margin 与小条高度同值（改一个忘一个 ⇒ 正文错位）');
 

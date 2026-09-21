@@ -131,7 +131,14 @@ console.log('\n=== ② 顶图 + 常驻小标题条 ===');
   ok(/\.d-mini\{[^}]*margin-bottom:-62px/.test(IDX),
     '★★ 小条用负 margin **不占文档流**（不加这一条正文会整体下移 62px）');
   ok(/\.d-mini\.on\{/.test(IDX), '★ 有 .d-mini.on 激活态');
-  ok(/\.d-mini\{[^}]*transform:translateY\(-102%\)/.test(IDX), '★ 未激活时靠 transform 收在上方（不靠改高度）');
+  /* ★ v10.31：这里原来断言「靠 transform 收在上方」。用户口径「详情页的顶部图不要动画了」
+     ⇒ 位移与过渡整条删掉。**不是删断言凑绿**，而是把同一处要害换成新机制的三条判据：
+       ① 靠 `visibility` 隐藏（仍旧「不靠改高度」——高度恒定那条断言在上面）；
+       ② 反向断言：不许有任何 `transform` 位移（位移本身就是要被去掉的动画）；
+       ③ 反向断言：不许有 `transition`（有过渡 = 有「一边下滑一边淡入」，就是「闪」的来源）。 */
+  ok(/\.d-mini\{[^}]*visibility:hidden/.test(IDX), '★ 未激活时靠 visibility 隐藏（不靠改高度）');
+  ok(!/\.d-mini\{[^}]*transform:/.test(IDX), '★★ 反向断言：小条不再做位移（用户口径「不要动画了」）');
+  ok(!/\.d-mini\{[^}]*transition:/.test(IDX), '★★ 反向断言：小条不留 transition（有过渡就有「闪」）');
   ok(/\.d-mini\{[^}]*pointer-events:none/.test(IDX), '未激活时不吃点击');
   /* ★ 开关必须用一次 classList.toggle —— 写成 if/else 两行会在快速滚动时抖动。
      判据取「函数体里 toggle('on' 只出现一次」，锚定到 dHeroSpy 体内。 */

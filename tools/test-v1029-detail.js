@@ -207,8 +207,21 @@ console.log('\n=== ⑤ 修改器 + 云存档同行、各最多 5 行 ===');
   ok(/\.d-pair\.solo\{grid-template-columns:1fr\}/.test(IDX), '只有一块有内容时收成单列（不留一整列空白）');
   ok(/@media\(max-width:760px\)\{\.d-pair\{grid-template-columns:1fr\}\}/.test(IDX),
     '窄屏回落单列（并排后每块只剩 ~150px，路径会被挤成三四个字一行）');
-  ok(/\.d-pair>div>\.d-blk\{margin-bottom:0\}/.test(IDX), '卡片的 margin-bottom 在 grid 里去掉（否则两列底部不齐）');
-  ok(/align-items:start/.test(IDX), '两块各自按内容高度收（拉齐会让行少的那块留一大片空白）');
+  ok(/\.d-pair>div>\.d-blk\{margin-bottom:0;/.test(IDX), '卡片的 margin-bottom 在 grid 里去掉（否则两列底部不齐）');
+  /* ★ v10.31 改写：原断言是 `align-items:start`（「两块各自按内容高度收」）。
+     用户看完实拍后口径反转 ——「我需要修改器+云存档的固定显示五个的，而不是如果一边
+     只有一个那个卡片大小就变小了」。实测（xd-692）旧状态下两块差 176px（336×161 vs
+     336×337），用户读成「坏了」。⇒ 换成 stretch（两卡永远等高）+ 三条配套判据。
+     ⚠️ 别只改这一个词：`stretch` 单独成立时，一张只有 1 条的卡片会**被拉得很高但仍
+        只有 1 行**，所以「固定预留 5 行」的 `.d-rows` 底高必须同时在。 */
+  /* ⚠️ 锚点必须收窄到 `.d-pair{…}` 这个规则体：裸写 `/align-items:stretch/`
+     在整个 IDX 里也能命中别处的 flex 声明 ⇒ 就算 .d-pair 改回 start 也照样绿（假绿）。 */
+  ok(/\.d-pair\{[^}]*align-items:stretch/.test(IDX), '★ 两块**等高**（v10.31 用户口径；v10.29 的 start 已作废）');
+  ok(!/\.d-pair\{[^}]*align-items:start/.test(IDX), '★★ 反向断言：.d-pair 不再 align-items:start');
+  ok(/\.d-rows\{min-height:calc\(var\(--d-row-h\) \* var\(--d-rows\)\)\}/.test(IDX),
+    '★★ 行容器固定预留 5 行槽位（只有 1 条的卡片也不缩水 —— 「固定显示五个」的落点）');
+  ok(/\.d-pair \.d-hint2\{margin-top:auto\}/.test(IDX),
+    '预留出来的空档不能把提示顶在半空 ⇒ 提示沉到卡底');
 
   const sp = fnBody('syncPair');
   ok(sp.length > 0, '★ 新增 syncPair()（两块异步回填，谁先回来不一定）');
