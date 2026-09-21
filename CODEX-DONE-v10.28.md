@@ -1,6 +1,6 @@
 # v10.28 —— 详情页版式重排 + 三处交互重做（吸顶 / 置顶 / 固定底栏 / 三专区预览分页）
 
-> 日期：2026-09-20 ｜ 上一版：v10.27（下载弹窗重构）
+> 日期：2026-09-20 开发 ｜ **2026-09-21 发布** ｜ 上一版：v10.27（下载弹窗重构）
 > 关联文件：`public/index.html`（主源）· `public/emulator.html` · `public/unpack.html`（重建）·
 > `tools/test-v1028-detail.js`（新增 119 条）· `tools/preview-v1028.js`（新增实拍 43 条）·
 > `tools/_counterproof-v1028.js`（新增反证 11 条）· `tools/run-all.js`（登记新套件）·
