@@ -94,6 +94,13 @@ const uniq = (a) => [...new Set(a)];
       await s2(400); F2.ob.disconnect(); const flipsOld = F2.get();
       dr.scrollTop = 0; await s2(400);
 
+      /* ---- 首个激活点：它同时给出「阈值」与「那一刻大标题在哪」----
+         ★ 真正要守的口径是后者（大标题是否已完全离开视口），不是「阈值必须等于某个具体整数」：
+         2026-09-21 对**线上**跑同一脚本时，逐 px 扫描是 251 才激活（hero 高 250）——
+         `y = dr.scrollTop` 会因布局小数被舍成 249.x ⇒ 少 1px。本地恰好 250.0 所以命中 250。
+         这是亚像素差异，不是逻辑差异；但「写死 250」的断言在线上就报假红。 */
+      const hit = scan.find((x) => x.on) || {};
+
       /* ---- ② 顶图 ---- */
       const hi = hero.querySelector('img');
       const mth = mini.querySelector('.th img');
@@ -124,7 +131,11 @@ const uniq = (a) => [...new Set(a)];
         mini: { transDur: cs(mini).transitionDuration, transProp: cs(mini).transitionProperty,
           transform: cs(mini).transform, anim: cs(mini).animationName, h: rect(mini).h },
         heroTransDur: cs(hero).transitionDuration,
-        thresholdHit: (scan.find((x) => x.on) || {}).y ?? null,
+        heroH: hero.offsetHeight,
+        /* ⚠️ 这些整数字段来自扫描（步长 10），`hit.y` 必然是 10 的倍数 ⇒ 只能判「落点与阈值同档」，
+           不能判「等于某个具体像素」。精确到 1px 的判据见 `_probe-v1031-thr.js`。 */
+        thresholdHit: hit.y === undefined ? null : hit.y,
+        titleBottomAtHit: hit.titleBottom === undefined ? null : hit.titleBottom,
         bothCount: scan.filter((x) => x.both).length,
         scanPts: scan.length,
         flipsNew, flipsOld, finalOn,
@@ -141,14 +152,25 @@ const uniq = (a) => [...new Set(a)];
     chk('① 小条 transform 为 none（不做位移）', m.mini.transform === 'none', `transform=${m.mini.transform}`);
     chk('① 小条无 keyframes 动画', m.mini.anim === 'none' || !m.mini.anim, `animationName=${m.mini.anim}`);
     chk('① 大图本身也无过渡', /^0s/.test(m.heroTransDur), `hero transitionDuration=${m.heroTransDur}`);
-    chk('① 阈值首次激活 = 250（= 大图高，即"大图整块离开"）', m.thresholdHit === 250, `实测 @ y=${m.thresholdHit}`);
+    /* ★ 判据口径（2026-09-21 对线上跑时才校准的）：阈值**跟着 `hero.offsetHeight` 走**才是规范，
+       但「首激活点」会被 `dr.scrollTop` 的亚像素舍入推后 ≤1px（线上 251 / 本地 250），
+       而本扫描步长是 10 ⇒ 只能判**同档**，不能判「等于某个具体像素」。
+       ⚠️ 别把容差写成 `< 10`：线上真实阈值 251、首命中点必然是 260（10 的倍数），差正好 10。
+       真正要守的是下面那条 —— 首激活时大标题必须**已完全离开**视口，
+       这正是用户「游戏名忽大忽小地闪」的口径，且跨环境稳定（本地/线上都过）。 */
+    chk('① 阈值首次激活 ≈ 大图高（同档；跟随 offsetHeight）',
+      m.thresholdHit !== null && m.heroH > 0 && m.thresholdHit >= m.heroH && m.thresholdHit - m.heroH <= 10,
+      `实测 @ y=${m.thresholdHit} / heroH=${m.heroH}`);
+    chk('★★ 首激活时大标题**已完全离开视口**（≤0）',
+      m.titleBottomAtHit !== null && m.titleBottomAtHit <= 0,
+      `大标题底 ${m.titleBottomAtHit}px`);
     chk('① 41 点扫描无「大标题与小条同屏」', m.bothCount === 0, `${m.bothCount} / ${m.scanPts} 点`);
     /* ⚠️ 这里**不能断言 0 次**：序列 [235,260,246,255,242,258,249,251] 从阈值下方
        起步、终点在阈值上方，所以「恰好一次激活」是**必需的**、不是抖动。
        抖动（chatter）的定义是**反复来回**：同一次穿越里出现 ≥2 次翻转。
        ⇒ 判据 = 恰好 1 次（0 次说明阈值不在 250，≥2 次才是抖动），再加终态仍在激活态。 */
     chk('① 临界点来回恰好一次激活、无反复翻转', m.flipsNew === 1, `翻转 ${m.flipsNew} 次`);
-    chk('① 序列结束后小条仍在激活态（末次 251 > 阈值 250）', m.finalOn === true, `on=${m.finalOn}`);
+    chk('① 序列结束后小条仍在激活态（末次 251 ≥ 阈值）', m.finalOn === true, `on=${m.finalOn}`);
     chk('① 阈值**下方**（~200）来回完全不触发', m.flipsOld === 0, `翻转 ${m.flipsOld} 次`);
 
     /* ---------- ② 顶图 ---------- */
