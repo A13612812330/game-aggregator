@@ -159,12 +159,25 @@ function chk(ok, name, extra) {
         return { txt: lg.textContent.trim(), inH4: !!(par && par.closest('h4')) };
       })(),
       waits: document.querySelectorAll('#bhDevSlot .dv .chip.wait').length,
-      moreTxt: (document.querySelector('#bhDevSlot .dv.more') || {}).textContent || '',
+      /* ★ v10.28：全量入口从「区块内联的 .dv.more 行」改成独立槽位 `#bhMoreSlot`
+         —— 后者对「机型清单为空、但有本站实测 / 逐条参数」的游戏**也给入口**。 */
+      moreTxt: (document.querySelector('#bhMoreSlot .d-more-btn') || {}).textContent || '',
       blkTxt: ((document.querySelector('#bhDevSlot') || {}).innerText || '').replace(/\s+/g, ' '),
       overflow: document.documentElement.scrollWidth > window.innerWidth + 1,
     };
   });
-  chk(r.n >= 9, '[线上] 详情页机型清单 ≥ 9 台', r.n + ' 台');
+  /* ★ v10.28 语义变更（**预期变更，不是退化**）：详情页手机配置**默认只渲染 5 台**
+     （`DL_DEV_SHOW = 5`），全量搬进「查看全部 N 台机型」弹窗。
+     ⇒ 旧断言「首屏 ≥ 9 台」已失效。但它守的**意图**必须保留：
+       「展示的是并集全量，不是上游摘要那个 6 台上限」。
+     改法：① 首屏 == 5 台 ② 入口文案标出的总数 ≥ 9 ③ **真点开弹窗**数里面的行 ≥ 9。
+       ★ 只有 ③ 等价于旧断言的口径（用户确实看得到全量）；①② 只是「入口还活着」。
+     ⚠️ 判据先过本地自检：同口径的本地版在 `tools/preview-v1028.js`（打 127.0.0.1:8123）。
+        线上红了先跑本地那条 —— 本地也红就是代码坏了，不是线上旧版（假红）。 */
+  chk(r.n === 5, '[线上] 首屏机型 = 5 台（v10.28 默认展示数）', r.n + ' 台');
+  const moreTotal = Number((r.moreTxt.match(/查看全部\s*(\d+)\s*台/) || [])[1] || 0);
+  chk(moreTotal >= 9, '[线上] ★ 存在「查看全部 N 台机型」入口且 N ≥ 9（不是上游摘要 6 台上限）',
+    r.moreTxt.trim().replace(/\s+/g, ' ') || '(没有入口)');
   const honor = r.rows.find((x) => /MTN/i.test(x.main + x.code + x.hw));
   chk(honor && honor.main === 'Honor Magic8 Lite', '[线上] 残缺代号已换成「品牌+型号」', honor ? honor.main : '(未找到 MTN 那台)');
   const mi = r.rows.find((x) => /25053PC47G/i.test(x.hw + x.code));
@@ -220,11 +233,26 @@ function chk(ok, name, extra) {
   }
   await p.screenshot({ path: path.join(OUT, 'live-hw.png') });
 
+  /* ---- ④ ★ v10.28：点开「查看全部」弹窗，数里面的机型行 ----
+     这才是旧断言「机型清单 ≥ 9 台」的真口径：用户确实能一次看全，
+     而不是「首屏少了几台 = 数据被截断」。 */
+  await p.evaluate(() => {
+    const mb = document.querySelector('#bhMoreSlot .d-more-btn');
+    if (mb) mb.click();
+  });
+  const popOk = await p.waitForFunction(
+    () => document.querySelectorAll('#dlBody .df-row').length > 0,
+    { timeout: 90000 },
+  ).then(() => true).catch(() => false);
+  const popN = await p.evaluate(() => document.querySelectorAll('#dlBody .df-row').length);
+  chk(popOk && popN >= 9, '[线上] ★ 弹窗里能一次看到全部 ≥ 9 台机型（旧「≥ 9 台」的真口径）', popN + ' 台');
+  await p.screenshot({ path: path.join(OUT, 'live-fullpop.png') });
+
   for (const pg of await b.pages()) { try { await pg.close(); } catch (x) {} }
   await b.close();
 
   console.log('\n' + '='.repeat(58));
   console.log(`线上验收：${pass} / ${pass + fail} 通过` + (fail ? `，${fail} 失败` : ''));
-  console.log('截图：_preview/live-devs.png、_preview/live-hw.png');
+  console.log('截图：_preview/live-devs.png、_preview/live-hw.png、_preview/live-fullpop.png');
   if (fail) process.exitCode = 1;
 })().catch((e) => { console.error('运行失败：', e.message); process.exit(1); });
