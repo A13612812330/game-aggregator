@@ -57,6 +57,13 @@ const MUST = [
    * ★ 别把 `d-pair` 写进来：线上 v10.28 **也有 2 次**，区分不了新旧（写了等于白写）。
    * ★ 也别只写 `df-tab`：线上 v10.28 已有 8 次（v10.28 就上了 tab）。 */
   'galLbStep', 'compareDocumentPosition', 'd-more-hd', '评分参数',
+  /* ---- v10.30：置顶改「恒高小条」+ 卡片统一变量 ----
+   * ★ 这三条实测「v10.29 为 0 次 / v10.30 为 13 / 5 / 2 次」才拿来用 ——
+   *   基准取 `git show HEAD~2:public/index.html`（= v10.29），
+   *   ⚠️ 别取 `HEAD~1`：v10.30 的功能提交在 `HEAD~1`，拿它比等于**拿 v10.30 比自己**
+   *   （2026-09-21 实际踩过，六个候选串全判成「不可用」）。
+   * ★ 也别写 `dHeroSpy`：v10.29 与 v10.30 都是 4 次，区分不了新旧（写了等于白写）。 */
+  'd-mini', '--cd-t2', 'MINI_GAP',
 ];
 
 /* ★ MUST 自检：本地首页都没有的串不可能区分新旧版本，只会制造假红 */
@@ -115,7 +122,7 @@ function chk(ok, name, extra) {
 
   const html = await p.content();
   const missing = MUST.filter((k) => !html.includes(k));
-  chk(missing.length === 0, '[页面] 线上首页含全部特征串（v10.14~v10.29）', missing.length ? '缺：' + missing.join(', ') : MUST.length + ' 项齐');
+  chk(missing.length === 0, '[页面] 线上首页含全部特征串（v10.14~v10.30）', missing.length ? '缺：' + missing.join(', ') : MUST.length + ' 项齐');
   chk(LOCAL_MISSING.length === 0,
     '★ MUST 每一项在**本地首页**里都存在（本地没有的串区分不了新旧，只会假红）',
     LOCAL_MISSING.length ? '本地缺：' + LOCAL_MISSING.join(', ') : MUST.length + ' 项');

@@ -321,6 +321,8 @@ node tools/audit-apps.js          # ★ 发布过就再跑一次：应用登记 
 
 | 项 | 结果 |
 |---|---|
+| **发布（v10.30）** | ✅ 覆盖 LIVE `wbapp_047aLTlMY7YdDmtVpp3BYa` ⇒ **同一 sandbox 复用成功**（`445143a7b300`），**链接未变** `https://gamehub-agg-v4.app.workbuddy.host/`。三页 md5 **逐字节一致**（index `5b24a89b8e` / emulator `68a1ccea9c` / unpack `9c20a130cf`）· `verify-online.js` **27/27** · `MUST` 随版加串 20 → **23 项** |
+| **★ 发布工具「空返回」= 无声失败（v10.30 实测）** | 同一份代码连推 4 次：① `fetch failed` ② `Array buffer allocation failed` ③ **无输出、无报错**（空返回） ④ 成功。★ **第 ③ 种最危险** —— 没有报错、没有链接，最容易被当成「已发布」汇报出去。⇒ **判据只能是拉线上 `index.html` 比 md5**（本次正是靠它发现线上一直没换）。另：目录 929MB、而 `.gitignore` 口径载荷仅 **227 文件 / 72.3MB**，第 ② 次的成因**未定论**（同样的目录第 ④ 次成功），不写成结论 |
 | **发布（v10.29）** | ✅ 覆盖 LIVE `wbapp_047aLTlMY7YdDmtVpp3BYa` ⇒ **同一 sandbox 复用成功**（`445143a7b300`），**链接未变** `https://gamehub-agg-v4.app.workbuddy.host/`。三页 md5 **逐字节一致**（index `91ff99ba16` / emulator `a65d857a36` / unpack `d53816eac9`）· `verify-online.js` **27/27** · 对账「与本地同版（含数据层）」 |
 | **★ 「改完没发」第 4 次复发（v10.29）** | 用户在**线上**看到旧界面来问「推送更新，我发现还是没变」。判据：改前线上 md5 `8817fbd695`（348,220B）**连一个 v10.29 特征都没有**（`评分参数`/`galLbStep`/`compareDocumentPosition`/`d-more-hd` 全 0 次），**五个已知域名实测均非 v10.29**。⇒ **GitHub 推送 ≠ 上线**，线上是**快照**，必须单独发布。★ 复核时顺手发现 `verify-online.js` 的 `MUST` **停在 v10.24**（发不发新包都会绿）⇒ 补 v10.29 独有 4 条；**别写 `d-pair`**（旧版也有 2 次）、**别只写 `df-tab`**（旧版已有 8 次） |
 | **★ 机地源搜索连续 6 日不可用（v10.29 修）** | `fetchers/jidi.js` L7 只解构 `{ HOST_JIDI, getHtml }`，而 L47/265/288 在调 `normDate` ⇒ 机地同步与机地源搜索恒 `normDate is not defined`（0.7 秒中止，连续 6 天无人发现）。补一行即修，修后实测 `jidi ok:true`。⇒ **新增 `tools/test-shared-destructure.js`**：导出清单**从 `shared.js` 源码求值**（不手抄），扫 19 个引用 shared 的文件比对「用了但没解构」；已登记 `SUITES`（总闸 28 → **29 套**） |

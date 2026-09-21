@@ -32,6 +32,15 @@
 > （多的字省略号即可，或者固定预留两行）」。用户选定：① **固定小标题条** · ② **固定预留两行**。
 > **完整说明见 `CODEX-DONE-v10.30.md`**。
 >
+> **✅ 已发布（2026-09-21）**：覆盖 LIVE `wbapp_047aLTlMY7YdDmtVpp3BYa`（**同一 sandbox 复用成功**
+> `445143a7b3004d749eab6be0fe8836e5`），**链接未变** `https://gamehub-agg-v4.app.workbuddy.host/`。
+> 线上三页 md5 **逐字节一致**（index `5b24a89b8e` / emulator `68a1ccea9c` / unpack `9c20a130cf`；
+> 改前线上分别为 `91ff99ba16` / `a65d857a36` / `d53816eac9`）· 线上验收 **27/27** ·
+> `verify-online.js` 的 `MUST` 已随版加串 20 → **23 项**（`d-mini` / `--cd-t2` / `MINI_GAP`，
+> 实测 v10.29 各 0 次、v10.30 各 13/5/2 次才入选）。
+> ⚠️ **本次发布前 3 次尝试全部无声失败**（`fetch failed` → `Array buffer allocation failed` →
+> **空返回**）；**空返回最危险**，看起来像成功，唯一可靠判据仍是拉线上 `index.html` 比 md5。
+>
 > **① 根因不只是阈值，是「滚动锚定自激」**：`.d-hero` 从 250px 收到 62px 让文档矮 188px，
 > 浏览器为保住视觉位置**自动改写 `scrollTop`** ⇒ 又越过阈值 ⇒ 再翻转 ⇒ **不需要用户操作也自己振**。
 > 实测旧实现（阈值 90px、来回滚 14 次）翻转 **21 次**；静置时 `scrollTop` 被从 200 改写成 71。
