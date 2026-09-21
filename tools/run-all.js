@@ -58,11 +58,24 @@ const SUITES = [
   'test-launcher.js',
   'test-v1026-jidiposts.js',
   'test-v1027-dlpop.js',
+  'test-v1028-detail.js',
 ];
 /* 刻意**不登记**的：
  *   · test-search-ui.js  —— 用 puppeteer，属第二层「浏览器实拍」，本脚本跑不了
  *   · test-emuhub.js     —— 已废弃的兼容壳，内部 require('./test-emulator-page.js')，
- *                           登记它只会把同一批断言算两遍（不是漏登记） */
+ *                           登记它只会把同一批断言算两遍（不是漏登记）
+ *   · check-inline-syntax.js —— 它不是「断言套件」而是**前置闸**（见下面的 PREFLIGHT）：
+ *                           只吐文件数、不吐断言数，混进 SUITES 会把条数汇总口径搅浑。 */
+
+/* 前置闸 —— 在跑任何断言**之前**执行。
+ * ★ 为什么必须有：`public/*.html` 的内联脚本是 3400~4700 行的单块 JS，
+ *   一旦语法坏了（注释里出现提前闭合序列、模板串里塞了反引号），
+ *   后面所有套件都会以「找不到标记 / 断言失败」的形式集体翻红 —— 看着像几十处功能坏了，
+ *   实际只有一处手误。先过语法闸，报错才能**精确到行列**。
+ * 判据：退出码非零 ⇒ 直接计入 crashed，最终 process.exit(1)。 */
+const PREFLIGHT = [
+  { name: 'check-inline-syntax.js', args: ['public/index.html', 'public/emulator.html', 'public/unpack.html'] },
+];
 
 let pass = 0, fail = 0;
 const crashed = [];
@@ -92,6 +105,30 @@ function exitTiedToFailures(src) {
   if (m1.some((m) => NAMES.test(m[1]))) return true;
   if (/process\.exitCode\s*=\s*1/.test(src) && /\bif\s*\(\s*(fail|fails|failures|failed|bad|errs|nFail)\b/.test(src)) return true;
   return false;
+}
+
+/* ---------- 前置闸 ---------- */
+let preOk = 0;
+for (const pf of PREFLIGHT) {
+  const file = path.join(ROOT, 'tools', pf.name);
+  if (!fs.existsSync(file)) { missing.push(pf.name); continue; }
+  let out = '', code = 0;
+  try {
+    out = execFileSync(process.execPath, [file, ...(pf.args || [])], {
+      cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60000,
+    });
+  } catch (e) {
+    code = e.status == null ? -1 : e.status;
+    out = String(e.stdout || '') + String(e.stderr || '');
+  }
+  if (code !== 0) crashed.push(`${pf.name} (前置闸 exit ${code})`);
+  else preOk++;
+  if (!QUIET) {
+    console.log(`\n${'='.repeat(68)}\n  [前置闸] ${pf.name}  exit=${code}\n${'='.repeat(68)}`);
+    console.log(out.trim());
+  } else {
+    console.log(`  ${code === 0 ? '✅' : '❌'} [前置闸] ${pf.name}  exit=${code}`);
+  }
 }
 
 for (const s of SUITES) {
@@ -130,6 +167,7 @@ for (const s of SUITES) {
 
 console.log(`\n${'#'.repeat(52)}`);
 console.log(`静态防线：${SUITES.length} 套`);
+console.log(`前置闸：${preOk} / ${PREFLIGHT.length} 通过`);
 console.log(`通过 ${pass} / 失败 ${fail}`);
 if (missing.length) console.log(`⚠️ 清单里的文件不存在：${missing.join(', ')}`);
 if (noExit.length) {

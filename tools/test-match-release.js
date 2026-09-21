@@ -45,7 +45,12 @@ for (const x of items) {
 ok(items.length > 3000, '产物条目数正常（' + items.length + '）');
 ok(s.matched >= 1535, '★ 匹配数不低于本版基线（实测 ' + s.matched + '，基线 1540）');
 ok(s.matchedRate >= 48, '★ 匹配率 ≥ 48（实测 ' + s.matchedRate + '%，改动前 47.9%）');
-ok(items.length <= 3195, '★ 同款已归并（' + items.length + ' ≤ 改动前 3195）');
+/* ★ 原判据 `items.length <= 3195` 是**硬上限**（v10.21 改动前的条目数）——
+   而社区库在持续收录，条目数只会往上走（2026-09-20 实测已到 3200）⇒ 这条迟早恒红，
+   且红的时候完全指不出「是归并坏了还是库涨了」。判据换成**归并产物**：
+   归并时会把被并掉的名字记进 `alt`，所以带 alt 的条目必须真实存在。 */
+const mergedCnt = items.filter((x) => x.alt && x.alt.length).length;
+ok(mergedCnt > 0, '★ 同款已归并（' + mergedCnt + ' 条带 alt = 被并掉的名字；条目数 ' + items.length + '）');
 /* ★ v10.23：改成「不低于基线」而不是恒等 ——
    社区库还在持续收录，配置数会**变多**；恒等会把「新增」误判成退化。
    真正要守住的是「归并不能丢配置」，即不得低于基线。 */

@@ -243,7 +243,17 @@ eq(dl.serverOf('https://store.steampowered.com/app/1/'), '其他链接',
     && /data-dlmod-open="mod"[\s\S]{0,200}?<i>0<\/i>/.test(idx),
     '★ 两个按钮各带条数占位 <i>（回填前是 0）');
   ok(/function setDlCounts\(/.test(idx), '★ 有 setDlCounts() 按 counts 回填条数并显隐');
-  ok(/setDlCounts\(j && j\.counts\)/.test(idx), '★ counts 在 loadDlBlock 里回填（不是别处）');
+  /* ★ v10.28：条数来源从 /api/mods/match 的 counts 换成 /api/download 的 sections[] ——
+     详情页新增的「三专区预览」用的就是后者，两套统计并存会出现
+     「按钮写 190、点开只有 110」（同一个语义两条链路，PITFALLS 2）。 */
+  ok(/const cnt = \{\};[\s\S]{0,240}?setDlCounts\(cnt\)/.test(idx),
+    '★ counts 在 loadDlBlock 里、按 /api/download 的 sections 现算后回填（不是别处）');
+  ok(/s\.key === 'mod' \|\| s\.key === 'modifier'/.test(idx),
+    '★ 回填用的两个 key 与底部按钮的 data-dlmod-open 一致（mod / modifier）');
+  ok(/if \(dlSecs\.some\(\(s\) => s\.key === kind\)\) \{ openDlSecPop\(kind\); return; \}/.test(idx),
+    '★ 底部「修改器 / Mod」按钮优先开**同一份** dlSecs 的专区弹窗（按钮上的条数与点开的内容同源）');
+  ok(/openModList\(\{/.test(idx),
+    '★ …但 mods/match 那条链路仍保留作兜底（XD 源没有专区概念，dlSecs 只有一块 key=all）');
   ok(/kind=' \+ kind/.test(idx) && /limit=' \+ D_MOD_CAP/.test(idx),
     '★ openModList 按 kind 拉**分类**列表（mod / modifier 分别取，不是混合 count）');
   ok(/data-dl-url="\$\{esc\(d\.url/.test(idx), '下载按钮把当前源详情页 URL 传给弹窗');

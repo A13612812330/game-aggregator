@@ -61,17 +61,37 @@ console.log('\n=== ① 跨源按钮：另一源无详情页 → 不显示 ===');
 /* ================= ② 手游专区详情页：实测记录可见 ================= */
 console.log('\n=== ② 详情页能看到「本站实测」的实际内容 ===');
 {
-  ok('手机配置块新增 #bhRecSlot 槽位', /<div id="bhRecSlot"><\/div>/.test(IDX));
+  /* ★ v10.28：实测/参数两块**收进「更多」弹窗**（用户口径「收进弹窗，不删数据」），
+     原来的 #bhRecSlot / #bhParamSlot 两个当场渲染槽位随之删除 ⇒ 锚点改成新的入口槽位。
+     数据源没变（仍是 /api/pc/records），只是改在**点击时**才取。 */
+  ok('手机配置块新增 #bhMoreSlot 槽位（v10.28 起实测/参数收进「更多」弹窗）',
+    /<div id="bhMoreSlot"><\/div>/.test(IDX));
   ok('loadBhBlock 在 records > 0 时读 /api/pc/records',
-    /if \(rec && h\.records > 0\)[\s\S]{0,300}?\/api\/pc\/records\?k=/.test(IDX));
+    /h\.records > 0\)[\s\S]{0,260}?\/api\/pc\/records\?k=/.test(IDX));
   ok('新增 bhRecRow() 渲染单条实测记录', /function bhRecRow\(x\)/.test(IDX));
-  ok('实测卡复用 .pc-rec 版式（不另造一套）', /<div class="pc-rec">\$\{recs\.map\(bhRecRow\)\.join\(''\)\}<\/div>/.test(IDX));
+  ok('实测卡复用 .pc-rec 版式（不另造一套）',
+    /'<div class="pc-rec">' \+ recs\.map\(bhRecRow\)\.join\(''\) \+ '<\/div>'/.test(IDX));
   ok('补齐「可玩 / 不可玩」胶囊配色（.pc-rec 原本缺这两态）',
     /\.pc-rec \.r \.hd \.pill\.ok\{/.test(IDX) && /\.pc-rec \.r \.hd \.pill\.no\{/.test(IDX));
-  ok('小节标题写明条数 + 全部实测入口', /本站实测记录<span class="n">\$\{recs\.length\} 条<\/span>/.test(IDX));
+  ok('弹窗内小节标题写明条数', /'<div class="df-sect">本站实测记录（' \+ recs\.length/.test(IDX));
+  /* ★ v10.28 真 bug 回归：`#bhMoreSlot` 的填充曾经被嵌进 if (devs.length && ds) 里 ——
+     库里存在「机型清单为空、但有实测/逐条配置」的游戏，那样入口会被一起吞掉，
+     用户既看不到机型、也拿不到本该有的实测与参数，而**所有「存在性」断言照样绿**。
+     判据用两段：① 顶层缩进（4 空格，if 内是 6 空格）；② 那个 if 之后 6000 字内不许再出现它。 */
+  /* 判据用「**块是否已闭合**」，不是「两处隔多远」——
+     早先写成 `if (devs.length && ds) {` 之后 6000 字内不许出现 moreSlot，
+     可这段代码本来就不到 6000 字 ⇒ **恒红**（判据选错了，不是代码错了）。
+     现在的判据：从那个 if 起到 moreSlot 之前，必须已经出现过「4 空格缩进的 }」。
+     块内缩进一律 ≥6 空格，所以 4 空格的 } 只可能是这个 if 自己的闭合。
+     反证：把 moreSlot 那段搬回 if 内 → 这段里再也找不到 4 空格的 } → 立刻变红。 */
+  const iIdf = IDX.indexOf('if (devs.length && ds) {');
+  const iMore = IDX.indexOf("const moreSlot = $('#bhMoreSlot');");
+  ok('★ 「更多」入口在 if (devs.length && ds) 块**外面**（无机型但有实测的游戏也要能点开）',
+    iIdf > 0 && iMore > iIdf && /^ {4}\}/m.test(IDX.slice(iIdf, iMore)),
+    'if@' + iIdf + ' more@' + iMore);
   ok('实测记录含可抄参数（兼容层/运行模式/驱动/DXVK）',
     ['兼容层', '运行模式', '驱动', 'DXVK'].every((k) => new RegExp(`add\\('${k}'`).test(IDX)));
-  ok('派生页已同步该槽位', /id="bhRecSlot"/.test(EMU));
+  ok('派生页已同步该槽位', /id="bhMoreSlot"/.test(EMU));
   ok('/api/pc/records 端点仍在（抽屉依赖它）', /app\.get\('\/api\/pc\/records'/.test(SERVER));
   /* 数据侧：实测库里确实有可渲染的记录（否则整块永远不显示） */
   const pcArr = (JSON.parse(read('data/phonecfg.json')).records || []);

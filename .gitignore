@@ -59,3 +59,8 @@ tools/_*
 /_dlcheck.js
 /_syntax-*.js
 /_probe*.js
+#   v10.28 又漏过两个（手工拆内联脚本做语法检查留下的 `_check.js` / `_extracted.js`）。
+#   ⇒ 已正式化为 `tools/check-inline-syntax.js`，产物固定落 `_test-out/`（已忽略），
+#     根级**不该再出现**临时 JS；下面点名兜住，防止旧习惯复发。
+/_check.js
+/_extracted.js

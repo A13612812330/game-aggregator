@@ -86,10 +86,12 @@ const DIRTY_RX = /turnip|vkpipe|8Elite-\d|ANGLE |兼容模式|GPU驱动|^\d{4}[A
     const s = document.getElementById('crossSrc');
     const cntEl = document.querySelector('#bhSlot .d-blk h4 .cnt');
     const slot = document.getElementById('bhDevSlot') || {};
-    const gpuSlots = [
-      ...[...document.querySelectorAll('#bhParamSlot .d-param .ph .gpu')].map((x) => x.textContent.trim()),
-      ...[...document.querySelectorAll('.d-param .ph .gpu')].map((x) => x.textContent.trim()),
-    ];
+    /* ★ v10.28：`#bhParamSlot` 槽位已并入 `#bhMoreSlot` 的「查看全部」弹窗 ——
+       参数卡（`.d-param`）统一在弹窗里渲染，所以这里的全局选择器就是唯一出处。
+       （弹窗节点也在 document 里，不必再加 `#dlBody` 前缀。）
+       ⚠️ 弹窗**没打开**时这里会是空数组 ⇒ `dirty.length === 0` 恒真 = **假绿**。
+          所以取快照前必须先驱动那个入口 —— 见下面的 openMoreSettle()。 */
+    const gpuSlots = [...document.querySelectorAll('.d-param .ph .gpu')].map((x) => x.textContent.trim());
     const chipTexts = [...document.querySelectorAll('#bhDevSlot .d-devlist .dv')].map((x) => x.innerText.trim());
     return {
       href: g ? g.getAttribute('href') : '',
@@ -104,6 +106,23 @@ const DIRTY_RX = /turnip|vkpipe|8Elite-\d|ANGLE |兼容模式|GPU驱动|^\d{4}[A
       bodyText: (document.querySelector('#bhSlot') || {}).innerText || '',
     };
   });
+
+  /** ★ v10.28：参数卡（芯片规格行 / GPU 槽位）已收进 #bhMoreSlot 的「查看全部」弹窗，
+   *  详情页默认不再铺开。取这两项数据前必须先点开那个入口 ——
+   *  否则 specRows 恒为 0（**假红**）、gpuSlots 恒为空数组（**假绿**：空数组 every() 永远为真）。 */
+  async function openMoreSettle(id) {
+    await openAndSettle(id);
+    await p.evaluate(() => {
+      const b = document.querySelector('#bhMoreSlot .d-more-btn');
+      if (b) b.click();
+    });
+    /* 弹窗 load() 要拉 /api/device/specs（分块）+ /api/pc/records + /api/bh/params，给足时间 */
+    await sleep(3000);
+  }
+  async function closeMore() {
+    await p.evaluate(() => { try { window.closeDownload(); } catch (e) {} });
+    await sleep(500);
+  }
 
   console.log('\n=== ① 跨源按钮落点（不再是站点首页）===');
   for (const c of CROSS_POS) {
@@ -128,7 +147,7 @@ const DIRTY_RX = /turnip|vkpipe|8Elite-\d|ANGLE |兼容模式|GPU驱动|^\d{4}[A
 
   console.log('\n=== ② / ③ / ④ 手机配置区块（机型 · 芯片 · 脏值）===');
   for (const c of MOBILE_POS) {
-    await openAndSettle(c.id);
+    await openMoreSettle(c.id);        // ★ v10.28：参数卡在弹窗里，必须先驱动那个入口
     const s = await snap();
     const devCnt = Number((s.cnt.match(/(\d+)\s*款机型/) || [])[1] || 0);
     chk(`[${c.name}] 铺出机型清单（不是「暂无记录」）`, devCnt >= c.minDev, `${devCnt} 款机型 · 「${s.cnt}」`);
@@ -136,9 +155,13 @@ const DIRTY_RX = /turnip|vkpipe|8Elite-\d|ANGLE |兼容模式|GPU驱动|^\d{4}[A
       /骁龙|天玑|Exynos|Helio|Unisoc|紫光|Snapdragon|Dimensity/i.test(s.devListHTML),
       s.devChips.slice(0, 3).join(' | '));
     chk(`[${c.name}] 参数卡有芯片规格行`, s.specRows > 0, `${s.specRows} 行`);
+    /* ★ 先钉「取到了样本」再钉「样本干净」—— 空数组会让下一条的 every/filter 恒真，
+       这是本项目最典型的一种假绿（PITFALLS 九）。 */
+    chk(`[${c.name}] GPU 槽位取到了样本（空数组会让下一条恒真）`, s.gpuSlots.length > 0, `${s.gpuSlots.length} 个`);
     const dirty = s.gpuSlots.filter((g) => g && DIRTY_RX.test(g));
     chk(`[${c.name}] GPU 槽位无脏值`, dirty.length === 0, dirty.length ? dirty.join(' / ') : s.gpuSlots.join(' / '));
     await p.screenshot({ path: path.join(OUT, `v1014-mobile-${c.id}.png`) });
+    await closeMore();                 // 关掉弹窗，避免影响后续循环的快照
   }
   for (const c of MOBILE_EMPTY) {
     await openAndSettle(c.id);

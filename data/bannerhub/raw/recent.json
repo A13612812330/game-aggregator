@@ -1,142 +1,142 @@
 [
   {
-    "game": "Roblox_Bootstrapper",
+    "game": "Euro_Truck_Simulator_2_Demo",
     "manufacturer": "Mali",
-    "device": "G57_MC2",
-    "timestamp": 1789867085,
-    "filename": "Roblox_Bootstrapper-Xiaomi-23124RN87G-Mali-G57_MC2-1789867085.json"
+    "device": "G57",
+    "timestamp": 1789953212,
+    "filename": "Euro_Truck_Simulator_2_Demo-INFINIX-Infinix_X6528-Mali-G57-1789953212.json"
   },
   {
     "game": "Grand_Theft_Auto_V_Legacy",
-    "manufacturer": "RMX3890",
+    "manufacturer": "CPH2219",
     "device": "Adreno__TM__610",
-    "timestamp": 1789865971,
-    "filename": "Grand_Theft_Auto_V_Legacy-realme-RMX3890-Adreno__TM__610-1789865971.json"
+    "timestamp": 1789949054,
+    "filename": "Grand_Theft_Auto_V_Legacy-OPPO-CPH2219-Adreno__TM__610-1789949054.json"
   },
   {
-    "game": "Euro_Truck_Simulator_2",
+    "game": "Red_Dead_Redemption_2",
     "manufacturer": "25053PC47G",
     "device": "Adreno__TM__825",
-    "timestamp": 1789865835,
-    "filename": "Euro_Truck_Simulator_2-Xiaomi-25053PC47G-Adreno__TM__825-1789865835.json"
+    "timestamp": 1789948281,
+    "filename": "Red_Dead_Redemption_2-Xiaomi-25053PC47G-Adreno__TM__825-1789948281.json"
   },
   {
-    "game": "Euro_Truck_Simulator_2",
-    "manufacturer": "25053PC47G",
-    "device": "Adreno__TM__825",
-    "timestamp": 1789865784,
-    "filename": "Euro_Truck_Simulator_2-Xiaomi-25053PC47G-Adreno__TM__825-1789865784.json"
+    "game": "BootstrapPackagedGame",
+    "manufacturer": "Mali",
+    "device": "G68_MC4",
+    "timestamp": 1789946852,
+    "filename": "BootstrapPackagedGame-OPPO-CPH2251-Mali-G68_MC4-1789946852.json"
+  },
+  {
+    "game": "Pro_Evolution_Soccer_2013",
+    "manufacturer": "Mali",
+    "device": "G57_MC2",
+    "timestamp": 1789946526,
+    "filename": "Pro_Evolution_Soccer_2013-samsung-SM-A075M-Mali-G57_MC2-1789946526.json"
+  },
+  {
+    "game": "Grand_Theft_Auto_V_Legacy",
+    "manufacturer": "Mali",
+    "device": "G615_MC6",
+    "timestamp": 1789945785,
+    "filename": "Grand_Theft_Auto_V_Legacy-Xiaomi-2311DRK48G-Mali-G615_MC6-1789945785.json"
+  },
+  {
+    "game": "Pro_Evolution_Soccer_2013",
+    "manufacturer": "Mali",
+    "device": "G57",
+    "timestamp": 1789944605,
+    "filename": "Pro_Evolution_Soccer_2013-realme-RMX3834-Mali-G57-1789944605.json"
+  },
+  {
+    "game": "Grand_Theft_Auto_V_Legacy",
+    "manufacturer": "S911B",
+    "device": "Adreno__TM__740",
+    "timestamp": 1789940988,
+    "filename": "Grand_Theft_Auto_V_Legacy-samsung-SM-S911B-Adreno__TM__740-1789940988.json"
+  },
+  {
+    "game": "Grand_Theft_Auto_V_Legacy",
+    "manufacturer": "S911B",
+    "device": "Adreno__TM__740",
+    "timestamp": 1789940432,
+    "filename": "Grand_Theft_Auto_V_Legacy-samsung-SM-S911B-Adreno__TM__740-1789940432.json"
+  },
+  {
+    "game": "Grand_Theft_Auto_V_Legacy",
+    "manufacturer": "NX9",
+    "device": "Adreno__TM__642L",
+    "timestamp": 1789936006,
+    "filename": "Grand_Theft_Auto_V_Legacy-HONOR-NTH-NX9-Adreno__TM__642L-1789936006.json"
+  },
+  {
+    "game": "Grand_Theft_Auto_V_Legacy",
+    "manufacturer": "NX9",
+    "device": "Adreno__TM__642L",
+    "timestamp": 1789935983,
+    "filename": "Grand_Theft_Auto_V_Legacy-HONOR-NTH-NX9-Adreno__TM__642L-1789935983.json"
+  },
+  {
+    "game": "Sekiro___Shadows_Die_Twice_-_GOTY_Edition",
+    "manufacturer": "Mali",
+    "device": "G615_MC2",
+    "timestamp": 1789933670,
+    "filename": "Sekiro___Shadows_Die_Twice_-_GOTY_Edition-Xiaomi-24090RA29G-Mali-G615_MC2-1789933670.json"
+  },
+  {
+    "game": "GTA_5",
+    "manufacturer": "Mali",
+    "device": "G57_MC2",
+    "timestamp": 1789930670,
+    "filename": "GTA_5-TECNO-TECNO_LJ6-Mali-G57_MC2-1789930670.json"
+  },
+  {
+    "game": "Grand_Theft_Auto_V_Legacy",
+    "manufacturer": "Mali",
+    "device": "G720_MC7",
+    "timestamp": 1789930364,
+    "filename": "Grand_Theft_Auto_V_Legacy-Xiaomi-2412DPC0AG-Mali-G720_MC7-1789930364.json"
+  },
+  {
+    "game": "Grand_Theft_Auto_V_Legacy",
+    "manufacturer": "Mali",
+    "device": "G57_MC2",
+    "timestamp": 1789930316,
+    "filename": "Grand_Theft_Auto_V_Legacy-OPPO-CPH2695-Mali-G57_MC2-1789930316.json"
+  },
+  {
+    "game": "Grand_Theft_Auto_V_Legacy",
+    "manufacturer": "23076RN4BI",
+    "device": "Adreno__TM__613",
+    "timestamp": 1789928759,
+    "filename": "Grand_Theft_Auto_V_Legacy-Xiaomi-23076RN4BI-Adreno__TM__613-1789928759.json"
+  },
+  {
+    "game": "Grand_Theft_Auto_V_Legacy",
+    "manufacturer": "23129RA5FL",
+    "device": "Adreno__TM__610",
+    "timestamp": 1789928670,
+    "filename": "Grand_Theft_Auto_V_Legacy-Xiaomi-23129RA5FL-Adreno__TM__610-1789928670.json"
+  },
+  {
+    "game": "God_of_War_Ragnar_k",
+    "manufacturer": "I2401",
+    "device": "Adreno__TM__830",
+    "timestamp": 1789928533,
+    "filename": "God_of_War_Ragnar_k-vivo-I2401-Adreno__TM__830-1789928533.json"
+  },
+  {
+    "game": "game",
+    "manufacturer": "G925",
+    "device": "Immortalis_MC11",
+    "timestamp": 1789928369,
+    "filename": "game-Xiaomi-2602BPC18G-Mali-G925-Immortalis_MC11-1789928369.json"
   },
   {
     "game": "PlayGTAV",
-    "manufacturer": "RMX3890",
+    "manufacturer": "LX2",
     "device": "Adreno__TM__610",
-    "timestamp": 1789864538,
-    "filename": "PlayGTAV-realme-RMX3890-Adreno__TM__610-1789864538.json"
-  },
-  {
-    "game": "Grand_Theft_Auto_V_Legacy",
-    "manufacturer": "Mali",
-    "device": "G57",
-    "timestamp": 1789861926,
-    "filename": "Grand_Theft_Auto_V_Legacy-motorola-moto_g35_5G-Mali-G57-1789861926.json"
-  },
-  {
-    "game": "Omega_Strike",
-    "manufacturer": "Mali",
-    "device": "G57",
-    "timestamp": 1789861552,
-    "filename": "Omega_Strike-TECNO-TECNO_BG6-Mali-G57-1789861552.json"
-  },
-  {
-    "game": "Grand_Theft_Auto_V_Legacy",
-    "manufacturer": "S948B",
-    "device": "Adreno__TM__840",
-    "timestamp": 1789860383,
-    "filename": "Grand_Theft_Auto_V_Legacy-samsung-SM-S948B-Adreno__TM__840-1789860383.json"
-  },
-  {
-    "game": "Prototype_",
-    "manufacturer": "A528B",
-    "device": "Adreno__TM__642L",
-    "timestamp": 1789857218,
-    "filename": "Prototype_-samsung-SM-A528B-Adreno__TM__642L-1789857218.json"
-  },
-  {
-    "game": "Toontown_Rewritten",
-    "manufacturer": "N49",
-    "device": "Adreno__TM__830",
-    "timestamp": 1789855896,
-    "filename": "Toontown_Rewritten-HONOR-PTP-N49-Adreno__TM__830-1789855896.json"
-  },
-  {
-    "game": "Spider-Man__Web_of_Shadows",
-    "manufacturer": "Mali",
-    "device": "G57_MC2",
-    "timestamp": 1789850574,
-    "filename": "Spider-Man__Web_of_Shadows-TCL-T613P-Mali-G57_MC2-1789850574.json"
-  },
-  {
-    "game": "Omega_Strike",
-    "manufacturer": "Mali",
-    "device": "G57",
-    "timestamp": 1789850380,
-    "filename": "Omega_Strike-TECNO-TECNO_BG6-Mali-G57-1789850380.json"
-  },
-  {
-    "game": "Microsoft_Visual_C___v14_Redistributable__x86__-_14_50_35719",
-    "manufacturer": "Redmi_Note_9S",
-    "device": "Adreno__TM__618",
-    "timestamp": 1789849401,
-    "filename": "Microsoft_Visual_C___v14_Redistributable__x86__-_14_50_35719-Xiaomi-Redmi_Note_9S-Adreno__TM__618-1789849401.json"
-  },
-  {
-    "game": "Microsoft_Visual_C___v14_Redistributable__x64__-_14_50_35719",
-    "manufacturer": "Redmi_Note_9S",
-    "device": "Adreno__TM__618",
-    "timestamp": 1789848129,
-    "filename": "Microsoft_Visual_C___v14_Redistributable__x64__-_14_50_35719-Xiaomi-Redmi_Note_9S-Adreno__TM__618-1789848129.json"
-  },
-  {
-    "game": "Grand_Theft_Auto_V_Legacy",
-    "manufacturer": "Mali",
-    "device": "G57_MC2",
-    "timestamp": 1789841949,
-    "filename": "Grand_Theft_Auto_V_Legacy-Xiaomi-2312FPCA6G-Mali-G57_MC2-1789841949.json"
-  },
-  {
-    "game": "Pro_Evolution_Soccer_2013",
-    "manufacturer": "Mali",
-    "device": "G52_MC2",
-    "timestamp": 1789841040,
-    "filename": "Pro_Evolution_Soccer_2013-samsung-SM-A065M-Mali-G52_MC2-1789841040.json"
-  },
-  {
-    "game": "Pro_Evolution_Soccer_2013",
-    "manufacturer": "Mali",
-    "device": "G52_MC2",
-    "timestamp": 1789841026,
-    "filename": "Pro_Evolution_Soccer_2013-samsung-SM-A065M-Mali-G52_MC2-1789841026.json"
-  },
-  {
-    "game": "Pro_Evolution_Soccer_2013",
-    "manufacturer": "Mali",
-    "device": "G52_MC2",
-    "timestamp": 1789840969,
-    "filename": "Pro_Evolution_Soccer_2013-samsung-SM-A065M-Mali-G52_MC2-1789840969.json"
-  },
-  {
-    "game": "Pro_Evolution_Soccer_2017",
-    "manufacturer": "Infinix_X6878",
-    "device": "Adreno__TM__810",
-    "timestamp": 1789839961,
-    "filename": "Pro_Evolution_Soccer_2017-INFINIX-Infinix_X6878-Adreno__TM__810-1789839961.json"
-  },
-  {
-    "game": "Resident_Evil_4__2005_",
-    "manufacturer": "G925",
-    "device": "Immortalis_MC11",
-    "timestamp": 1789839324,
-    "filename": "Resident_Evil_4__2005_-Xiaomi-2602BPC18G-Mali-G925-Immortalis_MC11-1789839324.json"
+    "timestamp": 1789927883,
+    "filename": "PlayGTAV-HONOR-CLK-LX2-Adreno__TM__610-1789927883.json"
   }
 ]

@@ -128,23 +128,33 @@ function chk(name, ok, extra) {
   chk('机型行真的占了版面（宽 > 100px）', dev.widths.every((w) => w > 100), dev.widths.join('/'));
 
   console.log('\n=== ② 手游专区详情页：本站实测记录可见 ===');
-  const rec = await p.evaluate(() => {
-    const slot = document.getElementById('bhRecSlot');
-    const rows = [...document.querySelectorAll('#bhRecSlot .pc-rec .r')];
+  /* ★ v10.28 迁移：「本站实测记录」不再在详情页**当场铺开**（用户口径「只需要手机模拟器配置，
+     不要多个显示」），而是收进 #bhMoreSlot 的「查看全部」弹窗。
+     这一段必须先**驱动**那个入口再取数 —— 直接查旧槽位会永远 0 条，
+     看起来像功能没了，其实是测试没走到（PITFALLS 16「懒加载分区要先驱动交互」同款）。 */
+  const rec = await p.evaluate(async () => {
+    const btn = document.querySelector('#bhMoreSlot .d-more-btn');
+    const opened = !!btn;
+    if (btn) btn.click();
+    await new Promise((r) => setTimeout(r, 1600));
+    const box = document.getElementById('dlBody') || document.body;
+    const rows = [...box.querySelectorAll('.pc-rec .r')];
     return {
-      sub: (document.querySelector('#bhRecSlot .bh-sub') || {}).innerText || '',
+      opened,
+      sub: [...box.querySelectorAll('.df-sect')].map((x) => x.textContent.trim()).join(' | '),
       rows: rows.length,
       first: rows.length ? rows[0].innerText.replace(/\n+/g, ' | ') : '',
-      hasPill: !!document.querySelector('#bhRecSlot .pc-rec .pill.ok, #bhRecSlot .pc-rec .pill.no'),
-      kvCount: document.querySelectorAll('#bhRecSlot .pc-rec .kv-i').length,
+      hasPill: !!box.querySelector('.pc-rec .pill.ok, .pc-rec .pill.no'),
+      kvCount: box.querySelectorAll('.pc-rec .kv-i').length,
       tag: [...document.querySelectorAll('#bhSlot .d-tg-row .d-tg')].map((x) => x.textContent.trim()),
     };
   });
   chk('「本站实测 N 条」标签存在（前提）', rec.tag.some((t) => /本站实测/.test(t)), rec.tag.join(' / '));
+  chk('「更多」入口可点开（v10.28 起实测/参数只此一个入口）', rec.opened === true);
   chk('实测记录区渲染出条目', rec.rows > 0, `${rec.rows} 条`);
   chk('每条带「可玩 / 不可玩」标记', rec.hasPill === true);
   chk('每条带可抄的参数（兼容层/驱动/DXVK…）', rec.kvCount >= 3, `${rec.kvCount} 个参数项`);
-  chk('小节标题写明条数', /本站实测记录/.test(rec.sub) && /\d+\s*条/.test(rec.sub), rec.sub.replace(/\s+/g, ' '));
+  chk('小节标题写明条数', /本站实测记录/.test(rec.sub) && /\d+\s*[条（]/.test(rec.sub), rec.sub.replace(/\s+/g, ' '));
   console.log('    首条:', rec.first.slice(0, 140));
   await p.screenshot({ path: path.join(OUT, 'v1015-mobile-full.png'), clip: { x: 900, y: 0, width: 540, height: 1100 } });
 
@@ -230,10 +240,14 @@ function chk(name, ok, extra) {
     const lib = btn.dataset.lib;
     btn.click();
     await new Promise((r) => setTimeout(r, 4000));
-    const rows = [...document.querySelectorAll('#bhRecSlot .pc-rec .r')];
+    /* ★ v10.28：实测记录已收进 #bhMoreSlot 的弹窗 —— 必须先点开再数（同 ② 段） */
+    const more = document.querySelector('#bhMoreSlot .d-more-btn');
+    if (more) { more.click(); await new Promise((r) => setTimeout(r, 1800)); }
+    const box = document.getElementById('dlBody') || document.body;
+    const rows = [...box.querySelectorAll('.pc-rec .r')];
     return {
       lib,
-      hasRecSlot: !!document.getElementById('bhRecSlot'),
+      hasRecSlot: !!document.getElementById('bhMoreSlot'),
       recRows: rows.length,
       devRows: document.querySelectorAll('#bhDevSlot .d-devlist .dv').length,
       gate: !!document.querySelector('#bhGate .bh-gate'),

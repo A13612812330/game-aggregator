@@ -141,12 +141,22 @@ ok(/devicesSummaryCnt/.test(srv) && /devicesAdded/.test(srv), '返回里带上�
   /* ★ v10.25：截断处的表达方式从「一行灰字：还有 N 台未展开」升级成**可点的「更多」按钮**
    *   （点开是全部机型的弹窗）。这条随之改查按钮的挂载条件 ——
    *   守护的意图没变：**只在真被截断时才出现**，不再用「上游共汇总 N 款」那种误导文案。 */
-  ok(/const more = hiddenDev > 0\s*\?\s*dFullBtn\(/.test(html), '★ 截断处改成「更多」按钮，且只在真被截断时出现');
+  /* ★ v10.28：改动有两处 ——
+     ① 入口从「清单内部的一个按钮」挪到**独立槽位 #bhMoreSlot**（清单里 5 台机型，
+        「按钮夹在机型中间」读起来像第 6 台）；
+     ② 触发条件从「机型被截断」扩成「机型被截断 **或** 有实测记录/逐条配置」——
+        因为实测与参数也收进同一个弹窗了（用户选择「收进弹窗」而非删掉）。
+     守护的意图没变：**有内容可看才出现**，不用「上游共汇总 N 款」那种误导文案。 */
+  ok(/const hiddenDev = allDevs\.length - devs\.length;/.test(html)
+    && /const hasAny = hiddenDev > 0 \|\| h\.records > 0 \|\| h\.configs > 0;/.test(html)
+    && /moreSlot\.innerHTML = hasAny \? dFullBtn\(/.test(html),
+    '★ 截断处改成「更多」按钮（挂在 #bhMoreSlot），且只在真被截断/有实测参数时才出现');
   ok(/const allDevs = h\.devices \|\| \[\];/.test(html), '用全量清单算截断数');
-  ok(/const devs = allDevs\.slice\(0, 24\);/.test(html), '展示仍按 24 台上限');
+  ok(/const DL_DEV_SHOW = 5;/.test(html) && /allDevs\.slice\(0, DL_DEV_SHOW\)/.test(html),
+    '★ v10.28：展示上限从 24 台收到 5 台（抽成常量 DL_DEV_SHOW；用户口径「默认展示5个」）');
   ok(/hiddenDev > 0/.test(html), 'more 行有「真的截断才显示」的条件');
   ok(!/上游共汇总 \$\{devCnt\} 款机型/.test(emu), '[派生页] 同步去掉了误导文案');
-  ok(/const more = hiddenDev > 0\s*\?\s*dFullBtn\(/.test(emu), '[派生页] 同步了「更多」按钮');
+  ok(/moreSlot\.innerHTML = hasAny \? dFullBtn\(/.test(emu), '[派生页] 同步了「更多」按钮');
   ok(/const allDevs = h\.devices \|\| \[\];/.test(emu), '[派生页] 同步了全量清单变量');
 
   console.log('\n' + '='.repeat(62));

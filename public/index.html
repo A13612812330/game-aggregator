@@ -708,15 +708,11 @@
   .d-hw .hw-hd .tag{font-size:9.5px;font-weight:800;color:#0369A1;background:#E0F2FE;
     border-radius:5px;padding:1px 6px}
   .d-hw .hw-hd .tag.more-tag{color:#B45309;background:#FFEDD5}
-  /* 默认只开 4 节，其余收在这里（全量展开 1800+px，抽屉里滚不完） */
-  .d-hw .hw-more{display:block;width:100%;margin-top:8px;padding:5px 8px;font:inherit;font-size:10.5px;
-    font-weight:700;color:#0369A1;background:#F1F7FE;border:1px dashed #BFD8F5;border-radius:8px;cursor:pointer}
-  .d-hw .hw-more:hover{background:#E7F1FD;border-color:#93B4F0}
+  /* ★ v10.28：面板只给「品牌 / 型号 / 硬件配置」三项，不再有「展开全部参数」开关
+     （用户口径：「点击后我只需要品牌，型号，硬件配置」）。
+     `.dg`（摘要芯片行，原先 8 枚胶囊）与 `.hw-more`（展开其余 8 节）两条规则
+     随实现一起删掉 —— 留着没人用的 CSS 会让人以为功能还在。 */
   .d-hw .hw-hd .src{margin-left:auto;font-size:10px;color:var(--c-t3)}
-  .d-hw .dg{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
-  .d-hw .dg span{font-size:10px;background:#EEF4FE;border:1px solid #DCE6F7;border-radius:6px;
-    padding:2px 6px;color:#1E3A8A}
-  .d-hw .dg span i{font-style:normal;color:#64748B;margin-right:4px}
   .d-hw .grp{margin-top:8px}
   .d-hw .grp h4{font-size:10.5px;font-weight:800;color:#475569;margin:0 0 4px}
   .d-hw .kvs2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 12px}
@@ -1057,7 +1053,24 @@
      一张 128×128 的方形缩略图会被撑成 720px 高的巨幅，而 460×215 的 Steam 头图
      只有 337px。同一份 UI，首图高度在 200~720px 之间乱跳，用户一眼就看出「不固定」。
      现在容器定高 + 图片绝对定位铺满 + object-fit:cover，任何比例的图都出同一块版。 */
-  .d-hero{position:relative;background:#101A38;height:250px;overflow:hidden}
+  /* ★ v10.28：封面 + 标题改为**吸顶**（用户口径：「封面 + 标题（吸顶）」）。
+     `#drawerBody` 是 `.drawer` 自己的滚动容器，而 `.d-hero` 是它的**首个子元素**
+     ⇒ sticky 相对抽屉视口全程生效，不需要额外的滚动父级。
+     滚过 90px 后收成 62px 的标题条（`.mini`）：250px 整块吸顶会吃掉近 1/4 屏，
+     而吸顶的意义只是「滚到哪儿都知道自己在看哪款游戏」。
+     压缩由 `dHeroSpy()` 挂 class 驱动（CSS 选不了「滚动位置」，`animation-timeline` 兼容性不够）。 */
+  .d-hero{position:sticky;top:0;z-index:8;background:#101A38;height:250px;overflow:hidden;
+    transition:height .24s cubic-bezier(.4,0,.2,1)}
+  .d-hero.mini{height:62px}
+  /* mini 态：标题移到与关闭键同一水平线，左让 56px（关闭键）、右让 104px（来源徽标） */
+  .d-hero.mini .d-title{left:56px;right:104px;top:0;bottom:auto;height:100%;padding:0;
+    display:flex;flex-direction:column;justify-content:center}
+  .d-hero.mini .d-title h2{font-size:15px;line-height:1.3;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;text-shadow:none}
+  .d-hero.mini .d-title .en{display:none}
+  .d-hero.mini .d-top{padding:13px 14px}
+  .d-hero.mini > img{filter:brightness(.44) saturate(.72)}
+  .d-hero.mini::after{background:linear-gradient(90deg,rgba(10,14,30,.9) 38%,rgba(10,14,30,.34) 100%)}
   .d-hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center}
   .d-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,14,30,.08) 30%,rgba(10,14,30,.9) 100%)}
   .d-top{position:absolute;top:0;left:0;right:0;z-index:2;display:flex;justify-content:space-between;padding:12px 14px}
@@ -1117,7 +1130,14 @@
      background:#EDF0F6;padding:0;cursor:pointer;line-height:0;transition:border-color .15s}
    .gal-th img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
    .gal-th.is-on{border-color:var(--c-primary);box-shadow:0 0 0 1px var(--c-primary)}
-   .gal-lb{position:fixed;inset:0;z-index:90;background:rgba(9,13,22,.92);
+   /* ★ v10.28：灯箱必须**盖在详情抽屉之上**。
+      用户口径：「图片点击展示后，在详情页后，我需要他置顶」—— 现场是这里写着 z-index:90，
+      而详情抽屉 `.drawer` 是 100、它的遮罩 `.mask` 也是 90
+      ⇒ 从详情页点开大图，整张图被抽屉原样挡住，等于「点了没反应」。
+      灯箱本身挂在 `document.body`（见 galLbOpen），不受 `.drawer` 的 transform 影响，
+      所以**只差层级**。取 140：高于抽屉(100)、下载弹窗(110)、搜索弹窗(130)，
+      低于 toast(150) —— 提示条仍应在最上。 */
+   .gal-lb{position:fixed;inset:0;z-index:140;background:rgba(9,13,22,.92);
      display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px}
    .gal-lb img{max-width:92vw;max-height:80vh;object-fit:contain;border-radius:8px;cursor:zoom-out}
    .gal-lb .n{color:#fff;font:500 12px/1 var(--font-num);opacity:.72}
@@ -1129,6 +1149,27 @@
   .d-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
   /* v10.15：只剩一个按钮时铺满整行（跨源按钮默认隐藏，查到另一源详情页才显形） */
   .d-actions.one{grid-template-columns:1fr}
+  /* ★ v10.28：修改器 + 云存档的**语义容器**（用户版式里这两块紧挨着，排在「手机模拟器配置」之后）。
+     故意不给视觉样式：两块各自是 `.d-blk`、自带间距；这个 div 只让「⑥ 修改器+云存档」
+     在 DOM 里能被整体定位（右侧定位条 / 回归测试需要它）。
+     写 `display:block` 是显式声明「有意为之」，而不是漏了样式。 */
+  .d-pair{display:block}
+  /* ★ v10.28：操作按钮组**固定在详情页底部**（用户口径：「我的意思是固定在详情页下面（移动也可查看）」）。
+     它是 `#drawerBody` 的**最后一个子元素**且位于 `.d-body` 之外 ⇒ sticky bottom 全程贴住抽屉底边，
+     滚到最底时回到自然位置停住（不会盖住最后一块内容）。
+     · 半透明 + 毛玻璃：正文从底下穿过时仍能看见一点，不是一块纯白补丁；
+     · `env(safe-area-inset-bottom)` 兜住 iOS 底部横条，不然按钮会压在横条上；
+     · z-index 9 高于 `.d-hero` 的 8 —— 两者固定在同一屏的上下两端，不重叠，但底栏里有可点按钮，
+       给高一档避免任何边界情况下的命中穿透。 */
+  .d-dock{position:sticky;bottom:0;z-index:9;margin-top:18px;
+    background:rgba(255,255,255,.96);backdrop-filter:saturate(1.6) blur(14px);
+    -webkit-backdrop-filter:saturate(1.6) blur(14px);
+    border-top:1px solid var(--c-border);box-shadow:0 -8px 24px rgba(18,26,51,.07);
+    padding:11px 18px calc(13px + env(safe-area-inset-bottom,0px))}
+  /* 移进底栏后不再各留一份上边距（间距由 .d-dock 的 padding 统一给） */
+  .d-dock .dl-strip{margin-top:0}
+  .d-dock .d-actions{margin-top:9px}
+  .d-dock .d-actions:first-child{margin-top:0}
   .go{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px;font-weight:700;padding:12px;border-radius:12px;transition:.15s}
   .go svg{width:15px;height:15px}
   /* ★ v10.25：下载动作条 —— 「下载本体 / 修改器 / Mod」三个并排，取代 v10.22 那个
@@ -1468,6 +1509,41 @@
   .dl-chip i{font-style:normal;font-family:var(--font-num);font-weight:800;margin-left:3px;color:var(--c-t3)}
   .dl-note{font-size:11px;line-height:1.7;color:var(--c-t3);margin:-2px 0 11px}
   .dl-note b{color:var(--c-t2)}
+  /* ============ ★ v10.28：详情页里的「三专区预览」+ 弹窗分页 ============
+     用户口径：「本体，修改器，Mod我需要放在最下面，且每个均只展示前三个，
+     点击全部后弹窗显示全部，弹窗显示十个其他的翻页」。
+     ⇒ 详情页只露 3 帖（`.dl-prev`），「全部」进 #dlPop 弹窗按 10 帖/页翻。
+     ⚠️ 行本身继续复用 `.dl-it`（v10.27 建的那套：一帖一行 + 右侧盘口按钮组），
+        这里只补「预览外壳」和「翻页条」两块，不另造一套行样式 —— 否则
+        同一份数据在两个地方会长得不一样。 */
+  .dl-prev{margin-top:9px;border:1px solid var(--c-border);border-radius:10px;overflow:hidden;background:#fff}
+  .dl-prev .h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 10px;
+    background:#F6F8FC;border-bottom:1px solid var(--c-border)}
+  .dl-prev .h b{font-size:12.5px;font-weight:800;color:var(--c-t1)}
+  .dl-prev .h .c{font:700 10.5px/1 var(--font-num);color:var(--c-t3);background:#fff;
+    border:1px solid var(--c-border);border-radius:5px;padding:3px 6px}
+  .dl-prev .h .dl-all{margin-left:auto;font:inherit;font-size:11px;font-weight:750;color:var(--c-primary);
+    background:#fff;border:1px solid var(--c-border2);border-radius:7px;padding:3px 9px;cursor:pointer;white-space:nowrap}
+  .dl-prev .h .dl-all:hover{background:#EAF1FF;border-color:var(--c-primary)}
+  .dl-prev .l{display:flex;flex-direction:column;gap:6px;padding:7px 8px}
+  .dl-prev .none{padding:9px 4px;font-size:11.5px;color:var(--c-t3)}
+  /* 弹窗里的整页列表：不依赖 `.dl-grp .l` / `.dl-sec .l` 那两条上下文选择器 */
+  .df-list{display:flex;flex-direction:column;gap:6px}
+  .df-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+  .df-tab{display:inline-flex;align-items:center;gap:5px;font:inherit;font-size:12px;font-weight:700;
+    color:var(--c-t2);background:#F3F5FA;border:1px solid var(--c-border);border-radius:8px;
+    padding:5px 11px;cursor:pointer}
+  .df-tab i{font-style:normal;font-family:var(--font-num);font-size:10.5px;font-weight:800;
+    color:var(--c-t3);background:#fff;border-radius:999px;padding:1px 6px}
+  .df-tab:hover{border-color:var(--c-border2)}
+  .df-tab.on{color:#fff;background:var(--c-primary);border-color:var(--c-primary)}
+  .df-tab.on i{color:var(--c-primary);background:#fff}
+  .df-pager{display:flex;align-items:center;justify-content:center;gap:12px;margin:15px 0 4px}
+  .df-pg{font:inherit;font-size:12px;font-weight:700;color:var(--c-t1);background:#fff;
+    border:1px solid var(--c-border2);border-radius:9px;padding:6px 14px;cursor:pointer}
+  .df-pg:hover:not(:disabled){background:#EAF1FF;border-color:var(--c-primary);color:var(--c-primary)}
+  .df-pg:disabled{opacity:.38;cursor:default}
+  .df-pg-n{font-family:var(--font-num);font-size:12px;font-weight:700;color:var(--c-t2)}
   .dl-posts{margin-top:3px}
   /* ★ v10.22：整组都取不到地址时的说明块（实测 XD 部分游戏返回「你没有权限下载」）。
      视觉上必须是「有内容的说明」，不能长得像加载失败的空壳 —— 否则用户会一直重试。
@@ -2895,7 +2971,11 @@ document.addEventListener('click', (e) => {
   const st = e.target.closest && e.target.closest('[data-gal-step]');
   if (st) { const r = st.closest('[data-gal]'); if (r) galGo(r, (+r.dataset.i || 0) + (+st.dataset.galStep)); return; }
   if (galLbEl && galLbEl.contains(e.target)) {            // 灯箱内：点图翻下一张、点空白/✕ 关闭
-    if (e.target === galLbEl) { galLbClose(); return; }
+    /* ★ v10.28 修：这里原先只判了「点背景」与「点图翻页」，**漏了右上角的 ✕ 按钮** ——
+       注释写的是「点空白 / ✕ 关闭」，但点 ✕ 会落进最后一个 return、什么都不做。
+       用户视角就是「打开大图后点关闭没反应，只能按 Esc」（实拍确认：点 ✕ 后灯箱仍在）。
+       回归判据在 tools/preview-v1028.js：「点 ✕ → 灯箱消失」。 */
+    if (e.target === galLbEl || (e.target.closest && e.target.closest('.gal-lb-x'))) { galLbClose(); return; }
     if (e.target.tagName === 'IMG') { galLbI = (galLbI + 1) % galLbImgs.length; galLbPaint(); }
     return;
   }
@@ -2997,21 +3077,36 @@ function paintDetail(d, fb, merge) {
     </div>`;
   })();
   body.innerHTML = `
-    <div class="d-hero">
+    <!-- ★ v10.28：整页顺序按用户给的版式重排 ——
+         ① 封面+标题(吸顶,合并游戏预览) ② 评分+参数表 ③ 介绍/版本 ④ 配置要求
+         ⑤ 手机模拟器配置 ⑥ 修改器+云存档 ⑦ 同分类更多 ⑧ 本体/修改器/Mod ⑨ 其他；
+         操作按钮组移出正文流，固定在抽屉底部（见文末 .d-dock）。
+         ⚠️ 改造前的顺序是「手机配置 → 配置要求 → 修改器 → 云存档 → 跨源 → 评分 → 参数表 →
+            介绍 → 预览 → 同分类 → 下载」—— 用户打开详情先看到的是「别人总结的配置」，
+            自己的评分 / 厂商 / 日期 / 大小要翻到第 5 屏，这正是他要重排的原因。 -->
+    <div class="d-hero" id="dHero">
       <div class="d-top">${closeBtnHtml()}<span class="src-badge ${s.cls}" style="color:#fff;background:${s.cls === 'jidi' ? 'rgba(230,65,93,.8)' : 'rgba(11,123,255,.8)'};align-self:center">${s.nm} 来源</span></div>
       ${cover ? `<img src="${esc(cover)}" alt="${esc(n.zh)}" onerror="this.remove()">` : ''}
       <div class="d-title"><h2>${esc(n.zh)}</h2>${n.en ? `<div class="en">${esc(n.en)}</div>` : ''}</div>
     </div>
     <div class="d-body">
       <div class="d-hint"><b>GameHub 仅为信息聚合站：</b>以下为源站实时抓取的详情与更新信息，本站不提供下载资源。完整内容请前往源站。</div>
-      <div id="bhSlot"></div>
-      <div id="reqSlot"></div>
-      <div id="trBlock"></div>
-      <div id="svBlock"></div>
-      <div id="crossSrc"></div>
+      <!-- ① 游戏预览：由正文第 7 位提到封面之后（用户口径「封面 + 标题（合并游戏预览）」）。
+           截图回答的本来就是「这游戏长什么样」，和封面是同一件事，
+           隔着一整屏介绍才看到没有道理。 -->
+      ${shotsHtml}
+      <!-- ② 玩家评分 + 参数表（厂商 / 发行日期 / 游戏大小 …） -->
       ${score ? `<div class="score-line"><span class="score-big">${score}</span><span class="score-meta">玩家评分 · 满分 10${d.steamRate ? `<i>Steam 好评率 ${esc(String(d.steamRate))}</i>` : ''}</span></div>` : ''}
       <div class="kv">${kv.map(([k, v]) => `<div class="it"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>
-      ${descHtml}${versionHtml}${shotsHtml}
+      <!-- ③ 游戏介绍 / 版本介绍 -->
+      ${descHtml}${versionHtml}
+      <!-- ④ 配置要求（源站有就用源站的，没有去 Steam 官方接口补 ★ v10.13） -->
+      <div id="reqSlot"></div>
+      <!-- ⑤ 手机模拟器配置（★ v10.28 合一：机型清单为主，点击看品牌/型号/硬件配置） -->
+      <div id="bhSlot"></div>
+      <!-- ⑥ 修改器 + 云存档：两套数据（Game Cheats Manager / Ludusavi）各渲染各的，
+           这里只负责让它们挨在一起（用户版式里这是一行）。 -->
+      <div class="d-pair" id="trSvSlot"><div id="trBlock"></div><div id="svBlock"></div></div>
       <!-- ★ v10.7：「同分类更多」挪到本块信息之后。
            原先它挂在 #crossSrc 之后（第 6 位），用户一打开抽屉先看到的是**别人的推荐**，
            自己的评分 / 参数 / 介绍反而要往下翻 —— 推荐位不该抢本体的位置。 -->
@@ -3020,6 +3115,8 @@ function paintDetail(d, fb, merge) {
            这里只给「跳转到源站帖子」的入口，不铺正文、不复制网盘直链 ——
            本站仍定位信息聚合站，资源与文件都在源站社区帖内。 -->
       <div id="dlSlot"></div>
+      <!-- ⑨ 其他：另一源收录卡片（linkCounterpart 异步回填）+ 免责声明 -->
+      <div id="crossSrc"></div>
       <div class="no-dl">🚫 仅聚合 <b>详情页与更新内容</b>，不含任何下载资源</div>
       <!-- ★ v10.25：下载动作条 —— 三个并排按钮（下载本体 / 修改器 / Mod）。
            用户口径：「我需要你将下载按钮优化（①下载本体，②下载修改器，③下载Mod）」。
@@ -3028,6 +3125,14 @@ function paintDetail(d, fb, merge) {
               也不给一个点开是空列表的按钮（同 PITFALLS：#11 宁可退回未收录）。
            ★ 「下载本体」故意不带数字：/api/download 要跟随 302 逐个解析（XD 约 3-8 秒），
               不能在打开详情页时就预取，所以它的条数只能点开才知道。 -->
+    </div>
+    <!-- ⑩ 操作按钮组：**固定在详情页底部**（用户口径「我的意思是固定在详情页下面（移动也可查看）」）。
+         ⚠️ 必须在 .d-body **之外** —— .d-body 有 padding-bottom，放里面 sticky 会被那段
+            内边距垫起来，滚到底时底栏与内容之间留一条白缝；放在 #drawerBody 的末尾
+            则与内容区边界完全对齐，也让 .d-body 的 padding 只作用于正文。
+         ⚠️ 本段位于模板字符串内部：注释里**不能出现反引号**，否则会提前终止模板串
+            （v10.28 实测踩到：写成 markdown 行内代码，整段变成裸 JS，报 Unexpected identifier）。 -->
+    <div class="d-dock">
       <div class="dl-strip" id="dlStrip"${(d.url || fb.jidiUrl) ? '' : ' hidden'}>
         ${(d.url || fb.jidiUrl) ? `<button class="ds ds-main" type="button" id="dlBtn"
            data-dl-open data-dl-title="${esc(n.zh)}" data-dl-sub="${esc(n.en || '')}"
@@ -3064,6 +3169,9 @@ function paintDetail(d, fb, merge) {
   /* ★ v10.25：先按「此刻已经渲染出来的区块」建一次定位条；
      后面那些懒加载分区（配置要求 / 修改器 / 云存档 / 下载条）靠 MutationObserver 补。 */
   railSync();
+  /* ★ v10.28：新渲染的顶图按**当前** scrollTop 定初态 —— 抽屉是复用节点，
+     换一款游戏时滚动位置不一定在顶部，不初始化会出现「已经滚到中间、顶图却还是大图」的错位。 */
+  dHeroSpy();
 }
 /* ★ v10.1：端游详情抽屉的三个「外部资源」区块（懒加载 —— 抽屉打开后才请求，不进首包）
  *
@@ -3098,6 +3206,9 @@ const D_GCM_URL = 'https://github.com/dyang886/Game-Cheats-Manager/releases';
  */
 const BH_EMU_URL = '/emulator.html#emu';
 const BH_DM_URL = '/emulator.html#dm';
+/* ★ v10.28：详情页里**默认露几台机型**（用户口径「默认展示5个，然后有个更多，点击弹窗可以查看全部」）。
+   其余在「查看全部」弹窗里给全量 —— 那里按 40 台一批分块取规格（URL 太长会 414）。 */
+const DL_DEV_SHOW = 5;
 
 /** 一条社区配置 → 参数芯片行（抽屉与完整面板共用同一份渲染，避免两处漂移）
  *  ★ v10.14：新增「机型 → 芯片规格」行（SoC / 品牌 / CPU 核簇 / 性能分）。
@@ -3169,37 +3280,35 @@ function bhRecRow(x) {
  *
  *  交互：再点同一台 = 收起；点另一台 = 换成那一台。一次只开一个，避免抽屉越撑越长。 */
 let _hwOpen = '';                         // 当前展开的机型（原始名），用于「再点收起」与互斥
-/* 默认只展开这几节（按优先级排前面）—— 全量 12 节展开有 1800+px，
-   在本来就长的抽屉里等于逼人一直滚。剩下的收进「展开全部」。 */
-const HW_KEEP = ['基本信息', '硬件配置', '屏幕', '电池'];
+/* ★ v10.28：面板只保留「品牌 / 型号 / 硬件配置」三项（用户口径：「点击后我只需要品牌，
+   型号，硬件配置」）。
+   改造前会铺「基本信息 / 硬件配置 / 屏幕 / 电池」4 节 + 一个「展开全部参数（还有 8 节）按钮」——
+   12 节合计 1800+px，而用户要回答的是「这台机器什么芯片」，不是拿一份完整规格书。
+   品牌 / 型号取自 kalvo 的「基本信息」组（实测：品牌=Xiaomi、型号=Poco F7）；
+   取不到就退回列表里那个译名 —— 面板不该因为少一个字段就空掉。 */
+const HW_INFO_G = '基本信息', HW_HW_G = '硬件配置';
 function hwPanelHtml(r) {
-  const short = esc(String(r.name || '').split(' - ')[0]);
+  const shortRaw = String(r.name || '').split(' - ')[0];
   const src = r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">kalvo ↗</a>` : '';
-  const dg = (r.digest || []).map((d) => `<span><i>${esc(d.label)}</i>${esc(d.value)}</span>`).join('');
   const all = r.groups || [];
-  const head = all.filter((g) => HW_KEEP.some((k) => g.name.indexOf(k) >= 0));
-  const rest = all.filter((g) => !HW_KEEP.some((k) => g.name.indexOf(k) >= 0));
-  const grpOf = (g) => `<div class="grp"><h4>${esc(g.name)}</h4>
-      <div class="kvs2">${g.items.map((it) => `<div><span title="${esc(it.k)}">${esc(it.k)}</span><b>${esc(it.v)}</b></div>`).join('')}</div>
-    </div>`;
-  return `<div class="d-hw"><div class="hw-hd"><b>${short}</b>
-      <span class="tag">硬件参数</span>
+  const info = all.find((g) => String(g.name).indexOf(HW_INFO_G) >= 0);
+  const pick = (k) => {
+    const it = info && (info.items || []).find((x) => x.k === k);
+    return (it && it.value) || '';
+  };
+  const brand = pick('品牌');
+  const model = pick('型号') || shortRaw;
+  const grp = all.find((g) => String(g.name).indexOf(HW_HW_G) >= 0);
+  const rows = grp
+    ? `<div class="grp"><h4>${esc(grp.name)}</h4>
+      <div class="kvs2">${grp.items.map((it) => `<div><span title="${esc(it.k)}">${esc(it.k)}</span><b>${esc(it.v)}</b></div>`).join('')}</div>
+    </div>`
+    : '<div class="load">这台机型在 kalvo 没有「硬件配置」分节，可点右上角去源站核对。</div>';
+  return `<div class="d-hw"><div class="hw-hd"><b>${esc(model)}</b>
+      ${brand ? `<span class="tag">品牌 ${esc(brand)}</span>` : ''}
       ${r.cached ? '' : '<span class="tag more-tag">刚抓取</span>'}
       <span class="src">${src}</span></div>
-    ${dg ? `<div class="dg">${dg}</div>` : ''}
-    ${head.map(grpOf).join('')}
-    ${rest.length ? `<div class="hw-rest" hidden>${rest.map(grpOf).join('')}</div>
-      <button type="button" class="hw-more" data-lb="展开全部参数（还有 ${rest.length} 节：${esc(rest.map((g) => g.name).join(' / '))}）"
-        onclick="hwToggleRest(this)">展开全部参数（还有 ${rest.length} 节：${esc(rest.map((g) => g.name).join(' / '))}）</button>` : ''}
-    </div>`;
-}
-/** 「展开全部 / 收起」开关 */
-function hwToggleRest(btn) {
-  const box = btn.parentNode.querySelector('.hw-rest');
-  if (!box) return;
-  const open = box.hasAttribute('hidden');
-  if (open) box.removeAttribute('hidden'); else box.setAttribute('hidden', '');
-  btn.textContent = open ? '收起其余参数' : (btn.getAttribute('data-lb') || '展开全部参数');
+    ${rows}</div>`;
 }
 async function toggleDevHardware(btn) {
   const slot = $('#bhHwSlot');
@@ -3361,13 +3470,16 @@ async function loadBhBlock(d, title, fb) {
     const gpuCnt = (h.gpus || []).length;
     const cntTxt = [devCnt ? `${devCnt} 款机型` : '', gpuCnt ? `${gpuCnt} 种 GPU` : ''].filter(Boolean).join(' · ');
     _hwOpen = '';                     // 换了一款游戏 → 硬件面板的「已展开」状态一并作废
+    /* ★ v10.28：这一节从「四个子块并列」收成**一块**（用户口径：「详情页中的手机配置只需要
+       手机模拟器配置，不要多个显示」）。默认只看到机型清单（前 5 台）—— 点机型看
+       品牌 / 型号 / 硬件配置；「查看全部」进弹窗。原先铺在外面的「本站实测记录」与
+       「逐条游玩参数」也一并收进那个弹窗（用户已确认：收进弹窗，不删数据）。 */
     slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>手机模拟器配置<span class="cnt">${cntTxt}</span></h4>
       <div class="d-tg-row">${tags.join('')}</div>
       <div id="bhDevSlot"></div>
       <div id="bhHwSlot"></div>
-      <div id="bhRecSlot"></div>
-      <div id="bhParamSlot"><div class="d-hint2" style="border:0;padding-top:4px">正在读取逐条游玩参数…</div></div>
-      <div class="d-hint2">参数为玩家在安卓机上跑通本作后导出的实际配置（驱动 / DXVK / 容器 / 翻译层）。
+      <div id="bhMoreSlot"></div>
+      <div class="d-hint2">点机型看该机的<b>品牌 / 型号 / 硬件配置</b>；参数为玩家在安卓机上跑通本作后导出的实际配置（驱动 / DXVK / 容器 / 翻译层）。
         完整清单见 <a href="${BH_EMU_URL}">手机专区 · 手游中心</a>。</div></div>`;
 
     /* ---- ① 机型清单：按「性能分」从弱到强排，并标出**门槛机型** ----
@@ -3379,7 +3491,10 @@ async function loadBhBlock(d, title, fb) {
     /* ★ v10.17：`h.devices` 现在是「社区库聚合摘要（上游只有 6 格）+ 逐条配置里的机型」合并后的全量，
        服务端已去重并对齐了写法（`MTN NX3` 与 `HONOR MTN-NX3` 视为同一台）。这里只负责截断展示。 */
     const allDevs = h.devices || [];
-    const devs = allDevs.slice(0, 24);
+    /* ★ v10.28：默认只露 **5** 台（用户口径「默认展示5个，然后有个更多，点击弹窗可以查看全部」）。
+       原来是 24 台平铺 —— 在抽屉里那是整整一屏半的按钮墙，而用户想先回答的是
+       「这几台能不能跑」，不是「一共多少台」。 */
+    const devs = allDevs.slice(0, DL_DEV_SHOW);
     const ds = $('#bhDevSlot');
     if (devs.length && ds) {
       let specs = {};
@@ -3397,27 +3512,6 @@ async function loadBhBlock(d, title, fb) {
         cntEl.innerHTML = esc(cntTxt)
           + `<span class="d-devlist-lg" title="橙色那台是实测跑通过的最弱机型 —— 比它强的机型基本也能跑">门槛机型</span>`;
       }
-    /* ★ v10.25：机型清单最多铺 24 台，多出来的给「查看全部」按钮。
-       点击时才补取其余机型的规格 —— /api/device/specs 的机型是塞在 URL 里的，
-       全量一次性发请求有 414（URI Too Long）风险，所以按 40 台分块串行发。 */
-    const hiddenDev = allDevs.length - devs.length;
-    const more = hiddenDev > 0
-      ? dFullBtn(dFullPut({
-        type: 'dv', title: '机型清单 · 全部', sub: t, total: allDevs.length,
-        load: async () => {
-          const out = [];
-          for (let i = 0; i < allDevs.length; i += 40) {
-            const chunk = allDevs.slice(i, i + 40);
-            let sp = {};
-            try {
-              sp = ((await fetch(api('/api/device/specs?models=' + encodeURIComponent(chunk.join('|')))).then((r) => r.json())) || {}).specs || {};
-            } catch (e) { sp = {}; }
-            for (const m of chunk) out.push(bhDevRow(m, sp[m] || null));
-          }
-          return { items: out };
-        },
-      }), `查看全部 ${allDevs.length} 台机型`).replace('class="d-more-btn"', 'class="d-more-btn" style="grid-column:1/-1"')
-      : '';
       /* 芯片名太长（如 `Dimensity 8350 (MT6897 MT6897Z_B/ZA MT8792Z/NA)`、
          `Samsung Exynos 2200 (国际版本) / Qualcomm Snapdragon 8 Gen 1 (美国)`）徽标里放不下，
          只留**主名**（第一个 `(` 或第一个 ` / ` 之前），完整值挂在 title 上、详情面板里也有。 */
@@ -3447,7 +3541,10 @@ async function loadBhBlock(d, title, fb) {
           <span class="sub">${chipHtml(x)}${x.code ? `<s>${esc(x.code)}</s>` : ''}</span>
         </button>`;
       };
-      ds.innerHTML = `<div class="d-devlist">${sorted.map(devRow).join('')}${more}</div>`;
+      /* ★ v10.28：清单里不再挂「查看全部」按钮 —— 它移到 `#bhMoreSlot`（独立一块）。
+         留在 `.d-devlist` 里的话，按钮会跟着清单一起被 `ds.onclick` 的机型委托吃掉，
+         而且 5 台机型的清单只有 5 行，「按钮夹在机型中间」读起来像是第 6 台机型。 */
+      ds.innerHTML = `<div class="d-devlist">${sorted.map(devRow).join('')}</div>`;
       ds.onclick = (ev) => {
         const b = ev.target.closest && ev.target.closest('.dv[data-hw]');
         if (b) toggleDevHardware(b);
@@ -3488,47 +3585,67 @@ async function loadBhBlock(d, title, fb) {
       }
     }
 
-    /* ---- ② 本站实测记录（★ v10.15 新增） ----
-     *   旧版这一块**只有一个「本站实测 N 条」标签**，一条内容都看不到 ——
-     *   用户口径「我需要看到手游专区里游戏详情页能看到对应手机配置（实测 / 社区库）」。
-     *   社区那半边（逐条参数）本来就有，缺的正是**实测**这半边：
-     *   表格里的 兼容层 / 运行模式 / 驱动 / DXVK / 帧率 全在 /api/pc/records 里，只是抽屉从没调过。
-     *   版式直接用 `.pc-rec`（这套 CSS 早就在，一直只在手游专区的实测面板里用）。 */
-    const rec = $('#bhRecSlot');
-    if (rec && h.records > 0) {
-      try {
-        const rj = await fetch(api('/api/pc/records?k=' + encodeURIComponent(t))).then((r) => r.json());
-        const recs = (rj && rj.items) || [];
-        rec.innerHTML = recs.length
-          ? `<div class="bh-sub">本站实测记录<span class="n">${recs.length} 条</span>
-               <a href="${BH_EMU_URL}">看全部实测 ↗</a></div>
-             <div class="pc-rec">${recs.map(bhRecRow).join('')}</div>`
-          : '';
-      } catch (e) { rec.innerHTML = ''; }
+    /* ★ v10.28：「其余机型 + 本站实测 + 逐条参数」全部收进**同一个**「查看全部」弹窗
+       （用户口径「默认展示5个，然后有个更多，点击弹窗可以查看全部」；
+        实测记录与逐条参数按他的选择「收进弹窗」而**不是删掉**）。
+       三份数据都在**点击时**才取 —— 详情页打开就拉 100 台机型的规格 + 100 份配置，
+       对绝大多数「只是看看」的用户是纯浪费。
+       ⚠️ 机型规格必须**分块**发：/api/device/specs 的机型是塞在 URL 查询串里的，
+          全量一次性发有 414（URI Too Long）风险，所以按 40 台一批串行。
+       ⚠️ 这一段必须留在 if (devs.length && ds) 块**外面**。库里存在「机型清单为空、
+          但有实测记录 / 逐条配置」的游戏（h.devices 上游摘要只有 6 格且逐条配置也可能空），
+          嵌进那个 if 里就等于连入口一起吞掉 —— 用户既看不到机型，也拿不到本该有的实测与参数。
+          这一条靠 tools/test-v1028-detail.js 守着。 */
+    const hiddenDev = allDevs.length - devs.length;
+    const moreSlot = $('#bhMoreSlot');
+    if (moreSlot) {
+      const hasAny = hiddenDev > 0 || h.records > 0 || h.configs > 0;
+      const label = hiddenDev > 0
+        ? `查看全部 ${allDevs.length} 台机型` + ((h.records || h.configs) ? ' 与实测参数' : '')
+        : '查看实测记录与逐条配置';
+      moreSlot.innerHTML = hasAny ? dFullBtn(dFullPut({
+        type: 'dv', title: '手机模拟器配置 · 全部', sub: t,
+        total: allDevs.length, recsOn: h.records > 0, paramsOn: h.configs > 0,
+        load: async () => {
+          /* ① 全部机型（分块取规格） */
+          const out = [];
+          for (let i = 0; i < allDevs.length; i += 40) {
+            const chunk = allDevs.slice(i, i + 40);
+            let sp = {};
+            try {
+              sp = ((await fetch(api('/api/device/specs?models=' + encodeURIComponent(chunk.join('|')))).then((r) => r.json())) || {}).specs || {};
+            } catch (e) { sp = {}; }
+            for (const m of chunk) out.push(bhDevRow(m, sp[m] || null));
+          }
+          /* ② 本站实测记录（跑通后的兼容层 / 驱动 / 帧率） */
+          let recs = [];
+          if (h.records > 0) {
+            try {
+              const rj = await fetch(api('/api/pc/records?k=' + encodeURIComponent(t))).then((r) => r.json());
+              recs = (rj && rj.items) || [];
+            } catch (e) { recs = []; }
+          }
+          /* ③ 逐条游玩参数（社区库；候选仓库键一起传，服务端挑份数最多的那个） */
+          let params = [];
+          const keys = (h.bhKeys || []).join(',');
+          if (keys && h.configs > 0) {
+            try {
+              const pj = await fetch(api('/api/bh/params?k=' + encodeURIComponent(keys) + '&limit=100')).then((r) => r.json());
+              params = (pj && pj.items) || [];
+            } catch (e) { params = []; }
+          }
+          return { items: out, recs, params };
+        },
+      }), label) : '';
     }
 
-    /* ---- ③ 铺开逐条参数（社区库）：把该游戏的所有候选仓库键一起传（服务端挑份数最多的那个） ---- */
-    const keys = (h.bhKeys || []).join(',');
-    const ps = $('#bhParamSlot');
-    if (!keys || !ps) {
-      if (ps) ps.innerHTML = '<div class="d-hint2" style="border:0;padding-top:4px">这款只有本站实测记录，逐条社区参数见手机专区。</div>';
-      return;
-    }
-    const pj = await fetch(api('/api/bh/params?k=' + encodeURIComponent(keys) + '&limit=3')).then(r => r.json());
-    const items = (pj && pj.items) || [];
-    if (!items.length) { ps.innerHTML = ''; return; }
-    ps.innerHTML = items.map(bhParamCard).join('')
-      + (h.configs > items.length
-        ? `<div class="more" style="margin-bottom:6px">共 ${h.configs} 份配置，这里显示最近的 ${items.length} 份</div>`
-          /* ★ v10.25：「全部」点击时才取（limit 3 → 100），沿用同一套 store+渲染器 */
-          + dFullBtn(dFullPut({
-            type: 'bp', title: '逐条游玩参数 · 全部配置', sub: t, total: h.configs,
-            load: async () => {
-              const jj = await fetch(api('/api/bh/params?k=' + encodeURIComponent(keys) + '&limit=100')).then((r) => r.json());
-              return { items: (jj && jj.items) || [], total: h.configs };
-            },
-          }), `查看全部 ${h.configs} 份配置`)
-        : '');
+    /* ★ v10.28：原先这里**当场铺两块内容** ——
+       「② 本站实测记录」（`/api/pc/records` 全量）与「③ 逐条游玩参数」
+       （`/api/bh/params?limit=3` + 一个「查看全部 N 份配置」按钮）。
+       现在两块都**不在详情页默认铺开**（用户口径：「只需要手机模拟器配置，不要多个显示」），
+       而是收进上面那个「查看全部」弹窗（用户已确认：收进弹窗、不删数据）。
+       取数与版式**原样搬进该弹窗的 load()**，`bhRecRow` / `bhParamCard` 两个渲染器继续复用 ——
+       同一个语义只留一份实现，不再有「详情页一套、弹窗另一套」的漂移风险。 */
   } catch (e) { /* 静默：区块是锦上添花，失败不打扰用户 */ }
 }
 
@@ -3836,60 +3953,117 @@ async function loadRelated(d, fb) {
  *    另注意：这一块与上面的「🛠 修改器」是**两套数据**，互不替代 ——
  *    上面的 trainers 来自 Game Cheats Manager（英文站元数据，没有下载地址），
  *    这里的 mods 来自机地社区帖（99.9% 带网盘直链，是真能拿到东西的那一套）。 */
-const D_DL_KIND = { mod: 'MOD', modifier: '修改器' };
 const D_JIDI_MODS = 'https://jidiyouxi.com/modify/list';
+/* ★ v10.28：详情页的下载区，从「4 条帖子 + 一个『查看全部』弹窗」改成
+ *   **三专区预览**（本体 / Mod / 修改器，每块只露前 3 帖），每块的「全部 N 帖」进弹窗按 10 帖/页翻。
+ *   用户口径：「本体，修改器，Mod我需要放在最下面，且每个均只展示前三个，
+ *             点击全部后弹窗显示全部，弹窗显示十个其他的翻页」。
+ *
+ *   ★ 数据源随之换了：原来走 `/api/mods/match`（只有 Mod / 修改器两类，**没有本体**），
+ *     现在走 `/api/download` —— 它按源站话题专区返回 `items[].section`（body / mod / modifier）
+ *     与 `sections[].count`（源站帖数）。顺带把结果缓存进 `dlPre`：点底部「下载本体」按钮时**秒开**，
+ *     不必把同一套 XD 302 解析流程再跑一遍（那一次要 3-8 秒）。
+ *
+ *   ⚠️ 与上面的「🛠 修改器」仍是**两套数据**，别混淆：
+ *      #trBlock（/api/trainers/match）= Game Cheats Manager 元数据，**没有下载地址**；
+ *      本区块（/api/download）        = 源站社区帖，99.9% 带网盘直链，真能取件。 */
+const DL_PREV_CAP = 3;     // ★ v10.28：详情页每个专区只露前 3 帖（预览上限，不是专区上限）
+let dlSecs = [];           // 当前详情页的三专区（已归帖）—— 「全部」弹窗直接复用这份
+let dlSecTitle = '';
+let dlPre = null;          // ★ v10.28：/api/download 的预取结果（供「下载本体」秒开）
+
+/** 把 /api/download 的返回切成「本体 / Mod / 修改器」三专区（每块都已归帖）。
+ *  · `sections[].count` 是**源站帖子数**（权威口径，写在标头上 —— 用户看的是「源站有多少帖」）
+ *  · `items[].section` 是每条地址的归属（用来分组 —— 本次真正取回多少）
+ *  两个都要用；混用会让「22 帖 / 60 个地址」读起来自相矛盾（v10.27 已记过这条）。
+ *  ⚠️ XD 源没有专区概念（`kind:'downbtn'`、无 section）⇒ 退成一块，行为与改造前一致 ——
+ *     不能让一个新增的分区逻辑，把「本来能显示的链接」变成空白。 */
+function dlSecsOf(j) {
+  const items = ((j && j.items) || []).filter((i) => i && i.real);
+  const raw = Array.isArray(j && j.sections) ? j.sections.filter((s) => s && s.key) : [];
+  if (!raw.length) {
+    if (!items.length) return [];
+    const posts = dlGroupByPost(items);
+    return [{
+      key: 'all',
+      name: (j && j.source === 'xd') ? 'XDGAME 官方盘口' : '下载资源',
+      count: posts.length, returned: posts.length, links: items.length, posts, merged: false,
+    }];
+  }
+  const order = ['body', 'mod', 'modifier'];
+  const rank = (k) => { const i = order.indexOf(k); return i < 0 ? 99 : i; };
+  return raw
+    .map((s) => {
+      const own = items.filter((i) => i.section === s.key);
+      const posts = dlGroupByPost(own);
+      return {
+        key: s.key, name: s.name || s.key,
+        count: Number(s.count) || posts.length,
+        returned: Number(s.returned) || posts.length,
+        links: own.length,
+        merged: !!s.merged,
+        posts,
+      };
+    })
+    .filter((s) => s.posts.length)
+    .sort((a, b) => rank(a.key) - rank(b.key));   // 固定「本体 → Mod → 修改器」，不依赖服务端顺序
+}
+
+/** 一个专区的预览块：标头（名字 + 帖数/地址数）+ 前 DL_PREV_CAP 帖 + 「全部 N 帖 →」。
+ *  ⚠️ 帖数不足 cap 时**不给**「全部」按钮 —— 一个点开跟外面一模一样的按钮不如没有。 */
+function dlPrevBlock(s) {
+  const rows = s.posts.slice(0, DL_PREV_CAP);
+  const more = s.posts.length > DL_PREV_CAP;
+  const extra = [s.links > s.posts.length ? s.links + ' 地址' : '', s.merged ? '含最近发布' : '']
+    .filter(Boolean).join(' · ');
+  return `<div class="dl-prev" data-sec="${esc(s.key)}">
+    <div class="h"><b>${esc(s.name)}</b><span class="c">${s.posts.length} 帖${extra ? ' · ' + esc(extra) : ''}</span>
+      ${more ? `<button type="button" class="dl-all" data-df-open="${esc(s.key)}">全部 ${s.posts.length} 帖 →</button>` : ''}
+    </div>
+    <div class="l">${rows.map(dlRow).join('')}</div>
+  </div>`;
+}
+
 async function loadDlBlock(d, fb, title) {
   const slot = $('#dlSlot');
   if (!slot) return;
   const t = String(title || (d && d.title) || (fb && fb.title) || '').trim();
-  const id = (fb && fb.id) || (d && d.id) || '';
-  if (t.length < 2 && !id) return;
+  const u = String((d && d.url) || (fb && fb.jidiUrl) || '').trim();
+  dlSecs = []; dlSecTitle = t; dlPre = null;
+  if (!u) { slot.innerHTML = ''; return; }
+  /* 先占位：/api/download 要跟随 302 逐个解析（XD 约 3-8 秒）。不能什么都不显示 ——
+     空白会被读成「这一块功能没了」（v10.13 在手机配置上踩过同款坑）。 */
+  slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>下载资源（本体 / Mod / 修改器）<span class="cnt">解析中</span></h4>
+    <div class="d-hint2" style="border:0;padding-top:2px">正在解析源站网盘地址（需逐个跟随跳转，约 3-8 秒）…</div></div>`;
+  let j = null;
   try {
-    const qs = [];
-    if (id) qs.push('id=' + encodeURIComponent(id));
-    if (t) qs.push('t=' + encodeURIComponent(t));
-    const j = await fetch(api('/api/mods/match?' + qs.join('&'))).then(r => r.json());
-    /* ★ v10.25：先回填底部「修改器 / Mod」两个下载按钮的条数。
-       ⚠️ 这一步必须在 items 空判**之前**：社区只收了 Mod 没收修改器（很常见），
-          或摘要列表为空而计数不为 0，两种情况下按钮都要能正确显形（默认 hidden）。 */
-    setDlCounts(j && j.counts);
-    const items = (j && j.items) || [];
-    if (!items.length) { slot.innerHTML = ''; return; }   // 社区没收录就不占版面
-    const rows = items.slice(0, 4).map(it => {
-      const kind = D_DL_KIND[it.kind] || '资源';
-      const nets = [...new Set((it.links || []).map(l => l.kind).filter(Boolean))].slice(0, 2).join(' / ');
-      const when = it.ut ? new Date(it.ut * 1000).toISOString().slice(0, 10) : '';
-      const cnt = (it.links || []).length;
-      const meta = [nets ? esc(nets) : '', cnt ? cnt + ' 个直链' : '', when].filter(Boolean).join(' · ');
-      return `<a class="d-dl-it" href="${esc(it.url || D_JIDI_MODS)}" target="_blank" rel="noopener">
-        <span class="k${it.kind === 'modifier' ? ' mf' : ''}">${kind}</span>
-        <span class="bd"><span class="t" title="${esc(it.title || '')}">${esc(it.title || '')}</span>
-        <span class="m">${meta}</span></span>
-        <span class="go">打开帖子 ↗</span></a>`;
-    }).join('');
-    /* ★ v10.25：这条的「全部」**点击时才取**（一次最多 200 条）——
-       详情页只铺 4 条，没必要为了一个可能没人点的按钮先把 200 条拉下来。 */
-    const rest = j.count > 4 ? dFullBtn(dFullPut({
-      type: 'md', title: '下载入口 · 全部资源帖', sub: t, count: j.count,
-      load: async () => {
-        const q2 = [];
-        if (id) q2.push('id=' + encodeURIComponent(id));
-        if (t) q2.push('t=' + encodeURIComponent(t));
-        q2.push('limit=200');
-        const jj = await fetch(api('/api/mods/match?' + q2.join('&'))).then((r) => r.json());
-        return { items: (jj && jj.items) || [], count: (jj && jj.count) || 0 };
-      },
-    }), `查看全部 ${j.count} 条资源帖`) : '';
-    slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>下载入口<span class="cnt">机地社区 ${j.count} 条</span></h4>
-      ${rows}${rest}
-      <div class="d-dl-links">
-        <a href="${D_JIDI_MODS}" target="_blank" rel="noopener">机地 MOD / 修改器区 ↗</a>
-        <a href="/emulator.html#sv">云存档位置</a>
-        <a href="/emulator.html#tr">修改器库</a>
-      </div>
-      <div class="d-hint2">以上为<b>机地社区帖</b>（MOD / 修改器），网盘链接与文件都在源站帖子内，本站不转存、不提供文件。<br>
-        云存档那一套给的是<b>存档文件应该放哪</b>（真实路径），不是下载链接 —— 见手机专区「云存档」。</div></div>`;
-  } catch (e) { slot.innerHTML = ''; }
+    j = await fetch(api('/api/download?url=' + encodeURIComponent(u))).then((r) => r.json());
+  } catch (e) { j = null; }
+  if (!j || !j.ok) {
+    slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>下载资源<span class="cnt">未取到</span></h4>
+      <div class="d-hint2">没能解析出网盘地址${(j && j.error) ? '（' + esc(String(j.error)) + '）' : ''}。
+        可直接去 <a href="${esc(u)}" target="_blank" rel="noopener">源站帖子</a> 看看。</div></div>`;
+    return;
+  }
+  dlPre = { url: u, data: j };            // 缓存：点「下载本体」时秒开，不再解析第二遍
+  dlSecs = dlSecsOf(j);
+  if (!dlSecs.length) { slot.innerHTML = ''; return; }
+  /* 底部三个下载按钮的条数也从这份数据回填（原来是 /api/mods/match 的 counts）——
+     同一个语义只留一个来源，避免出现「按钮写 190、点开只有 110」这种数字对不上。 */
+  const cnt = {};
+  for (const s of dlSecs) if (s.key === 'mod' || s.key === 'modifier') cnt[s.key] = s.count || s.posts.length;
+  setDlCounts(cnt);
+  const totalPosts = dlSecs.reduce((n, s) => n + s.posts.length, 0);
+  const totalLinks = dlSecs.reduce((n, s) => n + s.links, 0);
+  slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>下载资源<span class="cnt">${dlSecs.map((s) => esc(s.name) + ' ' + s.posts.length).join(' · ')}</span></h4>
+    <div class="d-hint2" style="border:0;padding-top:0">共 <b>${totalPosts}</b> 个资源帖 · <b>${totalLinks}</b> 个网盘地址；每块只露前 ${DL_PREV_CAP} 帖，
+      点「全部」看完整清单。网盘按钮直接去源站取件 —— 本站只聚合与跳转，<b>不转存、不提供文件</b>。</div>
+    ${dlSecs.map(dlPrevBlock).join('')}
+    <div class="d-dl-links">
+      <a href="${esc(u)}" target="_blank" rel="noopener">源站帖子 ↗</a>
+      <a href="/emulator.html#sv">云存档位置</a>
+      <a href="${D_JIDI_MODS}" target="_blank" rel="noopener">机地 MOD / 修改器区 ↗</a>
+    </div></div>`;
 }
 $('#mask').addEventListener('click', closeDetail);
 
@@ -4308,6 +4482,9 @@ function closeDownload() {
   pop.classList.remove('on');
   /* ★ 关掉就丢状态：否则「查看全部」那类弹窗复用 #dlBody 时，上一次的排序/筛选还在 */
   dlView = null;
+  /* ★ v10.28：翻页状态一并作废 —— 留着的话下次打开会先按旧页码画一帧，
+     而那时 `dFullCur.p` 指向的仍是**上一次**那份载荷（数据已经不对了）。 */
+  dFullCur = null;
   setTimeout(() => { pop.hidden = true; const b = $('#dlBody'); if (b) b.innerHTML = ''; }, 180);
 }
 /**
@@ -4339,12 +4516,20 @@ async function openDownload(ctx) {
   }
   $('#dlBody').innerHTML = '<div class="dlpop-load"><i></i><span>正在解析网盘地址（XD 需逐个跟随跳转，约 3-8 秒）…</span></div>';
 
-  const res = await Promise.all(jobs.map((j) =>
-    fetch(api('/api/download?url=' + encodeURIComponent(j.u)))
+  /* ★ v10.28：详情页打开时 `loadDlBlock` 已经把这份数据取回来了（存在 dlPre）——
+     命中就直接复用，用户点「下载本体」是**秒开**，而不是再等一次 3-8 秒的 302 解析。
+     ⚠️ 必须比对 url：换一款游戏后 dlPre 会指向上一款，用错会把别人的资源帖画进来
+        （而且看起来完全正常，是最难发现的那类错串）。 */
+  const res = await Promise.all(jobs.map((j) => {
+    if (dlPre && dlPre.url === j.u && dlPre.data && dlPre.data.ok) {
+      return Promise.resolve({ tag: j.tag, d: dlPre.data });
+    }
+    return fetch(api('/api/download?url=' + encodeURIComponent(j.u)))
       .then((r) => r.json())
       .then((d) => ({ tag: j.tag, d }))
       /* ★ 单个源失败不能拖垮另一个 —— 兜成同一个返回形状，下面统一渲染 */
-      .catch((e) => ({ tag: j.tag, d: { ok: false, error: e.message } }))));
+      .catch((e) => ({ tag: j.tag, d: { ok: false, error: e.message } }));
+  }));
 
   /* 标题优先用源站返回的**完整标题**（用户要的就是「完整的标题」，别用库里的短名盖掉） */
   const good = res.filter((x) => x.d && x.d.ok);
@@ -4446,7 +4631,10 @@ function dFullBtn(k, label) {
   return '<button type="button" class="d-more-btn" data-full="' + esc(k) + '">' +
     esc(label) + ' <span class="ar">→</span></button>';
 }
-const D_DF_KIND = { mod: 'MOD', modifier: '修改器' };
+/* ★ v10.28：弹窗里每页帖数（用户口径「弹窗显示十个其他的翻页」）。
+   取 10 是「一屏能扫完、又不用一直翻」的折中：`.dl-it` 一行约 64px，
+   10 行 ≈ 640px，正好落在 `.dlpop-box` 的 80vh 可视区里 —— 翻页后不必再滚动就能看全。 */
+const DF_PAGE = 10;
 const D_FULL_RENDER = {
   /* 🛠 修改器（Game Cheats Manager 公开数据，没有下载地址，只给来源与版本） */
   tr(p) {
@@ -4484,47 +4672,103 @@ const D_FULL_RENDER = {
     }
     return out.join('');
   },
-  /* 📥 下载入口：机地社区资源帖（MOD ∩ 修改器混排，用徽标区分） */
-  md(p) {
+  /* ★ v10.28：原先这里还有两个渲染器 ——
+     `md`（下载入口 · 全部资源帖）与 `bp`（逐条游玩参数 · 全部配置）。
+     两者的入口按钮都随本次详情页改版消失了：`md` 的宿主 `#dlSlot` 改成三专区预览
+     （改走 `dlsec`，一页 10 帖可翻页）；`bp` 的宿主 `#bhParamSlot` 收进了
+     「查看全部机型」弹窗（`dv` 里带 `params` 那一节）。
+     按项目铁律「删掉没人用的出口」一并清掉，连同只服务 `md` 的 `D_DF_KIND` 配色表 ——
+     留着会让人以为还有第三条路能走到这两块。 */
+  /* 📱 手机模拟器配置：全量机型 + 性能分 + 芯片，★ v10.28 起后面再接两节 ——
+     「本站实测记录」与「逐条游玩参数」。用户口径是「只需要手机模拟器配置，不要多个显示」，
+     所以详情页里这三块默认都不铺开，统一进这一个弹窗（他确认过：收进弹窗、不删数据）。
+     ★ 此处仍不做「点开硬件面板」—— 那个交互要按机型再发一次 /api/device/hardware，
+       放进弹窗会与抽屉里的面板状态打架；弹窗只回答「哪些机型跑过、各自多强」，
+       要看品牌 / 型号 / 硬件配置，回抽屉里点同一台。 */
+  dv(p) {
     const items = p.items || [];
-    const out = ['<div class="df-note">机地社区共 <b>' + (p.count || items.length) + '</b> 条资源帖 · ' +
-      '点任意一条去源站帖子取件。本站只做聚合与跳转，<b>不转存、不提供文件</b>。</div>'];
-    items.forEach((it) => {
-      const nets = [...new Set((it.links || []).map((l) => l.kind).filter(Boolean))].slice(0, 3).join(' / ');
-      const cn = (it.links || []).length;
-      const when = it.ut ? new Date(it.ut * 1000).toISOString().slice(0, 10) : '';
-      const meta = [nets || '', cn ? cn + ' 个直链' : '未见直链', when].filter(Boolean).join(' · ');
-      out.push('<div class="df-row"><span class="ix">' + esc(D_DF_KIND[it.kind] === 'MOD' ? 'M' : '修') + '</span>' +
-        '<span class="bd"><span class="t"><span class="tagx' + (it.kind === 'modifier' ? ' mf' : '') + '">' +
-        esc(D_DF_KIND[it.kind] || '资源') + '</span>' + esc(it.title || '') + '</span>' +
-        '<span class="m">' + esc(meta) + '</span></span>' +
-        '<a class="go2" href="' + esc(it.url || D_JIDI_MODS) + '" target="_blank" rel="noopener">打开 ↗</a></div>');
-    });
-    if ((p.count || 0) > items.length) {
-      out.push('<div class="df-note" style="margin:10px 0 0">另有 ' + (p.count - items.length) +
-        ' 条超出单页上限（一次最多 200 条），去 <a href="' + D_JIDI_MODS + '" target="_blank" rel="noopener">机地 MOD / 修改器区 ↗</a> 看全部</div>');
+    const out = ['<div class="df-note">共 <b>' + (p.total || items.length) + '</b> 台机型跑通过本作（按性能分从弱到强）· ' +
+      '点机型展开完整硬件参数请在详情页「手机模拟器配置」里操作。</div>'];
+    /* 机型行正常是 bhDevRow() 产出的**数据对象**；万一拿到的是已经成型的 HTML 串
+       （旧载荷 / 别的调用方），直接放行而不是去读 `x.name` —— 那会渲染出一片空白行。 */
+    out.push(items.map((x, i) => typeof x === 'string' ? x : '<div class="df-row"><span class="ix">' + (i + 1) + '</span><span class="bd">' +
+      '<span class="t">' + esc(x.name) + (x.score ? ' <span class="tagx dim">' + Math.round(x.score) + '</span>' : '') + '</span>' +
+      '<span class="m">' + (x.code ? esc(x.code) + ' · ' : '') + (x.chip ? esc(x.chip) : '芯片未收录') + '</span></span></div>').join(''));
+    /* 本站实测记录：`.pc-rec` 是这套数据的既有版式（手游专区的实测面板用的就是它） */
+    const recs = p.recs || [];
+    if (recs.length) {
+      out.push('<div class="df-sect">本站实测记录（' + recs.length + '）</div>');
+      out.push('<div class="pc-rec">' + recs.map(bhRecRow).join('') + '</div>');
+    }
+    /* 逐条游玩参数：直接复用详情页那张卡片（bhParamCard），不另做一套版式 */
+    const params = p.params || [];
+    if (params.length) {
+      out.push('<div class="df-sect">逐条游玩参数（' + params.length + '）</div>');
+      out.push(params.map(bhParamCard).join(''));
     }
     return out.join('');
   },
-  /* 📋 逐条游玩参数：直接复用详情页同一张卡片（bhParamCard），不另做一套版式 */
-  bp(p) {
-    const items = p.items || [];
-    return '<div class="df-note">社区共 <b>' + (p.total || items.length) + '</b> 份配置 · 本页展示 ' +
-      items.length + ' 份。参数为玩家在安卓机上跑通本作后导出的实际配置（驱动 / DXVK / 容器 / 翻译层）。</div>' +
-      items.map(bhParamCard).join('');
-  },
-  /* 📱 机型清单：全量机型 + 性能分 + 芯片。★ 此处不做「点开硬件面板」——
-     那个交互要按机型再发一次 /api/device/hardware，放进弹窗会与抽屉里的面板状态打架；
-     弹窗只回答「哪些机型跑过、各自多强」，看硬件参数回抽屉里点同一台。 */
-  dv(p) {
-    const items = p.items || [];
-    return '<div class="df-note">共 <b>' + (p.total || items.length) + '</b> 台机型跑通过本作（按性能分从弱到强）· ' +
-      '点机型展开完整硬件参数请在详情页「手机模拟器配置」里操作。</div>' +
-      items.map((x, i) => '<div class="df-row"><span class="ix">' + (i + 1) + '</span><span class="bd">' +
-        '<span class="t">' + esc(x.name) + (x.score ? ' <span class="tagx dim">' + Math.round(x.score) + '</span>' : '') + '</span>' +
-        '<span class="m">' + (x.code ? esc(x.code) + ' · ' : '') + (x.chip ? esc(x.chip) : '芯片未收录') + '</span></span></div>').join('');
+  /* 📥 三专区（本体 / Mod / 修改器）· ★ v10.28 新增。
+     详情页每块只露 3 帖，这里是「全部」的落点：每页 DF_PAGE 帖 + 上/下页；
+     多专区时顶部给切换标签（从哪块点进来就停在哪块，也能直接换块看）。
+     ⚠️ 行渲染继续用 `dlRow` —— 与详情页预览**同一个函数**，两处各写一套必然漂移。 */
+  dlsec(p, page, secKey) {
+    const secs = p.secs || [];
+    if (!secs.length) return '<div class="dlpop-empty">这款游戏没有可展示的资源帖</div>';
+    const per = p.pageSize || DF_PAGE;
+    const cur = secs.some((s) => s.key === secKey) ? secKey : secs[0].key;
+    const s = secs.find((x) => x.key === cur) || secs[0];
+    const total = s.posts.length;
+    const pages = Math.max(1, Math.ceil(total / per));
+    const pg = Math.min(Math.max(1, Number(page) || 1), pages);
+    const rows = s.posts.slice((pg - 1) * per, pg * per);
+    const out = [];
+    /* 多专区时才给切换标签 —— 只有一块时排一个单标签纯属噪音 */
+    if (secs.length > 1) {
+      out.push('<div class="df-tabs">' + secs.map((x) =>
+        '<button type="button" class="df-tab' + (x.key === cur ? ' on' : '') + '" data-df-sec="' + esc(x.key) + '">' +
+        esc(x.name) + '<i>' + x.posts.length + '</i></button>').join('') + '</div>');
+    }
+    out.push('<div class="df-note">' + esc(s.name) + ' 共 <b>' + total + '</b> 帖 · 每页 ' + per +
+      ' 帖，第 <b>' + pg + '</b> / ' + pages + ' 页 · 点盘口按钮直接去源站取件（本站不转存、不提供文件）' +
+      (s.count > total ? '；源站该专区共 ' + s.count + ' 帖' + (s.merged ? '（已并入「最近发布」那批）' : '') : '') +
+      '</div>');
+    out.push('<div class="df-list">' + rows.map(dlRow).join('') + '</div>');
+    if (pages > 1) {
+      out.push('<div class="df-pager">' +
+        '<button type="button" class="df-pg" data-df-page="' + (pg - 1) + '"' + (pg <= 1 ? ' disabled' : '') + '>‹ 上一页</button>' +
+        '<span class="df-pg-n">' + pg + ' / ' + pages + '</span>' +
+        '<button type="button" class="df-pg" data-df-page="' + (pg + 1) + '"' + (pg >= pages ? ' disabled' : '') + '>下一页 ›</button>' +
+        '</div>');
+    }
+    return out.join('');
   },
 };
+/* ★ v10.28：把「当前弹窗的可翻页状态」提出来 —— 翻页 / 切专区要能**重渲染同一份载荷**，
+   而载荷是点击时才异步取回的（`src.load()`），不存下来第二页就没数据可画。
+   ⚠️ 只在弹窗打开期间有效：`closeDownload()` 与换一款游戏（paintDetail 清 dFullStore）都会作废，
+      否则会出现「翻页翻出上一款游戏的资源帖」这种看起来完全正常的串台。 */
+let dFullCur = null;      // { p, page, sec }
+function paintFull() {
+  const body = $('#dlBody');
+  if (!body || !dFullCur) return;
+  const R = D_FULL_RENDER[dFullCur.p.type];
+  if (!R) return;
+  body.innerHTML = R(dFullCur.p, dFullCur.page, dFullCur.sec) ||
+    '<div class="dlpop-empty">没有可展示的内容</div>';
+}
+/** ★ v10.28：打开三专区里某一块的「全部」弹窗。
+ *  载荷直接复用 `dlSecs`（`loadDlBlock` 已经归好帖），所以这里是**同步**的 —— 不必再等网络。 */
+function openDlSecPop(key) {
+  if (!dlSecs.length) return;
+  const token = dFullPut({
+    type: 'dlsec',
+    title: dlSecTitle ? dlSecTitle + ' · 下载资源' : '下载资源 · 全部',
+    sub: '本体 / Mod / 修改器 · 每页 ' + DF_PAGE + ' 帖',
+    secs: dlSecs, sec: key || '', pageSize: DF_PAGE,
+  });
+  openFullPop(token);
+}
 async function openFullPop(token) {
   const pop = $('#dlPop');
   const src = dFullStore[token];
@@ -4536,13 +4780,16 @@ async function openFullPop(token) {
   $('#dlFoot').innerHTML = src.foot || '';
   pop.hidden = false;
   requestAnimationFrame(() => pop.classList.add('on'));
+  dFullCur = null;
   const needLoad = typeof src.load === 'function';
   $('#dlBody').innerHTML = '<div class="dlpop-load"><i></i><span>正在读取全部内容…</span></div>';
   let p = src;
   try {
     if (needLoad) p = Object.assign({}, src, (await src.load()) || {});
-    $('#dlBody').innerHTML = R(p) || '<div class="dlpop-empty">没有可展示的内容</div>';
+    dFullCur = { p, page: 1, sec: src.sec || '' };
+    paintFull();
   } catch (e) {
+    dFullCur = null;
     $('#dlBody').innerHTML = '<div class="dlpop-empty">读取失败：' + esc(e.message) +
       '<br><span style="font-size:11.5px">稍后重试</span></div>';
   }
@@ -4685,6 +4932,35 @@ async function openModList(ctx) {
       openFullPop(fb.dataset.full);
       return;
     }
+    /* ★ v10.28：三专区预览的「全部 N 帖 →」——
+       载荷**不必重新请求**：`loadDlBlock` 已把三专区（已归帖）存在 `dlSecs` 里，
+       这里只把它包成一个 token 交给同一套弹窗外壳。 */
+    const dfo = e.target.closest('[data-df-open]');
+    if (dfo) {
+      e.preventDefault();
+      e.stopPropagation();
+      openDlSecPop(dfo.dataset.dfOpen);
+      return;
+    }
+    /* ★ v10.28：弹窗内翻页 / 切换专区 —— 只改状态再重渲染，不重新取数。
+       重新取数不仅慢，还会因为服务端每次给的顺序不同而「翻页翻出重复条目」。 */
+    const dfp = e.target.closest('[data-df-page]');
+    if (dfp && dFullCur) {
+      e.preventDefault();
+      dFullCur.page = Number(dfp.dataset.dfPage) || 1;
+      paintFull();
+      $('#dlBody').scrollTop = 0;         // 翻页后回列表顶部，否则会停在上一页的滚动位置
+      return;
+    }
+    const dfs = e.target.closest('[data-df-sec]');
+    if (dfs && dFullCur) {
+      e.preventDefault();
+      dFullCur.sec = dfs.dataset.dfSec;   // 换专区 → 页码必须归 1，否则会落在空页上
+      dFullCur.page = 1;
+      paintFull();
+      $('#dlBody').scrollTop = 0;
+      return;
+    }
     /* ★ v10.25：Mod / 修改器按钮 —— **必须先于** data-dl-open 判（两者都可能是
        button.ds，且 data-dlmod-open 的按钮不带 data-dl-open，顺序其实无所谓；
        但显式分开判，避免以后有人给同一个按钮挂两个属性时行为不确定）。 */
@@ -4692,8 +4968,17 @@ async function openModList(ctx) {
     if (mb) {
       e.preventDefault();
       e.stopPropagation();
+      const kind = mb.dataset.dlmodOpen || 'mod';
+      /* ★ v10.28：三专区预览把「本体 / Mod / 修改器」的**权威清单**搬进了 #dlSlot
+         （/api/download 按源站专区切分），而底部这两个按钮的条数也由 setDlCounts
+         按同一份回填 —— 所以只要该专区在 dlSecs 里，就开那份分页弹窗。
+         否则会出现「按钮写 190、点开只有 110」：按钮走 download、弹窗走 /api/mods/match，
+         同一个语义两个统计口径（PITFALLS 2「同一字段多条链路」）。
+         ⚠️ 两条链路都留着 —— XD 源没有「专区」概念（dlSecs 退成一块 key=all），
+            那种条目仍走 mods/match 的 id ∪ 名称联合匹配，不能让它变成空弹窗。 */
+      if (dlSecs.some((s) => s.key === kind)) { openDlSecPop(kind); return; }
       openModList({
-        kind: mb.dataset.dlmodOpen || 'mod',
+        kind,
         title: mb.dataset.dlmodTitle || '',
         id: mb.dataset.dlmodId || '',
       });
@@ -4737,9 +5022,10 @@ const D_RAIL = [
   /* `.block` 同时被「版本介绍」用着 → 必须按标题文字过滤，否则会定位到版本介绍 */
   { k: 'desc', nm: '游戏介绍', sel: ['#drawerBody .block'], txt: '游戏介绍' },
   { k: 'rel', nm: '同分类', sel: ['#relSlot'] },
-  /* 下载优先指向底部那条三按钮动作条（最常被点的落点）；
-     该条存在但三个按钮全隐藏时它会 hidden → 自动退到「下载入口」区块。 */
-  { k: 'dl', nm: '下载', sel: ['#dlStrip', '#dlSlot'] },
+  /* ★ v10.28：优先指向正文里的三专区区块（`#dlSlot`）—— 它在文档流里，滚动定位准确；
+     `#dlStrip` 现在躺在 sticky 的 `.d-dock` 里（视觉位置恒在视口底部），
+     拿它当定位目标会让这一项几乎永远不高亮。它只在三专区没内容时兜底。 */
+  { k: 'dl', nm: '下载', sel: ['#dlSlot', '#dlStrip'] },
 ];
 let dRailItems = [];
 let dRailScrollPend = 0;
@@ -4817,7 +5103,11 @@ function railBoot() {
   }).observe(body, { childList: true, subtree: true });
   dr.addEventListener('scroll', () => {
     if (dRailScrollPend) return;
-    dRailScrollPend = requestAnimationFrame(() => { dRailScrollPend = 0; railSpy(); });
+    dRailScrollPend = requestAnimationFrame(() => {
+      dRailScrollPend = 0;
+      railSpy();
+      dHeroSpy();   // ★ v10.28：同一个 rAF 里顺带收窄顶图（不另起一个 scroll 监听）
+    });
   }, { passive: true });
   window.addEventListener('resize', () => { railPos(); railSpy(); });
   /* 点击跳转：用 document 级委托（与下载弹窗同理 —— #dRail 的 innerHTML 每次重扫
@@ -4832,6 +5122,18 @@ function railBoot() {
     dr.scrollTo({ top: Math.max(0, dr.scrollTop + dy - 14), behavior: 'smooth' });
   });
   railSync();
+}
+/* ★ v10.28：详情页顶图「滚动即收窄」。
+ *  用户口径：「封面 + 标题（吸顶）」—— 250px 的封面**整块**吸顶会占掉近 1/4 屏，
+ *  而吸顶真正的用处只是「滚到哪儿都知道自己在看哪款游戏」。
+ *  所以滚过 90px 就把 `.d-hero` 收成 62px 的标题条（`.mini`），滚回顶部再还原。
+ *  ⚠️ 为什么不用纯 CSS：CSS 选不了「滚动位置」，`animation-timeline:scroll()` 兼容性不够。
+ *  ⚠️ 为什么只用一次 `toggle`：开关状态必须在**同一处**判定。写成 `if (t) add else remove`
+ *     两行的话，快速来回滚动时两个方向各写一次、互相打架，会出现「收下去又弹回来」的抖动。 */
+function dHeroSpy() {
+  const dr = $('#drawer'), h = $('#dHero');
+  if (!dr || !h) return;
+  h.classList.toggle('mini', dr.scrollTop > 90);
 }
 railBoot();   // 定位条：绑一次观察器/滚动监听（常驻节点，不进 #drawerBody）
 

@@ -81,7 +81,7 @@ curl http://localhost:8123/api/health    # 期望 ok
 ### 步骤 5 · 跑三层防线
 
 ```bash
-# 第一层：静态（26 套 / 1700 条 / 必须 0 失败）
+# 第一层：静态（前置闸 1 个 + 27 套 / 1823 条 / 必须 0 失败）
 node tools/run-all.js
 
 # 第二层：浏览器实拍（puppeteer，★ 必须加大超时 + 分批跑）
@@ -211,11 +211,17 @@ node tools/audit-apps.js          # ★ 发布过就再跑一次：应用登记 
 
 | 层 | 工具 | 规模 | 特点 | 何时跑 |
 |---|---|---|---|---|
-| ① 静态 | `tools/run-all.js` | **26 套 / 1700 条** | 秒级、无需人盯 | 每次改完 |
-| ② 行为 | `test-emulator-page.js`（jsdom，含在 26 套内） | 119 条 | 需服务在 8123 | 每次改完 |
-| ③ 实拍 | `tools/preview-v*.js`（21 个） | 各 30~70 条 | puppeteer，**慢且脆** | 改页面时 |
+| ⓪ 语法闸 | `tools/check-inline-syntax.js`（由 `run-all` 作**前置闸**拉起） | 3 个页面 | 抽内联脚本 `node --check`，**精确到行列** | 每次改页面 |
+| ① 静态 | `tools/run-all.js` | **27 套 / 1823 条** | 秒级、无需人盯 | 每次改完 |
+| ② 行为 | `test-emulator-page.js`（jsdom，含在 27 套内） | 119 条 | 需服务在 8123 | 每次改完 |
+| ③ 实拍 | `tools/preview-v*.js`（实测 **20** 个） | 各 30~70 条 | puppeteer，**慢且脆** | 改页面时 |
 | ③' 回归 | `test-search-ui.js` + 六个 `test-v1025-*.js` | **141 条** | puppeteer + CDP，**要人盯、须分批** | 改交互后 |
 | ④ 线上 | `tools/verify-online.js` | — | 对**线上**验收 | 仅发布后 |
+
+★ **为什么 ⓪ 要单独占一层**：`public/*.html` 的内联脚本是 3400~4700 行的**单块** JS，
+一旦语法坏了（注释里出现提前闭合序列、模板串里塞了反引号），
+**后面所有套件都会集体翻红** —— 看着像几十处功能坏了，实际只有一处手误。
+先过语法闸，报错才精确到行列；且它**必须验 3 个页面**（派生页各有自己的内联块，只查主源会漏）。
 
 **写断言的六条硬规矩**（全是历史教训）：
 
@@ -385,8 +391,11 @@ $NODE tools/build-emulator-page.js && $NODE tools/build-unpack-page.js
 # 重启服务 / 健康检查
 $NODE tools/restart-server.js
 
-# 全量静态防线（26 套 1700 条）
+# 全量静态防线（前置闸 1 + 27 套 1823 条）
 $NODE tools/run-all.js
+
+# 只查内联脚本语法（报错精确到行列；默认查 index/emulator/unpack 三页）
+$NODE tools/check-inline-syntax.js
 
 # 浏览器实拍（按需换版本号）
 $NODE tools/preview-v1020.js

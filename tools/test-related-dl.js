@@ -197,6 +197,31 @@ const MODS_PAYLOAD = {
     { id: '2', kind: 'modifier', title: '内置修改器 v2.1', url: 'https://jidiyouxi.com/post/detail/2', ut: 1789000000, links: [{ url: 'https://pan.xunlei.com/s/x', kind: '迅雷网盘' }] },
   ],
 };
+/* ★ v10.28：详情页下载区改走 /api/download —— 按源站话题专区切分（本体 / Mod / 修改器），
+   而 /api/mods/match 只有 Mod / 修改器两类、**没有本体**。桩数据同步换成它的形状：
+     `items[].section` = 每条地址的归属（用来分组）
+     `sections[].count` = 源站该专区的**帖子数**（权威口径，写在标头上）
+   ⚠️ 这两个口径不能混用（「22 帖 / 60 个地址」看起来会自相矛盾）。
+   MODS_PAYLOAD 保留：openModList 那条兜底链路（XD 源无专区概念时）仍会用到。 */
+const DOWNLOAD_PAYLOAD = {
+  ok: true, source: 'jidi',
+  sections: [
+    { key: 'body', name: '本体', count: 12, returned: 20 },
+    { key: 'mod', name: 'Mod', count: 190, returned: 154, merged: true },
+    { key: 'modifier', name: '修改器', count: 4, returned: 10 },
+  ],
+  items: [
+    { real: 'https://pan.baidu.com/s/body1', server: 'baidu', postId: 3, postTitle: '本体免安装版', postUrl: 'https://jidiyouxi.com/post/detail/3', ct: 1789500000, section: 'body' },
+    /* Mod 专区**故意给 4 帖**（> DL_PREV_CAP=3）—— 只有超过 3 帖才会出现「全部 N 帖 →」，
+       桩数据给 1 帖的话那条断言永远测不到真东西。 */
+    { real: 'https://pan.quark.cn/s/abc', server: 'quark', postId: 1, postTitle: '1.01 Mod整合包', postUrl: 'https://jidiyouxi.com/post/detail/1', ct: 1789437445, section: 'mod' },
+    { real: 'https://pan.baidu.com/s/1x', server: 'baidu', postId: 1, postTitle: '1.01 Mod整合包', postUrl: 'https://jidiyouxi.com/post/detail/1', ct: 1789437445, section: 'mod' },
+    { real: 'https://pan.baidu.com/s/m2', server: 'baidu', postId: 4, postTitle: '2.00 Mod包', postUrl: 'https://jidiyouxi.com/post/detail/4', ct: 1789400000, section: 'mod' },
+    { real: 'https://pan.xunlei.com/s/m3', server: 'xunlei', postId: 5, postTitle: '3.00 Mod包', postUrl: 'https://jidiyouxi.com/post/detail/5', ct: 1789300000, section: 'mod' },
+    { real: 'https://pan.quark.cn/s/m4', server: 'quark', postId: 6, postTitle: '4.00 Mod包', postUrl: 'https://jidiyouxi.com/post/detail/6', ct: 1789200000, section: 'mod' },
+    { real: 'https://pan.xunlei.com/s/x', server: 'xunlei', postId: 2, postTitle: '内置修改器 v2.1', postUrl: 'https://jidiyouxi.com/post/detail/2', ut: 1789000000, section: 'modifier' },
+  ],
+};
 const RELATED_PAYLOAD = {
   ok: true, genre: '动作冒险', series: '赛博朋克', pool: 5627,
   items: [
@@ -218,7 +243,8 @@ function makeDom() {
         const url = String(u);
         calls.push(url);
         let body = { ok: true, items: [] };
-        if (url.includes('/api/mods/match')) body = MODS_PAYLOAD;
+        if (url.includes('/api/download')) body = DOWNLOAD_PAYLOAD;   // ★ v10.28：下载区的新数据源
+        else if (url.includes('/api/mods/match')) body = MODS_PAYLOAD;
         else if (url.includes('/api/library/related')) body = RELATED_PAYLOAD;
         else if (url.includes('/api/library/browse')) body = { ok: true, items: [], total: 0 };
         else if (url.includes('/api/health')) body = { ok: true };
@@ -256,19 +282,35 @@ function makeDom() {
   const d = { title: '赛博朋克2077/Cyberpunk 2077', url: 'https://www.xdgame.com/game/191.html', source: 'xdgamer', genres: ['动作冒险'] };
   const fb = { id: 'xd-191', title: d.title, genres: ['动作冒险'] };
 
-  /* B2. 下载入口：必须同时传 id 与 t */
+  /* B2. 下载区（★ v10.28 改造：数据源与版式都换了）
+     · 数据源 /api/mods/match → /api/download（后者才有「本体」这一类）
+     · 版式「4 条平铺 + 一个查看全部」→「三专区各露前 3 帖 + 每块一个全部按钮」 */
   await w.loadDlBlock(d, fb, d.title);
   const dl = doc.querySelector('#dlSlot').innerHTML;
-  const dlCall = calls.filter((u) => u.includes('/api/mods/match')).pop() || '';
-  t(/[?&]id=xd-191(&|$)/.test(dlCall) && /[?&]t=/.test(dlCall),
-    '下载入口请求同时带 id 与 t（只传一个会漏匹配）', dlCall.replace(/^.*\/api/, '/api'));
-  t(/1\.01 Mod整合包/.test(dl) && /内置修改器 v2\.1/.test(dl), '渲染出社区的 MOD / 修改器帖子标题');
-  t(/>MOD</.test(dl) && />修改器</.test(dl), '两类各带类型徽标');
-  t(/夸克网盘/.test(dl), '展示网盘类型（让用户知道点进去是什么网盘）');
+  const dlCall = calls.filter((u) => u.includes('/api/download')).pop() || '';
+  t(/\/api\/download\?url=/.test(dlCall) && /game%2F191|game\/191/.test(dlCall),
+    '★ 下载区按**当前详情页 url**取数（id+t 联合匹配那个端点没有「本体」这一类）',
+    dlCall.replace(/^.*\/api/, '/api').slice(0, 70));
+  t(/本体免安装版/.test(dl) && /1\.01 Mod整合包/.test(dl) && /内置修改器 v2\.1/.test(dl),
+    '★ 三个专区的帖子标题都渲染出来了（含 mods/match 拿不到的「本体」）');
+  t(/data-sec="body"/.test(dl) && /data-sec="mod"/.test(dl) && /data-sec="modifier"/.test(dl),
+    '★ 三专区各成一块（data-sec 标识），不是混在一张表里');
+  t(/夸克|百度|迅雷/.test(dl), '展示网盘类型（让用户知道点进去是什么网盘）');
   t((dl.match(/target="_blank"/g) || []).length >= 2, '每条都是新窗口跳转（打开帖子）', `target=_blank ×${(dl.match(/target="_blank"/g) || []).length}`);
-  t(/打开帖子/.test(dl) && /jidiyouxi\.com\/post\/detail\/1/.test(dl), '跳转指向源站帖子详情页，而非本站转存');
+  t(/源帖 ↗/.test(dl) && /jidiyouxi\.com\/post\/detail\/1/.test(dl), '跳转指向源站帖子详情页，而非本站转存');
   t(/云存档位置/.test(dl) && /#sv/.test(dl), '同屏给出「云存档位置」入口（用户提到的云存档那一档）');
-  t(/9 条/.test(dl), '显示该游戏的社区条目总数', (dl.match(/机地社区 \d+ 条/) || [''])[0]);
+  t(/个资源帖/.test(dl) && /个网盘地址/.test(dl),
+    '★ 写明「N 个资源帖 · M 个网盘地址」两个口径（帖数与地址数是两回事，混用会读起来自相矛盾）',
+    (dl.match(/共 <b>\d+<\/b> 个资源帖/) || [''])[0]);
+  t(/全部 4 帖 →/.test(dl),
+    '★ 超过 3 帖的专区给「全部 N 帖 →」入口（Mod 桩数据 4 帖）');
+  t((dl.match(/全部 \d+ 帖 →/g) || []).length === 1,
+    '★ 不足 3 帖的专区**不给**「全部」按钮（本体 1 帖、修改器 1 帖都不该有）',
+    `按钮数 ${(dl.match(/全部 \d+ 帖 →/g) || []).length}`);
+  /* 行渲染器是 dlRow()，产出 `.dl-it`；预览与弹窗**共用同一个函数**（两处各写一套必然漂移）。
+     桩数据：本体 1 帖 + Mod 4 帖 + 修改器 1 帖；Mod 按 cap 截到 3 ⇒ 1 + 3 + 1 = 5 行。 */
+  const rowCnt = (dl.match(/class="dl-it"/g) || []).length;
+  t(rowCnt === 5, '★ 每块预览按 DL_PREV_CAP=3 截断（1 + 3 + 1 = 5 行；全量是 6 帖）', `${rowCnt} 行`);
 
   /* B3. 推荐位：理由徽标 + 跳转 */
   await w.loadRelated(d, fb);
@@ -284,7 +326,7 @@ function makeDom() {
   /* B4. 接口空 → 区块必须清空（不能残留上一个游戏的内容） */
   w.fetch = function (u) {
     const url = String(u);
-    if (url.includes('/api/mods/match')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, count: 0, items: [] }) });
+    if (url.includes('/api/download')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, items: [], sections: [] }) });
     if (url.includes('/api/library/related')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, items: [] }) });
     return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true }) });
   };

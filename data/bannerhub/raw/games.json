@@ -893,7 +893,7 @@
   },
   {
     "name": "Buckshot_Roulette",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Bulletstorm__Full_Clip_Edition",
@@ -1505,7 +1505,7 @@
   },
   {
     "name": "Cyberpunk_2077",
-    "count": 15
+    "count": 16
   },
   {
     "name": "Cyberpunk_2077______________________________________________",
@@ -1597,7 +1597,7 @@
   },
   {
     "name": "DOOM_Eternal",
-    "count": 3
+    "count": 4
   },
   {
     "name": "DOOM__3__BFG_Edition_",
@@ -2409,11 +2409,11 @@
   },
   {
     "name": "Euro_Truck_Simulator_2",
-    "count": 224
+    "count": 225
   },
   {
     "name": "Euro_Truck_Simulator_2_Demo",
-    "count": 11
+    "count": 12
   },
   {
     "name": "Euro_Truck_Simulator_2______________________________________",
@@ -2465,7 +2465,7 @@
   },
   {
     "name": "F1_2013",
-    "count": 8
+    "count": 9
   },
   {
     "name": "F1_2014",
@@ -2773,7 +2773,7 @@
   },
   {
     "name": "Far_Cry_3",
-    "count": 93
+    "count": 94
   },
   {
     "name": "Far_Cry_3___________________________________________________",
@@ -2793,7 +2793,7 @@
   },
   {
     "name": "Far_Cry__2",
-    "count": 18
+    "count": 20
   },
   {
     "name": "Far_Cry__3",
@@ -3192,6 +3192,10 @@
     "count": 1
   },
   {
+    "name": "GTA_5",
+    "count": 1
+  },
+  {
     "name": "GTA_IV",
     "count": 1
   },
@@ -3397,7 +3401,7 @@
   },
   {
     "name": "God_of_War_Ragnar_k",
-    "count": 12
+    "count": 15
   },
   {
     "name": "God_of_War__________________________________________________",
@@ -3501,7 +3505,7 @@
   },
   {
     "name": "Grand_Theft_Auto_IV__The_Complete_Edition",
-    "count": 362
+    "count": 364
   },
   {
     "name": "Grand_Theft_Auto_IV__The_Complete_Edition_",
@@ -3541,7 +3545,7 @@
   },
   {
     "name": "Grand_Theft_Auto_V_Legacy",
-    "count": 1283
+    "count": 1310
   },
   {
     "name": "Grand_Theft_Auto_V_Legacy22",
@@ -4632,6 +4636,10 @@
     "count": 1
   },
   {
+    "name": "Lords_Of_The_Fallen__2014",
+    "count": 1
+  },
+  {
     "name": "Lords_of_the_Fallen",
     "count": 1
   },
@@ -4917,7 +4925,7 @@
   },
   {
     "name": "Mafia_II__Classic_",
-    "count": 32
+    "count": 33
   },
   {
     "name": "Mafia_II__Definitive_Edition",
@@ -5201,7 +5209,7 @@
   },
   {
     "name": "Minecraft",
-    "count": 2
+    "count": 1
   },
   {
     "name": "MinecraftInstaller",
@@ -5689,7 +5697,7 @@
   },
   {
     "name": "Need_for_Speed_9",
-    "count": 107
+    "count": 108
   },
   {
     "name": "Need_for_Speed_MONST_WANTEND",
@@ -5997,7 +6005,7 @@
   },
   {
     "name": "OpenAL_Installer",
-    "count": 8
+    "count": 9
   },
   {
     "name": "OpenBOR",
@@ -6369,7 +6377,7 @@
   },
   {
     "name": "PlayGTAV",
-    "count": 99
+    "count": 103
   },
   {
     "name": "PlayGTAVOptiJuegos7Z",
@@ -6549,7 +6557,7 @@
   },
   {
     "name": "Pro_Evolution_Soccer_2013",
-    "count": 2807
+    "count": 2822
   },
   {
     "name": "Pro_Evolution_Soccer_20132",
@@ -6629,7 +6637,7 @@
   },
   {
     "name": "Pro_Evolution_Soccer_2017",
-    "count": 170
+    "count": 171
   },
   {
     "name": "Pro_Evolution_Soccer_2017seting",
@@ -6921,7 +6929,7 @@
   },
   {
     "name": "Red_Dead_Redemption_2",
-    "count": 48
+    "count": 49
   },
   {
     "name": "Redout_2",
@@ -7329,7 +7337,7 @@
   },
   {
     "name": "START-GAME",
-    "count": 2
+    "count": 3
   },
   {
     "name": "START-GAME-Oculus",
@@ -7465,7 +7473,7 @@
   },
   {
     "name": "Sekiro___Shadows_Die_Twice_-_GOTY_Edition",
-    "count": 51
+    "count": 53
   },
   {
     "name": "Selene_s_Unbearable_Night",
@@ -7522,6 +7530,10 @@
   {
     "name": "Shenmue_I_II",
     "count": 2
+  },
+  {
+    "name": "Shenzhen",
+    "count": 1
   },
   {
     "name": "Shieldwall",
@@ -8905,7 +8917,7 @@
   },
   {
     "name": "UNCHARTED___Legacy_of_Thieves_Collection",
-    "count": 6
+    "count": 7
   },
   {
     "name": "UltimateTheaterSimulator",
@@ -9545,7 +9557,7 @@
   },
   {
     "name": "____2016",
-    "count": 41
+    "count": 42
   },
   {
     "name": "____33____",
@@ -9592,6 +9604,10 @@
     "count": 1
   },
   {
+    "name": "_____X________OFFLINE",
+    "count": 1
+  },
+  {
     "name": "______Newera_Heroes__Chronicle",
     "count": 2
   },
@@ -9630,6 +9646,10 @@
   {
     "name": "____________",
     "count": 6
+  },
+  {
+    "name": "____________Director_s_Cut",
+    "count": 1
   },
   {
     "name": "____________ULTRA_RUMBLE",
@@ -9909,7 +9929,7 @@
   },
   {
     "name": "game",
-    "count": 7
+    "count": 8
   },
   {
     "name": "game_",

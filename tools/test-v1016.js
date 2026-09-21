@@ -233,8 +233,12 @@ const emu = read('public/emulator.html');
 ok(/id="bhHwSlot"/.test(html), '抽屉模板里有 #bhHwSlot');
 ok(/async function toggleDevHardware/.test(html), '有 toggleDevHardware');
 ok(/function hwPanelHtml/.test(html), '有 hwPanelHtml');
-ok(/function hwToggleRest/.test(html), '有 hwToggleRest');
-ok(/const HW_KEEP = \['基本信息', '硬件配置', '屏幕', '电池'\]/.test(html), '★ 默认只展开核心 4 节（全开会 1800+px）');
+/* ★ v10.28 精简：面板从「核心 4 节 + 展开其余 8 节」收成**只有两组** ——
+   用户口径「点击后我只需要品牌，型号，硬件配置」⇒ HW_KEEP 白名单与 hwToggleRest 折叠
+   都不再需要，一并清掉。判据同步换成新的分组常量。 */
+ok(/const HW_INFO_G = '基本信息', HW_HW_G = '硬件配置';/.test(html),
+  '★ 面板按「基本信息 / 硬件配置」两组筛（v10.28 精简口径）');
+ok(!/HW_KEEP/.test(html), '★ 旧的「核心 4 节白名单」已清（不再需要折叠其余 8 节）');
 ok(/data-hw="\$\{esc\(x\.hwq\)\}"/.test(html), '★ 按钮带 data-hw（kalvo 只认营销名，不能传原始代号）');
 ok(/x\.hwq = \(mk && \(mk\.market \|\| mk\.display\)\) \|\| m/.test(html) || /hwq: \(mk && \(mk\.market \|\| mk\.display\)\) \|\| m/.test(html), 'hwq 取译出的型号名，译不出才退回原名');
 ok(/name: disp \|\| m/.test(html), '★ 主行优先显示译出的「品牌+型号」');
@@ -249,14 +253,14 @@ ok(/hwq/.test(html) && !/data-hw="\$\{esc\(x\.m\)\}"/.test(html), '没有错用�
 ok(/\.d-hw\{/.test(html) && /\.d-hw \.kvs2\{/.test(html), '硬件面板样式存在');
 ok(/\.d-devlist \.dv \.sub s\{/.test(html), '副行代号样式存在');
 ok(/\.d-hw \.kvs2\{grid-template-columns:1fr\}/.test(html), '★ 窄屏下参数表单列（两列会挤到换行）');
-ok(/\.d-hw \.hw-more\{/.test(html), '「展开全部」按钮样式存在');
+ok(!/\.hw-more\s*\{/.test(html), '★ 旧的「展开全部」按钮样式已清（面板不再有可折叠内容）');
 ok(/\.dm-code\{/.test(html), '机型卡的内部代号小字样式存在');
 
 /* 派生页同步 */
 ok(emu.length > 100000, '派生页已重建', (emu.length / 1024).toFixed(0) + 'KB');
 ok(/id="bhHwSlot"/.test(emu), '[派生页] 同步了 #bhHwSlot');
 ok(/function toggleDevHardware/.test(emu), '[派生页] 同步了 toggleDevHardware');
-ok(/function hwToggleRest/.test(emu), '[派生页] 同步了 hwToggleRest');
+ok(/const HW_INFO_G = '基本信息', HW_HW_G = '硬件配置';/.test(emu), '[派生页] 同步了面板分组常量');
 ok(/\.d-hw \.kvs2\{/.test(emu), '[派生页] 同步了参数面板样式');
 
 /* ★ 机型建议列表有**两个独立渲染分支**（品牌下拉 + 输入即查），首版只改了前者，
