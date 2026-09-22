@@ -159,8 +159,24 @@ ok(first3.some((i) => i.scale >= 10), '★ 榜首出现规模较大的游戏（�
 eq(match.abbrOf('Grand Theft Auto V 传承版'), 'gtav', 'abbrOf 生成英文首字母缩写');
 eq(match.abbrOf('只狼：影逝二度'), '', '纯中文名没有缩写（返回空串而非乱码）');
 const gta = match.analyze(armTr, { q: 'GTA', limit: 5 });
-ok(gta.items.length > 0 && /Grand Theft Auto/.test(gta.items[0].name),
-  '★ 搜「GTA」能命中 Grand Theft Auto V', gta.items.map((i) => i.name).join(' / '));
+/* ⚠️ v10.37 收窄：原断言是 `gta.items[0]`（榜首必须是 Grand Theft Auto），属 **over-claim**。
+   断言名说的是「能命中」，实际断的却是「榜首」—— 而榜首额外取决于**判定档位**与**热度**。
+   实测（spec-req 重建前后对照，口径 = 同一份 games.json + 两份 spec-req）：
+     · 重建前：`GTA 三部曲` reqFrom=jidi，min 里**没有 ramGb** ⇒ 关键维度不齐
+               ⇒ verdict=ok（ORDER 1）⇒ 被 3 个 smooth 压在第 4
+     · 重建后：reqFrom=steam，Steam 原文补齐 `ramGb:8` ⇒ verdict=smooth（ORDER 0）
+               ⇒ 与他人同档，再按热度 ⇒ 升到第 1
+   ⇒ 这是**数据变准带来的正确排序变化**，不是排序出错。
+   真正要守的行为是「**缩写通道**能召回不含 `GTA` 字面的 Grand Theft Auto V」，
+   故收窄为「结果中**包含**」而非「榜首」。 */
+ok(gta.items.length > 0 && gta.items.some((i) => /Grand Theft Auto/.test(i.name)),
+  '★ 缩写搜索有效：搜「GTA」能召回不含 GTA 字面的 Grand Theft Auto V',
+  gta.items.map((i) => i.name).join(' / '));
+/* ★ 上一条的**前提自检**（防假绿）：若该名字里本就含 "gta" 字面，
+   它就可能被**字面通道**召回 —— 那样缩写通道坏了它也照样出现，断言恒真。
+   这里把前提钉死，缩写通道一坏，上一条必红。 */
+ok(!/gta/i.test('Grand Theft Auto V 传承版'),
+  '★ 上一条断言的前提：Grand Theft Auto V 传承版 名里不含 GTA 字面（否则缩写通道无从验证）');
 ok(match.analyze(armTr, { q: 'grand', limit: 5 }).items.length > 0, '字面包含搜索仍然有效');
 
 const byName = match.analyze(armTr, { limit: 5, sort: 'name' });
