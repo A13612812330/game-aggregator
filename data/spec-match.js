@@ -170,6 +170,16 @@ const ARM_ONLY = ['turnip', 'adreno', 'adrenotools', 'gamemax'];
  *  判据见 tools/test-v1035.js；反证见 tools/_counterproof-v1035.js。 */
 const TR_OFF = /^(off|disabled|disable|false|no|none|null|nil|0|无|禁用|关闭|不支持|不可用)$/i;
 
+/* ★ 这两个 state 是**唯一来源**：`cmpArch` 的行为与 `dictInfo().archRule` 的自述都读它们，
+   ⇒ 不存在「自述一套、实现一套」。套件有**一致性断言**钉住这一点（test-v1035.js ⑥），
+   反证也有一条专门制造「自述与实现漂移」的变异。
+   为什么需要「自述」：判「线上服务端是不是最新」**不能只看 `index.html` 的 md5** ——
+   v10.35 实测就撞上了：线上与本地首页 md5 **完全一致**，但线上 `/api/spec/dict`
+   的 `dict` 仍报旧版本（前端字节没变、服务端 `data/**` 没部署）。
+   这个字段可用 `curl /api/spec/dict` 直接读到，是**服务端侧**可比的指纹。 */
+const ARCH_NO_TR = 'unknown';   /* ARM，但配置未提及 x86 转译层 ⇒ 缺信息，判「待确认」 */
+const ARCH_OFF = 'fail';        /* 配置**显式声明**转译层不可用 ⇒ 判「不可跑」 */
+
 function cmpArch(profile, spec) {
   const a = profile.arch && String(profile.arch.raw || '').toLowerCase();
   if (!a) {
@@ -194,12 +204,12 @@ function cmpArch(profile, spec) {
     const raw = String((profile.layer[tr] || {}).raw || '').trim();
     if (TR_OFF.test(raw)) {
       /* 显式声明不可用 —— 这是有信息量的「明确不支持」，判 fail 站得住 */
-      return { dim: 'arch', state: 'fail', note: 'ARM 架构，且配置**显式声明** ' + tr + ' 不可用（值「' + raw + '」）——没有 x86 转译，结构上跑不了 Windows 程序' };
+      return { dim: 'arch', state: ARCH_OFF, note: 'ARM 架构，且配置**显式声明** ' + tr + ' 不可用（值「' + raw + '」）——没有 x86 转译，结构上跑不了 Windows 程序' };
     }
     return { dim: 'arch', state: 'ok', note: 'ARM 架构，但有 ' + tr + ' 转译 x86 指令' };
   }
   /* ★★ 口径见函数上方注释：**导出物没提转译层 ≠ 设备没有转译层** ⇒ 只判「待确认」。 */
-  return { dim: 'arch', state: 'unknown', note: 'ARM 架构，配置未提及 x86 转译层（box64 / box86 / FEX）——缺信息，不能据此判不可跑' };
+  return { dim: 'arch', state: ARCH_NO_TR, note: 'ARM 架构，配置未提及 x86 转译层（box64 / box86 / FEX）——缺信息，不能据此判不可跑' };
 }
 
 /* ★ 评测口径（实测校准过一次）：
@@ -386,6 +396,13 @@ function dictInfo() {
     ],
     layers: LAYER_DX.map((l) => ({ kw: l.kw[0], max: l.max, note: l.note })),
     translators: X86_TRANSLATORS,
+    /* ★ v10.35：arch 口径的**自述**（唯一来源是上面两个常量，套件钉「自述 == 实现」）。
+       用途：`curl /api/spec/dict` 即可判「线上服务端是不是最新」——
+       ★ 只看 `index.html` 的 md5 会在「前端没变、服务端变了」时**误判为已最新**（v10.35 实测）。 */
+    archRule: {
+      noTranslatorInfo: ARCH_NO_TR,   /* ARM 但未提及转译层 ⇒ 'unknown'（v10.34 曾是 'fail'） */
+      explicitDisabled: ARCH_OFF,     /* 配置显式声明不可用 ⇒ 'fail' */
+    },
   };
 }
 

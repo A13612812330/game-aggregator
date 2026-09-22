@@ -162,6 +162,20 @@ console.log('\n=== ⑥ 接口未被牵连 ===');
   const S = strip(fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8'));
   ok(/specMatch\.analyze\(/.test(S), '★ 反向：/api/spec/analyze 仍走 specMatch.analyze（接口没被牵连）');
   ok(/specMatch\.dictInfo\(/.test(S), '★ 反向：/api/spec/dict 仍走 specMatch.dictInfo（口径改动没动接口层）');
+
+  /* ★★ 「自述 == 实现」一致性判据（不是手写清单，是**算出来比**）：
+     dictInfo().archRule 声明的口径必须与 cmpArch 实际返回一致 —— 否则
+     `curl /api/spec/dict` 这个「线上服务端是不是最新」的判据本身就是骗人的。
+     实测动机：v10.35 撞到「线上首页 md5 与本地完全一致，但线上服务端仍是旧版」
+     ⇒ 只看 md5 会误判「已最新」，服务端必须有自己的可比指纹。 */
+  const info = match.dictInfo();
+  ok(info && info.archRule, '★ /api/spec/dict 带有 arch 口径自述（archRule）');
+  eq(info.archRule.noTranslatorInfo,
+    match.cmpArch(prof({ arch: 'arm64-v8a', memory: '12 GB' }), {}).state,
+    '★ 自述「未提及转译层」的 state == cmpArch 实际返回值（算法算的，不是手写的）');
+  eq(info.archRule.explicitDisabled,
+    match.cmpArch(prof({ arch: 'arm64-v8a', compatibility: { box64: 'disabled' } }), {}).state,
+    '★ 自述「显式声明不可用」的 state == cmpArch 实际返回值');
 }
 
 console.log('\n============================');

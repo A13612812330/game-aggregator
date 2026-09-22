@@ -72,17 +72,47 @@ return { dim: 'arch', state: 'unknown', note: 'ARM 架构，配置未提及 x86 
 `TR_OFF = /^(off|disabled|disable|false|no|none|null|nil|0|无|禁用|关闭|不支持|不可用)$/i`（大小写不敏感）。
 决策理由与实测数字**写成注释留在函数上方**，避免下次有人又「顺手收紧」。
 
+### ★ 顺带修掉一个「线上是不是最新」判不出来的坑（本轮实测撞上的）
+
+收尾跑 `report.js` 时出现**表面全绿、实则误判**：
+
+| 判据 | 实测 | 结论 |
+|---|---|---|
+| 线上 `index.html` md5 | `9ae5854778` == 本地 | 「✅ 已是最新」 |
+| 线上 `/api/spec/dict` 的 `dict` | **`v10.20`**（本地 `v10.34`） | 线上**服务端是旧的** |
+
+根因：v10.33 / v10.34 / v10.35 三轮**只改了 `data/**` 与 `tools/**`**，
+`public/*.html` 字节没变 ⇒ md5 自然一致，但部署里那份 `data/**` 仍是上次发布的版本。
+**「首页 md5 一致」只能证明前端字节一致，证明不了服务端。**（这正是铁律 #6 / #15 的又一次复发。）
+
+**修法**：给 `dictInfo()`（即 `GET /api/spec/dict`）加一个**服务端口径指纹**：
+
+```js
+archRule: {
+  noTranslatorInfo: ARCH_NO_TR,   /* ARM 但未提及转译层 ⇒ 'unknown'（v10.34 曾是 'fail'） */
+  explicitDisabled: ARCH_OFF,     /* 配置显式声明不可用 ⇒ 'fail' */
+}
+```
+
+- `ARCH_NO_TR` / `ARCH_OFF` 是 **`cmpArch` 行为的唯一来源**，`archRule` 只是把它**自述**出来
+  ⇒ 不存在「自述一套、实现一套」。套件有**一致性断言**（`test-v1035.js` ⑥）
+  **算出来比**（`archRule.noTranslatorInfo === cmpArch(...).state`），不是手写清单。
+- 反证加了一条**专打「自述与实现漂移」**的变异（把 `archRule` 写死成 `fail`）⇒ 必须红。
+- 实测对比：本地 `dict=v10.34` + `archRule={"noTranslatorInfo":"unknown","explicitDisabled":"fail"}`；
+  **线上 `dict=v10.20` + `archRule=undefined`** ⇒ 一眼判出线上服务端未部署。
+- ⚠️ 只加**接口字段、不动前端**（`upDict` 面板是逐字段渲染的，多一个键不显示）⇒ `public/*.html` 字节仍未变。
+
 ---
 
 ## 四、验证
 
 | 项 | 结果 |
 |---|---|
-| 静态防线 | **35 套 / 2,344 条 / 0 失败**（前置闸 2/2；新增 `test-v1035.js` **41 条**，已登记 `SUITES`） |
+| 静态防线 | **35 套 / 2,347 条 / 0 失败**（前置闸 2/2；新增 `test-v1035.js` **44 条**，已登记 `SUITES`） |
 | 既有套件 | `test-v1034.js` **63/63**、`test-spec.js` **86/86**（三条断言随口径更新，见下） |
-| 反证 | `_counterproof-v1035.js` **9/9 合规**；`_counterproof-v1034.js` **12/12 合规**（变异已改成「把口径退回 fail」） |
+| 反证 | `_counterproof-v1035.js` **10/10 合规**（含一条「自述与实现漂移」）；`_counterproof-v1034.js` **12/12 合规**（变异已改成「把口径退回 fail」） |
 | 探针 | 画像 G 回到 待确认 14,552 / 信息不足 240 / 不可跑 1,727（与 v10.33 逐档一致） |
-| 接口实测（**重启服务后**） | `/api/spec/analyze` 画像 G：`dist = {maybe:14552, unknown:240, no:1727}`；`arch` 维度 `state=unknown`、note 为新文案；识别率 100% |
+| 接口实测（**重启服务后**） | `/api/spec/analyze` 画像 G：`dist = {maybe:14552, unknown:240, no:1727}`；`arch` 维度 `state=unknown`、note 为新文案；识别率 100%。`/api/spec/dict`：本地 `dict=v10.34` + `archRule={"noTranslatorInfo":"unknown","explicitDisabled":"fail"}`；**线上 `dict=v10.20` + `archRule=undefined`**（服务端未部署） |
 | 前端 | **未动**（`public/*.html` 字节未变 ⇒ 线上 md5 不变） |
 
 ### 随口径一并更新的三条旧断言（**不是**为了让测试变绿，是它们记录的旧口径已作废）
@@ -113,8 +143,9 @@ return { dim: 'arch', state: 'unknown', note: 'ARM 架构，配置未提及 x86 
   LIVE 仍是 **v10.28**（v10.29 / v10.30 / v10.33 / v10.34 / v10.35 均未发布，**发布需逐轮授权**）。
 - **未动 `arch` 之外的任何维度**：`dx` / `ram` / `storage` 的口径与判定一行未改，
   实测分布也证明没被牵连。
-- **未加版本标记到接口**：`/api/spec/dict` 仍只报词典版本（`v10.34`，本轮没改词典）。
-  若要让「服务端是不是最新」也能一眼判，需要加一个 rules 版本字段 —— 属于另一件事。
+- **未加版本标记到接口**：`/api/spec/dict` 仍只报**词典**版本（`v10.34`，本轮没改词典）；
+  但已新增 `archRule` **口径指纹**（见第三节末），服务端是不是最新可以 `curl` 判。
+  若还想把「规则版本」做成一个字符串常量，那是另一件事（当前用「自述 + 一致性断言」替代）。
 - **未开工**：2-A（收朴素子串假阳性 473 条）与 2-C（手游中心匹配率 51%）已在下一轮排期。
 
 ---
