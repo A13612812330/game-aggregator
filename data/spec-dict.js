@@ -1,5 +1,5 @@
 /**
- * spec-dict.js — 「解包 / 导出 JSON」的配置识别词典（v10.20 新增）
+ * spec-dict.js — 「解包 / 导出 JSON」的配置识别词典（v10.20 新增 · v10.34 字段校准）
  *
  * 场景：用户会把一份从游戏包 / 兼容层工具里导出的 JSON 喂进来，
  *   内容类似「兼容层最低配置」。**字段名事先未知**，所以这里不写死名字，
@@ -10,6 +10,19 @@
  *
  * ★ 样本到手后**只扩这个文件**（KEY_RULES / VAL_RULES / LAYER_KWS），
  *   接口与前端一律不动 —— 这就是「先把页面立起来」的意义。
+ *
+ * ★ v10.34（2-B 解包字段校准）改了四处，全部在本文件内 —— 每一处都是**现测量化**出来的，
+ *   不是凭感觉「可能识别不到」：
+ *   ① `KEY_RULES` 顺序：`arch` 提到 `cpu` 之前。
+ *      cpu 的宽词 `cpu`（`k.includes`）会把 `cpu_abi` / `cpuarch` 抢走，
+ *      于是 arch 里写的 `cpuabi` 是**死词**。实测：只有 `cpu_abi` 的 JSON ⇒
+ *      arch 维度 16,519 款 100% unknown ⇒ 14,552 款从可判掉成「待确认」。
+ *   ② 图形接口**先按键名认种类**：`VULKAN_VERSION:"1.3"` 曾被读成「支持 DX 1.3」⇒
+ *      dxCap 上限被压到 1.3 ⇒ 8,309 款（50%）被冤枉判「不可跑」。
+ *   ③ `space` 进 storage 关键词（`minRequirements.space` 原先不认识 ⇒ 要求档存储丢失）；
+ *      同时给规则加 `not` 排除项，免得 `namespace` 被算成「已识别」把识别率做虚。
+ *   ④ `nameOf()` 支持机型与嵌套（`device.model` / `机型`）—— 记录切换器不再显示「记录 #1」。
+ *   测量工具：`tools/_probe-spec.js`（改前/改后跑同一条命令比数字）。
  *
  * 纯函数、无网络、无副作用，可直接单测（tools/test-spec.js）。
  */
@@ -34,17 +47,27 @@ const GROUPS = {
 
 /* ── 键名关键词（小写、已去掉分隔符后的写法） ──
    ⚠️ 顺序即优先级：先匹配到的先用。宽词（如 mem）必须排在窄词之后，
-      否则 "vram" 会被 "ram" 先截走。 */
+      否则 "vram" 会被 "ram" 先截走。
+   ★ v10.34 顺序修正：`arch` 必须排在 `cpu` **之前**。
+      原先 cpu 在 arch 前面，而 cpu 的关键词里有宽词 `cpu`（`k.includes('cpu')`），
+      于是 `cpu_abi` / `cpuarch` 这类键被 cpu 抢走 —— arch 那一行精心写的
+      `cpuabi` 关键词**永远命中不到**（死词）。
+      实测后果（`tools/_probe-spec.js`）：只有 `cpu_abi` 的解包 JSON ⇒ arch 维度
+      16,519 款 **100% unknown** ⇒ 本该判「不可跑」（ARM 无 box86/box64 转译层）
+      的一律落到「待确认」，14,552 款从可判变成不可判。
+   ★ `not`：给宽词兜一个排除项（storage 的 `space` 会误吃 `namespace`）。 */
 const KEY_RULES = [
   { group: 'vram', label: '显存', kws: ['vram', 'videomemory', 'gpuram', '显存', 'graphicsmemory', 'gpumem'] },
   { group: 'gpu', label: '显卡', kws: ['gpu', 'graphicscard', 'videocard', 'videoadapter', 'renderer', 'graphics', '显卡', '图形卡', '显示适配器', 'gpuname', 'adapter'] },
-  { group: 'cpu', label: '处理器', kws: ['cpu', 'processor', 'cputype', 'cpuname', '处理器', '中央处理器'] },
+  /* ★ 架构：必须在 cpu 之前（见上）。'abi' 是窄词，不会抢别的。 */
+  { group: 'arch', label: '架构', kws: ['arch', 'architecture', 'abi', 'cpuabi', '指令集', '架构', 'isa'] },
+  { group: 'cpu', label: '处理器', kws: ['cpu', 'processor', 'cputype', 'cpuname', '处理器', '中央处理器', 'soc'] },
   { group: 'ram', label: '内存', kws: ['ram', 'memory', 'systemmemory', 'memtotal', '内存', '运行内存', 'mainmemory'] },
-  { group: 'storage', label: '存储', kws: ['storage', 'disk', 'diskspace', 'hdd', 'ssd', 'freespace', '存储', '硬盘', '磁盘', '可用空间', '空间'] },
+  { group: 'storage', label: '存储', kws: ['storage', 'disk', 'diskspace', 'hdd', 'ssd', 'freespace', '存储', '硬盘', '磁盘', '可用空间', '空间', 'space'],
+    not: /namespace|workspace|keyspace/ },
   { group: 'os', label: '系统', kws: ['os', 'osversion', 'operatingsystem', 'platform', 'systemversion', '系统', '操作系统'] },
   { group: 'api', label: '接口', kws: ['dx', 'directx', 'd3d', 'graphicsapi', 'apiversion', '接口', 'vulkan', 'opengl', 'metal'] },
   { group: 'driver', label: '驱动', kws: ['driver', 'driverversion', 'gpudriver', '驱动', 'glversion'] },
-  { group: 'arch', label: '架构', kws: ['arch', 'architecture', 'abi', 'cpuabi', '指令集', '架构'] },
   { group: 'res', label: '分辨率', kws: ['resolution', 'screen', 'displaymode', 'width', 'height', '分辨率'] },
   { group: 'ver', label: '版本', kws: ['version', 'ver', 'build', 'revision', '版本'] },
 ];
@@ -160,6 +183,10 @@ function classify(leaf) {
   }
   /* ② 普通键名 */
   for (const r of KEY_RULES) {
+    /* ★ v10.34：规则级排除项。`storage` 的宽词 `space` 会连 `namespace` 一起吃
+       （`'namespace'.endsWith('space')` 为真）—— 这类键跟存储无关，直接跳过整条规则。
+       不这么兜的话，「未识别」会被悄悄算成「已识别」，识别率虚高。 */
+    if (r.not && r.not.test(k)) continue;
     for (const w of r.kws) {
       if (k === w || joined.endsWith(w) || k.includes(w)) {
         return { group: r.group, conf: 'high', from: 'key', label: r.label };
@@ -306,11 +333,23 @@ function buildProfile(node, entries) {
      混在一起就会把「游戏要 DX12」读成「我支持 DX12」。 */
   for (const e of entries.filter((x) => x.group === 'api')) {
     const raw = String(e.value == null ? '' : e.value).trim();
-    const v = dxOf(raw);
+    /* ★★ v10.34：先按**键名**认接口种类，再看值。★★
+       原实现无条件 `dxOf(raw)`，把「根本不是 DX 的接口」也读成了 DX 版本：
+       `VULKAN_VERSION: "1.3"` ⇒ 认成「支持 DX 1.3」⇒ `dxCap()` 返回 `{max:1.3}`
+       ⇒ 实测让 **8,309 款（50%）被冤枉判「不可跑」**（同一台设备改挂 `dxvk` 时只有 1,727）。
+       规则：键名/值里出现 vulkan / metal / opengl 的，**只记名字、不解析版本号**；
+             只有明确写了 dx / directx / d3d（或键名叫 graphicsapi / apiversion / 接口）
+             才接受裸版本号 —— 裸数字本身无法自证是 DX。 */
+    const kp = normKey(e.key) + '|' + normKey(e.path);
+    const kind0 = /vulkan/.test(kp) ? 'vulkan' : /metal/.test(kp) ? 'metal'
+      : /opengl|opengles|gles/.test(kp) ? 'opengl' : '';
+    const dxish = /dx|directx|d3d|graphicsapi|apiversion|接口/.test(kp) || /directx|d3d/i.test(raw);
+    const v = kind0 ? null : (dxish ? dxOf(raw) : null);
     if (e.tier === 'min') { if (v != null && p.req.dx == null) p.req.dx = v; continue; }
     if (p.apiRaw.includes(raw)) continue;
     p.apiRaw.push(raw);
-    if (v != null) p.api.push({ kind: 'dx', v, raw });
+    if (kind0) p.api.push({ kind: kind0, v: null, raw });
+    else if (v != null) p.api.push({ kind: 'dx', v, raw });
     else if (/vulkan/i.test(raw)) p.api.push({ kind: 'vulkan', v: null, raw });
     else if (/opengl/i.test(raw)) p.api.push({ kind: 'opengl', v: null, raw });
   }
@@ -342,16 +381,50 @@ function buildProfile(node, entries) {
   return p;
 }
 
-/** 尽力给这条记录起个名字（游戏名 / 设备名 / 配置名） */
+/** 尽力给这条记录起个名字（机型 / 设备名 / 游戏名 / 配置名）
+ *
+ * ★ v10.34：支持**常见嵌套**与中文键。
+ *   原实现只看顶层字符串键，于是 `{device:{model:'Xiaomi 24095PCADG'}}` 与
+ *   `{机型:'小米 15'}` 都拿不到名字 ⇒ 记录切换器上显示「记录 #1」，
+ *   用户无法确认「你认没认出我这台机器」——而那正是他要看的第一件事。
+ *   优先级：机型/设备（含 `device.*` 嵌套）> 游戏名（含 `game.*`）> 通用名。
+ *   注意：**不改变**「顶层 `game:'Cyberpunk 2077'` 取作名字」这个既有行为（有回归断言）。 */
 function nameOf(node) {
   if (!node || typeof node !== 'object') return '';
-  const KEYS = ['name', 'title', 'game', 'gamename', 'model', 'device', 'devicename', 'label', 'id', 'appname'];
-  for (const k of KEYS) {
+  const pick = (obj, keys) => {
+    if (!obj || typeof obj !== 'object') return '';
+    for (const k of keys) {
+      for (const [kk, vv] of Object.entries(obj)) {
+        if (normKey(kk) === k && vv && typeof vv === 'string' && vv.trim().length < 80) return vv.trim();
+      }
+    }
+    return '';
+  };
+  const DEVICE = ['机型', 'devicemodel', 'model', 'devicename', 'device', '设备', '设备型号', 'soc', 'chip'];
+  const GAME = ['gamename', 'game', 'title', 'appname', '游戏名'];
+  const GENERIC = ['name', 'label', 'id'];
+
+  for (const k of ['device', 'deviceinfo', 'devicespec', '设备', 'device_model']) {
     for (const [kk, vv] of Object.entries(node)) {
-      if (normKey(kk) === k && vv && typeof vv === 'string' && vv.length < 80) return vv.trim();
+      if (normKey(kk) === normKey(k) && vv && typeof vv === 'object') {
+        const s = pick(vv, DEVICE.concat(['name']));
+        if (s) return s;
+      }
     }
   }
-  return '';
+  const d = pick(node, DEVICE);
+  if (d) return d;
+  for (const k of ['game', 'gameinfo', 'app']) {
+    for (const [kk, vv] of Object.entries(node)) {
+      if (normKey(kk) === normKey(k) && vv && typeof vv === 'object') {
+        const s = pick(vv, GAME.concat(['name']));
+        if (s) return s;
+      }
+    }
+  }
+  const g = pick(node, GAME);
+  if (g) return g;
+  return pick(node, GENERIC);
 }
 
 module.exports = {
@@ -362,5 +435,5 @@ module.exports = {
      `/api/spec/match` 会把它回传给前端，用来判断「这份结果是用哪版规则算的」。
      实测 `test-spec.js` 只断言「接口回传的版本 == 这里的版本」，所以跟发版号解耦是安全的。
      当前状态：v10.22 没有改词典内容（那版改的是结果页版式 + 数据来源），保持 v10.20 不动。 */
-  DICT_VERSION: 'v10.20',
+  DICT_VERSION: 'v10.34',
 };
