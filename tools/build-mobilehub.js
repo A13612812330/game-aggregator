@@ -38,11 +38,9 @@ const bh = readJson('bannerhub.json', { games: [] });
 const pc = readJson('phonecfg.json', { games: [] });
 
 /* ---------- 归一化与匹配（与 phonecfg.js 同口径，保证结论一致） ---------- */
-function normKey(s) {
-  return String(s || '').toLowerCase()
-    .replace(/[\s\u3000]+/g, '')
-    .replace(/[：:·・,，.。!！?？'"“”‘’()（）\[\]【】《》<>~～\-–—_+*&/／|｜\\]/g, '');
-}
+/* ★ v10.36：归一化统一到唯一真源（原先本文件自带一份，与 phonecfg / mobilehub
+ *   三份的字符类并不一致，且都漏剥商标号 `™®©` —— 见 data/name-normalize.js 文件头）。 */
+const { normKey, numMismatchByTitle } = require('../data/name-normalize');
 function libKeys(title) {
   const t = String(title == null ? '' : title).trim();
   if (!t) return [];
@@ -82,6 +80,16 @@ const EDITION_WORDS = [
   'remastered', 'remake', 'remaster', 'enhancededition', 'goldedition',
   'gameoftheyearedition', 'gotyedition', 'deluxeedition', 'deluxe', 'legacy',
   'ultimate', 'complete', 'edition', 'hypervisor', '支持网络联机', '虚拟机版',
+  /* ★ v10.36：CJK 版本词。原先只收英文 ⇒ `恐怖黎明：终极版` 归一成
+   *   `恐怖黎明终极版`，与查询 `恐怖黎明` 差一个尾缀，词干通道也兜不住。
+   *   实测（tools/_probe-match-audit.js）这类「只差版本尾缀」的真匹配有 4+ 条：
+   *     `恐怖黎明` → `恐怖黎明：终极版/Grim Dawn Definitive Edition`
+   *     `魔界战记4` → `魔界战记4完整版/Disgaea 4 Complete`
+   *     `武士少女` → `武士少女豪华版/SAMURAI MAIDEN DELUXE EDITION`
+   *     `天命奇御` → 同理
+   *   ⚠️ `stem()` 有 `s.length - w.length >= 4` 的余量保护，剥完太短会自动放弃。 */
+  '终极版', '完整版', '豪华版', '决定版', '年度版', '收藏版', '特别版',
+  '增强版', '纪念版', '导演剪辑版', '数字豪华版', '重制版', '复刻版', '经典版',
 ];
 
 /** 去尾缀：去掉「年份 / 版本词 / 罗马数字版本」等，得到可比较的词干 */
@@ -257,7 +265,10 @@ function libMatchCore(title, opts) {
   if (!t) return null;
 
   /* ① 完整段精确 */
-  for (const k of libKeys(t)) { const it = libByKey.get(k); if (it) return it; }
+  for (const k of libKeys(t)) {
+    const it = libByKey.get(k);
+    if (it && !numMismatchByTitle(t, it)) return it;
+  }
 
   const whole = normKey(t);
 
@@ -266,7 +277,7 @@ function libMatchCore(title, opts) {
   if (al) {
     for (const k of al) {
       const it = libByKey.get(k) || libByEn.get(k) || pickStem(stem(k), k);
-      if (it) return it;
+      if (it && !numMismatchByTitle(t, it)) return it;
     }
   }
 
@@ -274,13 +285,13 @@ function libMatchCore(title, opts) {
   const en = t.match(/[a-z][a-z0-9 :'’\-]{3,}/gi) || [];
   for (const frag of en) {
     const k = normKey(frag);
-    if (k.length >= 4) { const it = libByEn.get(k); if (it) return it; }
+    if (k.length >= 4) { const it = libByEn.get(k); if (it && !numMismatchByTitle(t, it)) return it; }
     /* ★ 词干命中必须过「数字一致性」护栏（Resident Evil 0 ≠ Resident Evil 3） */
-    if (k.length >= 5) { const it = pickStem(stem(k), k, strict); if (it) return it; }
+    if (k.length >= 5) { const it = pickStem(stem(k), k, strict); if (it && !numMismatchByTitle(t, it)) return it; }
   }
 
   /* ④ 词干（去年份 / 去版本词）—— 同样过数字护栏 */
-  { const it = pickStem(stem(whole), whole, strict); if (it) return it; }
+  { const it = pickStem(stem(whole), whole, strict); if (it && !numMismatchByTitle(t, it)) return it; }
 
   /* ⑤ 前缀包含：查询是库名的前缀（Tomb Raider ⊂ TombRaiderDefinitiveEdition）
    *    要求查询 ≥8 字符，避免短名（`God`）乱命中。
@@ -298,13 +309,13 @@ function libMatchCore(title, opts) {
   if (whole.length >= 8) {
     for (const [k, it] of libByEn) {
       if (k.length > whole.length && k.startsWith(whole) && !numConflict(whole, k)
-        && !(strict && sequelTail(k.slice(whole.length)))) return it;
+        && !(strict && sequelTail(k.slice(whole.length))) && !numMismatchByTitle(t, it)) return it;
     }
     /* 词干前缀：候选可能有多个，逐个用数字护栏筛 */
     for (const [st, cands] of libByStem) {
       if (st.length > whole.length && st.startsWith(whole)) {
         if (strict && sequelTail(st.slice(whole.length))) continue;
-        for (const c of cands) if (!numConflict(whole, c.k)) return c.it;
+        for (const c of cands) if (!numConflict(whole, c.k) && !numMismatchByTitle(t, c.it)) return c.it;
       }
     }
   }
@@ -347,6 +358,20 @@ const RELEASE_SUFFIX = [
   /\bklite\b/gi,
   /\bHYPERVISOR\b/gi,
   /\b(repack|fitgirl|dodi|codex|plaza|skidrow|empress|rune|tenoke|elamigos|razor1911|3dm)\b/gi,
+  /* ★ v10.36 新增：**运行环境 / 平台残渣**。社区库导出常把 exe 的运行环境标记也带进名字，
+   *   端游库标题里没有 ⇒ 精确通道整个失效。逐条核过，剥完命中的都是真匹配：
+   *     `Universe Sandbox x64`            → `宇宙沙盘/宇宙沙盒/Universe Sandbox`
+   *     `Future Soldier DX9`              → `未来战士/Future Soldier`
+   *     `forzahorizon6 loader`            → `极限竞速：地平线6/Forza Horizon 6`
+   *     `FINAL FANTASY VII Steam Edition` → `FINAL FANTASY VII`
+   *   ⚠️ 必须**要求一个分隔符**（空格或横杠）再匹配，否则 `Down-loader` 这种词尾会被误剥。
+   *   ⚠️ 仍**不收** `Reloaded`（Tropico Reloaded 是作品名，见下）。 */
+  /\s+[-–—]?\s*(d3d|dx)\s*1[0-2]\s*$/i,
+  /\s+[-–—]?\s*(x64|x86|win64|win32|64bit|32bit)\s*$/i,
+  /\s+[-–—]?\s*(vulkan|opengl)\s*$/i,
+  /\s+[-–—]?\s*(loader|launcher|bootstrapper)\s*$/i,
+  /\s+[-–—]?\s*(steam|epic|gog)\s+(edition|version)\s*$/i,
+  /\s+[-–—]?\s*(portable|offline|online)\s*$/i,
 ];
 /* ★ 故意**不剥** `Reloaded`：它既可能是发布标记（`Just Cause 4 Reloaded` = JC4），
  *   也可能是作品名本身（`Tropico Reloaded` 是 1+2 合集，≠ 海岛大亨6）。

@@ -46,6 +46,8 @@ function walk(dir, depth, out) {
   if (depth > 3) return out;
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     if (SKIP_DIRS.has(e.name)) continue;
+    /* 反证脚本的临时副本目录 `_cf134/` `_cf135/` …（逐个点名必然遗忘，用模式） */
+    if (/^_cf\d*$/.test(e.name)) continue;
     const p = path.join(dir, e.name);
     if (e.isDirectory()) walk(p, depth + 1, out);
     else if (e.name.endsWith('.js')) out.push(p);
@@ -143,6 +145,100 @@ for (const rel of ['fetchers/jidiHeadless.js', 'fetchers/jidiTopics.js']) {
   chk(rel + '：若调用 normDate 则必须解构到', !usesNorm || des.includes('normDate'),
     usesNorm ? '调用 ✔ 解构 ' + (des.includes('normDate') ? '✔' : '✘') : '未调用（无需）');
 }
+
+/* ---------- ⑤ 泛化：**所有**共享模块都要守，而不只是 shared.js ----------
+ *
+ * ★ v10.36 为什么补这一段：新建 `data/name-normalize.js`（跨源归一化的唯一真源）后，
+ *   同一类缺陷**立刻复现**：`data/phonecfg.js` 里解构漏了 `numMismatchByTitle`，
+ *   报错是 `ReferenceError: numMismatchByTitle is not defined`，
+ *   而且**只在跑到那一行才抛** —— 全量防线只报一句「异常退出：test-alias-guard.js (exit 1)」，
+ *   连一条 FAIL 行都没有（与「断言没抓住」长得一模一样，见反证技能的记录）。
+ *   根因是本套件**把 shared.js 写死了**。
+ *
+ * ★ 发现规则**不手写**（手写清单一定会漏，且漏了看不出来）：
+ *   扫全仓，把「被 ≥2 个不同文件用**解构**方式 require 的模块」自动认定为共享模块。
+ *   新增共享模块无需改本文件；只是把某个模块私有化（引用数降到 1）也会自动退出检查。
+ */
+function modKey(fromFile, spec) {
+  if (!spec.startsWith('.')) return null;                 // 只查仓内相对引用
+  const p = path.resolve(path.dirname(fromFile), spec);
+  for (const cand of [p, p + '.js', path.join(p, 'index.js')]) {
+    if (fs.existsSync(cand) && fs.statSync(cand).isFile()) return cand;
+  }
+  return null;
+}
+
+const desUsers = new Map();   // 模块绝对路径 → Set<引用它的文件>
+for (const f of files) {
+  const body = stripComments(fs.readFileSync(f, 'utf8'));
+  const re = /(?:const|let|var)\s*\{[^}]*\}\s*=\s*require\(\s*['"]([^'"]+)['"]\s*\)/g;
+  let m4;
+  while ((m4 = re.exec(body))) {
+    const t = modKey(f, m4[1]);
+    if (!t) continue;
+    if (!desUsers.has(t)) desUsers.set(t, new Set());
+    desUsers.get(t).add(f);
+  }
+}
+
+console.log('\n=== ⑤ 自动发现：被 ≥2 个文件解构引用的模块 ===');
+const SHARED_TARGETS = [...desUsers.entries()]
+  .filter(([, s]) => s.size >= 2)
+  .map(([mod, s]) => ({ mod, users: [...s] }))
+  .sort((a, b) => b.users.length - a.users.length);
+SHARED_TARGETS.forEach((t) => console.log('    ' + path.relative(ROOT, t.mod).replace(/\\/g, '/')
+  + '   ← ' + t.users.length + ' 个文件'));
+chk('自动发现到 ≥2 个共享模块（0 个说明扫描塌了，本段是空转）', SHARED_TARGETS.length >= 2, SHARED_TARGETS.length + ' 个');
+/* ★ 定点回归：v10.36 新建的这个模块必须在检查范围内 —— 否则本段等于没修 */
+chk('★ data/name-normalize.js 已被自动纳入检查（v10.36 的漏网点）',
+  SHARED_TARGETS.some((t) => t.mod.endsWith('name-normalize.js')));
+
+let missing2 = 0;
+for (const { mod, users } of SHARED_TARGETS) {
+  const relMod = path.relative(ROOT, mod).replace(/\\/g, '/');
+  const src = stripComments(fs.readFileSync(mod, 'utf8'));
+  const blk = src.match(/module\.exports\s*=\s*\{([\s\S]*?)\};/);
+  if (!blk) { console.log('    ' + relMod + '：module.exports 无法源码求值 ⇒ 跳过（请改成对象字面量）'); continue; }
+  const exps = blk[1].split(/[,\n]/)
+    .map((s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/, '').trim())
+    .filter((s) => /^[A-Za-z_$][\w$]*$/.test(s));
+  /* 函数型直接从**源码**认（不手写清单）：`function x` / `const x = (…) =>` / `const x = function`
+   *  ⇒ 调用形态是 `x(`；常量型用裸名匹配。 */
+  const isFunc = (n) => new RegExp('(?:function\\s+' + n + '\\b|(?:const|let|var)\\s+' + n
+    + '\\s*=\\s*(?:async\\s*)?(?:function\\b|\\())').test(src);
+
+  for (const f of users) {
+    const rel = path.relative(ROOT, f).replace(/\\/g, '/');
+    const body = stripComments(fs.readFileSync(f, 'utf8'));
+    const nsForm = new RegExp('(?:const|let|var)\\s+\\w+\\s*=\\s*require\\(\\s*[\'"][^\'"]*'
+      + relMod.split('/').pop().replace('.js', '') + '[\'"]\\s*\\)').test(body);
+    const got = [];
+    const reD = new RegExp('(?:const|let|var)\\s*\\{([^}]*)\\}\\s*=\\s*require\\(\\s*[\'"][^\'"]*'
+      + relMod.split('/').pop().replace('.js', '') + '[\'"]\\s*\\)', 'g');
+    let m5;
+    while ((m5 = reD.exec(body))) {
+      m5[1].split(',').forEach((x) => {
+        const n = x.split(':').pop().replace(/\/\*[\s\S]*?\*\//g, '').trim();
+        if (/^[A-Za-z_$][\w$]*$/.test(n)) got.push(n);
+      });
+    }
+    if (nsForm && !got.length) continue;
+    const miss = [];
+    for (const n of exps) {
+      if (got.includes(n)) continue;
+      const re = isFunc(n) ? new RegExp('(?<![\\w$.])' + n + '\\s*\\(') : new RegExp('(?<![\\w$.])' + n + '(?![\\w$])');
+      if (!re.test(body)) continue;
+      if (new RegExp('(?:function\\s+' + n + '\\b|(?:const|let|var)\\s+' + n + '\\s*=)').test(body)) continue;
+      miss.push(n);
+    }
+    if (miss.length) {
+      missing2 += miss.length;
+      console.log('    ✘ ' + relMod + ' ← ' + rel.padEnd(24) + ' 缺失: ' + miss.join(', ')
+        + '  （已解构: ' + (got.join(',') || '—') + '）');
+    }
+  }
+}
+chk('★ 没有任何文件「用了共享模块成员却没解构」（全部共享模块）', missing2 === 0, missing2 === 0 ? '0 处' : missing2 + ' 处');
 
 console.log('\n通过 ' + pass + '/' + (pass + fail) + '（失败 ' + fail + '）');
 /* ★ 写法必须是 `process.exit(fail ? 1 : 0)` 这一种 —— `run-all.js` 的 `exitTiedToFailures()`

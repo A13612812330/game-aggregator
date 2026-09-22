@@ -11,19 +11,16 @@
  */
 const fs = require('fs');
 const path = require('path');
+/* ★ v10.36：归一化统一到唯一真源（原先本文件自带一份，与 mobilehub / build-mobilehub 三份不一致，
+ *   且都漏剥商标号 `™®©` ⇒ 库内 `Call of Duty®: Modern Warfare® 2 (2009)` 永远对不上）。
+ *   见 data/name-normalize.js 的文件头。 */
+const { normKey, numMismatchByTitle } = require('./name-normalize');
 
 const IDX = path.join(__dirname, 'phonecfg.json');
 
 let idx = null;
 let byKey = null;
 let matchCache = new Map();
-
-function normKey(s) {
-  const t = String(s == null ? '' : s).toLowerCase();
-  return t
-    .replace(/[\s\u3000]+/g, '')
-    .replace(/[·・:：,，.。!！?？"'“”‘’()（）\[\]【】<>《》|｜/\\~～\-—_+*&#@$%^&;；]/g, '');
-}
 
 /**
  * 由「副标题截断」产生的系列名钥匙（如 `metalgearsolid` / `合金装备`）。
@@ -369,7 +366,7 @@ function libMatch(title) {
   if (!t) return null;
   for (const k of libKeys(t)) {
     const it = libByKey.get(k);
-    if (it) return it;
+    if (it && !numMismatchByTitle(t, it)) return it;
   }
   // ② 联网学到的别名：`120日元` → { `120yen`, `120yenstories` } → 本地库
   //    ★ 护栏：别名必须与查询名「同文种或同长相」，否则宁可不用。
@@ -389,7 +386,7 @@ function libMatch(title) {
     const k = normKey(frag);
     if (k.length >= 4) {
       const it = libByEn.get(k);
-      if (it) return it;
+      if (it && !numMismatchByTitle(t, it)) return it;
     }
   }
   return null;

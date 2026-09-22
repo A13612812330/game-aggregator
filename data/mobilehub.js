@@ -30,11 +30,9 @@ function ensure() {
   }
 }
 
-function normKey(s) {
-  return String(s || '').toLowerCase()
-    .replace(/[\s\u3000]+/g, '')
-    .replace(/[：:·・,，.。!！?？'"“”‘’()（）\[\]【】《》<>~～\-–—_+*&/／|｜\\]/g, '');
-}
+/* ★ v10.36：归一化统一到唯一真源（原先本文件自带一份，与 phonecfg / build-mobilehub
+ *   三份的字符类并不一致，且都漏剥商标号 `™®©` —— 见 data/name-normalize.js 文件头）。 */
+const { normKey } = require('./name-normalize');
 
 /* ================= ★ v10.14 GPU 脏值清洗 =================
  *
