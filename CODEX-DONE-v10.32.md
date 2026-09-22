@@ -355,3 +355,47 @@ http=403  <title>Attention Required! | Cloudflare</title>
 > `tools/_*` 为临时探针，`.gitignore` 已覆盖（**不入库**）。
 > ⚠️ `_counterproof-v1032-live.js` 会覆盖 `_preview/v1032-<tag>.png` 为**最后一条变异（打坏态）**的截图
 > ⇒ 固定顺序：改 → 套件 → 反证 → **重拍实拍图** → 交付。
+
+---
+
+## 七、发布（2026-09-22，用户授权「更新推送吧」）
+
+| 项 | 实测 |
+|---|---|
+| appId | `wbapp_047aLTlMY7YdDmtVpp3BYa`（**覆盖 LIVE，不新建**） |
+| sandbox | `445143a7b3004d749eab6be0fe8836e5` —— **同一 sandbox 复用成功** |
+| 链接 | **未变** `https://gamehub-agg-v4.app.workbuddy.host/` |
+| 三页 md5（发布后） | index `9ae5854778` · emulator `00a8628f62` · unpack `2db227c9d1` |
+| 三页 md5（发布前） | index `2cc4756045`（**v10.31**） |
+| 逐字节一致 | ✅ 连拉 3 次全部相等（`?cb=` 穿透 CDN） |
+| `verify-online.js` | **29 / 29**（v10.31 时为 27；新增 ③ 两条**接口**判据） |
+| `audit-apps.js` | 「**LIVE 与本地逐字节一致**」（含数据层），退出码 0 |
+| 实拍（指向线上复跑） | `preview-v1032.js` **73 / 73**，逐条与本地同值 |
+| `MUST` | 26 → **31 项**（随版加串，断言名 `（v10.14~v10.32）`） |
+
+### ★ ③ 是这一版唯一**页面特征串抓不到**的改动
+
+③ 改的是 `data/pcreq.js`（服务端），首页 HTML 里**没有那些函数名** ⇒
+`verify-online.js` 的 `includes` 式页面判据对它**完全无效**。
+⇒ 本次把验收扩到**接口层**，直打线上两个端点：
+
+```js
+/api/pcreq?t=生化危机9：安魂曲/Resident_Evil_Requiem
+  → hit=true · appid=3764200 · name=Resident Evil Requiem · 最低配置=有 · 推荐配置=有
+/api/pcreq/stats
+  → cached 712 / withReq 707 / miss 4 / ★ searchKeys 1
+```
+
+`searchKeys` 是 v10.32 新加的字段（把「按名称搜出来的 `q:` 缓存键」与 appid 键**分开计数**，
+否则「收录多少款」会虚高）⇒ **字段在 = 新版 pcreq.js 在**，是一条与页面无关的独立证据。
+
+### 发布后暴露的一条口径问题（已修）
+
+「发布工具返回成功」**不等于**上线（v10.30 踩过它「无输出无报错」的无声失败）。
+本次照铁律立刻拉线上三页比 md5 —— 三者全部等于本地 ⇒ 才敢写「已上线」。
+
+### 收尾顺序（本次实践固定下来）
+
+改 → 派生页重建 → 语法闸 → 静态套件 → 实拍 → **反证** → **重拍实拍图**（反证会把截图覆盖成打坏态）
+→ 文档 → 提交 → 推送 → **发布** → 拉线上比 md5 → `verify-online.js` → `audit-apps.js`
+→ 实拍套件**指向线上**复跑。

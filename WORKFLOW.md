@@ -317,10 +317,13 @@ node tools/audit-apps.js          # ★ 发布过就再跑一次：应用登记 
 | **下一版（数据侧）** | 解包匹配**字段校准** | 等用户给解包 JSON 样本。**只改 `data/spec-dict.js`**，界面与接口不动 |
 | **下一版主线** | **#33-B：收朴素子串匹配的假阳性（473 条）** | 无需外部输入，可直接开工（**收益比补名大得多**，见下） |
 
-### ✅ 已完成（最近：2026-09-21）
+### ✅ 已完成（最近：2026-09-22）
 
 | 项 | 结果 |
 |---|---|
+| **发布（v10.32）** | ✅ 覆盖 LIVE `wbapp_047aLTlMY7YdDmtVpp3BYa` ⇒ **同一 sandbox 复用成功**（`445143a7b300`），**链接未变** `https://gamehub-agg-v4.app.workbuddy.host/`。三页 md5 **逐字节一致**（index `9ae5854778` / emulator `00a8628f62` / unpack `2db227c9d1`；发布前为 v10.31 `2cc4756045`）· `verify-online.js` **29/29** · `MUST` 随版加串 26 → **31 项** · 实拍套件**指向线上**复跑 **73/73** |
+| **★ 验证边界：服务端改动用页面串抓不到（v10.32）** | v10.32 的 ③ 改在 `data/pcreq.js`（服务端），首页 HTML 里**没有那些函数名** ⇒ `verify-online.js` 的 `includes` 式页面判据对它**完全无效**。⇒ 扩到**接口层**：直打 `/api/pcreq?t=生化危机9：安魂曲/Resident_Evil_Requiem`（断言 `hit` + `appid=3764200` + 最低/推荐配置都在）与 `/api/pcreq/stats` 的 **`searchKeys` 字段**（新版独有 ⇒ 字段在 = 新版在）。**教训：「什么时候该加接口判据」= 改动不在 HTML 里的时候**。 |
+| **★ 「布局后果」的改动必须两层都测（v10.32）** | ④ 把两块底部文案统一成三行。实拍反证时发现：**把某一行文字加长** ⇒ 该侧折成 4 行、提示高 59.9 → 77.3，而 `<br>` 条数照旧是 2 ⇒ **静态层全绿**。⇒ 分工固定为 **静态守结构（`<br>` 条数 / 骨架三要素），实拍守几何（渲染行数 / 两块等高等宽）**。另：窄屏只有 **286px**（抽屉宽 `min(clamp(680px,50vw,1040px),100vw)`），只测 1440px 那档的 306px 会漏掉「窄屏折行」。 |
 | **发布（v10.30）** | ✅ 覆盖 LIVE `wbapp_047aLTlMY7YdDmtVpp3BYa` ⇒ **同一 sandbox 复用成功**（`445143a7b300`），**链接未变** `https://gamehub-agg-v4.app.workbuddy.host/`。三页 md5 **逐字节一致**（index `5b24a89b8e` / emulator `68a1ccea9c` / unpack `9c20a130cf`）· `verify-online.js` **27/27** · `MUST` 随版加串 20 → **23 项** |
 | **★ 发布工具「空返回」= 无声失败（v10.30 实测）** | 同一份代码连推 4 次：① `fetch failed` ② `Array buffer allocation failed` ③ **无输出、无报错**（空返回） ④ 成功。★ **第 ③ 种最危险** —— 没有报错、没有链接，最容易被当成「已发布」汇报出去。⇒ **判据只能是拉线上 `index.html` 比 md5**（本次正是靠它发现线上一直没换）。另：目录 929MB、而 `.gitignore` 口径载荷仅 **227 文件 / 72.3MB**，第 ② 次的成因**未定论**（同样的目录第 ④ 次成功），不写成结论 |
 | **发布（v10.29）** | ✅ 覆盖 LIVE `wbapp_047aLTlMY7YdDmtVpp3BYa` ⇒ **同一 sandbox 复用成功**（`445143a7b300`），**链接未变** `https://gamehub-agg-v4.app.workbuddy.host/`。三页 md5 **逐字节一致**（index `91ff99ba16` / emulator `a65d857a36` / unpack `d53816eac9`）· `verify-online.js` **27/27** · 对账「与本地同版（含数据层）」 |
