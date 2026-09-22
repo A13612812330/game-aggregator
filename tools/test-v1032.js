@@ -126,6 +126,52 @@ console.log('\n=== ③ 配置要求：双语名称搜索 + 三级校验 ===');
   ok(/catch \(e\) \{ \/\* 网络异常不写负缓存/.test(after), '★ 网络异常不写负缓存（与 appid 分支同一铁律）');
 }
 
+console.log('\n=== ④ 修改器 / 云存档：底部提示文案「三行」骨架 ===');
+{
+  /* 取全文件所有 `.d-hint2` 块，再按内容认出这两块（不要按行号取 —— 行号会漂）。 */
+  const hints = [...IDX.matchAll(/<div class="d-hint2">([\s\S]*?)<\/div>/g)].map((m) => m[1]);
+  const trHint = hints.find((h) => /游戏安装根目录/.test(h)) || '';
+  const svHint = hints.find((h) => /是占位符/.test(h)) || '';
+  ok(hints.length > 5 && trHint && svHint,
+    '★ 能从 15 个 `.d-hint2` 里认出这两块（按内容，不按行号）', hints.length + ' 个候选');
+
+  /* 每行「全角当量」宽：CJK/全角标点算 1，ASCII 算 0.55。
+     ⚠️ 这是**布局约束**的静态代理：hint 最窄 286px ÷ 10.5px ≈ 27.2 全角当量
+        （抽屉宽 `min(clamp(680px,50vw,1040px),100vw)` ⇒ 视口 761~1360px 时最窄）。
+        上限放宽到 30 只是为了「别把阈值卡在实测值上」，真正守行数的是实拍那层。 */
+  const wUnits = (s) => {
+    const txt = s.replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    let w = 0;
+    for (const ch of txt) w += /[\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]/.test(ch) ? 1 : 0.55;
+    return Math.round(w * 10) / 10;
+  };
+  for (const [nm, h] of [['修改器', trHint], ['云存档', svHint]]) {
+    ok(h.length > 20, nm + ' 的提示块取到内容');
+    const brN = (h.match(/<br>/g) || []).length;
+    ok(brN === 2, '★ ' + nm + ' 的提示是**显式三行**（2 个 <br>）—— 不靠自动折行', brN + ' 个 <br>');
+    const segs = h.split(/<br>/).map((x) => x.trim()).filter(Boolean);
+    ok(segs.length === 3, '★ ' + nm + ' 恰好三段', segs.length + ' 段');
+    const over = segs.map(wUnits).filter((x) => x > 30);
+    ok(over.length === 0, '★★ ' + nm + ' 每段都在一行内放得下（无超长段）',
+      '各段宽度 ' + segs.map(wUnits).join(' / '));
+  }
+  /* 骨架三要素：用法 → 注意 → 来源（两块同一套，这才是「排布一致」） */
+  ok(/游戏安装根目录/.test(trHint) && /Cheat Engine/.test(trHint) && /Game Cheats Manager/.test(trHint),
+    '★ 修改器三段＝用法 / CE 用法 / 来源，三要素齐（没为凑行数删信息）');
+  ok(/是占位符/.test(svHint) && /存档前先退出游戏/.test(svHint) && /Ludusavi/.test(svHint),
+    '★ 云存档三段＝占位符说明 / 存档注意 / 来源，三要素齐');
+  /* 两块都要保住原有的「可抄 / 可点」能力 */
+  ok(/<code>&lt;用户名&gt;<\/code>/.test(svHint) && /<code>&lt;平台账号ID&gt;<\/code>/.test(svHint),
+    '★ 占位符仍用 <code> 包着（可抄形态没被改掉）');
+  ok(/<b>存档前先退出游戏<\/b>/.test(svHint), '★ 「存档前先退出游戏」仍是加粗强调');
+  ok(/D_GCM_URL/.test(trHint), '★ 修改器提示里的 GCM 下载链接仍在');
+  /* ★ 反向断言：判**形态**而不是「旧原话」——
+     v10.32 反证的教训是「反向断言锚点写死旧代码字样，换个写法就绕过」。
+     这里要防的形态是「把两件事挤在同一行」（旧文案正是用「；」连成一句多排了一行）。 */
+  ok(!/；/.test(trHint), '★★ 反向：修改器提示不再用「；」把两件事挤进一行（那正是它排到 4 行的形态）');
+  ok(!/<br><br>/.test(trHint + svHint), '★★ 反向：没有空行凑高度（用户口径「不是说真预留」）');
+}
+
 console.log('\n=== 派生页同步（改主源必须重建） ===');
 {
   /* 只判 D_RAIL 块内的项名（派生页有自己的独立内容，整页判会假红） */
@@ -135,6 +181,14 @@ console.log('\n=== 派生页同步（改主源必须重建） ===');
     ok(/nm:\s*'修改器\/云存档'/.test(R), nm + ' 已同步「修改器/云存档」项');
     ok(!/nm:\s*'修改器'/.test(R), nm + ' 的定位条不含单独的「修改器」项');
     console.log('        （' + nm + ' 的条上项名：' + railNames(src) + '）');
+  }
+  /* 派生页也含这两段提示文案（实测 grep 命中）⇒ 必须一起同步「三行」结构 */
+  for (const [nm, src] of [['emulator.html', EMU], ['unpack.html', UNP]]) {
+    const hs = [...src.matchAll(/<div class="d-hint2">([\s\S]*?)<\/div>/g)].map((m) => m[1]);
+    const a = hs.find((h) => /游戏安装根目录/.test(h)) || '';
+    const b = hs.find((h) => /是占位符/.test(h)) || '';
+    ok((a.match(/<br>/g) || []).length === 2 && (b.match(/<br>/g) || []).length === 2,
+      nm + ' 的两块提示也已是三行骨架（改主源必须重建派生页）');
   }
 }
 

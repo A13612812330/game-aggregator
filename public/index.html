@@ -3965,10 +3965,24 @@ async function loadTrBlock(d, title) {
     const more = items.length > MAXTR
       ? dMoreHd(dFullPut({ type: 'tr', title: '修改器 · 全部来源', sub: t, items }), `全部 ${items.length}`)
       : '';
+    /* ★ v10.32（第 4 条）：底部提示文案改成**显式三行**。
+       用户口径：「修改器跟云存档的底部都预留三行」→ 追问后澄清
+       「就是底部文案优化下，我需要他们同高，不是说真预留」。
+       ⇒ 要的不是加空白槽位，是**两块底部文案排布一致**。
+       实测（xd-692，探针 `_probe-v1032-hint.js`）：两卡已同高（330.4 = 330.4），
+       但 hint 一个 **4 行 77.3px**、一个 **3 行 59.9px**，**差 17.3px 正好一整行** ——
+       根因是这段比云存档多排了一行，且只有它用 `<br>`、云存档靠自动折行。
+       ⇒ 两段统一为「用法 → 注意 → 来源」三行骨架，各 2 个 `<br>`；
+         每行控制在 ~25 个全角宽以内（hint 宽 306px ÷ 10.5px ≈ 29 全角），
+         保证 306px（最窄的两列）下**每行不折行** ⇒ 两块 hint 恒为 3 行 = 51.975px 文字高，
+         上下边同时对齐（`.d-pair .d-hint2{margin-top:auto}` 已把它沉到卡底）。
+       ⚠️ 文案长度是**布局约束**，不是随手删字：改长一行 = 那侧变 4 行 = 高度差又回来，
+         所以静态断言守 `<br>` 条数、实拍断言守**渲染行数 === 3**（两处都要，缺一处会漏）。 */
     slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>修改器<span class="cnt">${items.length} 个来源</span>${more}</h4>
       <div class="d-rows">${rows}</div>
-      <div class="d-hint2">修改器文件放到<b>游戏安装根目录</b>（与主程序 .exe 同级）后再启动；CE 修改表需先运行 Cheat Engine 再加载表格。<br>
-        清单聚合自 Game Cheats Manager 公开数据，<a href="${D_GCM_URL}" target="_blank" rel="noopener">打开 GCM 下载页 ↗</a></div></div>`;
+      <div class="d-hint2">文件放到<b>游戏安装根目录</b>（与主程序 .exe 同级）。<br>
+        启动前先运行 Cheat Engine，再加载 CE 表格。<br>
+        数据来自 Game Cheats Manager，<a href="${D_GCM_URL}" target="_blank" rel="noopener">打开 GCM 下载页 ↗</a></div></div>`;
   } catch (e) {} finally { syncPair(); }
 }
 
@@ -4010,10 +4024,15 @@ async function loadSvBlock(d, title) {
     (h.cloud || []).forEach(c => tags.push(`<span class="d-tg cloud">☁ ${esc(String(c).toUpperCase())}</span>`));
     if (h.phone) tags.push('<span class="d-tg phone">手机能玩</span>');
     if (h.installDir) tags.push(`<span class="d-tg dim">安装目录 ${esc(h.installDir)}</span>`);
+    /* ★ v10.32（第 4 条）：与上面「修改器」那段**同骨架的三行**（用法 → 注意 → 来源）。
+       原来它是**靠自动折行**排到 3 行的 ⇒ 宽度一变行数就变，两块底部立刻不齐；
+       现在显式两个 `<br>` 钉死三行，两块 hint 高度永远相等（各 51.975px 文字高）。 */
     slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>云存档位置<span class="cnt">${paths.length + regs.length} 条记录</span>${more}</h4>
       ${tags.length ? `<div class="d-tg-row" style="margin-bottom:6px">${tags.join('')}</div>` : ''}
       <div class="d-rows d-sv">${rows.join('')}</div>
-      <div class="d-hint2">路径中的 <code>&lt;用户名&gt;</code> / <code>&lt;平台账号ID&gt;</code> 是占位符，按你自己的账号替换。<b>存档前请先退出游戏</b>，避免被覆盖。数据来自 Ludusavi 开源清单（MIT）。</div></div>`;
+      <div class="d-hint2">路径中的 <code>&lt;用户名&gt;</code> / <code>&lt;平台账号ID&gt;</code> 是占位符。<br>
+        按你自己的账号替换；<b>存档前先退出游戏</b>，避免被覆盖。<br>
+        数据来自 Ludusavi 开源清单（MIT）。</div></div>`;
   } catch (e) {} finally { syncPair(); }
 }
 

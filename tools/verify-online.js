@@ -72,6 +72,17 @@ const MUST = [
    *   旧版本来就有的串区分不了新旧，写进去等于白写（本文件的判定是 `includes`，只看「有没有」）。
    * ★ 也别写 `d-row-h` 以外的短串如 `d-rows`：与 `--d-row-h` 同生同灭，重复计入无意义。 */
   '--d-row-h', 'REL_SHOW', 'Math.max(60, hero.offsetHeight)',
+  /* ---- v10.32：定位条合并 + 跳转避让小条 + 底部文案三行 ----
+   * ★ 实测「v10.31 为 0 次 / v10.32 为 1 次」才拿来用。
+   *   基准 = `git show b9dc2c7:public/index.html`（= 线上那一版 v10.31），
+   *   **导出后先核 md5 应为 `2cc4756045cce4459a6d1221662cde23`** 再采信计数
+   *   （v10.30 那次误取 HEAD~1 = 自己，六个候选串全判「不可用」，已踩过）。
+   * ★ `{ k: 'trsv'` 精确到键名带引号，避免命中派生页里别处的 `trsv` 字样。
+   * ★ **别写 `修改器/云存档`**：v10.31 **已经有 1 次**（v10.29 就写进注释了）⇒ 区分不了新旧。
+   * ★ **别写 `文件放到<b>游戏安装根目录</b>`**：v10.31 已有 1 次；要判 v10.32 的文案改动，
+   *   得用**新文案独有的那半句**（下面两条分别对应修改器 / 云存档两块）。 */
+  "{ k: 'trsv'", 'const cover = raw >= heroH', 'raw - cover - gap',
+  '启动前先运行 Cheat Engine', '是占位符。<br>',
 ];
 
 /* ★ MUST 自检：本地首页都没有的串不可能区分新旧版本，只会制造假红 */
@@ -117,6 +128,22 @@ function chk(ok, name, extra) {
     '[接口] /api/device/specs 逐台带回 chip 字段', spKeys.length + ' 台');
   chk(needFill.length >= 1, '[接口] 本款确有本地查不到的机型（③ 的入口）', needFill.join(' / ') || '(无 → 这游戏验不到③)');
 
+  /* ---- ★ v10.32 第 ③ 条：配置要求的「双语名称搜索」只在 `data/pcreq.js` 里，
+     页面特征串**抓不到它**（首页 HTML 里没有这些函数名）⇒ 必须直接打接口验。
+     样本 = 上一轮实测「中文段 0 结果、靠英文段救回」的那款。 */
+  const pr = await api('/api/pcreq?t=' + encodeURIComponent('生化危机9：安魂曲/Resident_Evil_Requiem'));
+  const prOK = pr.s === 200 && pr.j && pr.j.hit && String(pr.j.appid || '') === '3764200';
+  chk(prOK, '[接口] ★ v10.32 ③ 双语名称搜索已上线（中文段搜不到时靠英文段救回）',
+    pr.j ? ('hit=' + pr.j.hit + ' appid=' + pr.j.appid + ' name=' + (pr.j.name || '') +
+      ' 最低配置=' + (pr.j.min ? '有' : '无') + ' 推荐配置=' + (pr.j.rec ? '有' : '无')) : 'status ' + pr.s);
+  const pst = await api('/api/pcreq/stats');
+  /* ★ `searchKeys` 是 v10.32 新增字段：把「按名称搜出来的缓存键（q:）」与 appid 键**分开计数**。
+     没有它 ⇒ 「收录多少款」会把搜索负缓存也算进去而虚高。字段在 = pcreq.js 新版在。 */
+  chk(pst.s === 200 && pst.j && pst.j.ok && 'searchKeys' in pst.j,
+    '[接口] ★ v10.32 ③ 缓存统计已分列 `searchKeys`（name 命中的键不再混进「收录款数」）',
+    pst.j ? ('cached ' + pst.j.cached + ' / withReq ' + pst.j.withReq + ' / miss ' + pst.j.miss +
+      ' / searchKeys ' + pst.j.searchKeys) : 'status ' + pst.s);
+
   /* ---- ② 页面侧：真机打开、真点详情页 ---- */
   const H = await connectBrowser();
   const b = H.browser;
@@ -130,7 +157,7 @@ function chk(ok, name, extra) {
 
   const html = await p.content();
   const missing = MUST.filter((k) => !html.includes(k));
-  chk(missing.length === 0, '[页面] 线上首页含全部特征串（v10.14~v10.31）', missing.length ? '缺：' + missing.join(', ') : MUST.length + ' 项齐');
+  chk(missing.length === 0, '[页面] 线上首页含全部特征串（v10.14~v10.32）', missing.length ? '缺：' + missing.join(', ') : MUST.length + ' 项齐');
   chk(LOCAL_MISSING.length === 0,
     '★ MUST 每一项在**本地首页**里都存在（本地没有的串区分不了新旧，只会假红）',
     LOCAL_MISSING.length ? '本地缺：' + LOCAL_MISSING.join(', ') : MUST.length + ' 项');

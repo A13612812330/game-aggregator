@@ -147,6 +147,66 @@ const R1 = (n) => Math.round(n * 10) / 10;
         r.atBottom ? '已到底（物理夹住）' : 'gap=' + r.gap);
     }
 
+    /* ---------- ④ 底部提示文案：两块都要「三行」且等高 ----------
+       ★ 为什么必须实拍：静态只能数 `<br>` 条数，证明不了**渲染出来就是三行** ——
+         一段文字只要长过一行宽就会自己折成两行（`<br>` 管不住自动折行）。
+         用户口径「底部都预留三行 + 我需要他们同高」，真正要守的就是**渲染行数**与**高度差**。
+       ★ 扫两档宽度：抽屉宽 `min(clamp(680px,50vw,1040px),100vw)` ⇒
+         hint 最窄是 **286px**（视口 761~1360px），不是 1440px 那档的 306px。
+         只测最宽那档会漏掉「窄屏下折行」这个正是最该防的退化。 */
+    for (const w of [1440, 1000]) {
+      await p.setViewport({ width: w, height: 1000, deviceScaleFactor: 1 });
+      await sleep(500);
+      const m = await p.evaluate(() => {
+        /* 行数必须用**整体 Range 的 client rects** 数（浏览器按「行片段」返回）：
+           逐子节点取 rect 会把跨行的行内元素并成一个盒 ⇒ 少数一行。 */
+        const linesOf = (el) => {
+          const rg = document.createRange();
+          rg.selectNodeContents(el);
+          const tops = [...rg.getClientRects()].map((x) => Math.round(x.top));
+          const uniq = [];
+          for (const t of tops.sort((a, b) => a - b)) {
+            if (!uniq.length || t - uniq[uniq.length - 1] > 2) uniq.push(t);
+          }
+          return uniq.length;
+        };
+        const read = (sel) => {
+          const root = document.querySelector(sel);
+          const blk = root && root.querySelector('.d-blk');
+          const hint = root && root.querySelector('.d-hint2');
+          if (!hint || !blk) return null;
+          const hr = hint.getBoundingClientRect();
+          const rg = document.createRange();
+          rg.selectNodeContents(hint);
+          const rects = [...rg.getClientRects()];
+          return {
+            lines: linesOf(hint),
+            hintH: Math.round(hr.height * 10) / 10,
+            hintW: Math.round(hr.width),
+            maxLineW: Math.round(Math.max(...rects.map((x) => x.width))),
+            blkH: Math.round(blk.getBoundingClientRect().height * 10) / 10,
+          };
+        };
+        return { tr: read('#trBlock'), sv: read('#svBlock'), vw: window.innerWidth };
+      });
+      if (!m.tr || !m.sv) { chk('④ ' + w + 'px：两块提示块都取到', false); continue; }
+      const dH = Math.round(Math.abs(m.tr.hintH - m.sv.hintH) * 10) / 10;
+      const dC = Math.round(Math.abs(m.tr.blkH - m.sv.blkH) * 10) / 10;
+      console.log('    · 视口 ' + m.vw + '  hint宽=' + m.tr.hintW +
+        '  行数=' + m.tr.lines + '/' + m.sv.lines +
+        '  hint高=' + m.tr.hintH + '/' + m.sv.hintH +
+        '  卡高=' + m.tr.blkH + '/' + m.sv.blkH);
+      chk('④ (' + w + 'px) 两块底部文案都是**三行**',
+        m.tr.lines === 3 && m.sv.lines === 3, m.tr.lines + ' / ' + m.sv.lines + ' 行');
+      chk('④ (' + w + 'px) 两块文案块**等高**', dH <= 0.5, '差 ' + dH + 'px');
+      chk('④ (' + w + 'px) 两块卡片**等高**（同高要求）', dC <= 0.5, '差 ' + dC + 'px');
+      chk('④ (' + w + 'px) 没有一行被折行（最长行宽 ≤ 文案区宽）',
+        m.tr.maxLineW <= m.tr.hintW + 0.5 && m.sv.maxLineW <= m.sv.hintW + 0.5,
+        '最长行 ' + m.tr.maxLineW + ' ≤ 宽 ' + m.tr.hintW);
+    }
+    await p.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+    await sleep(500);
+
     await p.screenshot({ path: path.join(OUT, 'v1032-' + s.tag + '.png') });
     console.log('  截图 → _preview/v1032-' + s.tag + '.png');
   }

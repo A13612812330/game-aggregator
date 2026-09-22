@@ -81,7 +81,7 @@ curl http://localhost:8123/api/health    # 期望 ok
 ### 步骤 5 · 跑三层防线
 
 ```bash
-# 第一层：静态（前置闸 2 个 + 32 套 / 2165 条 / 必须 0 失败）
+# 第一层：静态（前置闸 2 个 + 32 套 / 2183 条 / 必须 0 失败）
 node tools/run-all.js
 
 # 第二层：浏览器实拍（puppeteer，★ 必须加大超时 + 分批跑）
@@ -223,7 +223,7 @@ node tools/audit-apps.js          # ★ 发布过就再跑一次：应用登记 
 | 层 | 工具 | 规模 | 特点 | 何时跑 |
 |---|---|---|---|---|
 | ⓪ 前置闸 | `check-inline-syntax.js` + **`check-card-rules.js`**（由 `run-all` 拉起） | 3 页 + 卡片族 | 语法**精确到行列**；卡片族**枚举实际规则体**（抓「测试还不知道的新断点」） | 每次改页面 |
-| ① 静态 | `tools/run-all.js` | **32 套 / 2165 条** | 秒级、无需人盯 | 每次改完 |
+| ① 静态 | `tools/run-all.js` | **32 套 / 2183 条** | 秒级、无需人盯 | 每次改完 |
 | ② 行为 | `test-emulator-page.js`（jsdom，含在 32 套内） | 119 条 | 需服务在 8123 | 每次改完 |
 | ③ 实拍 | `tools/preview-v*.js`（**24** 个） | 各 30~70 条 | puppeteer，**慢且脆** | 改页面时 |
 | ③' 回归 | `test-search-ui.js` + 六个 `test-v1025-*.js` | **141 条** | puppeteer + CDP，**要人盯、须分批** | 改交互后 |
@@ -416,7 +416,7 @@ $NODE tools/build-emulator-page.js && $NODE tools/build-unpack-page.js
 # 重启服务 / 健康检查
 $NODE tools/restart-server.js
 
-# 全量静态防线（前置闸 2 + 32 套 2165 条）
+# 全量静态防线（前置闸 2 + 32 套 2183 条）
 $NODE tools/run-all.js
 
 # 只查内联脚本语法（报错精确到行列；默认查 index/emulator/unpack 三页）
