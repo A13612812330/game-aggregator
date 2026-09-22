@@ -838,8 +838,20 @@ app.get('/api/pcreq', async (req, res) => {
   }
   coverCands.push(String(req.query.cover || '').trim());
   const cover = coverCands.find((c) => pcreq.appidOf(c)) || coverCands[0] || '';
+  /* ★ v10.33：库里**顶层 `appid` 字段**也要用上，不能只看封面。
+   *   实测（19,010 条端游库）：仅封面能解析出 appid 的 14,997，仅顶层字段有的 3,124，
+   *   两路都有 10（10/10 一致）⇒ 顶层字段是**唯一**能覆盖那 3,124 条的通路。
+   *   而它们恰恰是**机地独有**的游戏（封面是 img2.52jidi.com，不是 Steam CDN）：
+   *   「剑星」3489700 ·「渔力全开」4001890 ·「极限竞速：地平线 6」2483190 ——
+   *   它们本来就搜不到 Steam，配置要求只能靠这条。
+   *   ⚠️ 不补这一步的后果**实测过**：预热已把剑星的 min+rec 完整抓回（appid 3489700），
+   *     但线上查「剑星/Stellar_Blade」走的却是名称搜索命中的另一个条目
+   *     （`appid=` 空 · `rec=无`）—— **缓存里有、前端读不到**，而且拿到的质量更差。
+   *   优先级：仍以 cover 解析出的 appid 为先（保持既有行为不变），它解析不出才用字段。 */
+  const appid = (coverCands.map((c) => pcreq.appidOf(c)).find(Boolean)) ||
+    String((selfRec && selfRec.appid) || '').trim();
   try {
-    const r = await pcreq.resolve({ title: t, cover });
+    const r = await pcreq.resolve({ title: t, cover, appid });
     /* ③ 机地同名兜底：只在 Steam 没命中时走，且必须**中文名完全一致**才认，
      *    否则「生化危机4」会匹配到「生化危机4 重制版」这类不同作品。 */
     if (!r.hit && t) {

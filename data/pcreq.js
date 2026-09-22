@@ -53,23 +53,94 @@ function ensure() {
   return db;
 }
 
-/** 落盘（合并写，避免每抓一条就同步写 2MB 文件） */
+/* ★ v10.33：批量模式开关（给长跑预热脚本用）
+ *   预热时 save() 会被调用上万次，而 flush 是**全量序列化 + 全量写盘** ——
+ *   实测 18,131 条规模下单次 65ms（stringify 47 + 写 11）。
+ *   · 现有 5s debounce ⇒ 5 小时里要写 ~3,800 次 ≈ 26 GB（能跑，但纯属浪费）
+ *   · 批模式（关自动 + 脚本每 N 条 flushNow）⇒ 只写 ~35 次 ≈ 241 MB
+ *   ⚠️ 批模式只在**独立进程**里用。服务进程必须保持 autoFlush=true，
+ *      否则用户抓到的条目要等到下次手动 flush 才落盘，进程一挂就丢。 */
+let autoFlush = true;
+function setAutoFlush(on) {
+  autoFlush = !!on;
+  if (!autoFlush && flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
+}
+
+/** 落盘（合并写，避免每抓一条就同步写整份文件） */
 function flush(force) {
-  if (!dirty) return;
-  if (!force && flushTimer) return;
+  if (!dirty) return false;
+  if (!autoFlush && !force) return false;
+  if (!force && flushTimer) return false;
   const doWrite = () => {
     flushTimer = null;
-    if (!dirty || !db) return;
+    if (!dirty || !db) return false;
     dirty = false;
     try {
       db.builtAt = db.builtAt || Date.now();
+      /* ★ v10.33：落盘前**先合并磁盘新增**，否则本进程会拿「自己内存里的 map」
+         全量覆盖，把**另一个进程刚写进去的**条目整批抹掉。
+         这不是假想 —— 是本轮必须堵的灾难：预热脚本要跑 5.3 小时、每 500 条落一次盘，
+         而服务端只要有一个用户请求触发一次 5s debounce 写盘，就会用它内存里
+         那 700 多条把预热成果**全部盖掉**（前功尽弃，且没有任何报错）。
+         ⚠️ 两边（服务端 / 预热端）都要 merge 才是安全的：只有一边 merge 的话，
+            另一边照样覆盖。 */
+      mergeDisk();
       db.count = Object.keys(db.map).length;
-      fs.writeFileSync(FILE, JSON.stringify({ builtAt: db.builtAt, src: db.src, count: db.count, map: db.map }));
-    } catch (e) { /* 写不进去（只读盘）也不影响内存可用 */ }
+      const json = JSON.stringify({ builtAt: db.builtAt, src: db.src, count: db.count, map: db.map });
+      /* ★ v10.33：改成**原子写**（先写 .tmp 再 rename）。
+         原实现是直接 `writeFileSync(FILE, …)` 覆盖 —— 写到一半被 kill / 断电，
+         留下的就是半截 JSON；下次 ensure() 的 JSON.parse 抛错 ⇒ 落到 emptyDb()
+         ⇒ **整份缓存静默归零**（catch 吞了错，表面看不出）。预热是 5 小时级长跑，
+         中途被打断的概率不低，这个坑必须堵。
+         ⚠️ 同盘 rename 是原子的：读者只会看到「旧的完整文件」或「新的完整文件」。
+         ⚠️ Windows 上目标被别的进程占着时 rename 可能 EBUSY/EPERM ⇒ 回退直写，
+            不让「换名失败」把已经抓到的数据整个卡死。 */
+      const tmp = FILE + '.tmp';
+      try {
+        fs.writeFileSync(tmp, json);
+        fs.renameSync(tmp, FILE);
+      } catch (e) {
+        try { fs.writeFileSync(FILE, json); } catch (e2) { /* 只读盘：不影响内存可用 */ }
+      }
+      return true;
+    } catch (e) { /* 序列化失败也不影响内存可用 */ return false; }
   };
   if (force) return doWrite();
   flushTimer = setTimeout(doWrite, 5000);
   if (flushTimer.unref) flushTimer.unref();
+  return true;
+}
+function flushNow() { return flush(true); }
+
+/** ★ v10.33：把磁盘上「内存里还没有」的键合并进来（**只给长跑预热脚本用**）。
+ *   预热进程与服务进程各持一份内存 map，两边写盘都是**全量覆盖** ⇒ 后写的赢。
+ *   预热脚本每批写盘前先 merge，服务端这几分钟新抓的条目就不会被抹掉；
+ *   不 merge 的代价只是「用户刚看过的几款要重抓一次」——能接受，但白丢不如不丢。
+ *   ⚠️ 服务端**不要**调它：每次读 7MB 盘会把 debounce 写的开销翻倍，而服务端
+ *      本来就不会跟另一个写者并存。 */
+function mergeDisk() {
+  const d = ensure();
+  let added = 0;
+  try {
+    const j = JSON.parse(fs.readFileSync(FILE, 'utf8'));
+    for (const k of Object.keys(j.map || {})) {
+      if (!d.map[k]) { d.map[k] = j.map[k]; added += 1; }
+    }
+    if (added) d.count = Object.keys(d.map).length;
+  } catch (e) { /* 文件不存在 / 正被替换：没什么可合并 */ }
+  return added;
+}
+
+/** ★ v10.33：跨进程可见性 —— 带 TTL 的 mergeDisk（见 peek 里的完整理由）。
+ *  单独抽出来是为了「未命中时看一眼磁盘」这个动作能被 TTL 限制住：
+ *  不带 TTL 的话，每查一款库里没有的游戏就要同步读 7MB + parse 47ms。 */
+const MERGE_TTL = 30000;
+let lastMerge = 0;
+function refreshFromDisk() {
+  const now = Date.now();
+  if (now - lastMerge < MERGE_TTL) return 0;
+  lastMerge = now;
+  return mergeDisk();
 }
 process.on('exit', () => flush(true));
 
@@ -313,8 +384,19 @@ async function pickBySearch(title) {
 /** 同步读缓存（不触发网络） */
 function peek(appid) {
   if (!appid) return null;
-  const e = ensure().map[appid];
-  if (!e) return null;
+  let e = ensure().map[appid];
+  if (!e) {
+    /* ★ v10.33：未命中时**先看一眼磁盘**再放弃。
+       根因：本模块把整份 map 常驻内存，而 `ensure()` 只在首次读一次盘 ⇒
+       另一个进程（tools/build-steam-req.js 那个 5 小时长跑）刚写进去的条目
+       **在本进程里永远看不见**，除非重启服务。结果是「预热跑完了也没用，
+       要人工重启才生效」——而且跑的过程中一条都用不上。
+       有了这一步，预热边跑线上边生效，跑完也不需要重启。
+       ⚠️ 必须用 TTL 兜住读盘成本：每次未命中都读 7MB 盘会把详情页拖慢，
+         30 秒内最多读一次（代价：预热新写入的条目最多晚 30 秒可见）。 */
+    if (refreshFromDisk() > 0) e = ensure().map[appid];
+    if (!e) return null;
+  }
   if (e.miss) {
     /* 负缓存 7 天过期，过期后允许重试 */
     return (Date.now() - (e.ts || 0)) < 7 * 864e5 ? { miss: true } : null;
@@ -399,6 +481,10 @@ function stats() {
 
 module.exports = {
   resolve, peek, appidOf, parseReq, stats, save, _file: FILE,
+  /* ★ v10.33：长跑预热脚本用的三个控制口（服务端只用 resolve/peek/stats）。
+     setAutoFlush(false) 关掉 5s debounce → flushNow() 按批落盘 → mergeDisk() 防覆盖。
+     refreshFromDisk 带 TTL，服务端 peek 未命中时自动调（跨进程可见性）。 */
+  setAutoFlush, flushNow, mergeDisk, refreshFromDisk,
   /* ★ v10.32：导出这几个是为了让 A/B 探针（tools/_probe-req-ab.js）能
      在**不改产品代码**的前提下对比「旧单语无校验」与「新双语带校验」的命中差异。 */
   normName, titleParts, nameMatches, nameMatchLevel, searchCandidates, pickBySearch,
