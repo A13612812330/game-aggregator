@@ -6878,12 +6878,14 @@ const D_RAIL = [
   { k: 'shot', nm: '游戏预览', sel: ['#drawerBody .gal'] },
   { k: 'req', nm: '配置要求', sel: ['#reqSlot'] },
   { k: 'bh', nm: '手机配置', sel: ['#bhSlot'] },
-  /* ★ v10.29：修改器 / 云存档改成**同一行**（`.d-pair` 两列）——
-     两块在同一屏里并排，滚动时它们的前后差只有几像素。
-     定位条保留两项（各自仍可点、可高亮），因为两块内容完全不同，
-     只留一项会让「云存档」在条上彻底消失。 */
-  { k: 'tr', nm: '修改器', sel: ['#trBlock'] },
-  { k: 'sv', nm: '云存档', sel: ['#svBlock'] },
+  /* ★ v10.32：修改器 / 云存档在条上**合并成一项**。
+     用户口径：「修改器和存档现在是一行了，所以只需要一个」——
+     两块既然在同一行并排（`.d-pair` 两列），它们的 `rect.top` 只差几像素，
+     滚到这一行时两项**永远同时越过高亮线**，两个序号一起变蓝。
+     视觉上那是「同时选中两项」，读起来像坏了；点哪一个也都跳到同一行。
+     ⚠️ v10.29 曾特意保留两项（理由写在上一条注释里），那条理由已被用户口径否定：
+        两块内容不同 ≠ 需要两个入口 —— 定位条是按**屏幕位置**切的，不是按内容切的。 */
+  { k: 'trsv', nm: '修改器/云存档', sel: ['#trSvSlot'] },
   { k: 'rel', nm: '同分类', sel: ['#relSlot'] },
   /* ★ v10.28：优先指向正文里的三专区区块（`#dlSlot`）—— 它在文档流里，滚动定位准确；
      `#dlStrip` 现在躺在 sticky 的 `.d-dock` 里（视觉位置恒在视口底部），
@@ -6994,8 +6996,24 @@ function railBoot() {
          详情页重渲染后它可能已经脱离文档 —— 那时 getBoundingClientRect 会全为 0，
          `dy` 变成 -dr.top，一滚就跳到顶部。所以先确认它还在文档里。 */
       if (!el || !el.isConnected) return;
+      /* ★ v10.32：余量必须把**常驻小标题条的遮挡**算进去（用户口径：「定位的时候
+         顶部会遮挡部分，应该优化下」）。根因：`.d-mini` 是
+         `position:sticky;top:0;height:62px` + `margin-bottom:-62px`（**不占布局高度**），
+         它显形后恒覆盖在抽屉内容最上方 62px；而这里原来只留 14px 余量
+         ⇒ 跳转后目标分区的标题正好落进小条底下（被盖约 48px）。
+         ⚠️ 不能无条件减 62：小条只在 `scrollTop >= 大图高` 时才显形
+           （见 dHeroSpy），而「评分参数」这类紧跟大图的分区跳过去后可能还没过阈值 ——
+           那时多减 62 会把目标顶到半空。所以先算**不含余量**的落点，再按它判。
+         ⚠️ `hero` 用 offsetHeight 而不是常量：大图高是布局算出来的（250），
+           写死的话换机型 / 换字号就会错位 —— 与 dHeroSpy 用同一个来源。 */
+      const mini = $('#dMini'), hero = $('#dHero');
+      const miniH = mini ? mini.offsetHeight : 0;     // 62：小条自身高度
+      const heroH = hero ? hero.offsetHeight : 0;     // 250：小条显形阈值
       const dy = el.getBoundingClientRect().top - dr.getBoundingClientRect().top;
-      dr.scrollTo({ top: Math.max(0, dr.scrollTop + dy - 14), behavior: 'smooth' });
+      const raw = dr.scrollTop + dy;                  // 目标落点（不含任何余量）
+      const cover = raw >= heroH ? miniH : 0;         // 跳过去时小条会不会显形
+      const gap = cover ? 10 : 14;                    // 小条下方留 10，否则照旧 14
+      dr.scrollTo({ top: Math.max(0, raw - cover - gap), behavior: 'smooth' });
     };
     land();
     /* ★ v10.29 修，v10.30 保留双趟作为保险。
