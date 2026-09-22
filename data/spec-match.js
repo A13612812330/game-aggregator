@@ -150,6 +150,26 @@ function cmpDx(profile, spec) {
 /* ── 只在 ARM 生态里存在的层（出现它们却没标架构 → 需要提示补全） ── */
 const ARM_ONLY = ['turnip', 'adreno', 'adrenotools', 'gamemax'];
 
+/* ── ★★ v10.35 口径决策（用户 2026-09-22 定）：ARM 缺「x86 转译层」不再判不可跑 ──
+ *
+ *  实测（`tools/_probe-spec.js` 画像 G，全库 16,519 款）：
+ *      改前 v10.33：arch unknown(100%) ⇒ 待确认 14,552 / 信息不足 240 / 不可跑 1,727
+ *      改后 v10.34：arch fail(100%)    ⇒ **不可跑 16,519（100%）**
+ *      参考组画像 H（同一台设备，只是配置里多了 `box64`）⇒ 流畅 10,081 / 可跑 5,739 / 不可跑 699
+ *  ⇒ 一个键（`box64` 有没有出现在**导出物**里）的有无，让整库结论从「94% 可跑以上」
+ *    翻到「100% 不可跑」，其中 **14,792 款**从「待确认」被翻掉。
+ *
+ *  判据：**「导出物里没写 box64」与「设备没有 box64」在导出物里无法区分。**
+ *  而判错的代价不对称：
+ *    · 误判 fail    ⇒ 整库显示「不可跑」——用户直接看到不可能的结论（16,519 款）
+ *    · 误判 unknown ⇒ 只显示「待确认」——用户自己看一眼就行
+ *  且这与本文件既有口径一致：`req == null → skip`（**没标就一律不降级**，见 cmpNum）。
+ *
+ *  保留 fail 的唯一情形：配置**显式声明**转译层不可用
+ *  （值 = off / disabled / false / none / 0 / 无 / 禁用 …）——那是有信息量的「明确不支持」。
+ *  判据见 tools/test-v1035.js；反证见 tools/_counterproof-v1035.js。 */
+const TR_OFF = /^(off|disabled|disable|false|no|none|null|nil|0|无|禁用|关闭|不支持|不可用)$/i;
+
 function cmpArch(profile, spec) {
   const a = profile.arch && String(profile.arch.raw || '').toLowerCase();
   if (!a) {
@@ -170,8 +190,16 @@ function cmpArch(profile, spec) {
     return { dim: 'arch', state: 'unknown', note: '架构「' + a + '」无法判定' };
   }
   const tr = Object.keys(profile.layer || {}).find((k) => X86_TRANSLATORS.some((w) => k.includes(w)));
-  if (tr) return { dim: 'arch', state: 'ok', note: 'ARM 架构，但有 ' + tr + ' 转译 x86 指令' };
-  return { dim: 'arch', state: 'fail', note: 'ARM 架构且未发现 x86 转译层（box64 / box86 / FEX）——结构上无法执行 Windows 程序' };
+  if (tr) {
+    const raw = String((profile.layer[tr] || {}).raw || '').trim();
+    if (TR_OFF.test(raw)) {
+      /* 显式声明不可用 —— 这是有信息量的「明确不支持」，判 fail 站得住 */
+      return { dim: 'arch', state: 'fail', note: 'ARM 架构，且配置**显式声明** ' + tr + ' 不可用（值「' + raw + '」）——没有 x86 转译，结构上跑不了 Windows 程序' };
+    }
+    return { dim: 'arch', state: 'ok', note: 'ARM 架构，但有 ' + tr + ' 转译 x86 指令' };
+  }
+  /* ★★ 口径见函数上方注释：**导出物没提转译层 ≠ 设备没有转译层** ⇒ 只判「待确认」。 */
+  return { dim: 'arch', state: 'unknown', note: 'ARM 架构，配置未提及 x86 转译层（box64 / box86 / FEX）——缺信息，不能据此判不可跑' };
 }
 
 /* ★ 评测口径（实测校准过一次）：

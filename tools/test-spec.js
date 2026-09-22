@@ -82,8 +82,17 @@ const mkProfile = (o) => extract(o).records[0].profile;
 
 const armNoTr = mkProfile({ arch: 'arm64-v8a', memory: '16 GB' });
 const j1 = match.judge(armNoTr, { ramGb: 4, dx: 9 });
-eq(j1.dims.find((d) => d.dim === 'arch').state, 'fail', '★ ARM 且无转译层 → arch 判 fail');
-eq(j1.verdict, 'no', 'arch fail 直接导致整款不可跑');
+/* ⚠️ 这条口径**在 v10.35 由用户决策改过**：ARM 缺 x86 转译层**不再判不可跑**（原判 fail）。
+   理由（实测数字见 data/spec-match.js 的 cmpArch 上方注释）：
+   「导出物里没写 box64」与「设备没有 box64」**无法区分**，而判错的代价不对称 ——
+   误判 fail ⇒ 整库 16,519 款全显示「不可跑」；误判 unknown ⇒ 只显示「待确认」。
+   完整口径断言 + 全库影响面见 tools/test-v1035.js。 */
+eq(j1.dims.find((d) => d.dim === 'arch').state, 'unknown', '★ ARM 且无转译层 → arch 判「待确认」（v10.35 口径）');
+eq(j1.verdict, 'maybe', '★ 缺转译层信息 → 整款「待确认」，**不许**判不可跑（v10.35 口径）');
+
+/* 唯一保留 fail 的情形：配置**显式声明**转译层不可用（那是有信息量的「明确不支持」） */
+eq(match.judge(mkProfile({ arch: 'arm64-v8a', memory: '16 GB', compatibility: { box64: 'disabled' } }), { ramGb: 4 })
+  .dims.find((d) => d.dim === 'arch').state, 'fail', '★ 显式声明 box64 不可用 → arch 判 fail（v10.35 口径）');
 
 const armTr = mkProfile({ arch: 'arm64-v8a', memory: '16 GB', compatibility: { box64: '0.3.4', dxvk: '2.4' } });
 eq(match.judge(armTr, { ramGb: 4 }).dims.find((d) => d.dim === 'arch').state, 'ok', 'ARM + box64 → arch 通过');
@@ -157,9 +166,18 @@ ok(match.analyze(armTr, { q: 'grand', limit: 5 }).items.length > 0, '字面包�
 const byName = match.analyze(armTr, { limit: 5, sort: 'name' });
 eq(byName.items[0].verdict, real.stats.dist.smooth > 0 ? real.items[0].verdict : byName.items[0].verdict, 'sort=name 仍是同 verdict 内排序');
 
-/* ARM 无转译层时，不该出现「可跑」的 3A */
+/* ⚠️ 口径 v10.35 改过（原「全部判不可跑」）。arch 是**关键维度** ⇒ 缺信息时
+   结论只能是「待确认 / 信息不足」，**全库都不许出现「可跑 / 流畅」**。
+   这里用 `stats.dist`（全库）而不是被 limit 截断的 items，免得只在首屏碰巧成立。
+   ⚠️ `dist` 只含**出现过的**档位（一条都没有时那个键不存在，读出来是 undefined 不是 0）
+   ⇒ 一律用 `dc()` 归一，别直接写 `dist.ok === 0`（那样得到 undefined，假红）。 */
 const armNo = match.analyze(armNoTr, { limit: 5 });
-ok(armNo.items.every((i) => i.verdict === 'no'), '★ 无 x86 转译层 → 全部判不可跑');
+const dc = (k) => (armNo.stats.dist && armNo.stats.dist[k]) || 0;
+eq(dc('ok'), 0, '★ 缺 x86 转译层信息 → 全库不许出现「可跑」');
+eq(dc('smooth'), 0, '★ 缺 x86 转译层信息 → 全库不许出现「流畅」');
+eq(armNo.stats.playable, 0, '★ 缺 x86 转译层信息 → 可玩数 0');
+ok(armNo.items.every((i) => i.verdict !== 'ok' && i.verdict !== 'smooth'),
+  '★ 首屏同样不许出现「可跑 / 流畅」', armNo.items.map((i) => i.verdict).join(' / '));
 
 /* ============ ⑥ 边界 ============ */
 console.log('\n=== ⑥ 边界 ===');

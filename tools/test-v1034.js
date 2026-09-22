@@ -164,12 +164,13 @@ console.log('\n=== ⑤ 端到端四维判定 ===');
   eq(match.judge(good, { ramGb: 4, storageGb: 40, dx: 11 }).verdict, 'smooth',
     '内存 ≥ 2 倍 ⇒ 判「流畅」（口径没被这次改动牵连）');
 
-  /* ★ 口径变更（必须在断言名里写明，别 over-claim）：
-     cpu_abi 能读出「这是 ARM」之后，没写转译层的配置会判 arch fail ⇒ 整款「不可跑」。
-     原先因为 arch 读不到，这批落到「待确认」。这是**有意收紧**，不是副作用。 */
+  /* ⚠️ 「ARM 缺转译层」这条口径**已在 v10.35 由用户决策改掉**（原判 fail ⇒ 现判 unknown）。
+     本套件只保留「改完仍是 unknown」这个**事实断言**，专门盯它被**悄悄改回 fail**；
+     完整口径断言 + 反证见 tools/test-v1035.js / tools/_counterproof-v1035.js。
+     （改判的理由与实测数字写在 data/spec-match.js 的 cmpArch 上方注释里。） */
   const noTr = prof({ cpu_abi: 'arm64-v8a', memory: '12 GB', storage_free: '256 GB', compatibility: { dxvk: '2.4' } });
-  eq(dimOf(noTr, spec, 'arch').state, 'fail', '★ ARM 且兼容层里没有 x86 转译层 ⇒ arch 判 fail');
-  eq(match.judge(noTr, spec).verdict, 'no', '★ arch fail ⇒ 整款「不可跑」（原先因 arch 缺而落「待确认」）');
+  eq(dimOf(noTr, spec, 'arch').state, 'unknown', '★ ARM 且兼容层里没有 x86 转译层 ⇒ arch 判「待确认」（v10.35 口径）');
+  eq(match.judge(noTr, spec).verdict, 'maybe', '★ 缺转译层信息 ⇒ 整款「待确认」，**不许**判「不可跑」（v10.35 口径）');
 
   /* 反向：既有口径不许被顺手改掉 */
   eq(dimOf(prof({ memory: '16 GB' }), spec, 'arch').state, 'skip', '反向：没标架构且无 ARM 专用层 ⇒ arch skip');

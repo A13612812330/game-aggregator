@@ -66,6 +66,7 @@ const SUITES = [
   'test-v1032.js',
   'test-v1033.js',
   'test-v1034.js',
+  'test-v1035.js',
 ];
 /* 刻意**不登记**的：
  *   · test-search-ui.js  —— 用 puppeteer，属第二层「浏览器实拍」，本脚本跑不了
