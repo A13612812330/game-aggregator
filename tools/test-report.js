@@ -68,7 +68,7 @@ for (const [k, re] of [
 
 console.log('\n=== ③ 关键判据（防止退化成「只看 HTTP 200」）===');
 ok(/createHash\('md5'\)/.test(SRC), '★ 用 md5 比对判定线上版本，不只看状态码');
-ok(/与本地逐字节一致/.test(SRC), '判定文案明确写「与本地逐字节一致」');
+ok(/前端 md5 与服务端口径指纹均与本地一致/.test(SRC), '判定文案明确写「前端 md5 与服务端口径指纹均与本地一致」');
 ok(/ls-remote/.test(SRC), 'GitHub 用 ls-remote 比对远端分支');
 ok(/synced/.test(SRC), '给出「远端 = 本地」的同步结论字段');
 ok(/CODEX-INDEX\.md/.test(SRC) && /README\.md/.test(SRC), '更新日志同时检查 README 与 CODEX-INDEX');
@@ -91,6 +91,42 @@ ok(/test\(localTxt\)\s*&&\s*![\w.]*\.test\(remoteTxt\)/.test(CODE),
   '方向正确：本地有、线上没有 ⇒ 线上旧（别写反）');
 ok(/同代但内容有差异/.test(CODE), '指纹全中但字节不同 → 如实说「需人工核对」，不硬下结论');
 ok(/probeLink\(LINKS\.LIVE, localMd5, idxLocal\)/.test(CODE), 'probeLink 改传本地全部文本（判定要用指纹）');
+
+console.log('\n=== ③-c 线上判定：前端 + 服务端两条判据（v10.38 补）===');
+/* ★★ 为什么补这一节（2026-09-23 实测的假绿）★★
+ *   v10.33~v10.38 六轮的改动**全在 `data/**` 与 `tools/**`**，`public/index.html` 一个字节没动。
+ *   于是「index.html md5 与本地一致 ⇒ 已是最新」在本轮把「线上仍停在 v10.35 之前」
+ *   判成了「✅ 已是最新」——长得跟真绿一模一样，不报错、不崩。
+ *   ⇒ 判「线上是不是最新」必须**前端 + 服务端两条判据都过**。
+ *   ★ 而且必须**行为级**守：v10.38 刚踩过「只查符号出现过，被别处同名字符串撑成假绿」的坑，
+ *     所以这里 require 真模块、拿真函数喂真形状的输入，不看字符串有没有出现过。
+ */
+const RPT = require(path.join(ROOT, 'tools', 'report.js'));
+const SPEC_OK_SRC = 'const info = dictInfo(); return { ok: true, archRule: RULE };';
+const pUp = { ok: true, http: 200, has: { archRule: true }, err: null };
+const pOld = { ok: true, http: 200, has: { archRule: false }, err: null };
+const pDead = { ok: false, http: 502, has: {}, err: 'HTTP 502' };
+const vUp = RPT.serverVersionLabel(pUp, SPEC_OK_SRC);
+const vOld = RPT.serverVersionLabel(pOld, SPEC_OK_SRC);
+ok(typeof RPT.serverVersionLabel === 'function', '★ serverVersionLabel 已导出 ⇒ 能行为级测（不是只 grep 符号）');
+ok(vUp.ok === true, '★ 本地有 + 线上有 ⇒ 判「与本地一致」', vUp.ver);
+ok(vOld.ok === false, '★★ 本地有 + 线上没有 ⇒ 判「线上旧」（就是本轮实测的情形）', vOld.ver);
+ok(/尚未发布 v10\.35/.test(vOld.ver), '★ 落后时点明「尚未发布 v10.35」', vOld.ver);
+ok(/不能判为已是最新/.test(SRC), '★★ 前端同版但服务端旧时，判定里明确写「不能判为已是最新」');
+ok(RPT.serverVersionLabel(pDead, SPEC_OK_SRC).ok === false, '★ 接口取不到 ⇒ 不下结论（不许当成一致）');
+ok(RPT.serverVersionLabel(pUp, '').ok === false,
+  '★★ 本地源码里找不到该指纹 ⇒ 判「判据失效」，绝不静默放行（否则文件被改名就永远绿）');
+ok(/stripComments\(fs\.readFileSync/.test(CODE),
+  '★ 本地源码先剥注释再匹配指纹（`archRule` 在 spec-match.js 注释里也出现过）');
+ok(RPT.stripComments('/* archRule */ const a = 1;').indexOf('archRule') === -1, '★ stripComments 真的剥掉块注释');
+ok(RPT.serverFpRow(pOld).indexOf('✗') > -1, '★★ 服务端缺该指纹时，那一行必须出现 ✗', RPT.serverFpRow(pOld));
+ok(RPT.serverFpRow(pUp).indexOf('✗') === -1 && RPT.serverFpRow(pUp).indexOf('✓') > -1,
+  '★ 服务端有该指纹时渲染 ✓（反向：不许把 ✗ 渲染成 ✓）', RPT.serverFpRow(pUp));
+ok(!/live\.same \? '✅ 与本地逐字节一致 = 已是最新'/.test(CODE),
+  '★★ 已删掉「只看 index.html md5 就判已是最新」的单判据写法（假绿的来源）');
+ok(/await probeServer\(/.test(CODE), '★ 真的去探测服务端接口（不是只定义了个函数）');
+ok(/require\.main === module/.test(CODE) && /module\.exports = \{/.test(CODE),
+  '★ 主流程有 require.main 守卫 + 有导出（require 本文件不许产生副作用）');
 
 console.log('\n=== ④ 已知坑：不能设 GIT_TERMINAL_PROMPT=0 ===');
 /* CODE 已在文件顶部剥好注释（见那里的说明） */

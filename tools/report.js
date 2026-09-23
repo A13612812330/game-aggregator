@@ -118,6 +118,89 @@ function versionLabel(remoteTxt, localTxt, same) {
   return { ver: '同代但内容有差异（需人工核对）', detail: '特征指纹全中，但字节不同' };
 }
 
+/* ===== ②-b 服务端 + data 层的口径指纹（v10.38 补）=====
+ * ★★ 为什么必须有这一节 ★★
+ *   上面那套 FEATURES 只读 `public/index.html`，即**只证明前端同版**。
+ *   而 v10.33~v10.38 六轮的改动**全在 `data/**` 与 `tools/**`**，index.html 一个字节没动。
+ *   2026-09-23 实测（就是加这一节的原因）：
+ *     LIVE 的 index.html md5 = 本地 md5（9ae5854778）⇒ 旧判据判「✅ 已是最新」
+ *     而 LIVE 的 `/api/spec/dict` 返回 `archRule: undefined`，本地有
+ *     ⇒ 线上实际仍停在 v10.35 之前。**旧判据在本轮是假绿**，而它长得跟真绿一模一样。
+ *   ⇒ 判「线上是不是最新」必须**前端 + 服务端两条判据都过**，缺一条就降级为 ⚠️。
+ *
+ * 用法：新增服务端口径时往 SERVER_FEATURES 顶部加一条（`srcRe` 对着本地源码，
+ *       `apiTest` 对着线上接口返回的 JSON）。两边都不对 ⇒ 报「判据失效」，绝不静默放行。
+ */
+const SERVER_FEATURES = [
+  {
+    key: 'archRule',
+    api: '/api/spec/dict',
+    name: '服务端口径指纹 dictInfo().archRule',
+    since: 'v10.35',
+    srcRe: /archRule/,                                  // 本地源码里应当有
+    apiTest: (j) => !!(j && j.archRule && typeof j.archRule === 'object'),  // 线上接口应当返回它
+  },
+];
+
+/* ★ 必须先剥注释再匹配 srcRe：`archRule` 在 spec-match.js 的注释里也出现过（第 173 行那类
+   「这两个 state 是唯一来源…」的说明），直接 grep 原文会被注释撑成假绿 —— 与 v10.38
+   在 test-daily-sync.js 里踩到的 `ok(/bySource/)` 是同一个坑。 */
+const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+const SPEC_SRC = (() => {
+  try { return stripComments(fs.readFileSync(path.join(ROOT, 'data/spec-match.js'), 'utf8')); } catch (e) { return ''; }
+})();
+
+/**
+ * 判定线上服务端与本地是否同版。纯函数（输入 = 探针结果 + 本地源码），可单测。
+ * @returns {{ver:string, missing:Array, ok:boolean}}
+ */
+function serverVersionLabel(probe, localSrc) {
+  /* ① 先查判据自身是否还有效：本地源码里找不到指纹 ⇒ 判据失效，别拿它下结论 */
+  const lost = SERVER_FEATURES.filter((f) => !f.srcRe.test(localSrc || ''));
+  if (lost.length) {
+    return { ver: '本地源码里找不到 `' + lost[0].key + '` ⇒ 判据失效（先去修 report.js）', missing: [], ok: false };
+  }
+  /* ② 接口没拿到 ⇒ 同样不下结论 */
+  if (!probe || !probe.ok) {
+    return { ver: '服务端口径取不到（' + ((probe && (probe.err || 'HTTP ' + probe.http)) || '未探测') + '）', missing: [], ok: false };
+  }
+  /* ③ 本地有、线上没有 ⇒ 线上服务端旧 */
+  const missing = SERVER_FEATURES.filter((f) => !probe.has[f.key]);
+  if (missing.length) {
+    return { ver: '服务端旧于本地（线上尚未发布 ' + missing[missing.length - 1].since + '）', missing, ok: false };
+  }
+  return { ver: '与本地一致', missing: [], ok: true };
+}
+
+/** 服务端指纹那一行的正文（抽成纯函数 ⇒ 可行为级测：给了 ✗ 就不许渲染成 ✓） */
+function serverFpRow(probe) {
+  return SERVER_FEATURES.map((f) => f.key + ((probe && probe.has && probe.has[f.key]) ? ' ✓' : ' ✗（本地有）')).join(' · ');
+}
+
+/** 拉线上服务端指纹接口；只读，不写任何东西 */
+async function probeServer(base) {
+  const out = { ok: false, http: null, has: {}, err: null, json: null, api: SERVER_FEATURES[0].api };
+  try {
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), 20000);
+    const r = await fetch(base + out.api + '?cb=' + Date.now(), {
+      headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+      signal: c.signal,
+    });
+    const txt = await r.text();
+    clearTimeout(t);
+    out.http = r.status;
+    let j = null;
+    try { j = JSON.parse(txt); } catch (e) { j = null; }
+    out.json = j;
+    out.ok = r.ok && !!j;
+    for (const f of SERVER_FEATURES) out.has[f.key] = !!f.apiTest(j);
+  } catch (e) {
+    out.err = e.message.slice(0, 70);
+  }
+  return out;
+}
+
 async function probeLink(url, localMd5, localTxt) {
   const base = url.replace(/\/$/, '');
   const out = { url, http: null, md5: null, same: false, ver: '?', detail: '', err: null };
@@ -240,7 +323,11 @@ function changelog() {
 }
 
 /* ============ 主流程 ============ */
-(async () => {
+/* ★ v10.38 补：改成命名函数 + `require.main` 守卫 + `module.exports` ——
+   否则判据（serverVersionLabel 这类纯函数）只能靠「正文里出现过某字符串」来守，
+   正是 v10.38 刚踩过的坑：断言只查符号出现过，被别处同名字符串撑成假绿。
+   注意：**require 本文件不许有副作用**（否则套件一 require 就真跑一遍联网汇报）。 */
+async function main() {
   const L = [];
   const p = (s) => L.push(s);
 
@@ -276,11 +363,21 @@ function changelog() {
     p('（--no-net，跳过联网探测）');
   } else {
     const live = await probeLink(LINKS.LIVE, localMd5, idxLocal);
+    /* ★ v10.38 补：前端同版 ≠ 已是最新。必须再验服务端/data 层的口径指纹。 */
+    const srv = await probeServer(LINKS.LIVE.replace(/\/$/, ''));
+    const sv = serverVersionLabel(srv, SPEC_SRC);
+    let verdict;
+    if (live.err) verdict = '⚠️ 前端探测失败：' + live.err;
+    else if (!live.same) verdict = '⚠️ ' + live.ver + (live.detail ? ' · ' + live.detail : '');
+    else if (sv.ok) verdict = '✅ 前端 md5 与服务端口径指纹均与本地一致 = 已是最新';
+    else verdict = '⚠️ 前端同版，但 ' + sv.ver + ' ⇒ **不能判为已是最新**';
     p('| 项 | 实测 |');
     p('|---|---|');
     p('| HTTP | ' + (live.http || live.err) + ' |');
     p('| index.html md5 | ' + (live.md5 || '—') + '（本地 ' + localMd5 + '） |');
-    p('| 判定 | ' + (live.same ? '✅ 与本地逐字节一致 = 已是最新' : '⚠️ ' + live.ver + (live.detail ? ' · ' + live.detail : '')) + ' |');
+    p('| 服务端 ' + srv.api + ' | ' +
+      (srv.err ? srv.err : 'HTTP ' + srv.http + ' · ' + serverFpRow(srv)) + ' |');
+    p('| 判定 | ' + verdict + ' |');
     for (const d of LINKS.DEPRECATED) {
       const x = await probeLink(d.url, localMd5, idxLocal);
       p('| 弃用：' + d.url.replace('https://', '').replace(/\/$/, '') + ' | ' + (x.err ? x.err : 'HTTP ' + x.http + ' · ' + (x.same ? '⚠️ 内容竟与最新一致，但仍不用' : '旧版（符合预期）')) + ' |');
@@ -321,4 +418,8 @@ function changelog() {
   const text = L.join('\n');
   if (MD_ONLY) console.log(text);
   else { console.log('\n' + text + '\n'); }
-})();
+}
+
+if (require.main === module) main();
+
+module.exports = { FEATURES, SERVER_FEATURES, md5, stripComments, versionLabel, serverVersionLabel, serverFpRow, probeServer, main };

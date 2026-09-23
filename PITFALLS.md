@@ -887,6 +887,45 @@ v10.30 时误取 `HEAD~1`（= 自己）⇒ 六个候选串全判「不可用」�
 
 ---
 
+## 十四、每日任务收口（v10.38）—— 四条工程教训
+
+### 1. ★★ 只读模式（`--dry` 类）必须「声明式单点拦截」；内层手写 `if` 必漏且**不报错**
+
+`daily-sync.js` 第一版把 `if (ctx.dry)` 写在每一步的内层（10 步里只写了 4 步），结果
+一次 `--dry` 跑完 **XD / BannerHub / 机地三步全真跑了**（`lastIncrAt` 变成「刚刚」），
+而**没有任何报错**：退出码 0、摘要里那三行还写着「已完成」。是事后比对跑前跑后的
+时间戳（`lastIncrAt` / `lastSyncAt` / `bh.startedAt`）才发现的。
+⇒ 改成 `STEP_DEFS[].write` 声明式标注 + `planStep()` **一处**拦截；并且补一条计数断言
+「read + write 必须覆盖全部步骤」—— 今后新加步骤漏标 `write: true` 会被立刻抓住。
+
+### 2. ★★ 断言别只查「符号出现过」—— 别处同名符号会把它撑成假绿
+
+`ok(/bySource/.test(SRC))` 本意是守「分源条数从 `bySource` 取」，但 `stepJidi` 里有
+同名字符串，于是它**恒真**：把取值改回顶层（线上实测会渲染成 `?`）它照样绿。
+⇒ 三管齐下：抽 `sourceCounts()` 纯函数、用**真实返回形状**做行为断言、
+静态检查收窄到 `lib.bySource`。改完这条被 4 条断言同时抓住。
+★ 这一条是**反证**抓出来的（16 条变异里唯一没抓住的那条），不是自己看出来的。
+
+### 3. ★★ 判「层级」的取值要拿真实返回形状自检，不能脑补
+
+分源条数在 `bySource` 下，**顶层没有** `xdgamer`/`jidi` 键 —— 写错不报错、不崩，
+只是把摘要渲染成 `xdgamer ?`。同理 `idxState.jidi.total` 是 `upsert()` 返回的
+**全库总量**（19051），不是 jidi 源条数（3625），直接展示就是误导数字。
+
+### 4. ★★ 「index.html md5 一致 ⇒ 已是最新」是**单判据假绿**（2026-09-23 实测）
+
+v10.33~v10.38 六轮改动**全在 `data/**` 与 `tools/**`**，`public/index.html` 一字未动。
+于是 `report.js` 第②项拿 md5 一比、全绿，打印「✅ 已是最新」—— 而实测 LIVE 的
+`/api/spec/dict` 返回 `archRule: undefined`（本地有）⇒ 线上实际**仍停在 v10.35 之前**。
+⇒ `report.js` 改为**前端 + 服务端两条判据都过**才算「已是最新」：
+服务端指纹走 `SERVER_FEATURES`（`srcRe` 对本地源码、`apiTest` 对线上 JSON）；
+**任一侧取不到就降级 ⚠️**，且「本地源码里找不到该指纹」要显式报**判据失效**
+（否则文件一改名，判据永远绿）。
+★ 附带一条：匹配 `srcRe` 前要先**剥注释** —— `archRule` 在 `spec-match.js` 的注释里也出现过。
+★ 这条假绿已补 14 条断言 + 8 条反证变异（`tools/_counterproof-v1038b.js`，8/8 抓住）。
+
+---
+
 ## 附：已沉淀 skills（勿在本文件重复）
 
 `ui-ab-visual-regression` · `jsdom-ui-behavior-test` · `device-model-to-chip-translation` ·
