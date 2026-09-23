@@ -252,6 +252,14 @@
     "count": 2
   },
   {
+    "name": "Anno_1404_-_History_Edition",
+    "count": 1
+  },
+  {
+    "name": "Anomaly_Agent",
+    "count": 1
+  },
+  {
     "name": "Anomaly_President",
     "count": 1
   },
@@ -361,7 +369,7 @@
   },
   {
     "name": "Assassin_s_Creed__Liberation_HD",
-    "count": 8
+    "count": 9
   },
   {
     "name": "Assassin_s_Creed__Odyssey",
@@ -429,7 +437,7 @@
   },
   {
     "name": "Atla",
-    "count": 7
+    "count": 8
   },
   {
     "name": "AtomRPG",
@@ -450,6 +458,10 @@
   {
     "name": "Attack_on_Titan_2_-_A_O_T_2",
     "count": 10
+  },
+  {
+    "name": "Attack_on_Titan___A_O_T__Wings_of_Freedom",
+    "count": 1
   },
   {
     "name": "AutoPlay_Menu_Builder",
@@ -729,11 +741,11 @@
   },
   {
     "name": "BlackOps",
-    "count": 30
+    "count": 31
   },
   {
     "name": "BlackOpsMP",
-    "count": 1
+    "count": 2
   },
   {
     "name": "BlackOps_1_PLUTONIUM",
@@ -1053,6 +1065,10 @@
   },
   {
     "name": "Call_of_Duty___Advanced_Warfare_-_Gold_Edition",
+    "count": 1
+  },
+  {
+    "name": "Call_of_Duty___Black_Ops",
     "count": 1
   },
   {
@@ -1525,7 +1541,7 @@
   },
   {
     "name": "DARK_SOULS__II",
-    "count": 14
+    "count": 16
   },
   {
     "name": "DARK_SOULS__III",
@@ -1985,7 +2001,7 @@
   },
   {
     "name": "Diablo_II",
-    "count": 6
+    "count": 7
   },
   {
     "name": "Dig2",
@@ -2413,7 +2429,7 @@
   },
   {
     "name": "Euro_Truck_Simulator_2",
-    "count": 225
+    "count": 227
   },
   {
     "name": "Euro_Truck_Simulator_2_Demo",
@@ -2829,6 +2845,10 @@
   },
   {
     "name": "Farewell_North",
+    "count": 1
+  },
+  {
+    "name": "FarmingSimulator2015Game",
     "count": 1
   },
   {
@@ -3284,6 +3304,10 @@
     "count": 2
   },
   {
+    "name": "Game-Setup-Installer-1_0_0",
+    "count": 1
+  },
+  {
     "name": "GameApp",
     "count": 1
   },
@@ -3393,7 +3417,7 @@
   },
   {
     "name": "God_of_War",
-    "count": 143
+    "count": 145
   },
   {
     "name": "God_of_War_1_de_ps2_",
@@ -3537,7 +3561,7 @@
   },
   {
     "name": "Grand_Theft_Auto_V",
-    "count": 71
+    "count": 74
   },
   {
     "name": "Grand_Theft_Auto_V_",
@@ -3553,7 +3577,7 @@
   },
   {
     "name": "Grand_Theft_Auto_V_Legacy",
-    "count": 1320
+    "count": 1341
   },
   {
     "name": "Grand_Theft_Auto_V_Legacy22",
@@ -3889,7 +3913,7 @@
   },
   {
     "name": "Hollow_Knight",
-    "count": 25
+    "count": 26
   },
   {
     "name": "Hollow_Knight_Silksong",
@@ -4029,7 +4053,7 @@
   },
   {
     "name": "IGI",
-    "count": 3
+    "count": 4
   },
   {
     "name": "INAZUMA_ELEVEN__Victory_Road",
@@ -4513,7 +4537,7 @@
   },
   {
     "name": "Left_4_Dead_2",
-    "count": 56
+    "count": 57
   },
   {
     "name": "Left_4_Dead_MULTi26_-_ElAmigos______________________________",
@@ -5288,6 +5312,10 @@
     "count": 4
   },
   {
+    "name": "Monster_Sanctuary",
+    "count": 1
+  },
+  {
     "name": "Monster_Train_2",
     "count": 1
   },
@@ -5385,7 +5413,7 @@
   },
   {
     "name": "MotoGP_25",
-    "count": 2
+    "count": 3
   },
   {
     "name": "MotoGP_26",
@@ -5469,7 +5497,7 @@
   },
   {
     "name": "NARUTO_SHIPPUDEN__Ultimate_Ninja_STORM_2",
-    "count": 26
+    "count": 27
   },
   {
     "name": "NARUTO_SHIPPUDEN__Ultimate_Ninja_STORM_4",
@@ -6133,7 +6161,7 @@
   },
   {
     "name": "PES_2013",
-    "count": 25
+    "count": 26
   },
   {
     "name": "PES_2013_Fix",
@@ -6221,7 +6249,7 @@
   },
   {
     "name": "PRO_EVOLUTION_SOCCER_2018",
-    "count": 30
+    "count": 31
   },
   {
     "name": "PRO_EVO_17",
@@ -6385,7 +6413,7 @@
   },
   {
     "name": "PlayGTAV",
-    "count": 103
+    "count": 104
   },
   {
     "name": "PlayGTAVOptiJuegos7Z",
@@ -6549,7 +6577,11 @@
   },
   {
     "name": "Pro_Evolution_Soccer_2011",
-    "count": 13
+    "count": 15
+  },
+  {
+    "name": "Pro_Evolution_Soccer_2011_Settings_",
+    "count": 1
   },
   {
     "name": "Pro_Evolution_Soccer_2012",
@@ -6565,7 +6597,7 @@
   },
   {
     "name": "Pro_Evolution_Soccer_2013",
-    "count": 2829
+    "count": 2848
   },
   {
     "name": "Pro_Evolution_Soccer_20132",
@@ -6721,11 +6753,11 @@
   },
   {
     "name": "Prototype_",
-    "count": 32
+    "count": 33
   },
   {
     "name": "Prototype_2",
-    "count": 25
+    "count": 28
   },
   {
     "name": "Prototype___________________________________________________",
@@ -6869,7 +6901,7 @@
   },
   {
     "name": "Raft",
-    "count": 6
+    "count": 7
   },
   {
     "name": "Rage_Tool_Kit",
@@ -6897,6 +6929,10 @@
   },
   {
     "name": "Ratchet___Clank__Rift_Apart",
+    "count": 1
+  },
+  {
+    "name": "Ravenfield",
     "count": 1
   },
   {
@@ -7681,7 +7717,7 @@
   },
   {
     "name": "Sleeping_Dogs",
-    "count": 63
+    "count": 64
   },
   {
     "name": "Sleeping_Dogs_",
@@ -7697,7 +7733,7 @@
   },
   {
     "name": "Sleeping_Dogs__Definitive_Edition",
-    "count": 8
+    "count": 9
   },
   {
     "name": "Slendytubbies_0",
@@ -8713,7 +8749,7 @@
   },
   {
     "name": "Tomb_Raider",
-    "count": 134
+    "count": 138
   },
   {
     "name": "Tomb_Raider_-_Definitive_Edition",
@@ -9449,7 +9485,7 @@
   },
   {
     "name": "Yet_Another_Zombie_Survivors",
-    "count": 2
+    "count": 5
   },
   {
     "name": "You_Will_Die_Here_Tonight",
@@ -9528,6 +9564,10 @@
     "count": 1
   },
   {
+    "name": "_Rise_of_Eros_",
+    "count": 1
+  },
+  {
     "name": "_Stronghold_2",
     "count": 1
   },
@@ -9569,7 +9609,7 @@
   },
   {
     "name": "____2016",
-    "count": 42
+    "count": 43
   },
   {
     "name": "____33____",
@@ -9773,6 +9813,10 @@
   },
   {
     "name": "bla",
+    "count": 1
+  },
+  {
+    "name": "bssh",
     "count": 1
   },
   {
@@ -10589,7 +10633,7 @@
   },
   {
     "name": "unins000",
-    "count": 45
+    "count": 47
   },
   {
     "name": "unins003",
