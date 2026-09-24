@@ -163,6 +163,49 @@ function readProduct(name) {
   }
 }
 
+/**
+ * 读「配置要求预热」的进度产物（`_prewarm-progress.json`，在项目根、不在 data/）。
+ * ★ 读产物而不是解析 stdout —— 该脚本每 200 条打一次进度日志，
+ *   从文本里抠「命中几条」既脆，又容易把中间态当成最终态。
+ */
+function readPrewarm() {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(ROOT, '_prewarm-progress.json'), 'utf8'));
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * 预热增量步骤的摘要文案（纯函数，供单测直接喂形状）。
+ * @param {{stats:object}|null} before 跑之前的 spec-req 产物
+ * @param {{stats:object}|null} after  跑之后的 spec-req 产物
+ * @param {object|null} prog            build-steam-req.js 的 progress 产物
+ * @param {number} limit                本步上限（用于判断「是否还有积压」）
+ * ★ 未收录 / 失败**必须如实显示**：它们不写负缓存 ⇒ 次日还会再试；
+ *   不报出来就等于把「今天没抓到的」藏掉了。
+ */
+function fmtSteamreq(before, after, prog, limit) {
+  const b = (before && before.stats) || {};
+  const a = (after && after.stats) || {};
+  const parts = [];
+  if (prog) {
+    parts.push('本次 ' + (prog.done || 0) + '/' + (prog.total || 0));
+    parts.push('命中 ' + (prog.ok || 0));
+    if (prog.miss) parts.push('未收录 ' + prog.miss);
+    if (prog.err) parts.push('失败 ' + prog.err);
+    if (prog.throttled) parts.push('限流 ' + prog.throttled);
+  }
+  if (b.total != null && a.total != null) {
+    const d = a.total - b.total;
+    parts.push('对照库 ' + b.total + ' → ' + a.total + (d > 0 ? '（+' + d + '）' : ''));
+  }
+  if (a.withDx != null) parts.push('★DX ' + a.withDx);
+  /* 待抓数顶到上限 ⇒ 还有积压，次日继续。说清楚，免得看着像「已经追平」 */
+  if (prog && limit && Number(prog.total) >= limit) parts.push('仍有积压，次日续补');
+  return parts.join(' · ');
+}
+
 /** 本地时间戳，形如 2026-09-23 10:45:12 (周三)。 */
 function stamp() {
   const d = new Date();
@@ -452,6 +495,55 @@ async function stepJidi(ctx) {
   };
 }
 
+/** 9) 配置要求预热增量（Steam 联网）+ 重建派生索引。
+ *
+ *  ★ 这是 daily-sync 里**唯一联网且慢**的一步（实测 1.08s/条 ⇒ 500 条约 9 分钟）。
+ *  为什么必须接进来：`data/steam-req.json` 的缓存是 v10.37 **一次性**预热的结果
+ *  （17,329 条 / 9h36m）。而端游库每天在长（09-24 已 19,074），
+ *  不接增量 ⇒ ① 新增游戏的详情页要等实时抓 ② 解包匹配的对照库停在旧规模。
+ *  实测 09-24 已积压 **925 条**待补（跑 60 条抽样：命中 60 / 未收录 0 / 失败 0
+ *  ⇒ 待补的是**真·新增**，不是每天必然失败的废条目，所以补了就是净收益）。
+ *
+ *  ★ 两个环节缺一不可 —— **换数据后派生索引必须重建**，否则预热等于白跑：
+ *    ① `build-steam-req.js --limit=N` 补缓存（自带断点续跑：已有缓存直接跳过，
+ *       且落盘前合并服务端新增，不与在跑的服务互相覆盖）
+ *    ② `build-spec-req.js` 把缓存合成 `spec-req.json`（纯本地 join，实测 1.3s）
+ *
+ *  ★ 上限 500 条：积压更多时次日继续滚动补，不让每日任务变成小时级。
+ *  实测口径：60 条 / 65 秒；索引重建 1.3s（17,177 款）。
+ */
+async function stepSteamreq(ctx) {
+  const LIMIT = 500;
+  const before = readProduct('spec-req');
+
+  const r1 = await runProc(process.execPath,
+    [path.join('tools', 'build-steam-req.js'), '--limit=' + LIMIT],
+    { timeoutMs: ctx.t.steamreq });
+
+  /* ★ ② **不论预热成败都要重建索引**：预热是分批落盘的，被超时杀掉时盘上
+     已经多了若干条 —— 不重建就等于把抓到的那部分白扔了。 */
+  const r2 = await runProc(process.execPath, [path.join('tools', 'build-spec-req.js')],
+    { timeoutMs: ctx.t.script });
+  if (!r2.ok) {
+    return {
+      status: 'fail',
+      detail: '派生索引重建失败 EXIT ' + r2.code + '：' + String(r2.stderr || r2.stdout).trim().slice(0, 110),
+    };
+  }
+
+  const detail = fmtSteamreq(before, readProduct('spec-req'), readPrewarm(), LIMIT);
+  /* 超时 / 非零退出都判 fail，但**不等于数据坏了** —— 盘上已落的部分是好的，
+     次日续跑即可。这里不静默降级：失败就该在摘要里看得见。 */
+  if (r1.code == null) {
+    return { status: 'fail', detail: '预热超时（' + Math.round(ctx.t.steamreq / 60000) + ' 分钟）· ' + detail };
+  }
+  if (!r1.ok) {
+    return { status: 'fail', detail: '预热退出 ' + r1.code + '：' +
+      String(r1.stderr || r1.stdout).trim().slice(0, 90) + ' · ' + detail };
+  }
+  return { status: 'ok', detail };
+}
+
 /* ============================ 主流程 ============================ */
 
 /**
@@ -469,11 +561,16 @@ const STEP_DEFS = [
   { key: 'trainers', label: '修改器', fn: stepTrainers, write: true },
   { key: 'saves', label: '云存档', fn: stepSaves, write: true },
   { key: 'jidi', label: '机地同步', fn: stepJidi, write: true },
+  /* ★ v10.39 新增：接上「配置要求」的每日增量（ROADMAP 1-B）。
+     放在**最后**：它依赖 8 步跑完后的最新端游库（新入库的游戏才有 appid 可抓）。 */
+  { key: 'steamreq', label: '配置要求预热', fn: stepSteamreq, write: true },
 ];
 
 function parseArgs(argv) {
   const skip = new Set();
-  const t = { xd: 600000, bh: 720000, jidi: 300000, script: 180000, net: 420000 };
+  /* ★ steamreq 单独给 25 分钟：实测 1.08s/条 × 上限 500 条 ≈ 9 分钟，
+     留足余量应对限流退避（v10.37 全量期间触发过 144 次）。 */
+  const t = { xd: 600000, bh: 720000, jidi: 300000, script: 180000, net: 420000, steamreq: 1500000 };
   for (const a of argv) {
     if (a.startsWith('--skip=')) {
       for (const k of a.slice(7).split(',')) if (k.trim()) skip.add(k.trim());
@@ -580,6 +677,6 @@ if (require.main === module) {
 
 module.exports = {
   isTaskDone, dispWidth, padLabel, fmtDelta, decideStatus, tally, planStep, sourceCounts,
-  buildSummary, readProduct, stamp, shortTime, fmtMs,
+  buildSummary, readProduct, readPrewarm, fmtSteamreq, stamp, shortTime, fmtMs,
   STEP_DEFS, parseArgs,
 };

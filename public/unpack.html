@@ -1818,6 +1818,10 @@
   .up-ch.ok{background:#EDF7F0;color:#15803D}
   .up-ch.fail{background:#FDECEC;color:#B91C1C}
   .up-ch.unknown,.up-ch.uj{background:#FFF8E6;color:#8A6100}
+  /* ★ v10.39：「游戏侧未声明」—— 与 uj（我方配置未判定）分开配色，否则用户
+     分不清该去补配置还是该降低对结论的信任。紫色在本页未被任何状态占用。
+     样式基线沿用既有 .up-ch 家族（同字号 / 同圆角 / 同内距），只换色。 */
+  .up-ch.us{background:#F2EFFB;color:#6D28D9}
   .up-min{font-size:11px;color:var(--c-t3);line-height:1.55;word-break:break-word}
   .up-why{font-size:11px;color:#B91C1C;line-height:1.55;background:#FEF6F6;border-radius:6px;padding:5px 8px}
   .up-foot{padding-top:11px;margin-top:4px;border-top:1px solid var(--c-border);font-size:11px;color:var(--c-t3);line-height:1.7}
@@ -5951,6 +5955,17 @@ init();
       '<span class="up-ch ' + d.state + '" title="' + esc(d.note) + '">' + DIM_NAME[d.dim] + ' ' + DIM_STATE[d.state] + '</span>').join('');
     const uj = (it.unjudged || []).length
       ? '<span class="up-ch uj" title="配置里没有这项，无法判定">未判定：' + it.unjudged.map((d) => DIM_NAME[d] || d).join('、') + '</span>' : '';
+    /* ★ v10.39：**游戏侧未声明的维度必须可见**（口径见 data/spec-match.js 的 judge）。
+       病根：`skip` 既表示「配置未涉及」也表示「游戏没标」，而上面 chips 把所有 skip
+       一并过滤掉 ⇒ 用户看到「流畅」，却看不出这个结论**没有图形接口依据**。
+       实测全库 **6,585 款（38.5%）** 属此类（spec/dict 的 withDx 10,535 / 17,120）。
+       ★ 与 uj 分开是刻意的：uj = 我方配置缺信息，us = 游戏数据没标注 ——
+       责任侧不同，文案就不能一样，否则用户不知道该去补哪一边。 */
+    const basisTxt = (it.basis || []).length
+      ? ' —— 本款结论由' + it.basis.map((d) => DIM_NAME[d] || d).join('、') + '判定' : '';
+    const us = (it.unstated || []).length
+      ? '<span class="up-ch us" title="' + esc('游戏未标注：' + it.unstated.map((d) => DIM_NAME[d] || d).join('、') + basisTxt) + '">'
+        + '未声明：' + it.unstated.map((d) => DIM_NAME[d] || d).join('、') + '</span>' : '';
     const min = [];
     if (it.min.ram) min.push('内存 ' + it.min.ram);
     if (it.min.storage) min.push('空间 ' + it.min.storage);
@@ -5993,7 +6008,7 @@ init();
           ? '<div class="alt" title="' + esc(it.nameEn) + '">' + esc(it.nameEn) + '</div>' : '') +
         '<div class="meta">' + pills + '</div>' +
         '<div class="tgs">' + tags.join('') + '</div>' +
-        '<div class="up-chips">' + chips + uj + '</div>' +
+        '<div class="up-chips">' + chips + us + uj + '</div>' +
         '<div class="up-min">最低：' + esc(min.join(' · ') || '未标注') + '</div>' +
         (it.dims.some((d) => d.state === 'fail')
           ? '<div class="up-why">' + esc(it.dims.filter((d) => d.state === 'fail').map((d) => d.note).join('；')) + '</div>' : '') +
@@ -6029,6 +6044,11 @@ init();
           '<div class="up-dim"><b>' + esc(x.label) + '</b><span>' + esc(x.why) + '</span></div>').join('') + '</div>' +
         '<div class="up-dict-n">兼容层 → 图形接口能力：' + d.layers.map((l) => esc(l.note)).join('；') + '。<br>' +
         '能在 ARM 上执行 x86 指令的转译层：' + d.translators.map(esc).join(' / ') + '。<br>' +
+        /* ★ v10.39：新口径必须自述在这里 —— 否则用户在卡片上看到「未声明：图形接口」
+           会以为是渲染 bug。规则同 data/spec-match.js 的 judge：游戏没标某项（如 DX），
+           该维度不参与判定，结论按其余维度推定，**不因此翻成「待确认」**。 */
+        '游戏没标某项（如 DirectX 要求）时，该维度<b>不参与判定</b>：卡片会挂「未声明：图形接口」提醒，' +
+        '本款结论按其余维度推定，<b>不因此翻成「待确认」</b>。<br>' +
         srcLine + '</div>' +
         '</div>';
     } catch (e) { /* 判定依据是锦上添花，拿不到不影响主流程 */ }

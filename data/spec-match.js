@@ -136,7 +136,11 @@ function dxCap(profile) {
 }
 
 function cmpDx(profile, spec) {
-  if (!spec || spec.dx == null) return { dim: 'dx', state: 'skip', note: '游戏未标注 DirectX 要求' };
+  /* ★ v10.39：`side: 'game'` 标明「缺的是哪一侧的信息」——
+     这个维度是**游戏数据没标注**，不是我方配置没识别到。
+     judge 靠它把 skip 分成 unstated（游戏侧）/ 其余（配置侧），
+     前端文案才不会把「我方没写架构」误报成「游戏没声明架构」。 */
+  if (!spec || spec.dx == null) return { dim: 'dx', state: 'skip', side: 'game', note: '游戏未标注 DirectX 要求' };
   const cap = dxCap(profile);
   if (!cap) return { dim: 'dx', state: 'unknown', note: '配置里没有能推断 DirectX 能力的兼容层（如 DXVK / VKD3D）' };
   const ok = cap.max >= spec.dx;
@@ -192,7 +196,9 @@ function cmpArch(profile, spec) {
     if (armish) {
       return { dim: 'arch', state: 'unknown', note: '出现 ' + armish + '（仅 ARM 生态），但没标指令集架构 —— 需补 arch 才能判断能否执行 x86 程序' };
     }
-    return { dim: 'arch', state: 'skip', note: '配置未涉及指令集架构（按无关维度跳过）' };
+    /* side:'profile' —— 缺的是**我方配置**（PC 配置本来就不写指令集），
+       与 cmpDx / cmpNum 的 side:'game' 相对 ⇒ 不会被算进 unstated。 */
+    return { dim: 'arch', state: 'skip', side: 'profile', note: '配置未涉及指令集架构（按无关维度跳过）' };
   }
   const isArm = /arm|aarch64/.test(a);
   if (!isArm) {
@@ -218,7 +224,8 @@ function cmpArch(profile, spec) {
  *                                 清单看着很长其实没信息量。
  *     got == null  → 'unknown' —— 我方配置里没识别到这项，是真的缺信息。 */
 function cmpNum(dim, got, req, unit) {
-  if (req == null) return { dim, state: 'skip', note: '游戏未标注该项要求' };
+  /* side:'game' —— 同 cmpDx：`req == null` 缺的是**游戏数据**，不是我方配置 */
+  if (req == null) return { dim, state: 'skip', side: 'game', note: '游戏未标注该项要求' };
   if (got == null) return { dim, state: 'unknown', note: '配置里未识别到该项' };
   const r = Math.round((got - req) * 100) / 100;
   return {
@@ -247,6 +254,30 @@ function judge(profile, spec) {
      而不是含糊地降级成「待确认」——后者会让整张清单看着很长却没结论。 */
   const unjudged = unknowns.map((d) => d.dim);
   const keyUnknown = unknowns.filter((d) => KEY_DIMS.indexOf(d.dim) >= 0).map((d) => d.dim);
+  /* ★★ v10.39 口径（用户 2026-09-23 批准方案 ⓐ）：**「游戏侧未声明某项」必须可见**。
+   *
+   *  病根：`skip` 一个状态背了两种语义 ——
+   *    · 配置未涉及（arch 没标：PC 配置本来就不写指令集）
+   *    · 游戏未标注（dx / ram / storage 没标）
+   *  而前端 `chips` 把所有 `skip` 一并过滤掉，于是用户看到「流畅」，
+   *  却**看不出这个结论没有图形接口依据**。它不报错、不崩，只是悄悄少了一个依据。
+   *
+   *  实测规模：`/api/spec/dict` 的 `withDx 10,535 / total 17,120`
+   *  ⇒ **6,585 款（38.5%）** 的结论属此类（此前该数字被误记为「预热自动纠 57 条」）。
+   *
+   *  与 `unjudged` **刻意分开**，因为缺的是不同一侧的信息：
+   *    · unjudged（unknown）= 我方配置里没识别到 ⇒ 该去补配置
+   *    · unstated（skip 且 side:'game'）= 游戏数据里没标注 ⇒ 该如实降确定性
+   *  ★ 过滤**必须带 `side === 'game'`**，不能只看 `state === 'skip'`：
+   *    同一个 skip 状态也用于「配置没标架构」（side:'profile'）。
+   *    只看 state 会把「我方没写架构」误报成「游戏没声明架构」——本版实测踩到过一次。
+   *  `basis` = 真正参与了判定的维度，用于把「这条结论是按什么推出来的」说清楚。
+   *
+   *  ★ 两者都**不改 verdict** —— 沿用文件既有的 `req == null → skip`（没标就一律不降级）口径，
+   *    本次只把依据摊开给用户看，不翻转任何一条结论。
+   *  判据见 tools/test-v1039.js；反证见 tools/_counterproof-v1039.js。 */
+  const unstated = dims.filter((d) => d.state === 'skip' && d.side === 'game').map((d) => d.dim);
+  const basis = oks.map((d) => d.dim);
 
   let verdict;
   if (fails.length) verdict = 'no';
@@ -270,7 +301,7 @@ function judge(profile, spec) {
     const ramM = profile.ram && profile.ram.gb && spec.ramGb ? profile.ram.gb / spec.ramGb : 0;
     verdict = ramM >= 2 ? 'smooth' : 'ok';
   }
-  return { verdict, dims, unjudged, keyUnknown, reasons: dims.filter((d) => d.state !== 'skip') };
+  return { verdict, dims, unjudged, unstated, basis, keyUnknown, reasons: dims.filter((d) => d.state !== 'skip') };
 }
 
 const ORDER = { smooth: 0, ok: 1, maybe: 2, unknown: 3, no: 4 };
@@ -304,6 +335,9 @@ function analyze(profile, opts = {}) {
       abbr: abbrOf(g.name),
       dims: j.dims,
       unjudged: j.unjudged,
+      /* ★ v10.39：游戏侧未声明的维度 + 真正参与判定的维度（前端要把依据摊开） */
+      unstated: j.unstated,
+      basis: j.basis,
       /* ★ 展示用：把数值拼成人读串，并保留数值给前端算「够不够」 */
       min: {
         ram: g.min.ramGb != null ? g.min.ramGb + ' GB' : null,
@@ -365,6 +399,10 @@ function analyze(profile, opts = {}) {
       playable: filtered.filter((r) => r.verdict === 'smooth' || r.verdict === 'ok').length,
       hot: filtered.filter((r) => (r.hot || 0) > 0).length,
       dist, distLabel: Object.keys(dist).reduce((a, k) => (a[LABEL[k] || k] = dist[k], a), {}),
+      /* ★ v10.39：**结论依据强度** —— 各维度「游戏侧未声明」的条数（与 dist 同口径）。
+         不看这个数，就没法回答「这批『流畅』里有多少条其实没有图形接口依据」。
+         实测口径对照：`spec/dict` 的 withDx 10,535 / 17,120 ⇒ 此处 dx 应约 6,585。 */
+      unstated: filtered.reduce((a, r) => { for (const d of r.unstated) a[d] = (a[d] || 0) + 1; return a; }, {}),
       /* ★ 如实报出依据：不再是「Steam 官方 653 款」，而是两源合并后的真实口径 */
       source: (ix.stats && ix.stats.bySource)
         ? ('机地 ' + (ix.stats.jidiCandidates || 0) + ' 条 + Steam 官方 ' + (ix.stats.steamCandidates || 0) + ' 条，按 appid 合并为 ' + ix.built + ' 款')

@@ -217,6 +217,10 @@ const CSS_EXTRA = `
   .up-ch.ok{background:#EDF7F0;color:#15803D}
   .up-ch.fail{background:#FDECEC;color:#B91C1C}
   .up-ch.unknown,.up-ch.uj{background:#FFF8E6;color:#8A6100}
+  /* ★ v10.39：「游戏侧未声明」—— 与 uj（我方配置未判定）分开配色，否则用户
+     分不清该去补配置还是该降低对结论的信任。紫色在本页未被任何状态占用。
+     样式基线沿用既有 .up-ch 家族（同字号 / 同圆角 / 同内距），只换色。 */
+  .up-ch.us{background:#F2EFFB;color:#6D28D9}
   .up-min{font-size:11px;color:var(--c-t3);line-height:1.55;word-break:break-word}
   .up-why{font-size:11px;color:#B91C1C;line-height:1.55;background:#FEF6F6;border-radius:6px;padding:5px 8px}
   .up-foot{padding-top:11px;margin-top:4px;border-top:1px solid var(--c-border);font-size:11px;color:var(--c-t3);line-height:1.7}
