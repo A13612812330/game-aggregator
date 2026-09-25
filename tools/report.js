@@ -230,11 +230,17 @@ async function probeLink(url, localMd5, localTxt) {
 /**
  * 路径 2：走 api.github.com 读远端分支头。
  *
- * 为什么需要它（2026-09-18 实测）：本机网络对 **github.com（20.205.243.166）完全阻断**
- *   （连测 6 次全超时），于是 `git ls-remote` / `git push` 一律报
- *   `CONNECT tunnel failed, response 502`。
- *   而 **api.github.com（20.205.243.168）通畅**（TLS 正常，只是未授权时 403）。
- *   ⇒ 此时改用 REST API 读 ref，结果与 ls-remote 等价（同一个 sha）。
+ * 为什么需要它：`git ls-remote` 在本机**常年失败**，于是改走 REST 读 ref，
+ *   结果与 ls-remote 等价（同一个 sha）。
+ *
+ * ★ 2026-09-25 实测**更正了原先的归因**（原文写「本机网络对 github.com 完全阻断」——不准确）：
+ *   · `git ls-remote` 报 `CONNECT tunnel failed, response 502` 的**真实原因**是：
+ *     沙箱设了 `HTTP_PROXY/HTTPS_PROXY=http://127.0.0.1:62879`，**git 会遵守它**，
+ *     而该代理对 github.com 这一跳返回 502；
+ *   · 而 **Node 的 `https` 默认不读这些环境变量** ⇒ 直连 github.com 实测 **HTTP 200**
+ *     （api.github.com 未授权时 403，带 Bearer 则 200）。
+ *   ⇒ 所以「ls-remote 失败」**不能**反推「网络不通」，更不能反推「缺凭据」——
+ *     它只说明**那条代理不通**。判远端同步一律以 REST/sha 比对为准。
  */
 async function remoteViaApi(env) {
   const tk = sh('gh auth token', env);
@@ -397,10 +403,11 @@ async function main() {
     p('| 仓库 | ' + GITHUB.repo + '（' + GITHUB.visibility + '，分支 ' + GITHUB.branch + '） |');
     p('| 本地 HEAD | `' + head.slice(0, 7) + '` |');
     p('| 远端 ' + GITHUB.branch + ' | ' + (gh.remoteShort ? '`' + gh.remoteShort + '`' : '❌ 探测失败：' + gh.err) + ' |');
-    p('| 探测路径 | ' + (gh.via === 'api' ? '🔄 REST API（github.com 不可达，见下方说明）' : gh.via === 'ls-remote' ? '`git ls-remote`' : '❌ 两条路径均失败') + ' |');
+    p('| 探测路径 | ' + (gh.via === 'api' ? '🔄 REST API（ls-remote 失败，改走 api.github.com）' : gh.via === 'ls-remote' ? '`git ls-remote`' : '❌ 两条路径均失败') + ' |');
     p('| 结论 | ' + (gh.synced ? '✅ 已同步（远端 = 本地）' : gh.remote ? '⚠️ 未推送（本地领先）' : gh.bothFailed ? '❌ 无法确认（两条探测路径均失败）' : '❌ 无法确认') + ' |');
-    if (gh.via === 'api') p('| 备注 | 本机 github.com 被阻断（`CONNECT tunnel failed, response 502`），' +
-      '但 api.github.com 可用 ⇒ 结论仍为**实测**，非推测。 |');
+    if (gh.via === 'api') p('| 备注 | `git ls-remote` 失败（`CONNECT tunnel failed, response 502`：' +
+      '沙箱 `HTTPS_PROXY=127.0.0.1:62879` 对 github.com 不通；**直连 github.com 实测 HTTP 200**）' +
+      '⇒ 改走 api.github.com，结论仍为**实测**，非推测。 |');
   }
 
   /* ⑤ */

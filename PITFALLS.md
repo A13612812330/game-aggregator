@@ -965,6 +965,19 @@ v10.33~v10.38 六轮改动**全在 `data/**` 与 `tools/**`**，`public/index.ht
   ⇒ **代理层故障**，需用户侧重启客户端后才能发布（**载荷已就绪，无需重做准备工作**）。
 ★ 发布源**用载荷不用项目根**：`tools/_build-deploy-payload.js`（972MB → 79.8MB / 258 文件）。
 
+### 4. ★★ `git ls-remote` 失败 ≠ 网络不通、≠ 缺凭据 —— 是**沙箱代理**不通
+
+本机环境设了 `HTTP_PROXY / HTTPS_PROXY = http://127.0.0.1:62879`。**git 会遵守它**，
+而该代理对 github.com 那一跳返回 502 ⇒ `git ls-remote` / `git fetch` 一律报
+`CONNECT tunnel failed, response 502`（退出码 128）。
+
+★ 但 **Node 的 `https` 模块默认不读这些环境变量** ⇒ 直连 github.com 实测 **HTTP 200**
+  （api.github.com 未授权 403、带 Bearer 200）。
+  ⇒ 「ls-remote 失败」**不能**反推「网络被阻断」，更不能反推「凭据有问题」——
+    本项目 `tools/report.js` 原注释写「本机网络对 github.com **完全阻断**」，2026-09-25 实测更正。
+★ 推论：判远端同步**只认 sha / tree 比对**（走 API）。`_push-via-api.js` 走的就是 API，
+  所以它能推送成功 —— 这也解释了「`git push` / `ls-remote` 不通，但推送确实成功了」。
+
 ---
 
 ## 附：已沉淀 skills（勿在本文件重复）
