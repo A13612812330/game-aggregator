@@ -144,6 +144,36 @@ function chk(ok, name, extra) {
     pst.j ? ('cached ' + pst.j.cached + ' / withReq ' + pst.j.withReq + ' / miss ' + pst.j.miss +
       ' / searchKeys ' + pst.j.searchKeys) : 'status ' + pst.s);
 
+  /* ---- ★ v10.39 补：派生页**逐字节**比对（此前派生页线上状态无人看管）----
+     为什么必须补：
+       · 首页那套 `MUST` 判的是「**某个串在不在**」，而 v10.33~v10.39 这一整类版本
+         **前端 index.html 一字未改**（改动全在 `data/**` 与 `tools/**`）⇒ 对它结构性失明；
+       · 派生页（emulator / unpack）此前**完全没有判据**（本文件上方注释即写明
+         「只写首页能看到的串」），v10.39 恰好改了 `public/unpack.html` ⇒ 改了个看不见的地方。
+     判据口径：不比特征串，直接比**线上与本地的字节**（md5）。
+       · 零维护 —— 不用随版加串，也就不会像 `audit-apps.js` 的门禁那样过期；
+       · 对派生页的**任何**改动都敏感，包括纯样式位移。
+     ★ 判据语义 = 「线上派生页与本地逐字节相同」。**未发布时它会红，这是正确的红**
+       （不是判据坏了）；v10.32 发布后三页 md5 曾全部相等，证明该口径可达。 */
+  const md5hex = (s) => require('crypto').createHash('md5').update(s).digest('hex');
+  for (const pg of ['emulator.html', 'unpack.html']) {
+    let body = null, st = 0;
+    try {
+      const rr = await fetch(BASE + pg + '?cb=' + Date.now());
+      st = rr.status;
+      body = await rr.text();
+    } catch (e) { /* 网络失败：下面按 status/空处理 */ }
+    let loc = null;
+    try { loc = fs.readFileSync(path.join(__dirname, '..', 'public', pg), 'utf8'); } catch (e) { /* 本地缺文件 */ }
+    if (body == null || loc == null) {
+      chk(false, `[页面] ${pg} 线上可拉到且本地存在`, body == null ? '拉取失败 status ' + st : '本地缺 public/' + pg);
+      continue;
+    }
+    const om = md5hex(body), lm = md5hex(loc);
+    chk(om === lm, `[页面] ${pg} 线上与本地**逐字节一致**`,
+      om.slice(0, 10) + ' vs ' + lm.slice(0, 10) + (om === lm ? '' : '  ← 线上是旧版（该页未发布）'));
+  }
+
   /* ---- ② 页面侧：真机打开、真点详情页 ---- */
   const H = await connectBrowser();
   const b = H.browser;

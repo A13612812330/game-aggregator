@@ -216,6 +216,10 @@
     "count": 3
   },
   {
+    "name": "Alone_With_You",
+    "count": 1
+  },
+  {
     "name": "Amakano_SS",
     "count": 1
   },
@@ -281,6 +285,10 @@
   },
   {
     "name": "AowPF",
+    "count": 1
+  },
+  {
+    "name": "Apex_Legends",
     "count": 1
   },
   {
@@ -597,7 +605,7 @@
   },
   {
     "name": "Batman___Arkham_Origins",
-    "count": 14
+    "count": 15
   },
   {
     "name": "Batman___Arkham_VR",
@@ -1017,7 +1025,7 @@
   },
   {
     "name": "Call_of_Duty_",
-    "count": 5
+    "count": 6
   },
   {
     "name": "Call_of_Duty_-_World_at_War",
@@ -1169,7 +1177,7 @@
   },
   {
     "name": "Castlevania__Lords_of_Shadow___Ultimate_Edition",
-    "count": 9
+    "count": 10
   },
   {
     "name": "Casualties__Unknown_Demo",
@@ -1396,6 +1404,10 @@
     "count": 1
   },
   {
+    "name": "CourtBad",
+    "count": 1
+  },
+  {
     "name": "Cover_Fire",
     "count": 1
   },
@@ -1521,7 +1533,7 @@
   },
   {
     "name": "Cyberpunk_2077",
-    "count": 16
+    "count": 17
   },
   {
     "name": "Cyberpunk_2077______________________________________________",
@@ -1593,6 +1605,10 @@
   },
   {
     "name": "DEVIL_MAY_CRY_4_TRIAL",
+    "count": 1
+  },
+  {
+    "name": "DLSS5oneclick",
     "count": 1
   },
   {
@@ -1821,7 +1837,7 @@
   },
   {
     "name": "Dead_Island_Definitive_Edition",
-    "count": 11
+    "count": 12
   },
   {
     "name": "Dead_Island_GOTY_LAN",
@@ -2301,7 +2317,7 @@
   },
   {
     "name": "EasyAntiCheat_Launcher",
-    "count": 13
+    "count": 14
   },
   {
     "name": "EasyDeliveryCo",
@@ -2429,7 +2445,7 @@
   },
   {
     "name": "Euro_Truck_Simulator_2",
-    "count": 229
+    "count": 232
   },
   {
     "name": "Euro_Truck_Simulator_2_Demo",
@@ -2797,7 +2813,7 @@
   },
   {
     "name": "Far_Cry_3",
-    "count": 96
+    "count": 97
   },
   {
     "name": "Far_Cry_3___________________________________________________",
@@ -3417,7 +3433,7 @@
   },
   {
     "name": "God_of_War",
-    "count": 145
+    "count": 146
   },
   {
     "name": "God_of_War_1_de_ps2_",
@@ -3577,7 +3593,7 @@
   },
   {
     "name": "Grand_Theft_Auto_V_Legacy",
-    "count": 1351
+    "count": 1369
   },
   {
     "name": "Grand_Theft_Auto_V_Legacy22",
@@ -3925,7 +3941,7 @@
   },
   {
     "name": "Hollow_Knight__Silksong",
-    "count": 42
+    "count": 43
   },
   {
     "name": "Hollow_Knight_______________________________________________",
@@ -4880,6 +4896,10 @@
     "count": 1
   },
   {
+    "name": "MSI_Lite_Player_144",
+    "count": 1
+  },
+  {
     "name": "MTA_San_Andreas",
     "count": 3
   },
@@ -4929,7 +4949,7 @@
   },
   {
     "name": "Mad_Max",
-    "count": 8
+    "count": 9
   },
   {
     "name": "Mad_Skills_Motocross_Demo",
@@ -4948,6 +4968,10 @@
     "count": 3
   },
   {
+    "name": "Mafia_2_____________________________________________________",
+    "count": 1
+  },
+  {
     "name": "Mafia_II",
     "count": 1
   },
@@ -4961,7 +4985,7 @@
   },
   {
     "name": "Mafia_II__Classic_",
-    "count": 34
+    "count": 35
   },
   {
     "name": "Mafia_II__Definitive_Edition",
@@ -5365,7 +5389,7 @@
   },
   {
     "name": "Mortal_Kombat_Komplete_Edition",
-    "count": 43
+    "count": 44
   },
   {
     "name": "Mortal_Kombat_Project_",
@@ -5437,7 +5461,7 @@
   },
   {
     "name": "Mount___Blade__Warband",
-    "count": 5
+    "count": 6
   },
   {
     "name": "Mousetrap",
@@ -5513,7 +5537,7 @@
   },
   {
     "name": "NARUTO_SHIPPUDEN__Ultimate_Ninja_STORM_4",
-    "count": 60
+    "count": 61
   },
   {
     "name": "NARUTO_SHIPPUDEN__Ultimate_Ninja_STORM_Revolution",
@@ -6137,7 +6161,7 @@
   },
   {
     "name": "PEAK",
-    "count": 11
+    "count": 12
   },
   {
     "name": "PES",
@@ -6153,7 +6177,7 @@
   },
   {
     "name": "PES2017",
-    "count": 6
+    "count": 7
   },
   {
     "name": "PES2017-_PATCH_LENGEDS_LITE_part1",
@@ -6345,7 +6369,7 @@
   },
   {
     "name": "Pes2013",
-    "count": 3
+    "count": 4
   },
   {
     "name": "Pes_13",
@@ -6553,7 +6577,7 @@
   },
   {
     "name": "Prince_of_Persia_",
-    "count": 3
+    "count": 4
   },
   {
     "name": "Prince_of_Persia_-_The_Forgotten_Sands",
@@ -6573,6 +6597,10 @@
   },
   {
     "name": "Prince_of_Persia___Warrior_Within__Config_App",
+    "count": 1
+  },
+  {
+    "name": "Prince_of_Persia_the_Forgotten_Sands",
     "count": 1
   },
   {
@@ -6617,7 +6645,7 @@
   },
   {
     "name": "Pro_Evolution_Soccer_2013",
-    "count": 2851
+    "count": 2858
   },
   {
     "name": "Pro_Evolution_Soccer_20132",
@@ -6697,7 +6725,7 @@
   },
   {
     "name": "Pro_Evolution_Soccer_2017",
-    "count": 171
+    "count": 172
   },
   {
     "name": "Pro_Evolution_Soccer_2017seting",
@@ -6773,7 +6801,7 @@
   },
   {
     "name": "Prototype_",
-    "count": 33
+    "count": 34
   },
   {
     "name": "Prototype_2",
@@ -6993,7 +7021,7 @@
   },
   {
     "name": "Red_Dead_Redemption",
-    "count": 43
+    "count": 44
   },
   {
     "name": "Red_Dead_Redemption_2",
@@ -7033,7 +7061,7 @@
   },
   {
     "name": "Resident_Evil_2",
-    "count": 95
+    "count": 96
   },
   {
     "name": "Resident_Evil_2_2019_Deluxe_Edition_MULTi12_-_ElAmigos______",
@@ -8397,7 +8425,7 @@
   },
   {
     "name": "TheCensor",
-    "count": 1
+    "count": 2
   },
   {
     "name": "TheComa2B",
@@ -8564,6 +8592,10 @@
     "count": 3
   },
   {
+    "name": "The_Last_of_Us__Part_II_Remastered",
+    "count": 1
+  },
+  {
     "name": "The_Legend_of_Heroes__Sen_no_Kiseki_II_KAI_-The_Erebonian_Civil_War-",
     "count": 2
   },
@@ -8624,6 +8656,10 @@
     "count": 1
   },
   {
+    "name": "The_Rhapsody_of_Zephyr_Remastered",
+    "count": 1
+  },
+  {
     "name": "The_Riftbreaker_",
     "count": 1
   },
@@ -8649,7 +8685,7 @@
   },
   {
     "name": "The_Sims__4",
-    "count": 16
+    "count": 17
   },
   {
     "name": "The_Smiling_Man",
@@ -8701,7 +8737,7 @@
   },
   {
     "name": "The_Witcher_3__Wild_Hunt",
-    "count": 33
+    "count": 34
   },
   {
     "name": "The_Witcher_Game",
@@ -9121,7 +9157,7 @@
   },
   {
     "name": "Valheim",
-    "count": 3
+    "count": 4
   },
   {
     "name": "Valiant_Hearts__The_Great_War____Soldats_Inconnus___M_moires_de_la_Grande_Guerre_",
@@ -9633,7 +9669,7 @@
   },
   {
     "name": "____2016",
-    "count": 43
+    "count": 44
   },
   {
     "name": "____33____",
@@ -9737,6 +9773,10 @@
   },
   {
     "name": "______________",
+    "count": 1
+  },
+  {
+    "name": "_______________V_______",
     "count": 1
   },
   {
@@ -9909,7 +9949,7 @@
   },
   {
     "name": "eFootball_PES_2021_SEASON_UPDATE",
-    "count": 51
+    "count": 52
   },
   {
     "name": "eFootball__PES_2020",
