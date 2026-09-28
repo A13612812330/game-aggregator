@@ -1009,9 +1009,67 @@ dirty = true; flush();
 
 ---
 
+## 十六、v10.41 发布 + 重启（两条操作坑）
+
+### 1. ★ 重启服务「杀了就起」会**静默退到下一个端口**，悄悄多出一个副实例
+
+本次流程：`Stop-Process` 杀掉 8123 的旧 PID → 立刻启动新实例。
+结果新实例打印：
+
+```
+[GameHub] 端口 8123 被占用，尝试 8124 …
+[GameHub] 聚合站已启动: http://localhost:8124
+```
+
+而 `netstat` 里 **8123 也被另一个 PID 占着** —— 一度**两个实例同时在跑**。
+
+根因有两层：
+
+- 杀进程后端口**不会立刻释放**（TIME_WAIT / 句柄回收）；项目里三个启动器
+  （`.cmd` / `.vbs`）都写着「端口忙就退到下一个端口」，**不会等**，也不会报错。
+- 于是「我以为我在重启」，实际是**起了一个新端口上的第二个实例**，
+  而真正对外服务的那一个还是旧的 —— 判「改完是否生效」时就会得出错误结论。
+
+★ 正确做法（本次事后验证）：杀完之后**先断言端口真的没人监听**，再启动；
+启动后再断言**监听 PID 变了且只有一个实例**。
+
+```bash
+# 杀
+kill <PID>
+# 等——必须等到端口真的空出来（而不是「进程没了」）
+until ! netstat -ano | grep -q ":8123 .*LISTENING"; do sleep 0.5; done
+# 起
+node server.js &
+# 断言：只有一个 PID，且是新 PID
+netstat -ano | grep ":8123 .*LISTENING"
+```
+
+★ 排查时的判别诀窍：**看启动日志里打印的端口号**。
+只要出现「尝试 8124」这类字眼，说明你想重启的那个「主实例」根本没被重启。
+
+### 2. ★ 重建发布载荷前，旧载荷目录**必须先改名**（`fs.rmSync` 会被护栏拦下）
+
+`tools/_build-deploy-payload.js` 第 103 行是：
+
+```js
+if (fs.existsSync(OUT)) fs.rmSync(OUT, { recursive: true, force: true });
+```
+
+载荷约 260 个文件，远超沙箱批量删除阈值（50），会直接抛
+`SAFE_DELETE_BULK_CONFIRM_REQUIRED count=258 > threshold=50`。
+
+★ **改名不是删除** ⇒ `fs.renameSync(OUT, OUT + '-prev')` 可以正常通过护栏，
+构建脚本随后在原名上重建。这是既有约定做法，不要为了绕护栏去写「分批 rm」的循环。
+
+★ 副作用：旧载荷会**一份份攒着**（本次已攒到 `-old` + `-prev` 共约 160 MB），
+只能靠人工清 —— 顺手记一下体积，别等磁盘报警才发现。
+
+---
+
 ## 附：已沉淀 skills（勿在本文件重复）
 
 `ui-ab-visual-regression` · `jsdom-ui-behavior-test` · `device-model-to-chip-translation` ·
 `cross-source-name-matching` · `single-source-dual-page` · `win-github-upload` ·
 `multi-source-date-field` · `gpu-tier-cross-vendor` · `web-internal-api-reverse` ·
-`counterproof-assertions` · `win-project-launcher` · `endgame-three-source-analysis`
+`counterproof-assertions` · `win-project-launcher` · `endgame-three-source-analysis` ·
+`fetch-failure-cache-poisoning`（v10.41 沉淀：抓取失败仍写盘 ⇒ 好数据被打空 + TTL 重新计时）
