@@ -44,9 +44,28 @@ shell.CurrentDirectory = root
 shell.Run cmd, 0, False
 
 ' ---- wait for boot, then open the browser ----
-WScript.Sleep 2600
-If Not PortBusy(PORT) Then WScript.Sleep 2500
-shell.Run "http://localhost:" & PORT, 1, False
+'   v10.42: verify the service REALLY came up on PORT before opening the page.
+'   Old behaviour opened the browser after a fixed delay, so a failed start
+'   (port held by the previous instance, crash, syntax error) still opened a
+'   dead page and gave no explanation. server.js no longer falls back to
+'   PORT+1 either, so "did it start?" has to be checked, not assumed.
+Dim n
+n = 0
+Do While n < 15
+  If PortBusy(PORT) Then Exit Do
+  WScript.Sleep 1000
+  n = n + 1
+Loop
+
+If PortBusy(PORT) Then
+  shell.Run "http://localhost:" & PORT, 1, False
+Else
+  MsgBox "The service did not start on port " & PORT & " within 15s." & vbCrLf & vbCrLf & _
+         "Most likely the port is still held by the previous instance." & vbCrLf & _
+         "Run stop-gamehub.cmd, then start again." & vbCrLf & vbCrLf & _
+         "This launcher does not fall back to another port.", 48, "GameHub"
+  WScript.Quit 1
+End If
 
 ' -------------------------------------------------------------------
 Function PortBusy(p)

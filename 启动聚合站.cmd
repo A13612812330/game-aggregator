@@ -35,6 +35,31 @@ if not defined NODE (
   exit /b 1
 )
 
+REM ============ 2b) wait until the port is really free (v10.42) ============
+REM   Why: server.js used to bump to %PORT%+1 when the port was taken, so a
+REM   restart could silently leave the OLD process on %PORT% and start a second
+REM   instance next to it. server.js now refuses to shift (it exits with an
+REM   error instead), but a service that is still holding the port while it
+REM   shuts down would still make this launch fail. So wait here, and say so
+REM   clearly instead of opening a page that cannot work.
+set "WAITS=0"
+:WAITFREE
+set "BUSYPID="
+for /f "tokens=5" %%P in ('netstat -ano ^| findstr /R /C:":%PORT% .*LISTENING"') do if not defined BUSYPID set "BUSYPID=%%P"
+if not defined BUSYPID goto FREEOK
+set /a WAITS+=1
+if %WAITS% GEQ 20 goto FREENO
+timeout /t 1 >nul
+goto WAITFREE
+:FREENO
+echo [GameHub] ERROR: port %PORT% is still in use by PID %BUSYPID% (waited 20s).
+echo [GameHub]        Run stop-gamehub.cmd first, then start this launcher again.
+echo [GameHub]        This launcher will NOT fall back to another port.
+echo.
+pause
+exit /b 1
+:FREEOK
+
 REM ============ 3) show LAN address (for phone / other PCs) ============
 set "LANIP="
 for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /C:"IPv4"') do if not defined LANIP set "LANIP=%%a"

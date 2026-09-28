@@ -105,9 +105,20 @@ ok(cmdPick === vbsBest, '\u2605 两套算法结论**一致**（不一致 ⇒ 两
 ok(!!fs.existsSync(path.join(VBASE, cmdPick, 'node.exe')),
   '\u2605 选出的 node.exe **当前真实存在**（版本漂移就会被这条抓住）');
 
-/* 为什么必须有回退：server.js 有端口自增兜底 ⇒ 多实例会一路 8124/8125 */
-ok(/listen\(port \+ 1, triesLeft - 1\)/.test(SRV),
-  '\u2605 [前提] server.js 有端口自增兜底 ⇒ 无幂等启动会静默起出一串实例');
+/* ★ v10.42 改向：server.js 的端口自增已被**显式开关**闸住（默认关）。
+   旧断言守的是「**有**自增兜底」—— 而那正是「重启失败却看不出来」的来源：
+   打算重启 8123 时端口尚未释放，旧代码会静默起出 8124 副实例（三个后果：
+   ① 以为重启成功、实际 8123 还是旧进程；② 两实例共写 data/** 交叉覆盖；
+   ③ 线上诊断以 8123 为准，看到的却是旧代码）。
+   ⚠️ 断言必须改成**守闸门**，否则旧写法 `EADDRINUSE ⇒ 直接自增` 回归时它仍是绿的。 */
+ok(/const ALLOW_PORT_SHIFT = process\.env\.GAMEHUB_PORT_SHIFT === '1'/.test(SRV),
+  '\u2605 [前提] server.js 的端口自增由 GAMEHUB_PORT_SHIFT 显式开关控制（默认关）');
+ok(/if \(ALLOW_PORT_SHIFT && triesLeft > 0\)/.test(SRV),
+  '\u2605 自增**只在开关打开时**才走（不是看到 EADDRINUSE 就自增）');
+ok(!/EADDRINUSE'\s*&&\s*triesLeft > 0/.test(SRV),
+  '\u2605 已删掉「EADDRINUSE 就直接自增」的旧写法（它会让重启失败的副实例静默起出来）');
+ok(/不会自动换端口/.test(SRV) && /stop-gamehub\.cmd/.test(SRV),
+  '\u2605 端口被占时打印**处理办法**（先跑 stop-gamehub.cmd），不是只丢一句启动失败');
 ok(/let\b.*NODE|set "NODE="/.test(CMD), '.cmd 用变量承载 node 路径（不散落多处）');
 
 /* ==================== C. 编码与引号安全 ==================== */
@@ -148,6 +159,34 @@ ok(pCmd && pVbs && pStop && pSrv, '四个文件都抠到了端口号（抠不到
   [pCmd, pVbs, pStop, pSrv].join('/'));
 ok(pCmd === pVbs && pVbs === pStop && pStop === pSrv,
   '\u2605 .cmd / .vbs / stop / server.js 的端口**完全一致**');
+
+/* ==================== H. 端口释放等待与「起来了没」校验（v10.42 新增）==================== */
+console.log('\n=== H. 端口等待 / 启动核实（v10.42 新增）===');
+/* 起因（2026-09-28 实测）：杀掉服务后立刻启动，端口尚未释放 ⇒ 旧代码静默换端口起副实例。
+   ⇒ ① 启动器必须先**等端口真的空出来**；
+     ② `.vbs` 后台起 node，旧实现固定 sleep 后直接开浏览器 —— **启动失败也照样开一个死页面**，
+        所以它必须起完再**核实真的监听了**，否则弹窗告诉用户怎么办。
+   ⚠️ 本沙箱**不能执行 .cmd / .vbs**（Bash 与 PowerShell 两条通道都禁止调 cmd.exe），
+      所以下面只能做**结构**断言；端口判据本身（`tokens=5` 取 PID、`":PORT " + LISTENING`）
+      已用真实 `netstat` 输出在 Node 里复算过：8123 → PID 38712、8188 → 空闲。 */
+ok(/:WAITFREE/.test(CMD) && /goto WAITFREE/.test(CMD) && /:FREEOK/.test(CMD),
+  '\u2605 .cmd 有「等端口释放」循环（标签闭合）');
+const cmdLabels = (CMD.match(/^:[A-Za-z]+/gm) || []).map((s) => s.slice(1));
+const cmdGotos = (CMD.match(/goto ([A-Za-z]+)/g) || []).map((s) => s.split(' ')[1]);
+ok(cmdLabels.length >= 3 && new Set(cmdLabels).size === cmdLabels.length,
+  '\u2605 .cmd 标签存在且不重名（重名 ⇒ cmd 解析到第一个，静默走错分支）', cmdLabels.join(','));
+ok(cmdGotos.length >= 3 && cmdGotos.every((g) => cmdLabels.includes(g)),
+  '\u2605 .cmd 每个 goto 都有对应标签（缺标签 ⇒ 直接报「找不到批处理标签」）', cmdGotos.join(','));
+ok(/if %WAITS% GEQ 20 goto /.test(CMD),
+  '\u2605 等待计数用 goto 循环做比较（未塞进小括号块：块内 %WAITS% 在解析期展开会恒为初值）');
+ok(/still in use by PID %BUSYPID%/.test(CMD) && /will NOT fall back to another port/.test(CMD),
+  '\u2605 .cmd 超时后报出占用者 PID，并明说**不会**退到别的端口');
+ok(/Do While n < 15[\s\S]{0,140}If PortBusy\(PORT\) Then Exit Do/.test(VBS),
+  '\u2605 .vbs 起完服务后**轮询核实**端口真的监听了（旧版是固定 sleep 后直接开页面）');
+ok(/MsgBox[\s\S]{0,400}does not fall back to another port/.test(VBS),
+  '\u2605 .vbs 起不来时**弹窗告诉用户怎么办**（不再静默开一个死页面）');
+ok(/^Option Explicit/m.test(VBS) && /^Dim n\b/m.test(VBS),
+  '\u2605 .vbs 是 Option Explicit ⇒ 新变量必须 Dim（漏 Dim 会「Variable is undefined」崩溃）');
 
 /* ==================== F. 线上链接单一出处 ==================== */
 console.log('\n=== F. 线上链接：三处必须同源（换链接漏改一处即变红）===');

@@ -14,6 +14,10 @@ const SRC = fs.readFileSync(path.join(ROOT, 'tools/report.js'), 'utf8');
 /* 剥掉注释后再查源码：注释里**特意**写了一些坑的说明，不剥会误报（注释里提到 ≠ 代码里用了）。
    ⚠️ 必须在这里就定义 —— 下面多个小节都要用它，放到后面会 ReferenceError。 */
 const CODE = SRC.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+/* ★ v10.42：report.js 模块本身（纯函数可做**行为级**断言，不是只 grep 符号）。
+   原先定义在 ③-c，但 ③-b 也要用它 —— 早用、晚定义 = ReferenceError（与上面 CODE 同款教训）。
+   require 本文件无副作用（main 有 `require.main === module` 守卫）。 */
+const RPT = require(path.join(ROOT, 'tools', 'report.js'));
 
 let pass = 0, fail = 0;
 const ok = (cond, name, detail) => {
@@ -71,7 +75,7 @@ ok(/createHash\('md5'\)/.test(SRC), '★ 用 md5 比对判定线上版本，不�
 ok(/前端 md5 与服务端口径指纹均与本地一致/.test(SRC), '判定文案明确写「前端 md5 与服务端口径指纹均与本地一致」');
 ok(/ls-remote/.test(SRC), 'GitHub 用 ls-remote 比对远端分支');
 ok(/synced/.test(SRC), '给出「远端 = 本地」的同步结论字段');
-ok(/CODEX-INDEX\.md/.test(SRC) && /README\.md/.test(SRC), '更新日志同时检查 README 与 CODEX-INDEX');
+ok(/docs\/versions\/README\.md/.test(SRC) && /README\.md/.test(SRC), '更新日志检查 README 与 docs/versions/ 索引');
 /* ★ v10.40：版本日志从根目录迁到 docs/versions/，并去掉 `CODEX-DONE-` 前缀。
    这条**必须**守住 —— 迁移后仍去根目录找，会**静默统计到 0 份**（目录还在、只是找错地方，
    不报错、汇报里只是少一行）。用剥注释后的 CODE 查，避免注释里提到就假绿。 */
@@ -85,7 +89,36 @@ ok(/\^v10\\\.\\d\+\\\.md\$/.test(CODE), '★ 日志文件名判据已同步为 v
 ok(!/coverage:\s*\[\s*'/.test(CODE), '★ 逐版覆盖清单是**算**出来的，不是手写数组（写死过 → v10.21 漏一行）');
 ok(/for \(let v = 10; v <= top; v\+\+\)/.test(CODE), '覆盖清单自动从 10.10 连续到最新版');
 
-console.log('\n=== ③-b 线上版本判定不许「报反」（2026-09-18 新增）===');
+console.log('\n=== ③-b 索引真源 / 文档收敛 / 运行期对照（v10.42 新增）===');
+/* CODEX-INDEX.md 已移除：它的 42 个版本块与 README 的 34 个是同一批摘要的两次书写
+   （README 那份还少 8 版）⇒ 版本索引职责收敛到 `docs/versions/`。
+   ⚠️ 旧写法（`read('CODEX-INDEX.md')`）现在**不报错**：文件被删 ⇒ 读不到只是空串，
+   `mv` 退化成 '?'、`indexHas` 恒 false —— 汇报里那两行悄悄变成「缺 v?」。所以必须显式守。 */
+ok(/const INDEX_FILE = LOG_DIR \+ '\/README\.md'/.test(CODE),
+  '★ 索引真源 = docs/versions/README.md（v10.42 起）');
+ok(!/read\('CODEX-INDEX\.md'\)/.test(CODE),
+  '★ 已不再读已移除的 CODEX-INDEX.md（读了只会静默返空串 ⇒ 判据退化成「缺 v?」）');
+ok(!/\| `CODEX-INDEX\.md` \|/.test(CODE), '★ ⑤ 的表格里不再有 CODEX-INDEX 那一行');
+ok(/\| `' \+ cl\.indexFile \+ '`（唯一版本索引） \|/.test(CODE),
+  '★ ⑤ 的索引行改报 docs/versions/README.md');
+
+/* ★ v10.42：运行期缓存对照 —— 补掉「看得出版本是哪一版、看不出线上那份数据还活着吗」的盲区 */
+ok(/const RUNTIME_PROBES = \[/.test(CODE), '★ 有运行期取样清单（RUNTIME_PROBES）');
+ok(/function runtimeCacheRow/.test(CODE) && typeof RPT.runtimeCacheRow === 'function',
+  '★ runtimeCacheRow 抽成纯函数并导出 ⇒ 可行为级测（不是只 grep 符号）');
+ok(RPT.runtimeCacheRow({ ok: true, v: 12 }, { ok: true, v: 12 }).indexOf('一致') > -1,
+  '两侧条数相同 ⇒ 报「一致」');
+const rcPoison = RPT.runtimeCacheRow({ ok: true, v: 12 }, { ok: true, v: 0 });
+ok(rcPoison.indexOf('⚠') > -1,
+  '★★ 线上 0 < 本地 12 ⇒ 必须提示（正是 v10.41「机型恒 6 台」的形态）', rcPoison);
+ok(RPT.runtimeCacheRow(null, { ok: true, v: 12 }).indexOf('取不到本地值') > -1,
+  '★ 本地取不到 ⇒ 不比较（不许把「没采到」说成「一致」）');
+ok(RPT.runtimeCacheRow({ ok: true, v: 12 }, { ok: false, err: 'HTTP 404' }).indexOf('取不到线上值') > -1,
+  '★ 线上取不到 ⇒ 不比较');
+ok(/只提示，不参与判定/.test(SRC),
+  '★ 该节在输出里明确标注「只提示，不参与判定」（否则它自己会变成新的漂移源）');
+
+console.log('\n=== ③-c 线上版本判定不许「报反」（2026-09-18 新增）===');
 /* 旧实现：md5 不同时用 `/.chip\.ol/` 猜，结果「线上还没发布 v10.20」被说成「新于本地？」。
    这类错误比不说更危险 —— 用户会以为线上已经是最新。 */
 ok(/const FEATURES = \[/.test(CODE), '★ 用特征指纹判定线上版本，不用单一样式类猜');
@@ -99,7 +132,7 @@ ok(/test\(localTxt\)\s*&&\s*![\w.]*\.test\(remoteTxt\)/.test(CODE),
 ok(/同代但内容有差异/.test(CODE), '指纹全中但字节不同 → 如实说「需人工核对」，不硬下结论');
 ok(/probeLink\(LINKS\.LIVE, localMd5, idxLocal\)/.test(CODE), 'probeLink 改传本地全部文本（判定要用指纹）');
 
-console.log('\n=== ③-c 线上判定：前端 + 服务端两条判据（v10.38 补）===');
+console.log('\n=== ③-d 线上判定：前端 + 服务端两条判据（v10.38 补）===');
 /* ★★ 为什么补这一节（2026-09-23 实测的假绿）★★
  *   v10.33~v10.38 六轮的改动**全在 `data/**` 与 `tools/**`**，`public/index.html` 一个字节没动。
  *   于是「index.html md5 与本地一致 ⇒ 已是最新」在本轮把「线上仍停在 v10.35 之前」
@@ -108,7 +141,7 @@ console.log('\n=== ③-c 线上判定：前端 + 服务端两条判据（v10.38 
  *   ★ 而且必须**行为级**守：v10.38 刚踩过「只查符号出现过，被别处同名字符串撑成假绿」的坑，
  *     所以这里 require 真模块、拿真函数喂真形状的输入，不看字符串有没有出现过。
  */
-const RPT = require(path.join(ROOT, 'tools', 'report.js'));
+/* ★ v10.42：RPT 已提到文件顶部 require（③-b 也要用）—— 这里不再重复定义，见顶部注释。 */
 const SPEC_OK_SRC = 'const info = dictInfo(); return { ok: true, archRule: RULE };';
 const pUp = { ok: true, http: 200, has: { archRule: true }, err: null };
 const pOld = { ok: true, http: 200, has: { archRule: false }, err: null };
@@ -193,7 +226,7 @@ for (const f of ['HANDOFF.md', 'CODEX-HANDOFF.md']) {
   const s = doc(f);
   ok(/已归档/.test(s), '★ ' + f + ' 顶部有「已归档」说明（不再冒充最新）');
   ok(!/最新\s*——\s*先看这段/.test(s), '★ ' + f + ' 已删掉「最新 —— 先看这段」的旧claim');
-  ok(/CODEX-INDEX\.md/.test(s), f + ' 指向 CODEX-INDEX.md（当前状态以它为准）');
+  ok(/docs\/versions\//.test(s), f + ' 指向 docs/versions/（v10.42 起唯一版本索引，取代已移除的 CODEX-INDEX.md）');
   ok(liveHostRe.test(s), f + ' 给出**当前**分享链接（' + LIVE_HOST + '）');
 }
 const handoff = doc('HANDOFF.md');
@@ -210,7 +243,7 @@ console.log('\n=== ⑤-c 流程总纲 WORKFLOW.md（2026-09-18 新增）===');
    所以断言盯的是「不可跳过的步骤必须在文档里」，而不是文笔。 */
 const wf = doc('WORKFLOW.md');
 ok(wf.length > 3000, 'WORKFLOW.md 存在且有实质内容', (Buffer.byteLength(wf, 'utf8') / 1024).toFixed(1) + 'KB');
-ok(/CODEX-INDEX\.md/.test(wf), '★ 指向 CODEX-INDEX.md（版本真源不是它，避免又养出一份「自称最新」）');
+ok(/docs\/versions\/README\.md/.test(wf), '★ 指向 docs/versions/README.md（版本真源不是它，避免又养出一份「自称最新」）');
 ok(/基线[^\n]*v\d+\.\d+/.test(wf), '声明了明确基线版本（便于一眼看出是否过期）');
 for (const [kw, why] of [
   ['build-emulator-page.js', '重建手机专区派生页'],

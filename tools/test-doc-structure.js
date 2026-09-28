@@ -270,6 +270,88 @@ for (const d of docs) {
 ok(badLinks.length === 0, 'md 相对链接全部可解析（失效 ' + badLinks.length +
   ' 处' + (badLinks.length ? '：' + badLinks.slice(0, 4).join(' ｜ ') + ' …' : '') + '）');
 
+/* ---------- v10.42 新增：版本索引收敛后的四条守卫 ----------
+ * 背景：`CODEX-INDEX.md` 已移除 —— 它顶部那个引用块里有 **42 个版本摘要块**（v10.1→v10.41 全覆盖），
+ *       而 README 顶部有 **34 个同款块**（还少 v10.11~v10.17 七版）：同一批摘要写了两次，
+ *       各自漂移，谁也说不清「哪一份才是该看的」。⇒ 索引职责收敛到 `docs/versions/`。
+ *       README 同时从「往上长」改成「项目说明在前 + 最近 5 版摘要」（原版唯一 H1 被挤到第 2011 行）。
+ * 这四条守的都是**坏了不报错**的形态。 */
+console.log('');
+console.log('--- v10.42 版本索引收敛守卫 ---');
+
+/* ① 已移除的文件不得回潮 */
+ok(!fs.existsSync(path.join(ROOT, 'CODEX-INDEX.md')),
+  '根目录无 CODEX-INDEX.md（v10.42 移除：它的版本块与 README 的重复）');
+
+/* ② 活文档里不得再把 CODEX-INDEX.md 当索引来**指路**。
+ *    ★ 三次收窄，缺一个都会误报：
+ *      ① 跳过 `docs/versions/v*.md` —— 那是**历史留档**，里面如实记着当时的做法；
+ *      ② 逐行忽略「它已经没了」的句子（含「已移除 / 已废弃 / 已收敛 / 不再使用」）；
+ *      ③ ★ **判据只判「指路」形态，不判「符号出现过」**（v10.42 实测踩到）：
+ *         README 的 changelog 必须如实写「本版移除了 `CODEX-INDEX.md`」，还会有
+ *         「它曾有过 41 个版本块」「旧文件可从某个 sha 取出」这类叙述 ——
+ *         按「符号出现过」判会把 changelog 一起判红，等于逼人不写原因（本项目的假绿老毛病）。
+ *         所以收窄成两种真·指路形态：**指针词 + 文件名**，或**以文件名开头的表格行**。
+ *    ★ 收窄后仍能抓住设计中的回归（见 `tools/_counterproof-v1042.js` ⑧ / ⑪ 两个变异）。 */
+const CidxPointer = /(见|看|详见|参见|参考|依据|索引|入口|查阅)\s*[：:，,、]?\s*[（(]?\s*`?CODEX-INDEX\.md/;
+const CidxTableKey = /^\s*\|\s*`?CODEX-INDEX\.md`?\s*\|/;
+const cidxLive = [];
+for (const d of docs) {
+  if (d.rel.startsWith(LOG_DIR + '/')) continue;
+  const raw = fs.readFileSync(d.abs, 'utf8').split(/\r?\n/);
+  let fence = null;
+  raw.forEach((l, i) => {
+    const f = /^(`{3,}|~{3,})/.exec(l.trim());
+    if (f) { const m = f[1][0]; if (fence === null) fence = m; else if (fence === m) fence = null; return; }
+    if (fence !== null) return;
+    if (!l.includes('CODEX-INDEX.md')) return;
+    if (/已移除|已删除|已废弃|已收敛|不再使用/.test(l)) return;
+    if (!CidxPointer.test(l) && !CidxTableKey.test(l)) return;
+    cidxLive.push(d.rel + ' L' + (i + 1) + '：' + l.trim().slice(0, 56));
+  });
+}
+ok(cidxLive.length === 0, '活文档里无「把 CODEX-INDEX.md 当索引」的活引用（命中 ' + cidxLive.length +
+  ' 行' + (cidxLive.length ? '：' + cidxLive.slice(0, 3).join(' ｜ ') : '') + '）');
+
+/* ★★ 判据自检（防止上面那次收窄把判据收成**恒真**）：
+ *    正样本必须命中、负样本必须放过 —— 两边都测，否则「宁可不报」的收窄没人挡得住。 */
+const CidxSelfPos = [
+  '> 版本索引见 `CODEX-INDEX.md`。',
+  '版本索引：CODEX-INDEX.md',
+  '| `CODEX-INDEX.md` | ★★ **版本索引** | 每版 |',
+  '- 详见 CODEX-INDEX.md',
+];
+const CidxSelfNeg = [
+  '### ★ v10.42 增量（2026-09-28）—— 文档收敛：移除 `CODEX-INDEX.md`、README 去重',
+  '`CODEX-INDEX.md` 有 **41 个**版本块（v10.1 → v10.41，无缺号，占 L211–L1854），',
+  '历史不丢：`CODEX-INDEX.md` 亦可从 `4b8ab0e` 取出。',
+];
+const cidxPos = CidxSelfPos.filter((l) => CidxPointer.test(l) || CidxTableKey.test(l));
+const cidxNeg = CidxSelfNeg.filter((l) => CidxPointer.test(l) || CidxTableKey.test(l));
+ok(cidxPos.length === CidxSelfPos.length && cidxNeg.length === 0,
+  'CODEX-INDEX 判据自检：正样本 ' + cidxPos.length + '/' + CidxSelfPos.length +
+  ' 命中、负样本 ' + cidxNeg.length + ' 误报' + (cidxNeg.length ? '（' + cidxNeg[0].slice(0, 40) + '）' : ''));
+
+/* ③ README 不许再「往上长」：版本摘要块 ≤ 6，且必须排在项目说明 H1 **之后**。
+ *    事故形态就是这次修的：2,854 行里前 1,978 行是 34 个版本块，
+ *    `# GameHub 游讯聚合（机地 × XDGAME）` 被压到**第 2011 行** ——
+ *    访客打开首页看不到「这个项目是什么」。块数上限给 6 是留一版余量（当前 5）。 */
+const readmeTxt = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const rHeads = headingsOf(readmeTxt.split(/\r?\n/));
+const rH1 = rHeads.filter((h) => h.lv === 1);
+const rBlocks = rHeads.filter((h) => /v\d+\.\d+\s*增量/.test(h.t));
+ok(rBlocks.length > 0 && rBlocks.length <= 6,
+  'README 版本摘要块 ≤ 6（实测 ' + rBlocks.length + '：' + rBlocks.map((h) => h.t.slice(0, 8)).join(', ') + '）');
+ok(rH1.length === 1 && rBlocks.length > 0 && rBlocks.every((h) => h.ln > rH1[0].ln),
+  'README 的项目说明排在版本摘要**之前**（H1 在 L' + (rH1[0] ? rH1[0].ln : '?') +
+  '，首个版本块在 L' + (rBlocks[0] ? rBlocks[0].ln : '?') + '）');
+
+/* ④ 索引表与版本日志文件不许漂移（一边加了、另一边忘了，两边都看不出来） */
+const idxTxt = (() => { try { return fs.readFileSync(path.join(logAbs, 'README.md'), 'utf8'); } catch (e) { return ''; } })();
+const idxRows = (idxTxt.match(/^\|\s*\[v10\.\d+\]\(v10\.\d+\.md\)/gm) || []).length;
+ok(idxRows > 0 && idxRows === verFiles.length,
+  LOG_DIR + '/README.md 索引行数与日志文件数一致（索引 ' + idxRows + ' / 文件 ' + verFiles.length + '）');
+
 /* ---------- 汇总 ---------- */
 console.log('--- 逐项 ---');
 for (const l of okList) console.log(l);

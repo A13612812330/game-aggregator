@@ -226,6 +226,66 @@ async function probeLink(url, localMd5, localTxt) {
   return out;
 }
 
+/* ============ ②-b 运行期缓存对照（★ 只提示，不参与判定）============ */
+/**
+ * 为什么要这一节：现有两条判据（前端 `index.html` md5 + 服务端 `dictInfo().archRule`）
+ *   **只看得出「代码是哪一版」，看不出「线上这份数据还活着吗」**。
+ *   v10.41 那个 bug 就是这么漏过去的：线上沙箱抓不到 raw.githubusercontent.com，
+ *   `data/bhparams.js` 抓到 0 条却仍写盘 ⇒ `/api/bh/params` 的好缓存被打空、7 天 TTL 重计时，
+ *   详情页机型清单只剩上游摘要的 6 台 —— 而**前端 md5 与服务端指纹全程正常**，
+ *   两台机器「看起来同版」，实际用户看到的东西不一样。
+ *   ⇒ 补一条**运行期取样对照**：拿同一个 key / 同一款游戏，本地与线上各打一次，比条数。
+ *
+ * ★ 它**只提示、不判定**：这两项是运行期抓取/缓存的产物，会随沙箱出网能力波动，
+ *   把它接进判定会让汇报本身变成新的漂移源。所以只在两处不一致时给一行 ⚠️ 供人看。
+ */
+const RUNTIME_PROBES = [
+  {
+    key: 'bhparams.items',
+    path: '/api/bh/params?k=ULTIMATE_MARVEL_VS__CAPCOM_3&limit=12',
+    pick: (j) => (j.items || []).length,
+    name: '`/api/bh/params` 该 key 的机型配置条数',
+  },
+  {
+    key: 'mobilehub.devices',
+    path: '/api/mobilehub/match?t=' + encodeURIComponent('终极漫画英雄vs卡普空3'),
+    pick: (j) => ((j.hit && j.hit.devices) || []).length,
+    name: '`/api/mobilehub/match` 该游戏的机型台数',
+  },
+];
+
+/** 取一个运行期指标；失败不抛，只记 err（对照节不该让整份汇报挂掉） */
+async function probeRuntime(base, p) {
+  const out = { ok: false, http: null, v: null, err: null };
+  try {
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), 20000);
+    const r = await fetch(base + p.path + '&cb=' + Date.now(), {
+      headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+      signal: c.signal,
+    });
+    const txt = await r.text();
+    clearTimeout(t);
+    out.http = r.status;
+    let j = null;
+    try { j = JSON.parse(txt); } catch (e) { j = null; }
+    if (r.ok && j) { out.ok = true; out.v = p.pick(j); } else out.err = 'HTTP ' + r.status;
+  } catch (e) { out.err = e.message.slice(0, 60); }
+  return out;
+}
+
+/**
+ * 对照文案（纯函数 ⇒ 可行为级测）。三种输入各返回不同结论，
+ * 且**取不到任一侧时不下结论** —— 不允许把「没采到」说成「一致」。
+ */
+function runtimeCacheRow(local, live) {
+  if (!local || !local.ok) return '取不到本地值（' + ((local && local.err) || '未探测') + '）⇒ 不比较';
+  if (!live || !live.ok) return '取不到线上值（' + ((live && live.err) || '未探测') + '）⇒ 不比较';
+  if (local.v === live.v) return '一致（' + local.v + '）';
+  if (live.v < local.v) return '⚠️ 线上 ' + live.v + ' < 本地 ' + local.v + ' ⇒ 疑似线上运行期抓取/缓存退化（不参与判定）';
+  return '⚠️ 线上 ' + live.v + ' > 本地 ' + local.v + ' ⇒ 线上比本地多（本地可能需重跑抓取；不参与判定）';
+}
+
 /* ============ ④ GitHub ============ */
 /**
  * 路径 2：走 api.github.com 读远端分支头。
@@ -300,33 +360,43 @@ async function github(localHead) {
 function changelog() {
   const read = (f) => { try { return fs.readFileSync(path.join(ROOT, f), 'utf8'); } catch (e) { return ''; } };
   const readme = read('README.md');
-  const index = read('CODEX-INDEX.md');
-  /* 最新版本号：从 CODEX-INDEX 顶部块取 */
-  const mv = (index.match(/v(10\.\d+)\s*增量/) || [])[1] || '?';
   /* ★ v10.40：版本日志已从根目录迁到 docs/versions/（去掉 CODEX-DONE- 前缀）。
      这里**必须跟着改**，否则本函数会静默少统计到 0 份（目录还在、只是找错了地方）。 */
   const LOG_DIR = 'docs/versions';
+  /* ★ v10.42：索引真源换成 docs/versions/README.md ——
+     `CODEX-INDEX.md` 已移除（它的 42 个版本块与 README 的 34 个是同一批摘要的两次书写）。
+     若这里还去读 CODEX-INDEX.md，读不到的会是空串，`mv` 退化成 '?'、`indexHas` 恒 false ——
+     **不报错，只是汇报里那两行悄悄变成「缺 v?」**。 */
+  const INDEX_FILE = LOG_DIR + '/README.md';
+  const index = read(INDEX_FILE);
   const doneFiles = fs.readdirSync(path.join(ROOT, LOG_DIR)).filter((f) => /^v10\.\d+\.md$/.test(f)).sort((a, b) => {
     const n = (s) => Number((s.match(/v10\.(\d+)/) || [])[1] || 0);
     return n(a) - n(b);
   });
+  /* 最新版本号 = 版本日志里的最大号（每版都必须留一份 ⇒ 它才是最可靠的版本真源） */
+  const nums = doneFiles.map((f) => Number((f.match(/v10\.(\d+)/) || [])[1] || 0)).sort((a, b) => b - a);
+  const mv = nums[0] ? '10.' + nums[0] : '?';
+  /* 索引表里该版有没有行（形如 `| [v10.42](v10.42.md) |`） */
+  const idxHasRow = (v) => new RegExp('\\[v' + String(v).replace('.', '\\.') + '\\]\\(v' + String(v).replace('.', '\\.') + '\\.md\\)').test(index);
   return {
     readmeHas: readme.includes('v' + mv),
-    /* README 顶层是 `## ★ vX`；INDEX 的版本块是引用样式 `> ## ★ vX` —— 两处都要容错 */
-    readmeSection: (readme.match(/^>?\s*##\s*★\s*v(10\.\d+)[^\n]*/m) || [])[0] || '',
-    indexHas: new RegExp('v' + mv.replace('.', '\\.') + '\\s*增量').test(index),
-    indexHead: (index.match(/^>?\s*##\s*★\s*v[\d.]+[^\n]*/m) || [])[0] || '',
+    /* README 里最新那块的标题：v10.42 起收敛为「最近 5 版」，块降为 `###` ⇒ 两档都要容错 */
+    readmeSection: (readme.match(/^#{2,3}\s*★?\s*v(10\.\d+)[^\n]*/m) || [])[0] || '',
+    indexHas: idxHasRow(mv),
+    indexHead: (index.match(/^\|\s*\[v[\d.]+\]\(v[\d.]+\.md\)[^\n]*/m) || [])[0] || '',
     latest: mv,
+    indexFile: INDEX_FILE,
     doneCount: doneFiles.length,
     doneLatest: doneFiles.slice(-3),
     /* ★ 覆盖清单**不再手写**：曾写死 `['10.10'…'10.20']`，v10.21 时就漏更新了
-       （汇报里少一行，看不出来）。现在自动从 10.10 连续到「INDEX 最新版 / 版本日志最大版」。 */
+       （汇报里少一行，看不出来）。现在自动从 10.10 连续到「版本日志最大版」。
+       v10.42 起两列改为「有日志文件 / 在索引表里有行」——比原先的「README 里提没提」更有意义
+       （收敛后 README 本就不再逐版列，用 README 当判据会整列变 ✘ 变成噪声）。 */
     coverage: (() => {
-      const nums = doneFiles.map((f) => Number((f.match(/v10\.(\d+)/) || [])[1] || 0));
-      const top = Math.max(10, Number(String(mv).split('.')[1] || 0), ...nums);
+      const top = Math.max(10, ...nums);
       const out = [];
       for (let v = 10; v <= top; v++) out.push('10.' + v);
-      return out.map((v) => ({ v, readme: readme.includes('v' + v), index: index.includes('v' + v) }));
+      return out.map((v) => ({ v, log: doneFiles.includes('v' + v + '.md'), idx: idxHasRow(v) }));
     })(),
   };
 }
@@ -393,6 +463,28 @@ async function main() {
     }
   }
 
+  /* ②-b */
+  p('');
+  p('### ②-b 运行期缓存对照（★ 只提示，不参与判定）');
+  p('');
+  if (NO_NET) p('（--no-net，跳过）');
+  else {
+    const LOCAL_BASE = 'http://127.0.0.1:8123';
+    const LIVE_BASE = LINKS.LIVE.replace(/\/$/, '');
+    p('| 指标 | 本地 8123 | 线上 | 对照 |');
+    p('|---|---|---|---|');
+    for (const rp of RUNTIME_PROBES) {
+      const [lo, lv] = await Promise.all([probeRuntime(LOCAL_BASE, rp), probeRuntime(LIVE_BASE, rp)]);
+      p('| ' + rp.name + ' | ' + (lo.ok ? lo.v : '取不到') + ' | ' + (lv.ok ? lv.v : '取不到') +
+        ' | ' + runtimeCacheRow(lo, lv) + ' |');
+    }
+    p('');
+    p('> **为什么只提示**：这两项是**线上运行期抓取/缓存的产物**，会随沙箱出网能力波动。');
+    p('> v10.41 的「机型恒 6 台」正是这样漏过「前端 md5 + `dictInfo().archRule`」两条判据的 ——');
+    p('> 前端与服务端指纹**全程正常**，但用户看到的数据不一样。');
+    p('> **一致 ≠ 数据全对；不一致也不必然是发布问题** ⇒ 只列出来给人看，不接进判定。');
+  }
+
   /* ④ */
   const head = sh('git rev-parse HEAD').out || '';
   const gh = NO_NET ? null : await github(head);
@@ -421,9 +513,9 @@ async function main() {
   p('| 位置 | 状态 |');
   p('|---|---|');
   p('| `README.md` | ' + (cl.readmeHas ? '✅ 已含 v' + cl.latest : '❌ 缺 v' + cl.latest) + ' · ' + cl.readmeSection.slice(0, 70) + ' |');
-  p('| `CODEX-INDEX.md` | ' + (cl.indexHas ? '✅ 已含 v' + cl.latest : '❌ 缺 v' + cl.latest) + ' · ' + cl.indexHead.slice(0, 70) + ' |');
+  p('| `' + cl.indexFile + '`（唯一版本索引） | ' + (cl.indexHas ? '✅ 索引表含 v' + cl.latest : '❌ 索引表缺 v' + cl.latest) + ' · ' + cl.indexHead.slice(0, 70) + ' |');
   p('| `docs/versions/v*.md` | ' + cl.doneCount + ' 份，最近：' + cl.doneLatest.join(' / ') + ' |');
-  p('| 逐版覆盖 | ' + cl.coverage.map((c) => 'v' + c.v + (c.readme && c.index ? '✔' : '✘')).join(' ') + ' |');
+  p('| 逐版覆盖 | ' + cl.coverage.map((c) => 'v' + c.v + (c.log && c.idx ? '✔' : '✘')).join(' ') + ' |');
 
   const text = L.join('\n');
   if (MD_ONLY) console.log(text);
@@ -432,4 +524,4 @@ async function main() {
 
 if (require.main === module) main();
 
-module.exports = { FEATURES, SERVER_FEATURES, md5, stripComments, versionLabel, serverVersionLabel, serverFpRow, probeServer, main };
+module.exports = { FEATURES, SERVER_FEATURES, RUNTIME_PROBES, md5, stripComments, versionLabel, serverVersionLabel, serverFpRow, runtimeCacheRow, probeServer, main };

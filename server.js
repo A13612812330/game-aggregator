@@ -16,6 +16,16 @@ const shotsLib = require('./fetchers/shots');
 const specDict = require('./data/spec-dict');
 const specMatch = require('./data/spec-match');
 
+/* ★ v10.42：端口自增兜底改为「显式开关」，**默认关闭**。
+ *   旧行为：`EADDRINUSE ⇒ listen(port + 1, triesLeft - 1)`，最多自增 30 次
+ *   （v10.25 的启动器注释里就记着「实测最多 30 次」）。
+ *   危害不是「多占一个端口」，而是**让「到底重启了没有」无法判断**：想重启 8123 时端口尚未释放，
+ *   于是悄悄起了 8124 副实例 —— 用户看到窗口有日志、浏览器也开了，以为重启成功，
+ *   实际 8123 还是旧进程；两个实例共写同一份 `data/**`（本项目多处缓存是「读改写整份 JSON」）
+ *   会交叉覆盖；而线上诊断一律以 8123 为准，看到的却是旧代码 ⇒ 排查方向直接跑偏。
+ *   确实需要并行跑第二个实例做对照时，显式设 `GAMEHUB_PORT_SHIFT=1`。 */
+const ALLOW_PORT_SHIFT = process.env.GAMEHUB_PORT_SHIFT === '1';
+
 const app = express();
 /* ★ 端口唯一真源（v10.1）
  *   历史坑：这里原本写 3456，而文件末尾 listen() 里又写了 8123 字面量，两处不一致 ——
@@ -1653,19 +1663,33 @@ app.get('/api/download', async (req, res) => {
 
 app.use((_req, res) => res.status(404).json({ ok: false, error: 'Not Found' }));
 
+/* ★ v10.42：端口被占用时**默认不再静默换端口**，改为响亮失败并给出处理办法。
+ *   为什么（2026-09-28 实测踩到）：想重启 8123，`stop` 之后端口尚未释放就启动，
+ *   旧实现会一路自增到 8124 起个副实例 —— 三个可见后果：
+ *     ① 用户以为重启成功（有日志、浏览器也开了），实际 8123 还是旧进程；
+ *     ② 两个实例共写同一份 `data/**`，交叉覆盖；
+ *     ③ 线上诊断以 8123 为准，看到的却是旧代码。
+ *   逃生开关：`GAMEHUB_PORT_SHIFT=1`（并行跑对照实例时用）。 */
 function listen(port, triesLeft) {
   const srv = app.listen(port, () => {
     console.log(`[GameHub] 聚合站已启动: http://localhost:${port}`);
     console.log(`[GameHub] 数据源: 机地 jidiyouxi.com  |  XDGAME xdgamer.com`);
   });
   srv.on('error', (e) => {
-    if (e.code === 'EADDRINUSE' && triesLeft > 0) {
-      console.log(`[GameHub] 端口 ${port} 被占用，尝试 ${port + 1} …`);
-      listen(port + 1, triesLeft - 1);
-    } else {
+    if (e.code !== 'EADDRINUSE') {
       console.error('[GameHub] 启动失败:', e.message);
       process.exit(1);
     }
+    if (ALLOW_PORT_SHIFT && triesLeft > 0) {
+      console.log(`[GameHub] 端口 ${port} 被占用，GAMEHUB_PORT_SHIFT=1 ⇒ 尝试 ${port + 1} …`);
+      listen(port + 1, triesLeft - 1);
+      return;
+    }
+    console.error(`[GameHub] ★ 端口 ${port} 已被占用 —— 本次不会自动换端口（v10.42 起）。`);
+    console.error(`[GameHub]   最可能：上一次的服务还在跑（浏览器能打开就说明是它）。`);
+    console.error(`[GameHub]   处理：先运行 stop-gamehub.cmd，或杀掉占用 ${port} 的进程，再启动。`);
+    console.error(`[GameHub]   若确实要让位到 ${port + 1}：设环境变量 GAMEHUB_PORT_SHIFT=1 后重试。`);
+    process.exit(1);
   });
 }
 listen(PORT, 30);

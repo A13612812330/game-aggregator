@@ -7,7 +7,7 @@
 >
 > | 你要找什么 | 看哪里 |
 > |---|---|
-> | 当前版本 / 各版做了什么 | **`CODEX-INDEX.md`**（索引，最新置顶）+ `docs/versions/vX.Y.md`（逐版完整说明） |
+> | 当前版本 / 各版做了什么 | **`docs/versions/`**（`README.md` 是索引、`vX.Y.md` 是逐版完整说明） |
 > | 界面与功能的当前形态 | `README.md` |
 > | **当前分享链接** | `https://gamehub-agg-v4.app.workbuddy.host/`（v10.23 起，**v10.24 发布后链接未变**） |
 > | 每次收尾的五项状态 | `node tools/report.js`（**实测**，不靠记忆） |
@@ -32,7 +32,7 @@
 > ⚠️ 判定版本一律比 `index.html` 的 md5 —— 这**五个**域名**全部返回 200**，状态码区分不出新旧。
 >
 > ⚠️ 同理，本文里的**任务清单、端口约定、启动器写法、遗留项**都可能已被后续版本改掉，
-> 引用前先到 `CODEX-INDEX.md` 确认。
+> 引用前先到 `docs/versions/README.md`（版本索引）确认。
 
 ---
 
@@ -688,7 +688,7 @@ node -e "const p=require('./data/mobilehub-names.progress.json');console.log(p.d
 |---|---|
 | `CODEX-HANDOFF.md` | ★★ **2026-09-14 盘点**：项目全貌 / 位置固定表 / 文件功能字典 / 技术栈 / 端口约定 / 文档滞后清单 / 优化建议（交给 Codex 用的主文档） |
 | `CODEX-TASKS.md` | ★★ **可直接复制粘贴的 Codex 任务 prompt 集**（P0-P3 共 11 条，每条含背景/约束/验收） |
-| `CODEX-INDEX.md` | ★★ **交付物清单 + Codex 派发索引**（含首轮引导句、11 条派发句、推荐派发顺序） |
+| `docs/versions/` | ★★ **版本索引（`README.md`）+ 逐版完整说明（`v10.N.md`）** —— v10.42 起已移除 `CODEX-INDEX.md`，索引职责收敛到本目录 |
 | `README.md` | ★ 5.2 万字完整技术文档（v9.3，**部分数字滞后，见 CODEX-HANDOFF.md 第 9 节**） |
 | `DESIGN.md` | 页面设计规范（**内容落后，待同步**） |
 | `.workbuddy/artifacts/2026-09-10-GameHub-优化轮19-手游中心合并与全站统一搜索.md` | 本轮交付说明 |
