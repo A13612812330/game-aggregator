@@ -15,7 +15,7 @@
 > | v10.19 | 模拟器指南改 **`.eg-sec` 卡片化 + `.eg-no` 序号徽章 + 7 chip 吸顶模块导航**；`var(--c-line)`（从未定义）→ `var(--c-border)` |
 >
 > ⇒ 要做筛选条 / 指南相关的改动，**先读代码**，别照第 4 节抄。
-> 当前版本与逐版说明见 **`CODEX-INDEX.md`** + **`CODEX-DONE-vX.Y.md`**；
+> 当前版本与逐版说明见 **`CODEX-INDEX.md`** + **`docs/versions/vX.Y.md`**；
 > 视觉改动有回归防线：`node tools/run-all.js`（含 `test-filter-layout` 77 条布局断言）。
 
 ---

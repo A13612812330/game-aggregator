@@ -303,7 +303,10 @@ function changelog() {
   const index = read('CODEX-INDEX.md');
   /* 最新版本号：从 CODEX-INDEX 顶部块取 */
   const mv = (index.match(/v(10\.\d+)\s*增量/) || [])[1] || '?';
-  const doneFiles = fs.readdirSync(ROOT).filter((f) => /^CODEX-DONE-v10\.\d+\.md$/.test(f)).sort((a, b) => {
+  /* ★ v10.40：版本日志已从根目录迁到 docs/versions/（去掉 CODEX-DONE- 前缀）。
+     这里**必须跟着改**，否则本函数会静默少统计到 0 份（目录还在、只是找错了地方）。 */
+  const LOG_DIR = 'docs/versions';
+  const doneFiles = fs.readdirSync(path.join(ROOT, LOG_DIR)).filter((f) => /^v10\.\d+\.md$/.test(f)).sort((a, b) => {
     const n = (s) => Number((s.match(/v10\.(\d+)/) || [])[1] || 0);
     return n(a) - n(b);
   });
@@ -317,7 +320,7 @@ function changelog() {
     doneCount: doneFiles.length,
     doneLatest: doneFiles.slice(-3),
     /* ★ 覆盖清单**不再手写**：曾写死 `['10.10'…'10.20']`，v10.21 时就漏更新了
-       （汇报里少一行，看不出来）。现在自动从 10.10 连续到「INDEX 最新版 / CODEX-DONE 最大版」。 */
+       （汇报里少一行，看不出来）。现在自动从 10.10 连续到「INDEX 最新版 / 版本日志最大版」。 */
     coverage: (() => {
       const nums = doneFiles.map((f) => Number((f.match(/v10\.(\d+)/) || [])[1] || 0));
       const top = Math.max(10, Number(String(mv).split('.')[1] || 0), ...nums);
@@ -419,7 +422,7 @@ async function main() {
   p('|---|---|');
   p('| `README.md` | ' + (cl.readmeHas ? '✅ 已含 v' + cl.latest : '❌ 缺 v' + cl.latest) + ' · ' + cl.readmeSection.slice(0, 70) + ' |');
   p('| `CODEX-INDEX.md` | ' + (cl.indexHas ? '✅ 已含 v' + cl.latest : '❌ 缺 v' + cl.latest) + ' · ' + cl.indexHead.slice(0, 70) + ' |');
-  p('| `CODEX-DONE-v*.md` | ' + cl.doneCount + ' 份，最近：' + cl.doneLatest.join(' / ') + ' |');
+  p('| `docs/versions/v*.md` | ' + cl.doneCount + ' 份，最近：' + cl.doneLatest.join(' / ') + ' |');
   p('| 逐版覆盖 | ' + cl.coverage.map((c) => 'v' + c.v + (c.readme && c.index ? '✔' : '✘')).join(' ') + ' |');
 
   const text = L.join('\n');

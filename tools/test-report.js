@@ -72,7 +72,14 @@ ok(/前端 md5 与服务端口径指纹均与本地一致/.test(SRC), '判定文
 ok(/ls-remote/.test(SRC), 'GitHub 用 ls-remote 比对远端分支');
 ok(/synced/.test(SRC), '给出「远端 = 本地」的同步结论字段');
 ok(/CODEX-INDEX\.md/.test(SRC) && /README\.md/.test(SRC), '更新日志同时检查 README 与 CODEX-INDEX');
-ok(/CODEX-DONE-v10/.test(SRC), '更新日志统计 CODEX-DONE-v*.md 份数');
+/* ★ v10.40：版本日志从根目录迁到 docs/versions/，并去掉 `CODEX-DONE-` 前缀。
+   这条**必须**守住 —— 迁移后仍去根目录找，会**静默统计到 0 份**（目录还在、只是找错地方，
+   不报错、汇报里只是少一行）。用剥注释后的 CODE 查，避免注释里提到就假绿。 */
+ok(/const LOG_DIR = 'docs\/versions'/.test(CODE) && /path\.join\(ROOT, LOG_DIR\)/.test(CODE),
+  '★ 版本日志从 docs/versions/ 读取（v10.40 迁移后旧路径会静默统计到 0 份）');
+ok(!/readdirSync\(ROOT\)\.filter\(\(f\) => \/\^CODEX-DONE/.test(CODE),
+  '★ 已不再从根目录找 CODEX-DONE-*.md（旧路径写死 ⇒ 静默失效）');
+ok(/\^v10\\\.\\d\+\\\.md\$/.test(CODE), '★ 日志文件名判据已同步为 v10.N.md（无 CODEX-DONE- 前缀）');
 /* ★ 反例：这条清单曾**写死** `['10.10'…'10.20']`，v10.21 时漏更新 —— 汇报里少一行，
    而且看不出来（少一行不像报错）。所以断言不许它退回数组字面量。 */
 ok(!/coverage:\s*\[\s*'/.test(CODE), '★ 逐版覆盖清单是**算**出来的，不是手写数组（写死过 → v10.21 漏一行）');

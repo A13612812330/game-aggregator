@@ -39,12 +39,26 @@ const MIN_LINE = 12;       // 非平凡行的最小长度
 const MAX_COPY_RATIO = 0.6; // 偏移比对：重复占比 ≥ 此值即判「整段副本」
 const MIN_OVERLAP = 60;    // 偏移后至少要重叠这么多行才参与判定（避免尾部短重叠误报）
 
-/* 待守的文档：根目录全部 .md —— ★ 用「枚举实际文件」而不是手写清单，
- * 因为新增文档时必须自动被覆盖（这正是本闸要防的「新增了没人守」）。 */
-const docs = fs.readdirSync(ROOT).filter((f) => /\.md$/i.test(f)).sort();
+/* 待守的文档：根目录 + `docs/versions/` 的全部 .md
+ * ★ 用「枚举实际文件」而不是手写清单，因为新增文档时必须自动被覆盖
+ *   （这正是本闸要防的「新增了没人守」）。
+ * ★ v10.40：39 份版本日志从根目录迁到 `docs/versions/` —— 若这里仍只扫根目录，
+ *   它们会**整体掉出守护范围且不报错**（正是本闸存在的理由）。 */
+const DOC_DIRS = ['', 'docs/versions'];
+const docs = [];   // [{ rel, abs }]
+for (const d of DOC_DIRS) {
+  const abs = path.join(ROOT, d);
+  if (!fs.existsSync(abs)) continue;
+  for (const f of fs.readdirSync(abs).filter((x) => /\.md$/i.test(x)).sort()) {
+    docs.push({ rel: d ? d + '/' + f : f, abs: path.join(abs, f) });
+  }
+}
+const LOG_DIR = 'docs/versions';
+const RE_VER_LOG = /^v10\.(\d+)\.md$/;
 
-console.log('=== 文档结构闸（v10.39 新增）===');
-console.log('扫描根目录 .md：' + docs.length + ' 个');
+console.log('=== 文档结构闸（v10.39 新增 / v10.40 扩到 docs/versions）===');
+console.log('扫描 .md：' + docs.length + ' 个（根目录 ' + docs.filter((d) => !d.rel.includes('/')).length +
+  ' + ' + LOG_DIR + ' ' + docs.filter((d) => d.rel.startsWith(LOG_DIR + '/')).length + '）');
 console.log('门槛：非平凡行 ≥ ' + MIN_LINE + ' 字 · 偏移重复占比 ≥ ' + (MAX_COPY_RATIO * 100) + '% 判为副本 · 最小重叠 ' + MIN_OVERLAP + ' 行');
 console.log('');
 
@@ -74,7 +88,7 @@ function headingsOf(lines) {
 }
 
 /* ---------- 标题路径：`## A` 下的 `### X` 与 `## B` 下的 `### X` 不算重复 ----------
- * 实测假红：CODEX-DONE-v10.5.md 有 `### 修法` ×3、v10.32.md 有 `### 改法` ×2、
+ * 实测假红：docs/versions/v10.5.md 有 `### 修法` ×3、v10.32.md 有 `### 改法` ×2、
  * README.md 有 `### 验证/修法/防线` 各 ×2 —— 它们各自的父节不同，**是合法结构**。
  * 真正该报的是「同一父节下出现两个同名子节」（那才是复制粘贴事故的形态）。 */
 function headingPaths(heads) {
@@ -90,6 +104,28 @@ function headingPaths(heads) {
 }
 
 
+/* ---------- 剥掉「代码里的伪链接」 ----------
+ * ★ 实测假红：docs/versions/README.md 在表格里用**行内代码**演示「根目录该怎么写链接」
+ *   （`` `[v10.39](docs/versions/v10.39.md)` ``），闸把它当真链接去解析 ⇒ 必然找不到。
+ *   代码段里的 `](…)` 是**示例**、不是链接，与「围栏里的 `#` 不是标题」同一类问题。 */
+function stripCode(src) {
+  const out = [];
+  let fence = null;
+  for (const raw of src.split(/\r?\n/)) {
+    const t = raw.trim();
+    const f = /^(`{3,}|~{3,})/.exec(t);
+    if (f) {
+      const mark = f[1][0];
+      if (fence === null) fence = mark;
+      else if (fence === mark) fence = null;
+      out.push('');
+      continue;
+    }
+    out.push(fence !== null ? '' : raw.replace(/`[^`]*`/g, ' '));
+  }
+  return out.join('\n');
+}
+
 const findings = [];
 
 /* 显式例外：允许出现 >1 个一级标题的文件 + 理由。
@@ -101,8 +137,9 @@ const H1_EXCEPTIONS = [
 ];
 const staleExceptions = [];
 
-for (const f of docs) {
-  const raw = fs.readFileSync(path.join(ROOT, f), 'utf8');
+for (const d of docs) {
+  const f = d.rel;
+  const raw = fs.readFileSync(d.abs, 'utf8');
   const lines = raw.split(/\r?\n/);
   const n = lines.length;
   const label = f + '（' + n + ' 行）';
@@ -158,6 +195,81 @@ for (const e of H1_EXCEPTIONS) {
 }
 ok(staleExceptions.length === 0, '例外表无陈旧项（登记 ' + H1_EXCEPTIONS.length + ' 条）');
 
+/* ---------- v10.40 新增：版本日志迁移后的四项守卫 ----------
+ * 背景：39 份日志从根目录迁到 `docs/versions/`，并去掉 `CODEX-DONE-` 前缀，
+ *       同时把「纯文本提及」改成可点击链接。这四条守的都是**坏了不报错**的形态。 */
+console.log('');
+console.log('--- v10.40 版本日志守卫 ---');
+
+/* ① 根目录不得回潮出现 CODEX-DONE-*.md */
+const RE_OLDNAME = /^CODEX-DONE-.*\.md$/i;
+const rootOld = fs.readdirSync(ROOT).filter((f) => RE_OLDNAME.test(f));
+ok(rootOld.length === 0, '根目录无 CODEX-DONE-*.md（回潮 ' + rootOld.length + ' 个' +
+  (rootOld.length ? '：' + rootOld.slice(0, 4).join(', ') : '') + '）');
+
+/* ② docs/versions 下也不得有（只搬文件不改名会漏掉这一半） */
+const logAbs = path.join(ROOT, LOG_DIR);
+const logOld = fs.existsSync(logAbs) ? fs.readdirSync(logAbs).filter((f) => RE_OLDNAME.test(f)) : [];
+ok(logOld.length === 0, LOG_DIR + ' 下无 CODEX-DONE-*.md（实测 ' + logOld.length + ' 个）');
+
+/* ③ 全仓不得残留「活引用」形态：反引号包裹的具体旧文件名。
+ *    ★ 判据收窄到**具体文件名**（含数字版本号），因为规范说明里会出现 `CODEX-DONE-v*.md`
+ *      这类通配写法 —— 那不是活引用，不该报。 */
+const RE_LIVE_REF = /`CODEX-DONE-v\d+\.\d+\.md`/;
+const liveRefs = [];
+for (const d of docs) {
+  const s = fs.readFileSync(d.abs, 'utf8');
+  if (RE_LIVE_REF.test(s)) liveRefs.push(d.rel);
+}
+ok(liveRefs.length === 0, '无 `CODEX-DONE-v<版本>.md` 活引用（残留 ' + liveRefs.length +
+  ' 个' + (liveRefs.length ? '：' + liveRefs.slice(0, 4).join(', ') : '') + '）');
+
+/* ④ docs/versions 版本号必须连续、且每个文件的 H1 与自己的版本号一致。
+ *    H1 对不上是最阴的一种：文件叫 v10.39、标题写着 v10.38（复制模板忘改），
+ *    人眼扫索引时看不出来，但会让「按标题找版本」全线错位。 */
+const verFiles = fs.existsSync(logAbs)
+  ? fs.readdirSync(logAbs).filter((f) => RE_VER_LOG.test(f))
+  : [];
+const minis = verFiles.map((f) => Number(RE_VER_LOG.exec(f)[1])).sort((a, b) => a - b);
+const gaps = [];
+for (let v = minis[0]; v <= minis[minis.length - 1]; v++) if (!minis.includes(v)) gaps.push(v);
+ok(minis.length > 0 && gaps.length === 0,
+  LOG_DIR + ' 版本号连续（' + minis.length + ' 份，v10.' + minis[0] + ' → v10.' + minis[minis.length - 1] +
+  (gaps.length ? '，缺：v10.' + gaps.join(' / v10.') : '，无缺号') + '）');
+
+const h1Mismatch = [];
+for (const f of verFiles) {
+  const v = RE_VER_LOG.exec(f)[1];
+  const txt = fs.readFileSync(path.join(logAbs, f), 'utf8');
+  const h1 = (headingsOf(txt.split(/\r?\n/)).filter((h) => h.lv === 1)[0] || {}).t || '';
+  if (!new RegExp('^v10\\.' + v + '\\b').test(h1)) h1Mismatch.push(f + ' → 「' + h1.slice(0, 30) + '」');
+}
+ok(h1Mismatch.length === 0, '每份日志的 H1 与文件名版本号一致（不符 ' + h1Mismatch.length +
+  ' 个' + (h1Mismatch.length ? '：' + h1Mismatch.slice(0, 3).join(' ｜ ') : '') + '）');
+
+/* ⑤ 所有 .md 里的相对链接目标必须存在。
+ *    ★ 这条是「挪完文件改完引用」的收口判据：迁移时漏改一处引用，
+ *      原先的纯文本形态**不会报错**（本来就不可点），改成链接后才会露出来。
+ *      所以既要改（可点击），也要有这一条来证明**改对了**。 */
+const badLinks = [];
+for (const d of docs) {
+  const s = stripCode(fs.readFileSync(d.abs, 'utf8'));
+  const dir = path.dirname(d.abs);
+  const rx = /\]\(([^)\s]+)\)/g;
+  let m;
+  while ((m = rx.exec(s))) {
+    let t = m[1].trim();
+    if (/^(https?:|mailto:|tel:|data:|#)/i.test(t)) continue;   // 外链 / 锚点不查
+    t = t.split('#')[0];
+    if (!t) continue;
+    let dec = t;
+    try { dec = decodeURIComponent(t); } catch (e) { /* 原样 */ }
+    if (!fs.existsSync(path.resolve(dir, dec))) badLinks.push(d.rel + ' → ' + t);
+  }
+}
+ok(badLinks.length === 0, 'md 相对链接全部可解析（失效 ' + badLinks.length +
+  ' 处' + (badLinks.length ? '：' + badLinks.slice(0, 4).join(' ｜ ') + ' …' : '') + '）');
+
 /* ---------- 汇总 ---------- */
 console.log('--- 逐项 ---');
 for (const l of okList) console.log(l);
@@ -187,6 +299,6 @@ process.exit(fail ? 1 : 0);
  * · 首版判据的两处假红（已修，留作教训）：
  *   ① 「一级标题恰好 1 个」把**围栏代码块里的 `#` 注释**当标题 ⇒ WORKFLOW.md 被算成 24 个、
  *      README.md 被算成 2 个 ⇒ 必须先跳过 ``` / ~~~ 块。
- *   ② 「标题文本唯一」太严 ⇒ CODEX-DONE-v10.5.md 的 `### 修法` ×3、README.md 的 `### 验证` ×2
+ *   ② 「标题文本唯一」太严 ⇒ docs/versions/v10.5.md 的 `### 修法` ×3、README.md 的 `### 验证` ×2
  *      都是**不同父节下的同名子节**，完全合法 ⇒ 改成「标题**路径**唯一」。
  */
