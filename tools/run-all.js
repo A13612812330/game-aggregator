@@ -75,6 +75,12 @@ const SUITES = [
    * 本套件守：① 一级标题恰好 1 个 ② 任意偏移下不存在大段重复 ③ 标题路径唯一。
    * ★ 它是**唯一一个不读代码、只读文档**的套件（`root/*.md`，自动发现、不写死清单）。 */
   'test-doc-structure.js',
+  /* ★ v10.41 新增：bhparams 防污染。
+   * 起因：线上沙箱抓不到 raw.githubusercontent.com ⇒ `/api/bh/params` 抓到 0 条后
+   * 仍把 `{total:24, items:[]}` 写回 `data/bhparams.json` 并刷新 ts ⇒ 好数据被覆盖、
+   * 7 天 TTL 重新计时 ⇒ 机型清单被打回上游 6 格摘要且一周不重试。
+   * 本套件守「本轮全部抓取失败时磁盘缓存逐字节不变」（模块在临时沙箱里跑，不碰真实缓存）。 */
+  'test-bhparams-nopoison.js',
 ];
 /* 刻意**不登记**的：
  *   · test-search-ui.js  —— 用 puppeteer，属第二层「浏览器实拍」，本脚本跑不了

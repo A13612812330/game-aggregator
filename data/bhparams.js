@@ -213,6 +213,8 @@ async function mapLimit(list, limit, fn) {
  *   所以在候选中挑**文件最多**的那个，而不是盲信第一个。
  *
  * 返回 { ok, key, picked, candidates, items:[…], total, cached, fetchedAt }
+ *   ★ v10.41 新增 `allFailed`：本轮抓取/解析**全部失败**（此时 items 是保留的旧值或空，
+ *     磁盘缓存**未被改写**）。调用方据此区分「真的没有配置」与「这次没抓到」。
  */
 async function params(keyOrKeys, limit = 4) {
   const cands = (Array.isArray(keyOrKeys) ? keyOrKeys : String(keyOrKeys || '').split(','))
@@ -247,6 +249,39 @@ async function params(keyOrKeys, limit = 4) {
     return parseConfig(j, meta);
   });
   const items = parsed.filter(Boolean).slice(0, n);
+
+  /* ★ v10.41：**本轮全部抓取/解析失败时不落盘** —— 宁可保留旧值，也不写「0 条」
+   *
+   *   症状（v10.39 一次线上验收 6 条红，当时记为「成因未定论」）：
+   *     样本游戏机型清单**恒为 6 台**（= 上游聚合摘要上限，没和逐条配置合并）。
+   *
+   *   根因（2026-09-28 实测定位）：
+   *     `/api/mobilehub/match` 的 `devices` = 摘要 ∪ `bhparams.cachedDevices()`，
+   *     而**线上沙箱访问 raw.githubusercontent.com 全部失败** ⇒ 本函数抓到 0 条，
+   *     紧跟着把 `{total:24, items:[]}` **写回磁盘并刷新 ts**，于是：
+   *       ① 已有的好数据被「0 条」覆盖掉；
+   *       ② 新 ts 让 7 天 TTL 重新计时 ⇒ 一次网络抖动被放大成**一周**的退化。
+   *
+   *   证据（同一个 key、同样的 24 份配置，仅出网能力不同）：
+   *     本地 `ULTIMATE_MARVEL_VS__CAPCOM_3` → total=24 items=12
+   *     线上 同一个 key                  → total=24 items=0   （24 份全部失败）
+   *
+   *   修法：全部失败 ⇒ 不写盘、不动 ts，返回上一次的好数据并标记 `allFailed`。
+   *     这样下次调用仍会重新联网，网络恢复即**自愈**，不再锁死 7 天。
+   *     `list.length === 0`（该 key 确实没有配置）走上面的分支，不受本判断影响。 */
+  if (!items.length && list.length > 0) {
+    const prev = c[key];
+    const kept = (prev && Array.isArray(prev.items)) ? prev.items : [];
+    return {
+      ok: true, key, picked: key, candidates: sizes,
+      items: kept.slice(0, n),
+      total: prev && prev.total != null ? prev.total : list.length,
+      cached: kept.length > 0,      // 返回的是旧值（不是本次抓到的）
+      allFailed: true,              // 本轮 0 条可用 —— 调用方可据此如实说明
+      fetchedAt: prev && prev.ts,
+    };
+  }
+
   c[key] = { ts: Date.now(), total: list.length, items };
   dirty = true; flush();
   return { ok: true, key, picked: key, candidates: sizes, items, total: list.length, cached: false, fetchedAt: c[key].ts };
