@@ -34,6 +34,8 @@
  ├─ 改页面样式/交互 ──────► 【主源】public/index.html（或生成器的 SECTIONS 常量）
  ├─ 改手机专区专属区块 ───► 【主源】tools/build-emulator-page.js 的 SECTIONS
  │                          + tools/emulator-sections.js（页面脚本）
+ ├─ 改端游资源页专属区块 ─► 【主源】tools/build-resource-page.js 的 SECTIONS
+ │                          + tools/resource-sections.js（页面脚本）
  ├─ 改解包匹配页 ────────► 【主源】tools/build-unpack-page.js 的 SECTIONS
  │                          + tools/unpack-sections.js
  ├─ 改接口/路由 ─────────► server.js
@@ -42,7 +44,7 @@
 ```
 
 **共享资产（CSS / 顶栏 / 遮罩 / 搜索 / 通用脚本）只有一处真源** ——
-由 `tools/page-assets.js` 从 `index.html` 抽出，三个页面同源吃同一份。
+由 `tools/page-assets.js` 从 `index.html` 抽出，**四个**页面同源吃同一份。
 ⇒ **改共享资产只改 `index.html`**，改完必须重建**所有**派生页。
 
 ### 步骤 2 · 改代码
@@ -51,8 +53,8 @@
 
 | 铁律 | 原因 |
 |---|---|
-| 派生页 `emulator.html` / `unpack.html` **绝不手改** | 下次重建就冲掉 |
-| 改共享资产只改 `index.html` | 否则三页漂移 |
+| 派生页 `emulator.html` / `resources.html` / `unpack.html` **绝不手改** | 下次重建就冲掉 |
+| 改共享资产只改 `index.html` | 否则四页漂移 |
 | 改 `data/*.js` 后必须重启服务 | node 模块缓存，不重启不生效 |
 | 改 `server.js` 后必须重启服务 | 同上 |
 | 改 `server.js` / `data/**` 前先备份目标文件 | 破坏性操作兜底 |
@@ -61,8 +63,9 @@
 
 ```bash
 node tools/build-emulator-page.js    # → public/emulator.html
+node tools/build-resource-page.js    # → public/resources.html
 node tools/build-unpack-page.js      # → public/unpack.html
-node tools/test-pages-sync.js        # ★ 同步防线（25 条）
+node tools/test-pages-sync.js        # ★ 同步防线（40 条）
 ```
 
 ★ `test-pages-sync.js` 是**唯一**能发现「主源改了但派生页没重建」的手段
@@ -82,7 +85,7 @@ curl http://localhost:8123/api/health    # 期望 ok
 ### 步骤 5 · 跑三层防线
 
 ```bash
-# 第一层：静态（前置闸 2 个 + 38 套 / 2703 条 / 必须 0 失败）
+# 第一层：静态（前置闸 2 个 + 40 套 / 2881 条 / 必须 0 失败）
 node tools/run-all.js
 
 # 第二层：浏览器实拍（puppeteer，★ 必须加大超时 + 分批跑）
@@ -193,6 +196,7 @@ node tools/audit-apps.js          # ★ 发布过就再跑一次：应用登记 
 |---|:--:|:--:|:--:|:--:|:--:|:--:|
 | 首页样式/交互（`index.html`） | ✓ **全部** | — | ✓ | ✓ | ✓ | ✓ |
 | 手机专区区块（`SECTIONS` + `emulator-sections.js`） | ✓ emu | — | ✓ | ✓ | ✓ | ✓ |
+| 端游资源页区块（`build-resource-page.js` + `resource-sections.js`） | ✓ resources | — | ✓ | ✓ | ✓ | ✓ |
 | 解包匹配页（`build-unpack-page.js` + `unpack-sections.js`） | ✓ unpack | — | ✓ | ✓ | ✓ | ✓ |
 | 接口/路由（`server.js`） | — | ✓ | ✓ | ✓ | ✓ | ✓ |
 | 数据读取层（`data/*.js`） | — | ✓ | ✓ | 视情况 | ✓ | ✓ |
@@ -242,9 +246,9 @@ node tools/audit-apps.js          # ★ 发布过就再跑一次：应用登记 
 
 | 层 | 工具 | 规模 | 特点 | 何时跑 |
 |---|---|---|---|---|
-| ⓪ 前置闸 | `check-inline-syntax.js` + **`check-card-rules.js`**（由 `run-all` 拉起） | 3 页 + 卡片族 | 语法**精确到行列**；卡片族**枚举实际规则体**（抓「测试还不知道的新断点」） | 每次改页面 |
-| ① 静态 | `tools/run-all.js` | **38 套 / 2703 条** | 秒级出结果、无需人盯（整套实测约 2.5 分钟） | 每次改完 |
-| ② 行为 | `test-emulator-page.js`（jsdom，含在 38 套内） | 119 条 | 需服务在 8123 | 每次改完 |
+| ⓪ 前置闸 | `check-inline-syntax.js` + **`check-card-rules.js`**（由 `run-all` 拉起） | 语法 4 页 + 卡片族 3 页 | 语法**精确到行列**；卡片族**枚举实际规则体**（抓「测试还不知道的新断点」） | 每次改页面 |
+| ① 静态 | `tools/run-all.js` | **40 套 / 2881 条**（2026-10-09 现测） | 秒级出结果、无需人盯（整套实测约 2.5 分钟） | 每次改完 |
+| ② 行为 | `test-emulator-page.js` + `test-resource-page.js`（jsdom，含在 40 套内） | 99 + 68 条 | 需服务在 8123 | 每次改完 |
 | ③ 实拍 | `tools/preview-v*.js`（**24** 个） | 各 30~70 条 | puppeteer，**慢且脆** | 改页面时 |
 | ③' 回归 | `test-search-ui.js` + 八个 `test-v1025-*.js`（**9 个**） | 各 10~40 条（**跑完看末行**，随版增长、不写死） | puppeteer + CDP，**要人盯、须分批** | 改交互后 |
 | ④ 线上 | `tools/verify-online.js` | — | 对**线上**验收 | 仅发布后 |
@@ -252,16 +256,16 @@ node tools/audit-apps.js          # ★ 发布过就再跑一次：应用登记 
 ★ **为什么 ⓪ 要单独占一层**：`public/*.html` 的内联脚本是 3400~4700 行的**单块** JS，
 一旦语法坏了（注释里出现提前闭合序列、模板串里塞了反引号），
 **后面所有套件都会集体翻红** —— 看着像几十处功能坏了，实际只有一处手误。
-先过语法闸，报错才精确到行列；且它**必须验 3 个页面**（派生页各有自己的内联块，只查主源会漏）。
+先过语法闸，报错才精确到行列；且它**必须验 4 个页面**（派生页各有自己的内联块，只查主源会漏）。
 
 ★ **`check-card-rules.js`（v10.30 新增）为什么也归 ⓪ 而不是 ①**：
 断言套件只能守住**它已经知道的选择器**。有人新加一条断点
 （如 `.skeleton .sk-th{width:112px;height:66px}`），套件照样全绿，样式却已经漂了。
-本闸反过来做——**先枚举 2 页实际规则体，再判合规**，所以它能抓到「测试还不知道的那条断点」；
+本闸反过来做——**先枚举 3 页实际规则体，再判合规**，所以它能抓到「测试还不知道的那条断点」；
 同时它维护两张**显式例外表**（`.emu-card .cov` 顶部横幅 92px 等）并**自检陈旧**：
 登记了但代码里已不存在的选择器也报错，避免「例外表」退化成「静默跳过」。
 
-★ **v10.39 新增：文档结构闸 `test-doc-structure.js`**（登记在 38 套内，**唯一一个不读代码、只读文档的套件**）。
+★ **v10.39 新增：文档结构闸 `test-doc-structure.js`**（登记在 40 套内，**唯一一个不读代码、只读文档的套件**）。
 起因见第七节 v10.39 那条：整份 `WORKFLOW.md` 被插进一行长行的中间，**在仓库里活了 3 个版本没人发现**，
 因为此前**没有任何套件看 `.md`**。它守三件事（都是「坏了不报错」的形态）：
 ① 一级标题恰好 1 个（归档文档放宽到 2，走显式例外表 + **自检陈旧**）；
@@ -320,28 +324,28 @@ WORKFLOW.md 曾被误算成 24 个一级标题）；**判据要按文件成对�
 
 ---
 
-## 六、当前规模基线（2026-09-24 接口实测，v10.39）
+## 六、当前规模基线（2026-10-09 接口实测，v10.44）
 
 | 库 | 规模 | 接口 |
 |---|---|---|
-| 端游库 | **19,074** = XDGAME **15,448** + 仅机地 **3,626** ｜双料 **13,448**（含机地源 17,074） | `/api/library/stats` |
+| 端游库 | **19,397** = XDGAME **15,740** + 仅机地 **3,657** ｜双料 **13,448**（含机地源 17,105） | `/api/library/stats` |
 | **机地全量话题** | **17,220** | `/api/jiditopics/stats` |
-| **PC 要求库** | **17,177** 款（含最低 17,146 / 推荐 11,366） | `/api/spec/dict` |
-| **配置要求缓存** | cached **16,371** · withReq **16,170** · miss **200** · `q:` 搜索键 1 | `/api/pcreq/stats` |
-| 手游中心（合并索引） | **3,226** · 匹配端游 **1,652（51.2%）** · 未匹配 1,574 · 配置 **15,791** | `/api/mobilehub/stats` |
-| BannerHub 社区库 | 2,682 款 / 14,802 份配置 / 1,529 机型 / 91 GPU | `/api/bh/stats` |
+| **PC 要求库** | **17,487** 款（含最低 17,457 / 推荐 11,581） | `/api/spec/dict` |
+| **配置要求缓存** | cached **17,508** · withReq **16,877** · miss **630** · `q:` 搜索键 1 | `/api/pcreq/stats` |
+| 手游中心（合并索引） | **3,312** · 匹配端游 **1,680（50.7%）** · 未匹配 1,632 · 配置 **16,638** | `/api/mobilehub/stats` |
+| BannerHub 社区库 | 2,792 款 / 15,649 份配置 / 1,570 机型 / 91 GPU | `/api/bh/stats` |
 | 机型实测库 | 1,037 条 / 1,025 款 / 可玩 543 / 不可玩 474 / 未标 20 | `/api/pc/stats` |
-| 修改器 | 3,635（匹配端游 2,812 = **77.4%**） | `/api/trainers/stats` |
+| 修改器 | 3,683（匹配端游 2,848 = **77.3%**） | `/api/trainers/stats` |
 | **Mod** | **8,943**（匹配 7,076 = **79.1%**）｜带链接 8,936 / 链接总数 13,390 | `/api/mods/stats` |
-| 云存档 | 6,606 款 / **15,031** 条路径 / 手机能玩 1,132 | `/api/saves/stats` |
-| 机型库 | 17 品牌 / **1,058** 台 | `/api/device/stats` |
+| 云存档 | 6,625 款 / **15,064** 条路径 / 手机能玩 1,163 | `/api/saves/stats` |
+| 机型库 | 17 品牌 / **1,086** 台 | `/api/device/stats` |
 | **机型市场库** | **11,500** 行 / 8,261 代号 / 3,938 市场 / 24 品牌 ｜**冲突 3,239** | `/api/device/market-stats` |
-| 机型硬件库 · 设备补齐 | 34（命中 28 / 缺 6）· 16（14 条有芯片） | `/api/device/hardware-stats` · `/api/device/fill-stats` |
-| **跨源对照 xref** | 修改器 2,365 · 存档 6,265 · **双料 1,695** | `/api/xref/stats` |
+| 机型硬件库 · 设备补齐 | 35（命中 29 / 缺 6）· 16（14 条有芯片） | `/api/device/hardware-stats` · `/api/device/fill-stats` |
+| **跨源对照 xref** | 修改器 2,391 · 存档 6,274 · **双料 1,707** | `/api/xref/stats` |
 
-**接口总量 74 条路由（其中 72 条 `/api/*`）**，`server.js` **1,672 行**（2026-09-24 实测）。
-**前端三页**（全部内联、零构建；★ KB = 磁盘字节 / 1024，**本版已统一口径**）：`index` **371** KB（JS 226 / CSS 136）· `emulator` **457** KB（JS 290 / CSS 144）· `unpack` **408** KB（JS 250 / CSS 147），合计 **1,237 KB ≈ 1.21 MB**。
-**防线** 38 套 / 2703 条 + 前置闸 2 个；`tools/*.js` **192** 个（含实拍 24 个、`_*` 临时探针与反证 82 个，后者 `.gitignore` 覆盖）。
+**接口总量 74 条路由（其中 72 条 `/api/*`）**，`server.js` **1,696 行**（2026-10-09 现测）。
+**前端四页**（全部内联、零构建；★ KB = 磁盘字节 / 1024，**口径已统一**）：`index` **372** KB（JS 226 / CSS 136）· `emulator` **435** KB（JS 272 / CSS 145）· `resources` **408** KB（JS 254 / CSS 140）· `unpack` **408** KB（JS 250 / CSS 147），合计 **1,623 KB ≈ 1.58 MB**。
+**防线** 40 套 / 2881 条 + 前置闸 2 个；`tools/*.js` **201** 个（含实拍 24 个、`_*` 临时探针与反证 87 个，后者 `.gitignore` 覆盖）。
 
 ★ **完整功能盘点、覆盖率短板与排期见 `ROADMAP.md`**（本文只留流程要用的规模）。
 > ★ 这张表**会随抓取过期**。判据是接口实测值，不是这张表 ——
@@ -418,16 +422,16 @@ WORKFLOW.md 曾被误算成 24 个一级标题）；**判据要按文件成对�
 ```bash
 NODE=C:/Users/komo/.workbuddy/binaries/node/versions/22.22.2-3/node.exe
 
-# 重建派生页
-$NODE tools/build-emulator-page.js && $NODE tools/build-unpack-page.js
+# 重建派生页（★ 三张都要重建；漏一张只在 test-pages-sync 里报）
+$NODE tools/build-emulator-page.js && $NODE tools/build-resource-page.js && $NODE tools/build-unpack-page.js
 
 # 重启服务 / 健康检查
 $NODE tools/restart-server.js
 
-# 全量静态防线（前置闸 2 + 38 套 2703 条）
+# 全量静态防线（前置闸 2 + 40 套 2881 条）
 $NODE tools/run-all.js
 
-# 只查内联脚本语法（报错精确到行列；默认查 index/emulator/unpack 三页）
+# 只查内联脚本语法（报错精确到行列；默认查 index/emulator/resources/unpack 四页）
 $NODE tools/check-inline-syntax.js
 
 # 只查卡片族 CSS 合规（图片槽不许定高 / 卡片圆角必须走变量；枚举实际规则体）

@@ -159,11 +159,12 @@ const TAB_JS = `/* ================= 📱 手机专区 · 子页签（独立页�
           实测库视角并入合并索引（见 SECTIONS 注释）。页签由 4 个减为 3 个，
           #pc 路由保留为**兼容别名**（旧链接 #pc 会落到 #emu，不会白屏）。
 
-   ★ v10：新增 **修改器(#trainers)** 与 **云存档(#saves)** —— 共 **5 个平级页签**。
+   ★ v10.44：**修改器(#trainers) / 云存档(#saves) 迁出**到独立页 /resources.html，
+            本页回到 **3 个平级页签**：手游中心 / 机型兼容 / 模拟器指南。
 
-   URL hash 同步：/emulator.html#emu / #tr / #sv / #eg / #dm（#pc 归一为 #emu）
+   URL hash 同步：/emulator.html#emu / #dm / #eg（#pc 归一为 #emu）
 */
-const ET_MAP = { emu: '#emulator', tr: '#trainers', sv: '#saves', eg: '#emuguide', dm: '#devmatch' };
+const ET_MAP = { emu: '#emulator', dm: '#devmatch', eg: '#emuguide' };
 let etCur = 'emu';
 
 /* ★ v10.2 修的孤儿调用：主脚本（两页共用）里底部 Tab 的 emu/pc/eg 分支会调 goEmuPage()，
@@ -175,8 +176,6 @@ function goEmuPage(t) { switchEmuTab(t === 'pc' ? 'emu' : t); }
 /** 各分区懒加载入口（在 initXxx 声明之后调用，避免 TDZ） */
 function etInit(t) {
   if (t === 'emu') return initEmu();
-  if (t === 'tr') return initTr();
-  if (t === 'sv') return initSv();
   if (t === 'eg') return initEg();
   if (t === 'dm') return initDm();
 }
@@ -200,16 +199,10 @@ function switchEmuTab(t, opts) {
   el.setAttribute('href', '#emu');
   el.addEventListener('click', (e) => { e.preventDefault(); switchEmuTab('emu'); });
 })();
-/** 子页签数字回填（手游中心合并游戏数 / 修改器条数 / 云存档手机可玩数 / 机型库条目数） */
+/** 子页签数字回填（手游中心合并游戏数 / 机型库条目数） */
 async function fillTabNums() {
   const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.textContent = Number(v).toLocaleString(); };
   try { const s = await fetch(api('/api/mobilehub/stats')).then((r) => r.json()); if (s && s.total != null) set('tabNumEmu', s.total); } catch (e) {}
-  try {
-    const s = await fetch(api('/api/tools/stats')).then((r) => r.json());
-    if (s && s.trainers) set('tabNumTr', s.trainers.total);
-    /* 云存档页签数字用「手机能玩」口径，与页面默认筛选一致，避免「显示 5,741 结果只列出 1,117」 */
-    if (s && s.saves) set('tabNumSv', s.saves.phonePlayable);
-  } catch (e) {}
   try { const s = await fetch(api('/api/device/stats')).then((r) => r.json()); if (s && s.devices != null) set('tabNumDm', s.devices); } catch (e) {}
 }
 /* 底部 Tab 同款处理（底部「手机专区」直接落 手游中心） */
@@ -452,19 +445,15 @@ const SECTIONS = `
    v9.1：**一条切换条、四个平级页签**。二级条已删除（见 TAB_JS 顶部注释）。
    v9.3：**「手游可玩」与「实测配置」合并**为「手游中心」一个页签（见 SECTIONS 顶部注释），
          实测库的独立视角改由「机型兼容」页签承担。页签由 4 个减为 3 个。
-   v10 ：新增 **修改器(#trainers)** 与 **云存档(#saves)** 两个平级页签，共 **5 个**。
-         排序：内容（手游中心）→ 资源（修改器 / 云存档）→ 工具（指南 / 机型兼容）——
-         用户说「在手机专区增加两个页面」，放中间让「找资源」这条主线连贯。
-   v10.13：用户口径「模拟器指南放在最后一个」→ 页签顺序改为
-         **手游中心 → 修改器 → 云存档 → 机型兼容 → 模拟器指南**。
-         理由：指南是**读一次就够**的资料页，不是日常入口；
-         机型兼容是「查我的设备能跑什么」的高频动作，应排在它前面。
-         （分区 DOM 顺序不动 —— 页签切换只切 display，与 DOM 前后无关。） */
+   v10 ：曾新增 **修改器(#trainers)** 与 **云存档(#saves)** 两个平级页签（共 5 个）。
+   v10.44：用户口径「手机专区保留手机中心+机型兼容+模拟器指南」——
+         上述两类**迁出**到独立页 /resources.html（MOD / 存档 / 修改器），
+         本页回归 **3 个页签**：手游中心 → 机型兼容 → 模拟器指南。
+         理由：MOD / 存档 / 修改器 本质是**端游资源**，挂在手机专区下语义不成立
+         （用户曾为找存档迷路）。两页一分，各自的标题与默认筛选才说得通。 */
 const BACKBAR = `<div class="wrap page-back">
   <div class="emu-tabs" id="emuTabs">
     <button class="emu-tab on" data-et="emu" type="button"><b id="tabNumEmu">—</b><span>手游中心</span></button>
-    <button class="emu-tab" data-et="tr" type="button"><b id="tabNumTr">—</b><span>修改器</span></button>
-    <button class="emu-tab" data-et="sv" type="button"><b id="tabNumSv">—</b><span>云存档</span></button>
     <button class="emu-tab" data-et="dm" type="button"><b id="tabNumDm">—</b><span>机型兼容</span></button>
     <button class="emu-tab" data-et="eg" type="button"><b>指南</b><span>模拟器指南</span></button>
   </div>
@@ -523,92 +512,6 @@ const DEVMATCH_HTML = `
   </div>
 </main>`;
 
-/* 修改器分区（#trainers）：独立页专属骨架，脚本重建（同 DEVMATCH_HTML 的理由——幂等）。
- *
- * 数据源：Game Cheats Manager 公开清单 https://gamezonelabs.com/api/data/gcm
- *   → tools/fetch-trainers.js 采集 → data/trainers.json → /api/trainers/*
- *
- * ★ 本页**刻意不做下载按钮**：GCM 官方下载走一次性 S3 签名 URL（依赖客户端密钥），
- *   无法离线复现也不该绕过。所以改为「信息展示 + 获取方式引导」，
- *   把用户导向官方渠道（GCM 修改器库页面 / GCM 应用下载）。
- */
-const TRAINERS_HTML = `
-<main class="wrap et-hide" id="trainers" data-et="tr">
-  <div class="sec-h"><span class="bar tr"></span><h2>修改器</h2><span class="en">TRAINERS</span><span class="more" id="trCount"></span></div>
-  <div class="emu-intro tr">
-    <span class="ic">🛠</span>
-    <div class="tx">
-      <b>单机游戏修改器，一处查全</b>——数据来自 <b>Game Cheats Manager</b> 的公开清单，
-      汇总 <b>5 个来源</b>：<b>风灵月影</b>（业界标准、数量最多）、<b>CE 修改表</b>、<b>社区贡献</b>、<b>小幸修改器</b>、<b>GCM 精选</b>。
-      每条都标了<b>来源与版本</b>，并<b>自动关联端游库</b>——能对上库的可以直接点进游戏详情。
-      <span style="opacity:.75">本站<b>不托管修改器文件</b>：官方下载走的是一次性签名链接，无法离线复现，请用卡片上的「获取方式」到官方渠道取。</span>
-      <span id="trBuilt" style="opacity:.75"></span>
-    </div>
-  </div>
-  <div class="emu-stats" id="trStats"></div>
-  <div class="emu-bar">
-    <div class="emu-bar-row">
-      <input class="emu-search" id="trSearch" type="text" placeholder="搜索：艾尔登法环 / ELDEN RING / 只狼…" autocomplete="off">
-      <select class="emu-sel" id="trSource"><option value="">全部来源</option></select>
-    </div>
-    <div class="emu-bar-row">
-      <span class="emu-bar-lb">排序</span>
-      <div class="emu-sorts" id="trSorts">
-        <button class="emu-sort on" data-s="lib" type="button" title="能对上端游库（有封面、点得进详情）的优先">匹配优先</button>
-        <button class="emu-sort" data-s="zh" type="button">中文名</button>
-        <button class="emu-sort" data-s="name" type="button">英文名</button>
-        <button class="emu-sort" data-s="source" type="button">按来源</button>
-      </div>
-      <span class="emu-bar-sp"></span>
-      <button class="emu-refresh tr on em-tg" id="trToggleLib" type="button" title="只显示能对上端游库的游戏">仅看匹配端游</button>
-    </div>
-  </div>
-  <div class="emu-grid tr" id="trGrid"></div>
-  <button class="load-more" id="trMore" style="display:none">加载更多</button>
-</main>`;
-
-/* 云存档分区（#saves）：独立页专属骨架，脚本重建（同 DEVMATCH_HTML 的理由——幂等）。
- *
- * 数据源：Ludusavi manifest（MIT）→ tools/build-saves.js 流式过滤 → data/saves.json → /api/saves/*
- *
- * ★ 这个页面的核心内容就是**存档路径本身**（用户要的「放置位置」），
- *   所以卡片直接把路径铺出来，用等宽字体、允许换行、不截断——
- *   截断了用户就没法照着去找文件了。
- */
-const SAVES_HTML = `
-<main class="wrap et-hide" id="saves" data-et="sv">
-  <div class="sec-h"><span class="bar sv"></span><h2>云存档</h2><span class="en">CLOUD SAVE</span><span class="more" id="svCount"></span></div>
-  <div class="emu-intro sv">
-    <span class="ic">💾</span>
-    <div class="tx">
-      <b>存档到底放在哪？</b>——这张表给出每款游戏的<b>存档文件位置</b>与<b>注册表存档项</b>，
-      照着路径就能备份、迁移、跨设备接档；同时标出<b>是否支持云同步</b>（Steam / GOG / Epic / Origin…）。
-      数据来自开源存档清单 <b>Ludusavi</b>（MIT 许可，社区长期维护）。
-      <span style="opacity:.75">路径里的 <code>&lt;用户名&gt;</code> 换成你自己的系统用户名即可；模拟器里则是虚拟 C 盘下的同一路径。</span>
-      <span id="svBuilt" style="opacity:.75"></span>
-    </div>
-  </div>
-  <div class="emu-stats" id="svStats"></div>
-  <div class="emu-bar">
-    <div class="emu-bar-row">
-      <input class="emu-search" id="svSearch" type="text" placeholder="搜索：艾尔登法环 / ELDEN RING / 博德之门3…" autocomplete="off">
-    </div>
-    <div class="emu-bar-row">
-      <span class="emu-bar-lb">排序</span>
-      <div class="emu-sorts" id="svSorts">
-        <button class="emu-sort on" data-s="paths" type="button" title="存档项多的游戏优先">存档最多</button>
-        <button class="emu-sort" data-s="cloud" type="button">云同步优先</button>
-        <button class="emu-sort" data-s="name" type="button">名称</button>
-      </div>
-      <span class="emu-bar-sp"></span>
-      <button class="emu-refresh sv on em-tg" id="svPhone" type="button" title="只显示手游中心里能玩的游戏">仅看手机能玩</button>
-      <button class="emu-refresh sv em-tg" id="svCloud" type="button" title="只显示支持云同步的游戏">仅看云同步</button>
-    </div>
-  </div>
-  <div class="emu-grid sv" id="svGrid"></div>
-  <button class="load-more" id="svMore" style="display:none">加载更多</button>
-</main>`;
-
 /* ---------- 组装 ---------- */
 const out = [
   ...HEAD_LINES,
@@ -642,11 +545,12 @@ const out = [
     .page-back{gap:9px}
     #emuTabs{margin-left:0;width:100%}
     #emuTabs .emu-tab{flex:1;padding:8px 5px;gap:5px;font-size:11.5px;justify-content:center}
-    /* ★ v10：5 个页签放不下数字胶囊，窄屏收起（分区标题有「共 N 款」兜底） */
+    /* ★ v10 起页签曾增到 5 个，窄屏放不下数字胶囊；v10.44 回到 3 个，
+     *   这条紧凑规则沿用（三页视觉一致，分区标题有「共 N 款」兜底） */
     #emuTabs .emu-tab b{display:none}
   }
   @media(max-width:430px){
-    /* 超窄屏：字号再收一档，5 个文字页签仍要一眼看全 */
+    /* 超窄屏：字号再收一档，3 个文字页签仍要一眼看全 */
     #emuTabs .emu-tab{font-size:10.5px;padding:8px 3px}
     .emu-grid.sv{grid-template-columns:1fr}
   }
@@ -733,8 +637,6 @@ const out = [
   '',
   SECTIONS,
   DEVMATCH_HTML,
-  TRAINERS_HTML,
-  SAVES_HTML,
   '',
   SEARCH,
   '',
@@ -808,5 +710,5 @@ const out = [
 fs.writeFileSync(EMU, out, 'utf8');
 console.log(`✅ 已同步共享资产到 public/emulator.html`);
 console.log(`   CSS ${CSS.length}B ｜ 顶栏 ${TOPBAR.length}B ｜ 抽屉+tabbar ${OVERLAY.length}B ｜ 脚本 ${JS.length}B`);
-console.log(`   保留独立页自己的三分区 ${SECTIONS.length}B ＋ 机型兼容 ${DEVMATCH_HTML.length}B ＋ 修改器 ${TRAINERS_HTML.length}B ＋ 云存档 ${SAVES_HTML.length}B 与页签切换条`);
+console.log(`   保留独立页自己的两分区 ${SECTIONS.length}B ＋ 机型兼容 ${DEVMATCH_HTML.length}B 与 3 页签切换条`);
 

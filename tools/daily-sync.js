@@ -252,6 +252,10 @@ function findPython() {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/* 服务体检等待窗口（秒）。守护任务「GameHub 8123 keepalive」每分钟跑一次，
+   所以 75s 足够覆盖一个完整周期 + 服务自身的启动时间。 */
+const HEALTH_WAIT_S = 75;
+
 /** 发一个 JSON 请求；永不抛。 */
 async function httpJson(method, p, timeoutMs) {
   const ctl = new AbortController();
@@ -335,11 +339,26 @@ async function waitBh(maxMs) {
 
 /* ============================ 步骤实现 ============================ */
 
-/** 1) 服务体检（关键步骤）：不可达则尝试后台启动。 */
+/** 1) 服务体检（关键步骤）：不可达先等守护拉起，兜底才自行启动。 */
 async function stepHealth(ctx) {
   const first = await httpJson('GET', '/api/health', 5000);
   if (first.ok) return { status: 'ok', detail: '已在运行' };
   if (ctx.dry) return { status: 'fail', detail: '不可达（--dry 不启动服务）', critical: true };
+
+  // 首选：Windows 计划任务「GameHub 8123 keepalive」每分钟会把服务拉起来。
+  // 等它一个周期再判失败——服务恰好在本分钟被重启时，本函数原先会直接
+  // 判定「启动后仍不可达」，于是整轮 10 步全部不执行（2026-10-01~10-08 的
+  // 连续失败就是这个成因）。这里改成先等守护，等不到才自己动手。
+  let waited = 0;
+  while (waited < HEALTH_WAIT_S) {
+    await sleep(5000);
+    waited += 5;
+    const r = await httpJson('GET', '/api/health', 8000);
+    if (r.ok) return { status: 'ok', detail: '原不可达，守护已在 ' + waited + 's 内拉起' };
+  }
+
+  // 兜底：守护没在跑（任务被禁用/删除）时才回到自行启动。
+  // ⚠️ 沙箱/自动化环境里 detached 子进程可能被宿主回收，所以这只是保底。
   let p;
   try {
     p = spawn(process.execPath, ['server.js'], {
@@ -347,12 +366,18 @@ async function stepHealth(ctx) {
     });
     p.unref();
   } catch (e) {
-    return { status: 'fail', detail: '启动失败：' + String(e.message).slice(0, 80), critical: true };
+    return {
+      status: 'fail', critical: true,
+      detail: '等守护 ' + HEALTH_WAIT_S + 's 未拉起，自行启动也失败：' + String(e.message).slice(0, 60),
+    };
   }
   await sleep(4000);
   const again = await httpJson('GET', '/api/health', 8000);
-  if (again.ok) return { status: 'ok', detail: '原不可达，已自动启动' };
-  return { status: 'fail', detail: '启动后仍不可达', critical: true };
+  if (again.ok) return { status: 'ok', detail: '原不可达，已自行启动' };
+  return {
+    status: 'fail', critical: true,
+    detail: '等守护 ' + HEALTH_WAIT_S + 's + 自启均未成功；请检查计划任务「GameHub 8123 keepalive」是否在运行',
+  };
 }
 
 /** 2) XD 增量索引。 */

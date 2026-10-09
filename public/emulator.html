@@ -1709,11 +1709,12 @@
     .page-back{gap:9px}
     #emuTabs{margin-left:0;width:100%}
     #emuTabs .emu-tab{flex:1;padding:8px 5px;gap:5px;font-size:11.5px;justify-content:center}
-    /* ★ v10：5 个页签放不下数字胶囊，窄屏收起（分区标题有「共 N 款」兜底） */
+    /* ★ v10 起页签曾增到 5 个，窄屏放不下数字胶囊；v10.44 回到 3 个，
+     *   这条紧凑规则沿用（三页视觉一致，分区标题有「共 N 款」兜底） */
     #emuTabs .emu-tab b{display:none}
   }
   @media(max-width:430px){
-    /* 超窄屏：字号再收一档，5 个文字页签仍要一眼看全 */
+    /* 超窄屏：字号再收一档，3 个文字页签仍要一眼看全 */
     #emuTabs .emu-tab{font-size:10.5px;padding:8px 3px}
     .emu-grid.sv{grid-template-columns:1fr}
   }
@@ -1804,6 +1805,7 @@
     <nav class="main-nav">
       <a href="/" id="navHome">🏠 首页</a>
       <a href="/emulator.html" class="on" id="navEmu">📱 手机专区</a>
+      <a href="/resources.html" id="navRes">🎮 端游资源</a>
       <a href="/unpack.html" id="navUnpack">📦 解包匹配</a>
     </nav>
     <span class="spacer"></span>
@@ -1819,8 +1821,6 @@
 <div class="wrap page-back">
   <div class="emu-tabs" id="emuTabs">
     <button class="emu-tab on" data-et="emu" type="button"><b id="tabNumEmu">—</b><span>手游中心</span></button>
-    <button class="emu-tab" data-et="tr" type="button"><b id="tabNumTr">—</b><span>修改器</span></button>
-    <button class="emu-tab" data-et="sv" type="button"><b id="tabNumSv">—</b><span>云存档</span></button>
     <button class="emu-tab" data-et="dm" type="button"><b id="tabNumDm">—</b><span>机型兼容</span></button>
     <button class="emu-tab" data-et="eg" type="button"><b>指南</b><span>模拟器指南</span></button>
   </div>
@@ -1998,73 +1998,6 @@
     <div class="emu-grid" id="dmGrid"></div>
     <button class="dm-more" id="dmMore" type="button" style="display:none">加载更多</button>
   </div>
-</main>
-
-<main class="wrap et-hide" id="trainers" data-et="tr">
-  <div class="sec-h"><span class="bar tr"></span><h2>修改器</h2><span class="en">TRAINERS</span><span class="more" id="trCount"></span></div>
-  <div class="emu-intro tr">
-    <span class="ic">🛠</span>
-    <div class="tx">
-      <b>单机游戏修改器，一处查全</b>——数据来自 <b>Game Cheats Manager</b> 的公开清单，
-      汇总 <b>5 个来源</b>：<b>风灵月影</b>（业界标准、数量最多）、<b>CE 修改表</b>、<b>社区贡献</b>、<b>小幸修改器</b>、<b>GCM 精选</b>。
-      每条都标了<b>来源与版本</b>，并<b>自动关联端游库</b>——能对上库的可以直接点进游戏详情。
-      <span style="opacity:.75">本站<b>不托管修改器文件</b>：官方下载走的是一次性签名链接，无法离线复现，请用卡片上的「获取方式」到官方渠道取。</span>
-      <span id="trBuilt" style="opacity:.75"></span>
-    </div>
-  </div>
-  <div class="emu-stats" id="trStats"></div>
-  <div class="emu-bar">
-    <div class="emu-bar-row">
-      <input class="emu-search" id="trSearch" type="text" placeholder="搜索：艾尔登法环 / ELDEN RING / 只狼…" autocomplete="off">
-      <select class="emu-sel" id="trSource"><option value="">全部来源</option></select>
-    </div>
-    <div class="emu-bar-row">
-      <span class="emu-bar-lb">排序</span>
-      <div class="emu-sorts" id="trSorts">
-        <button class="emu-sort on" data-s="lib" type="button" title="能对上端游库（有封面、点得进详情）的优先">匹配优先</button>
-        <button class="emu-sort" data-s="zh" type="button">中文名</button>
-        <button class="emu-sort" data-s="name" type="button">英文名</button>
-        <button class="emu-sort" data-s="source" type="button">按来源</button>
-      </div>
-      <span class="emu-bar-sp"></span>
-      <button class="emu-refresh tr on em-tg" id="trToggleLib" type="button" title="只显示能对上端游库的游戏">仅看匹配端游</button>
-    </div>
-  </div>
-  <div class="emu-grid tr" id="trGrid"></div>
-  <button class="load-more" id="trMore" style="display:none">加载更多</button>
-</main>
-
-<main class="wrap et-hide" id="saves" data-et="sv">
-  <div class="sec-h"><span class="bar sv"></span><h2>云存档</h2><span class="en">CLOUD SAVE</span><span class="more" id="svCount"></span></div>
-  <div class="emu-intro sv">
-    <span class="ic">💾</span>
-    <div class="tx">
-      <b>存档到底放在哪？</b>——这张表给出每款游戏的<b>存档文件位置</b>与<b>注册表存档项</b>，
-      照着路径就能备份、迁移、跨设备接档；同时标出<b>是否支持云同步</b>（Steam / GOG / Epic / Origin…）。
-      数据来自开源存档清单 <b>Ludusavi</b>（MIT 许可，社区长期维护）。
-      <span style="opacity:.75">路径里的 <code>&lt;用户名&gt;</code> 换成你自己的系统用户名即可；模拟器里则是虚拟 C 盘下的同一路径。</span>
-      <span id="svBuilt" style="opacity:.75"></span>
-    </div>
-  </div>
-  <div class="emu-stats" id="svStats"></div>
-  <div class="emu-bar">
-    <div class="emu-bar-row">
-      <input class="emu-search" id="svSearch" type="text" placeholder="搜索：艾尔登法环 / ELDEN RING / 博德之门3…" autocomplete="off">
-    </div>
-    <div class="emu-bar-row">
-      <span class="emu-bar-lb">排序</span>
-      <div class="emu-sorts" id="svSorts">
-        <button class="emu-sort on" data-s="paths" type="button" title="存档项多的游戏优先">存档最多</button>
-        <button class="emu-sort" data-s="cloud" type="button">云同步优先</button>
-        <button class="emu-sort" data-s="name" type="button">名称</button>
-      </div>
-      <span class="emu-bar-sp"></span>
-      <button class="emu-refresh sv on em-tg" id="svPhone" type="button" title="只显示手游中心里能玩的游戏">仅看手机能玩</button>
-      <button class="emu-refresh sv em-tg" id="svCloud" type="button" title="只显示支持云同步的游戏">仅看云同步</button>
-    </div>
-  </div>
-  <div class="emu-grid sv" id="svGrid"></div>
-  <button class="load-more" id="svMore" style="display:none">加载更多</button>
 </main>
 
 <!-- ===== 🔍 搜索弹窗（命令面板式：联想 + 结果 + 源站兜底，均在此完成） ===== -->
@@ -3241,9 +3174,12 @@ $('#tabbar').addEventListener('click', (e) => {
      —— 那里没有 #rankStage，若也拦成「回顶部」就等于点了没反应。历史上正是因为这个，
      页内又塞了一个「← 返回聚合首页」按钮，同一个出口在屏幕上出现两次。
      这里用 body 上的页面标记区分两页语义，而不是各写一份脚本。 */
-const IS_EMU_PAGE = document.body.getAttribute('data-page') === 'emulator';
+/* ★ v10.44：独立页不再只有「手机专区」—— 端游资源(/resources.html) 与
+   解包匹配同样没有 #rankStage，点「🏠 首页」必须是真跳转回 `/`。
+   判据由「等于 emulator」放宽为「任何带 data-page 标记的都不是首页」。 */
+const IS_SUB_PAGE = (document.body.getAttribute('data-page') || '') !== '';
 $('#navHome').addEventListener('click', (e) => {
-  if (IS_EMU_PAGE) return;              // 独立页：交回 href="/" 正常跳转
+  if (IS_SUB_PAGE) return;              // 独立页：交回 href="/" 正常跳转
   e.preventDefault();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
@@ -4114,361 +4050,6 @@ async function openPcPanel(title) {
 }
 
 
-/* ================= ⑤ 修改器（Game Cheats Manager 公开清单） =================
- *
- * 数据源：https://gamezonelabs.com/api/data/gcm （公开 GET，免密钥）
- *   → tools/fetch-trainers.js 采集 → data/trainers.json → /api/trainers/*
- *
- * ⚠️ 本节**刻意不做下载按钮**：GCM 官方下载走一次性 S3 签名 URL
- *    （download_base_thread.py 的 get_signed_download_url()，依赖仓库外的
- *     secret_config 提供 SIGNED_URL_DOWNLOAD_ENDPOINT + CLIENT_API_KEY），
- *    签名 URL 用完即废，我们既无法离线复现、也不应绕过。
- *    所以卡片给的是「**获取方式**」——把用户导向官方渠道。
- *
- * ★ 关于「放置位置」（用户本轮特别问的）：
- *    修改器与存档不同 —— 它是**独立 exe，不需要放进游戏目录**。
- *    直接运行即可，它会自己挂上游戏进程。页面把这条讲清楚，
- *    避免用户照搬「存档要放对目录」的思路去找位置。
- */
-const trState = { q: '', source: '', sort: 'lib', matched: true, offset: 0, total: 0, items: [], inited: false, loading: false };
-
-/** 5 个来源的展示名与官方获取入口（链接均已实测 200） */
-const TR_SRC = {
-  fling: { label: '风灵月影', go: 'https://flingtrainer.com/', goLabel: '风灵月影官网' },
-  cheat_table: { label: 'CE 修改表', go: 'https://gamezonelabs.com/products/gcm/trainers', goLabel: 'GCM 修改器库' },
-  community: { label: '社区贡献', go: 'https://gamezonelabs.com/products/gcm/trainers', goLabel: 'GCM 修改器库' },
-  xiaoxing: { label: '小幸修改器', go: 'https://gamezonelabs.com/products/gcm/trainers', goLabel: 'GCM 修改器库' },
-  gcm: { label: 'GCM 精选', go: 'https://github.com/dyang886/Game-Cheats-Manager/releases', goLabel: 'GCM 下载页' },
-};
-
-function trCard(it) {
-  const zh = it.zh || '';
-  const en = it.name || '';
-  const title = zh || en || '?';
-  const meta = TR_SRC[it.source] || { label: it.source || '未知来源', go: '', goLabel: '' };
-
-  const cov = it.libCover
-    ? '<div class="cov"><img src="' + esc(it.libCover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
-      + (it.libId ? '<button class="cov-btn" data-lib="' + esc(it.libId) + '" data-title="' + esc(it.libTitle || title) + '" type="button">查看游戏详情</button>' : '')
-      + '</div>'
-    : '<div class="cov noimg"><span>' + esc(String(title).slice(0, 2).toUpperCase()) + '</span></div>';
-
-  /* 中文名优先做标题，英文名降级成别名行；两者相同时不重复渲染 */
-  const altHtml = (zh && en && zh !== en) ? '<div class="alt" title="' + esc(en) + '">' + esc(String(en).slice(0, 46)) + '</div>' : '';
-
-  const go = meta.go
-    ? '<div class="tr-go"><a href="' + esc(meta.go) + '" target="_blank" rel="noopener noreferrer">获取方式 ↗ ' + esc(meta.goLabel) + '</a></div>'
-    : '';
-
-  return '<article class="emu-card' + (it.libCover ? ' has-cov' : '') + '" data-name="' + esc(title) + '" data-lib="' + esc(it.libId || '') + '" data-libt="' + esc(it.libTitle || '') + '">'
-    + cov
-    + '<div class="bd">'
-    + '<h4 title="' + esc(title) + '">' + esc(title) + '</h4>'
-    + altHtml
-    + '<div class="meta">'
-    + '<span class="tg src ' + esc(it.source) + '">' + esc(meta.label) + '</span>'
-    + (it.version ? '<span class="pill ver">v ' + esc(it.version) + '</span>' : '')
-    + (it.libId ? '<span class="tg">已关联端游库</span>' : '')
-    + '</div>'
-    + go
-    + '<div class="tr-note">💡 <b>放置位置</b>：独立 exe，<b>不用放进游戏目录</b>，双击运行即可（会自动挂上游戏进程）。</div>'
-    + '</div>'
-    + '</article>';
-}
-
-function bindTrCards() {
-  const g = document.getElementById('trGrid'); if (!g || g.dataset.bound) return;
-  g.dataset.bound = '1';
-  g.addEventListener('click', (e) => {
-    const btn = e.target.closest('.cov-btn');
-    const card = e.target.closest('.emu-card'); if (!card) return;
-    if (btn && btn.dataset.lib && typeof openDetailById === 'function') {
-      e.stopPropagation();
-      openDetailById(btn.dataset.lib, btn.dataset.title || card.dataset.libt || card.dataset.name);
-      return;
-    }
-    if (card.dataset.lib && typeof openDetailById === 'function') {
-      openDetailById(card.dataset.lib, card.dataset.libt || card.dataset.name);
-      return;
-    }
-    if (typeof toast === 'function') toast('这款未收录进本地端游库，暂无详情页');
-  });
-}
-
-async function loadTr(more) {
-  if (trState.loading) return;
-  trState.loading = true;
-  const grid = document.getElementById('trGrid');
-  if (!more) { trState.offset = 0; if (grid) grid.innerHTML = '<div class="emu-loading">正在拉取修改器清单…</div>'; }
-  try {
-    const qs = new URLSearchParams({
-      q: trState.q, source: trState.source, sort: trState.sort,
-      limit: EMU_PAGE_SIZE, offset: trState.offset,
-    });
-    if (!trState.matched) qs.set('stats', 'all');
-    const j = await fetch(api('/api/trainers/list?' + qs)).then((r) => r.json());
-    trState.total = j.total || 0;
-    const items = j.items || [];
-    trState.items = more ? trState.items.concat(items) : items;
-    trState.offset = trState.items.length;
-    if (grid) grid.innerHTML = trState.items.length ? trState.items.map(trCard).join('') : '<div class="emu-empty">没有匹配的修改器，换个关键词试试</div>';
-    const cnt = document.getElementById('trCount'); if (cnt) cnt.textContent = '共 ' + trState.total.toLocaleString() + ' 条';
-    const mo = document.getElementById('trMore');
-    if (mo) mo.style.display = trState.items.length < trState.total ? '' : 'none';
-  } catch (e) {
-    if (grid) grid.innerHTML = '<div class="emu-empty">拉取失败，请稍后重试</div>';
-  } finally { trState.loading = false; }
-}
-
-async function initTr() {
-  if (trState.inited) return; trState.inited = true;
-  bindTrCards();
-  try {
-    const s = await fetch(api('/api/trainers/stats')).then((r) => r.json());
-    const box = document.getElementById('trStats');
-    if (box) {
-      box.innerHTML = [
-        ['修改器总数', s.total], ['已关联端游', s.matched], ['来源数', (s.sources || []).length], ['匹配率', s.matchedRate + '%'],
-      ].map(([k, v]) => '<div class="st"><b>' + (v == null ? '—' : (typeof v === 'number' ? v.toLocaleString() : esc(v))) + '</b><span>' + k + '</span></div>').join('');
-    }
-    const built = document.getElementById('trBuilt');
-    if (built && s.builtAt) built.textContent = '（清单更新于 ' + new Date(s.builtAt).toLocaleString('zh-CN', { hour12: false }) + '）';
-    const sel = document.getElementById('trSource');
-    if (sel && s.sources) {
-      sel.innerHTML = '<option value="">全部来源</option>' + s.sources
-        .map((x) => '<option value="' + esc(x.key) + '">' + esc(x.label) + '（' + Number(x.count).toLocaleString() + '）</option>').join('');
-    }
-  } catch (e) {}
-  const si = document.getElementById('trSearch');
-  if (si && !si.dataset.bound) {
-    si.dataset.bound = '1';
-    let t;
-    si.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { trState.q = si.value.trim(); loadTr(false); }, 260); });
-  }
-  const src = document.getElementById('trSource');
-  if (src && !src.dataset.bound) { src.dataset.bound = '1'; src.addEventListener('change', () => { trState.source = src.value; loadTr(false); }); }
-  const sorts = document.getElementById('trSorts');
-  if (sorts && !sorts.dataset.bound) {
-    sorts.dataset.bound = '1';
-    sorts.addEventListener('click', (e) => {
-      const b = e.target.closest('.emu-sort'); if (!b) return;
-      sorts.querySelectorAll('.emu-sort').forEach((x) => x.classList.toggle('on', x === b));
-      trState.sort = b.dataset.s; loadTr(false);
-    });
-  }
-  const mo = document.getElementById('trMore');
-  if (mo && !mo.dataset.bound) { mo.dataset.bound = '1'; mo.addEventListener('click', () => loadTr(true)); }
-  const libTog = document.getElementById('trToggleLib');
-  if (libTog) {
-    const paint = () => {
-      libTog.classList.toggle('on', trState.matched);
-      libTog.classList.toggle('on', trState.matched);
-    };
-    paint();
-    if (!libTog.dataset.bound) {
-      libTog.dataset.bound = '1';
-      libTog.addEventListener('click', () => { trState.matched = !trState.matched; paint(); loadTr(false); });
-    }
-  }
-  await loadTr(false);
-}
-
-
-/* ================= ⑥ 云存档（存档位置库 · Ludusavi 开源清单） =================
- *
- * 数据源：https://github.com/mtkennerly/ludusavi-manifest（MIT）
- *   → tools/build-saves.js 流式过滤 → data/saves.json → /api/saves/*
- *
- * ★ 这一节的核心产出就是**存档路径本身**（用户要的「放置位置」）。
- *   所以卡片不做折叠 —— 直接把路径铺在卡面上，
- *   等宽字体、允许换行、**不截断**（截断了用户就没法照着找文件）。
- *
- * ★ 默认口径与页签数字一致：**仅看手机能玩**（在手游中心内），
- *   因为这是「手机专区」语境；关掉开关或传 stats=all 才看全量 5,741 款。
- */
-const svState = { q: '', sort: 'paths', phone: true, cloud: false, offset: 0, total: 0, items: [], inited: false, loading: false };
-
-function svCard(it) {
-  const title = it.title || it.name || '?';
-  const paths = it.paths || [];
-  const regs = it.regs || [];
-  const cloud = it.cloud || [];
-
-  const cov = it.libCover
-    ? '<div class="cov"><img src="' + esc(it.libCover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
-      + (it.libId ? '<button class="cov-btn" data-lib="' + esc(it.libId) + '" data-title="' + esc(title) + '" type="button">查看游戏详情</button>' : '')
-      + '</div>'
-    : '<div class="cov noimg"><span>' + esc(String(title).slice(0, 2).toUpperCase()) + '</span></div>';
-
-  /* 中文标题优先；清单原名作别名行 */
-  const altHtml = (it.name && it.name !== title) ? '<div class="alt" title="' + esc(it.name) + '">' + esc(String(it.name).slice(0, 46)) + '</div>' : '';
-
-  /* 路径行：最多铺 3 条文件路径 + 2 条注册表项，其余折叠成「另有 N 条」
-   *   ★ v10.5：每行右侧带「复制」按钮 —— 路径是本分区的主产物，复制是最高频动作，
-   *     不能再要求用户「先全选再 Ctrl+C」。 */
-  const MAXP = 3, MAXR = 2;
-  const rows = [];
-  for (const p of paths.slice(0, MAXP)) {
-    const tag = (p.tags && p.tags.length) ? String(p.tags[0]) : '存档';
-    const label = tag === 'save' ? '存档' : (tag === 'config' ? '配置' : tag);
-    const full = p.shown || p.raw;
-    rows.push('<div class="p"><i>' + esc(label) + '</i><span>' + esc(full) + '</span>'
-      + '<button class="cp" type="button" data-cp="' + esc(full) + '" title="复制这条路径">复制</button></div>');
-  }
-  for (const r of regs.slice(0, MAXR)) {
-    rows.push('<div class="p reg"><i>注册表</i><span>' + esc(r.raw) + '</span>'
-      + '<button class="cp" type="button" data-cp="' + esc(r.raw) + '" title="复制这条注册表项">复制</button></div>');
-  }
-  const hidden = (paths.length - Math.min(paths.length, MAXP)) + (regs.length - Math.min(regs.length, MAXR));
-  const moreLine = hidden > 0 ? '<div class="more">另有 ' + hidden + ' 条存档位置未展示，进游戏详情查看</div>' : '';
-
-  const cloudTags = cloud.length
-    ? cloud.map((c) => '<span class="tg cloud">☁ ' + esc(String(c).toUpperCase()) + '</span>').join('')
-    : '<span class="tg dim">不支持云同步</span>';
-
-  return '<article class="emu-card sv' + (it.libCover ? ' has-cov' : '') + '" data-name="' + esc(title) + '" data-lib="' + esc(it.libId || '') + '">'
-    + cov
-    + '<div class="bd">'
-    + '<h4 title="' + esc(title) + '">' + esc(title) + '</h4>'
-    + altHtml
-    + '<div class="meta">'
-    + (it.phone ? '<span class="tg phone">手机能玩</span>' : '')
-    + '<span class="pill">' + paths.length + ' 条存档</span>'
-    + (regs.length ? '<span class="pill">' + regs.length + ' 项注册表</span>' : '')
-    + '</div>'
-    + '<div class="tgs">' + cloudTags + '</div>'
-    + '<div class="paths">' + (rows.join('') || '<div class="p"><span>暂无文件路径记录</span></div>') + moreLine + '</div>'
-    + '</div>'
-    + '</article>';
-}
-
-/** 复制文本：优先 Clipboard API，失败退回隐藏 textarea + execCommand
- *  （http 非 localhost / 老内核下 Clipboard API 不可用，别让「复制」按钮点了没反应） */
-function copyText(txt) {
-  const s = String(txt || '');
-  if (!s) return;
-  const fallback = () => {
-    try {
-      const ta = document.createElement('textarea');
-      ta.value = s;
-      ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      return true;
-    } catch (e) { return false; }
-  };
-  const done = () => { if (typeof toast === 'function') toast('已复制：' + (s.length > 42 ? s.slice(0, 42) + '…' : s)); };
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(s).then(done).catch(() => { if (fallback()) done(); });
-  } else if (fallback()) done();
-}
-
-function bindSvCards() {
-  const g = document.getElementById('svGrid'); if (!g || g.dataset.bound) return;
-  g.dataset.bound = '1';
-  /* ★ v10.5 点击分流修正：
-   *   上一版为了「路径文字防误触」把整卡点击整个吞掉（只留封面上的按钮可点），
-   *   用户点卡片正文毫无反应 —— 反馈为「云存档点击未跳转」。
-   *   现在按区域分工：
-   *     · 点 .cp        → 只复制这条路径（不跳转）
-   *     · 点 .paths 区  → 允许选中/复制，不跳转
-   *     · 点卡上其它地方 → 有端游库命中就进游戏详情
-   *   这样「抄路径」和「看详情」两个诉求都保住，不再互相牺牲。 */
-  g.addEventListener('click', (e) => {
-    const cp = e.target.closest('.cp');
-    if (cp) { e.stopPropagation(); copyText(cp.dataset.cp || ''); return; }
-    const card = e.target.closest('.emu-card'); if (!card) return;
-    if (e.target.closest('.paths')) return;   // 路径区不触发跳转（要能选中文字）
-    const btn = e.target.closest('.cov-btn');
-    const lib = (btn && btn.dataset.lib) || card.dataset.lib;
-    if (lib && typeof openDetailById === 'function') {
-      openDetailById(lib, (btn && btn.dataset.title) || card.dataset.name);
-      return;
-    }
-    if (typeof toast === 'function') toast('这条没对上端游库，没有详情页；存档路径可直接点「复制」');
-  });
-}
-
-async function loadSv(more) {
-  if (svState.loading) return;
-  svState.loading = true;
-  const grid = document.getElementById('svGrid');
-  if (!more) { svState.offset = 0; if (grid) grid.innerHTML = '<div class="emu-loading">正在拉取存档位置库…</div>'; }
-  try {
-    const qs = new URLSearchParams({
-      q: svState.q, sort: svState.sort, limit: EMU_PAGE_SIZE, offset: svState.offset,
-    });
-    /* ★ 开关语义：phone 关掉 = 放开到全量（stats=all） */
-    if (svState.phone) qs.set('phone', '1'); else qs.set('stats', 'all');
-    if (svState.cloud) qs.set('cloud', '1');
-    const j = await fetch(api('/api/saves/list?' + qs)).then((r) => r.json());
-    svState.total = j.total || 0;
-    const items = j.items || [];
-    svState.items = more ? svState.items.concat(items) : items;
-    svState.offset = svState.items.length;
-    if (grid) grid.innerHTML = svState.items.length ? svState.items.map(svCard).join('') : '<div class="emu-empty">没有匹配的游戏，换个关键词试试</div>';
-    const cnt = document.getElementById('svCount'); if (cnt) cnt.textContent = '共 ' + svState.total.toLocaleString() + ' 款';
-    const mo = document.getElementById('svMore');
-    if (mo) mo.style.display = svState.items.length < svState.total ? '' : 'none';
-  } catch (e) {
-    if (grid) grid.innerHTML = '<div class="emu-empty">拉取失败，请稍后重试</div>';
-  } finally { svState.loading = false; }
-}
-
-async function initSv() {
-  if (svState.inited) return; svState.inited = true;
-  bindSvCards();
-  try {
-    const s = await fetch(api('/api/saves/stats')).then((r) => r.json());
-    const box = document.getElementById('svStats');
-    if (box) {
-      box.innerHTML = [
-        ['手机能玩', s.phonePlayable], ['收录游戏', s.total], ['存档位置', s.pathCount], ['支持云同步', s.withCloud],
-      ].map(([k, v]) => '<div class="st"><b>' + (v == null ? '—' : (typeof v === 'number' ? v.toLocaleString() : esc(v))) + '</b><span>' + k + '</span></div>').join('');
-    }
-    const built = document.getElementById('svBuilt');
-    if (built && s.builtAt) built.textContent = '（清单更新于 ' + new Date(s.builtAt).toLocaleString('zh-CN', { hour12: false }) + '，源：' + s.source + '）';
-  } catch (e) {}
-  const si = document.getElementById('svSearch');
-  if (si && !si.dataset.bound) {
-    si.dataset.bound = '1';
-    let t;
-    si.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { svState.q = si.value.trim(); loadSv(false); }, 260); });
-  }
-  const sorts = document.getElementById('svSorts');
-  if (sorts && !sorts.dataset.bound) {
-    sorts.dataset.bound = '1';
-    sorts.addEventListener('click', (e) => {
-      const b = e.target.closest('.emu-sort'); if (!b) return;
-      sorts.querySelectorAll('.emu-sort').forEach((x) => x.classList.toggle('on', x === b));
-      svState.sort = b.dataset.s; loadSv(false);
-    });
-  }
-  const mo = document.getElementById('svMore');
-  if (mo && !mo.dataset.bound) { mo.dataset.bound = '1'; mo.addEventListener('click', () => loadSv(true)); }
-  const ph = document.getElementById('svPhone');
-  if (ph) {
-    const paint = () => { ph.classList.toggle('on', svState.phone); };
-    paint();
-    if (!ph.dataset.bound) {
-      ph.dataset.bound = '1';
-      ph.addEventListener('click', () => { svState.phone = !svState.phone; paint(); loadSv(false); });
-    }
-  }
-  const cl = document.getElementById('svCloud');
-  if (cl) {
-    const paint = () => { cl.classList.toggle('on', svState.cloud); };
-    paint();
-    if (!cl.dataset.bound) {
-      cl.dataset.bound = '1';
-      cl.addEventListener('click', () => { svState.cloud = !svState.cloud; paint(); loadSv(false); });
-    }
-  }
-  await loadSv(false);
-}
-
 /* ================= 📱 手机专区 · 子页签（独立页） =================
    v9.1 改版：**只有一条切换条**，4 个平级页签 —— 不再有"二级切换条"。
      手游中心(#emulator) / 模拟器指南(#emuguide) / 机型兼容(#devmatch)
@@ -4481,11 +4062,12 @@ async function initSv() {
           实测库视角并入合并索引（见 SECTIONS 注释）。页签由 4 个减为 3 个，
           #pc 路由保留为**兼容别名**（旧链接 #pc 会落到 #emu，不会白屏）。
 
-   ★ v10：新增 **修改器(#trainers)** 与 **云存档(#saves)** —— 共 **5 个平级页签**。
+   ★ v10.44：**修改器(#trainers) / 云存档(#saves) 迁出**到独立页 /resources.html，
+            本页回到 **3 个平级页签**：手游中心 / 机型兼容 / 模拟器指南。
 
-   URL hash 同步：/emulator.html#emu / #tr / #sv / #eg / #dm（#pc 归一为 #emu）
+   URL hash 同步：/emulator.html#emu / #dm / #eg（#pc 归一为 #emu）
 */
-const ET_MAP = { emu: '#emulator', tr: '#trainers', sv: '#saves', eg: '#emuguide', dm: '#devmatch' };
+const ET_MAP = { emu: '#emulator', dm: '#devmatch', eg: '#emuguide' };
 let etCur = 'emu';
 
 /* ★ v10.2 修的孤儿调用：主脚本（两页共用）里底部 Tab 的 emu/pc/eg 分支会调 goEmuPage()，
@@ -4497,8 +4079,6 @@ function goEmuPage(t) { switchEmuTab(t === 'pc' ? 'emu' : t); }
 /** 各分区懒加载入口（在 initXxx 声明之后调用，避免 TDZ） */
 function etInit(t) {
   if (t === 'emu') return initEmu();
-  if (t === 'tr') return initTr();
-  if (t === 'sv') return initSv();
   if (t === 'eg') return initEg();
   if (t === 'dm') return initDm();
 }
@@ -4522,16 +4102,10 @@ function switchEmuTab(t, opts) {
   el.setAttribute('href', '#emu');
   el.addEventListener('click', (e) => { e.preventDefault(); switchEmuTab('emu'); });
 })();
-/** 子页签数字回填（手游中心合并游戏数 / 修改器条数 / 云存档手机可玩数 / 机型库条目数） */
+/** 子页签数字回填（手游中心合并游戏数 / 机型库条目数） */
 async function fillTabNums() {
   const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.textContent = Number(v).toLocaleString(); };
   try { const s = await fetch(api('/api/mobilehub/stats')).then((r) => r.json()); if (s && s.total != null) set('tabNumEmu', s.total); } catch (e) {}
-  try {
-    const s = await fetch(api('/api/tools/stats')).then((r) => r.json());
-    if (s && s.trainers) set('tabNumTr', s.trainers.total);
-    /* 云存档页签数字用「手机能玩」口径，与页面默认筛选一致，避免「显示 5,741 结果只列出 1,117」 */
-    if (s && s.saves) set('tabNumSv', s.saves.phonePlayable);
-  } catch (e) {}
   try { const s = await fetch(api('/api/device/stats')).then((r) => r.json()); if (s && s.devices != null) set('tabNumDm', s.devices); } catch (e) {}
 }
 /* 底部 Tab 同款处理（底部「手机专区」直接落 手游中心） */

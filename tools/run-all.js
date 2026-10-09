@@ -34,6 +34,12 @@ const QUIET = process.argv.includes('--quiet');
 const SUITES = [
   'test-alias-guard.js',
   'test-emulator-page.js',
+  /* ★ v10.44 新增：端游资源独立页（/resources.html）的 jsdom 行为回归。
+   * 起因：MOD / 存档 / 修改器 从「手机专区」平级抽出成第 4 张派生页，
+   *       test-emulator-page.js 里那批 tr/sv 用例随之作废 —— 若不同步补一份，
+   *       这三类资源就会**看起来有防线、实际零覆盖**（用例删了但没人发现）。
+   * 同 test-emulator-page.js，它也要 8123 在跑。 */
+  'test-resource-page.js',
   'test-saves-match.js',
   'test-date-norm.js',
   'test-mods.js',

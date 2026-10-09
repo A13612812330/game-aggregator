@@ -1,4 +1,11 @@
-/* 手机专区「独立页」端到端回归 —— 首页入口 + /emulator.html 三段式（手游可玩 / 实测配置 / 兼容·指南）
+/* 手机专区「独立页」端到端回归 —— 首页入口 + /emulator.html 三段式（手游中心 / 机型兼容 / 模拟器指南）
+ *
+ * ★ v10.44：MOD / 存档 / 修改器 已从本页平级抽出，独立成 /resources.html
+ *   （用户口径：「手游的样式更新下，也需要划分模块 MOD，存档，修改器，
+ *             手机专区保留手机中心 + 机型兼容 + 模拟器指南」）。
+ *   ⇒ 本页回到 3 页签；原「修改器 / 云存档」两组用例整体迁往 tools/test-resource-page.js。
+ *   本文件保留一组**反向断言**（本页不该再有 #trainers/#saves/tr/sv 页签），
+ *   防的是「用例删了、功能又漂回来」这种反向退化。
  *
  * 为什么用 jsdom：沙箱里 Chrome/Edge headless 起不来，本次要验的恰好是纯 DOM 行为
  * （顶栏 href、回首页出口唯一、子页签 .et-hide 切换、二级切换条、深链 bootTab、
@@ -66,8 +73,16 @@ async function main() {
   ok('首页已无任何 /emulator.html 的内联分区残留', !$('#emulator') && !$('#devmatch'));
 
   // v10.20：顶栏由 2 个入口增为 3 个（新增「📦 解包匹配」），导航是共享资产故两页同步
+  // v10.44：再增第 4 个「🎮 端游资源」→ /resources.html（MOD / 存档 / 修改器 独立成页），
+  //         手机专区随之收缩为 3 页签，故本文件的 tr/sv 用例整体迁往 test-resource-page.js
   const navLinks = $$('.main-nav a');
-  ok('顶栏有 3 个入口（首页 / 手机专区 / 解包匹配）', navLinks.length === 3, `实际 ${navLinks.length}：${navLinks.map((a) => a.textContent.trim()).join(' / ')}`);
+  ok('顶栏有 4 个入口（首页 / 手机专区 / 端游资源 / 解包匹配）', navLinks.length === 4, `实际 ${navLinks.length}：${navLinks.map((a) => a.textContent.trim()).join(' / ')}`);
+  ok('顶栏含第 4 条「端游资源」#navRes → /resources.html',
+    !!$('#navRes') && $('#navRes').getAttribute('href') === '/resources.html',
+    $('#navRes') ? $('#navRes').getAttribute('href') : '(缺失)');
+  ok('顶栏顺序为 首页 → 手机专区 → 端游资源 → 解包匹配',
+    navLinks.map((a) => a.id).join(',') === 'navHome,navEmu,navRes,navUnpack',
+    navLinks.map((a) => a.id).join(','));
   ok('顶栏第三条是「解包匹配」#navUnpack → /unpack.html',
     !!$('#navUnpack') && $('#navUnpack').getAttribute('href') === '/unpack.html',
     $('#navUnpack') ? $('#navUnpack').getAttribute('href') : '(缺失)');
@@ -86,6 +101,17 @@ async function main() {
     tabEmuEl ? tabEmuEl.getAttribute('href') : '(缺失)');
   ok('底部 Tab 已无 tabPc / tabEg / tabDm（收进独立页子页签）',
     !$('#tabPc') && !$('#tabEg') && !$('#tabDm'));
+  /* ★ v10.44：底 Tab 新增「端游资源」入口。**故意不挂 data-tab** ——
+   *   主脚本用 closest('a[data-tab]') 拦截，挂了就会被当页内切换而 preventDefault、
+   *   跳不出去。这里锁的就是「它是真链接」。 */
+  const tabResEl = $$('#tabbar a').find((a) => a.getAttribute('href') === '/resources.html');
+  ok('底部 Tab 新增「端游资源」真链接 → /resources.html',
+    !!tabResEl, tabResEl ? tabResEl.textContent.trim() : '(缺失)');
+  ok('底部「端游资源」入口不带 data-tab（否则被主脚本拦成页内切换，跳不出去）',
+    !!tabResEl && !tabResEl.hasAttribute('data-tab'),
+    tabResEl ? ('data-tab=' + tabResEl.getAttribute('data-tab')) : '(缺失)');
+  ok('首页底部 Tab 仍为 5 个 data-tab 项（端游资源不进 data-tab 计数）',
+    $$('#tabbar a[data-tab]').length === 5, `实际 ${$$('#tabbar a[data-tab]').length}`);
 
   // 首页不应再残留手机专区的重函数
   const homeJs = $$('script').map((s) => s.textContent).join('\n');
@@ -122,24 +148,27 @@ async function main() {
   ok('独立页顶栏高亮落在「手机专区」上（首页不抢高亮）',
     !!navEmu && navEmu.classList.contains('on') && !!navHome && !navHome.classList.contains('on'));
   /* v9.3：**一条切换条**（「手游中心」合并了原「手游可玩」+「实测配置」）
-   * v10 ：新增「修改器」「云存档」，共 **5 个平级页签**
-   * ★ v10.13：用户要求「模拟器指南放在最后一个」→ 指南(eg) 从第 4 位挪到末位
-   *       顺序 = 内容(emu) → 资源(tr/sv) → 工具(dm) → 指南(eg) */
-  ok('独立页切换条 #emuTabs 有 5 个平级页签', qa('#emuTabs .emu-tab').length === 5, `实际 ${qa('#emuTabs .emu-tab').length}`);
-  const tabDefs = ['emu', 'tr', 'sv', 'dm', 'eg'];
-  ok('五个页签 data-et 依次为 emu/tr/sv/dm/eg',
+   * v10 ：曾新增「修改器」「云存档」，共 5 个平级页签
+   * v10.13：用户要求「模拟器指南放在最后一个」→ eg 从第 4 位挪到末位
+   * ★ v10.44：tr/sv 搬去 /resources.html（用户：三类是端游资源），本页回到 **3 个平级页签**
+   *           顺序 = 内容(emu) → 工具(dm) → 指南(eg) */
+  ok('独立页切换条 #emuTabs 有 3 个平级页签', qa('#emuTabs .emu-tab').length === 3, `实际 ${qa('#emuTabs .emu-tab').length}`);
+  const tabDefs = ['emu', 'dm', 'eg'];
+  ok('三个页签 data-et 依次为 emu/dm/eg',
     qa('#emuTabs .emu-tab').map((b) => b.dataset.et).join(',') === tabDefs.join(','),
     qa('#emuTabs .emu-tab').map((b) => b.dataset.et).join(','));
   ok('第 1 个页签是「手游中心」', /手游中心/.test((qa('#emuTabs .emu-tab')[0] || {}).textContent || ''),
     (qa('#emuTabs .emu-tab')[0] || {}).textContent || '(缺失)');
-  ok('第 2 个页签是「修改器」', /修改器/.test((qa('#emuTabs .emu-tab')[1] || {}).textContent || ''),
+  ok('第 2 个页签是「机型兼容」', /机型兼容/.test((qa('#emuTabs .emu-tab')[1] || {}).textContent || ''),
     (qa('#emuTabs .emu-tab')[1] || {}).textContent || '(缺失)');
-  ok('第 3 个页签是「云存档」', /云存档/.test((qa('#emuTabs .emu-tab')[2] || {}).textContent || ''),
+  ok('第 3 个页签是「模拟器指南」', /模拟器指南/.test((qa('#emuTabs .emu-tab')[2] || {}).textContent || ''),
     (qa('#emuTabs .emu-tab')[2] || {}).textContent || '(缺失)');
-  ok('第 4 个页签是「机型兼容」', /机型兼容/.test((qa('#emuTabs .emu-tab')[3] || {}).textContent || ''),
-    (qa('#emuTabs .emu-tab')[3] || {}).textContent || '(缺失)');
-  ok('第 5 个页签是「模拟器指南」', /模拟器指南/.test((qa('#emuTabs .emu-tab')[4] || {}).textContent || ''),
-    (qa('#emuTabs .emu-tab')[4] || {}).textContent || '(缺失)');
+  /* ★ v10.44：已搬家的两个页签必须彻底绝迹 —— 留着就是点不动的死页签
+   *   （tr/sv 已不在本页 ET_MAP 里，switchEmuTab 会直接 return）。 */
+  ok('切换条已无「修改器」页签（tr 已搬 /resources.html）',
+    !q('#emuTabs .emu-tab[data-et="tr"]'));
+  ok('切换条已无「云存档」页签（sv 已搬 /resources.html）',
+    !q('#emuTabs .emu-tab[data-et="sv"]'));
   /* ★ v9.1 核心修复：二级切换条必须彻底删除 —— 它原先常驻显示，
      在非「兼容·指南」页签上点了没反应，就是用户说的「并没有交互」。 */
   ok('二级切换条 #egSubbar 已彻底移除', !q('#egSubbar'));
@@ -262,90 +291,23 @@ async function main() {
     await sleep(1200);
   }
 
-  /* ================= ★ v10 新增分区：修改器 / 云存档 ================= */
-  /* ---- 切「修改器」（第 2 个平级页签） ---- */
-  click(q('#emuTabs .emu-tab[data-et="tr"]'));
-  await sleep(1600);
-  ok('切「修改器」→ #trainers 显示', !q('#trainers').classList.contains('et-hide'));
-  ok('切「修改器」→ #emulator 同时收起', q('#emulator').classList.contains('et-hide'));
-  ok('切「修改器」→ tab 高亮同步', (q('#emuTabs .emu-tab.on') || {}).dataset?.et === 'tr');
-  ok('修改器网格已渲染卡片', qa('#trGrid .emu-card').length > 0, `实际 ${qa('#trGrid .emu-card').length}`);
-  ok('修改器卡片带来源徽标（.tg.src）', qa('#trGrid .emu-card .tg.src').length > 0,
-    `实际 ${qa('#trGrid .emu-card .tg.src').length}`);
-  ok('修改器卡片带版本号胶囊（.pill.ver）', qa('#trGrid .emu-card .pill.ver').length > 0,
-    `实际 ${qa('#trGrid .emu-card .pill.ver').length}`);
-  ok('修改器卡片有「获取方式」外链（不提供下载直链，导流官方）',
-    qa('#trGrid .emu-card .tr-go a').length > 0, `实际 ${qa('#trGrid .emu-card .tr-go a').length}`);
-  ok('修改器卡片有「放置位置」说明（用户本轮明确要的信息）',
-    qa('#trGrid .emu-card .tr-note').length > 0 &&
-    /放置位置/.test(qa('#trGrid .emu-card .tr-note')[0].textContent || ''));
-  ok('修改器来源下拉已填充 5 个来源', qa('#trSource option').length === 6,
-    `实际 ${qa('#trSource option').length}（含「全部来源」）`);
-  ok('修改器「仅看匹配端游」默认开启',
-    !!q('#trToggleLib') && q('#trToggleLib').classList.contains('on'),
-    q('#trToggleLib') ? q('#trToggleLib').textContent.trim() : '');
-  { /* 只显示匹配端游库的 → 每张卡要么有封面要么明确标了未关联 */
-    const total = q('#trCount').textContent || '';
-    ok('修改器计数已回填', /共 [\d,]+ 条/.test(total), total);
-  }
+  /* ================= ★ v10.44：修改器 / 云存档 已迁出本页 =================
+   * 用户口径：「手游的样式更新下，也需要划分模块 MOD，存档，修改器，
+   *           手机专区保留手机中心 + 机型兼容 + 模拟器指南」。
+   * ⇒ 两个页签连同分区骨架、驱动脚本、卡片断言**整体搬到 /resources.html**，
+   *   对应用例见 tools/test-resource-page.js（那里测得更细：MOD 也是新写的）。
+   *
+   * ⚠️ 本文件之所以要显式留这段话、并显式断言「不存在」，是因为**少给一条断言
+   *    比多给一条危险得多**：页签被删了但用例忘记删，用例会静默失去覆盖；
+   *    而用例留着、页签被删，就会像本轮一样拿 null 直接崩（第 289 行原状）。
+   *    所以这里既删用例，也把「已迁走」写成断言，双向钉住。
+   */
+  ok('本页已无 #trainers / #saves 分区（已迁 /resources.html）',
+    !q('#trainers') && !q('#saves'));
+  ok('本页已无修改器 / 云存档的任何骨架 id（不留空壳节点）',
+    !q('#trGrid') && !q('#svGrid') && !q('#trSource') && !q('#svPhone'));
 
-  /* ---- 切「云存档」（第 3 个平级页签） ---- */
-  click(q('#emuTabs .emu-tab[data-et="sv"]'));
-  await sleep(1600);
-  ok('切「云存档」→ #saves 显示', !q('#saves').classList.contains('et-hide'));
-  ok('切「云存档」→ #trainers 同时收起', q('#trainers').classList.contains('et-hide'));
-  ok('切「云存档」→ tab 高亮同步', (q('#emuTabs .emu-tab.on') || {}).dataset?.et === 'sv');
-  ok('云存档网格已渲染卡片', qa('#svGrid .emu-card').length > 0, `实际 ${qa('#svGrid .emu-card').length}`);
-  /* ★ 这是本轮的核心诉求：卡片上必须真的把「存档路径」铺出来 */
-  ok('云存档卡片渲染出存档路径行（.paths .p）', qa('#svGrid .emu-card .paths .p').length > 0,
-    `实际 ${qa('#svGrid .emu-card .paths .p').length}`);
-  {
-    const first = qa('#svGrid .emu-card .paths .p')[0];
-    const txt = first ? (first.textContent || '') : '';
-    /* 路径应已把占位符解析成可读形式（含盘符或注册表头） */
-    ok('存档路径已解析为可读形式（含盘符 \\ 或 HKEY_）', /[A-Z]:\\|HKEY_|~\/|\/usr\//.test(txt),
-      txt.slice(0, 80));
-  }
-  ok('云存档卡片带云同步/不支持徽标', qa('#svGrid .emu-card .tg.cloud, #svGrid .emu-card .tg.dim').length > 0);
-  ok('云存档「仅看手机能玩」默认开启',
-    !!q('#svPhone') && q('#svPhone').classList.contains('on'),
-    q('#svPhone') ? q('#svPhone').textContent.trim() : '');
-  /* ---- ★ v10.5 核心修复：云存档卡片点正文要能进游戏详情 ----
-   *   旧版为「路径文字防误触」把整卡点击整个吞掉（只留封面上的按钮），
-   *   用户反馈「云存档点击未跳转」。现在分工：正文进详情 / .paths 不跳 / .cp 只复制。 */
-  {
-    const svCard = qa('#svGrid .emu-card').find((c) => c.dataset.lib);
-    ok('云存档卡片有「复制」按钮（路径行右侧）', qa('#svGrid .emu-card .paths .cp').length > 0,
-      `实际 ${qa('#svGrid .emu-card .paths .cp').length} 个`);
-    if (svCard) {
-      /* 点路径行 → 不跳转（要能选中文字） */
-      const p = svCard.querySelector('.paths .p');
-      if (p) { click(p); await sleep(500); }
-      ok('点 .paths 路径行 → 不跳转（保证能选中/复制文字）', !q('#drawer').classList.contains('show'));
-      /* 点正文（标题）→ 进详情 */
-      click(svCard.querySelector('h4'));
-      await sleep(1400);
-      ok('点云存档卡片正文 → 打开游戏详情抽屉',
-        q('#drawer').classList.contains('show'), q('#drawer').className);
-      W.closeDetail(); await sleep(300);
-    }
-  }
-  /* 关掉「仅看手机能玩」→ 放开到全量，计数应变大 */
-  {
-    const before = q('#svCount').textContent || '';
-    click(q('#svPhone'));
-    await sleep(1600);
-    const after = q('#svCount').textContent || '';
-    const nBefore = Number(String(before).replace(/[^\d]/g, '')) || 0;
-    const nAfter = Number(String(after).replace(/[^\d]/g, '')) || 0;
-    ok('关掉「仅看手机能玩」→ 放开到全量（计数变大）', nAfter > nBefore, `${before} → ${after}`);
-    ok('关掉后文案不变（仍无状态字），.on 已移除',
-      !/[✓○已开]/.test(q('#svPhone').textContent || '') && !q('#svPhone').classList.contains('on'));
-    click(q('#svPhone'));  // 复原
-    await sleep(1200);
-  }
-
-  /* ---- 直接切「模拟器指南」（第 4 个平级页签，不再经二级） ---- */
+  /* ---- 直接切「模拟器指南」（第 3 个平级页签，不再经二级） ---- */
   click(q('#emuTabs .emu-tab[data-et="eg"]'));
   await sleep(1200);
   ok('切「模拟器指南」→ #emuguide 显示', !q('#emuguide').classList.contains('et-hide'));
@@ -354,12 +316,12 @@ async function main() {
   ok('指南技术栈 5 层已渲染', qa('#egStack .eg-ly').length === 5, `实际 ${qa('#egStack .eg-ly').length}`);
   ok('子页签数字已回填（非占位 —）', !qa('#emuTabs .emu-tab b').some((b) => b.textContent.trim() === '—'),
     qa('#emuTabs .emu-tab b').map((b) => b.textContent.trim()).join(' / '));
-  /* v9.3：第 3 个 tab「机型兼容」回填已索引机型数 */
+  /* v9.3：机型兼容 tab 回填已索引机型数（v10.44 起它是第 2 个页签） */
   const dmNum = q('#tabNumDm');
   ok('「机型兼容」tab 数字已回填为真实机型数', !!dmNum && /^[\d,]+$/.test(dmNum.textContent.trim()),
     dmNum ? dmNum.textContent.trim() : '(缺失)');
 
-  /* ---- 直接切「机型兼容」（第 3 个平级页签） ---- */
+  /* ---- 直接切「机型兼容」（第 2 个平级页签，v10.44 起） ---- */
   click(q('#emuTabs .emu-tab[data-et="dm"]'));
   await sleep(1600);
   ok('切「机型兼容」→ #devmatch 显示、#emuguide 隐藏',
@@ -411,20 +373,22 @@ async function main() {
   ok('深链 #dm → tab 停在「机型兼容」', (d4d.querySelector('#emuTabs .emu-tab.on') || {}).dataset?.et === 'dm');
   d4.window.close();
 
-  /* ★ v10：两个新分区也要能深链直达（分享/书签场景） */
-  const { dom: d4t } = await makeDom(BASE + '/emulator.html#tr');
-  const d4td = d4t.window.document;
-  ok('深链 #tr → 直开修改器', !d4td.querySelector('#trainers').classList.contains('et-hide'));
-  ok('深链 #tr → 手游中心收起', d4td.querySelector('#emulator').classList.contains('et-hide'));
-  ok('深链 #tr → tab 停在「修改器」', (d4td.querySelector('#emuTabs .emu-tab.on') || {}).dataset?.et === 'tr');
-  d4t.window.close();
+  /* ★ v10.44：#tr / #sv 深链随分区一起搬到 /resources.html（用例见 test-resource-page.js）。
+   *   这里改成**反向断言**：本页再收到 #tr / #sv 必须安全落到默认页签（手游中心），
+   *   而不是切到一个不存在的分区（那会是一片空白）。 */
+  const { dom: d4x } = await makeDom(BASE + '/emulator.html#tr');
+  const d4xd = d4x.window.document;
+  ok('本页收到已迁走的深链 #tr → 安全落回手游中心（不空白）',
+    !d4xd.querySelector('#emulator').classList.contains('et-hide'));
+  ok('本页收到 #tr → 高亮停在手游中心（不会有野页签被点亮）',
+    (d4xd.querySelector('#emuTabs .emu-tab.on') || {}).dataset?.et === 'emu');
+  d4x.window.close();
 
-  const { dom: d4s } = await makeDom(BASE + '/emulator.html#sv');
-  const d4sd = d4s.window.document;
-  ok('深链 #sv → 直开云存档', !d4sd.querySelector('#saves').classList.contains('et-hide'));
-  ok('深链 #sv → 修改器收起', d4sd.querySelector('#trainers').classList.contains('et-hide'));
-  ok('深链 #sv → tab 停在「云存档」', (d4sd.querySelector('#emuTabs .emu-tab.on') || {}).dataset?.et === 'sv');
-  d4s.window.close();
+  const { dom: d4y } = await makeDom(BASE + '/emulator.html#sv');
+  const d4yd = d4y.window.document;
+  ok('本页收到已迁走的深链 #sv → 安全落回手游中心（不空白）',
+    !d4yd.querySelector('#emulator').classList.contains('et-hide'));
+  d4y.window.close();
 
   /* ============================================================
    * 四、★ v9.1 双坑回归：切换后「前一个分区必须真的消失」
@@ -440,7 +404,7 @@ async function main() {
   const d5d = d5W.document;
   const qaCtrl = (d, s) => [...d.querySelectorAll(s)];
   const click5 = (el) => el.dispatchEvent(new d5W.MouseEvent('click', { bubbles: true, cancelable: true }));
-  ok('初始 5 个分区都带 data-et', qaCtrl(d5d, 'main[data-et]').length === 5,
+  ok('初始 3 个分区都带 data-et', qaCtrl(d5d, 'main[data-et]').length === 3,
     `实际 ${qaCtrl(d5d, 'main[data-et]').length}`);
   click5(d5d.querySelector('#emuTabs .emu-tab[data-et="dm"]'));
   await sleep(300);

@@ -207,5 +207,47 @@ ok(fs.existsSync(path.join(ROOT, '_archived', 'launcher-v1-20260904.bat')),
   '旧 .bat 是**归档**而非删除（`_archived/launcher-v1-20260904.bat`）');
 ok(/\[InternetShortcut\]/.test(URLF), '线上快捷方式文件已就位');
 
+/* ==================== I. port-8123 静默守护（v10.43 新增）==================== */
+console.log('\n=== I. port-8123 静默守护（v10.43 新增）===');
+/* 起因（2026-10-01~10-08 实测）：8123 没有开机自启，机器一重启服务就缺席，
+   每日同步的第 1 步「服务体检」（critical）随即 DAILY_FAIL ⇒ 后 9 步零执行，
+   数据冻结 8 天。修法：Windows 计划任务每分钟跑 tools/keepalive-8123.vbs
+   —— 端口在 ⇒ 立刻退出（不产生常驻进程）；不在 ⇒ 隐藏起 server.js 并核实
+   端口真的监听。由 wscript.exe 承载（GUI 子系统，不分配控制台 ⇒ 不闪窗）。 */
+const KA = read('tools/keepalive-8123.vbs');
+ok(KA.length > 800, '\u2605 keepalive .vbs 存在且有实质内容', KA.length + 'B');
+ok(ASCII.test(KA), '\u2605 keepalive .vbs 源码纯 ASCII（WSH 按 ANSI 解析，中文会乱码）');
+ok(/^Option Explicit/m.test(KA), '\u2605 keepalive .vbs 是 Option Explicit');
+ok(!/versions[\\/]+22\.\d/.test(KA), '\u2605 keepalive .vbs 没有硬编码版本目录');
+ok(/%USERPROFILE%/.test(KA) && /For Each f In fso\.GetFolder\(vbase\)/.test(KA),
+  '\u2605 keepalive .vbs 扫描 managed 运行时（字典序取最大）');
+ok(/If PortBusy\(PORT\) Then WScript\.Quit 0/.test(KA),
+  '\u2605 keepalive 有「已在监听就立刻退出」快速路径（否则每分钟多起一个实例）');
+ok(/shell\.Run cmd, 0, False/.test(KA),
+  '\u2605 keepalive 用 Run(cmd, 0, False) 隐藏窗口启动（第 2 个参数 0 = SW_HIDE）');
+ok(/Do While n < WAIT_S[\s\S]{0,200}If PortBusy\(PORT\) Then/.test(KA),
+  '\u2605 keepalive 起完服务后**轮询核实**端口真的监听了（spawn 成功 != 服务可用）');
+ok(/START FAILED/.test(KA), '\u2605 keepalive 启动失败会写日志（不再静默失败）');
+ok(/keepalive\.log/.test(KA), '\u2605 keepalive 的日志落点固定（_preview/keepalive.log）');
+const kaPort = (KA.match(/Const PORT = (\d+)/) || [])[1] || '';
+ok(!!kaPort && kaPort === pSrv,
+  '\u2605 keepalive 端口与 server.js **一致**（抠不到 ⇒ 恒真 = 假绿）', kaPort + ' vs ' + pSrv);
+ok(!/E:\\/i.test(KA) && /WScript\.ScriptFullName/.test(KA),
+  '\u2605 keepalive 路径运行时推导（不写死绝对路径：项目目录含中文，字面量会被 ANSI 误读）');
+
+/* ★ v10.44 新增（2026-10-09 实测）：守护脚本**自己**也会闪窗。
+   keepalive 用 wscript.exe + Run(cmd,0) 确实不分配控制台 —— 但 PortBusy 内部
+   曾用 WshShell Exec，而 Exec **没有窗口样式参数**（只有 Run 有）
+   ⇒ 它为 cmd.exe 分配一个**真实可见**的控制台，于是「已在监听就退出」
+   的快速路径照样每分钟闪一次黑窗（实测 wscript pid=792 ->
+   cmd.exe netstat -ano -p tcp -> VISIBLE，同一分钟内复现两次）。
+   此后 keepalive 里任何带点的 Exec 调用都必须变红。 */
+ok(!/\.Exec\(/.test(KA),
+  '\u2605 keepalive 全程不得使用 WshShell Exec（Exec 无窗口样式参数 ⇒ 给 cmd.exe 分配可见控制台）');
+ok(/":" & p & " "/.test(KA) && /"LISTENING"/.test(KA),
+  '\u2605 keepalive 的端口判据同样带尾随空格（`:8123 ` 不会命中 `:81230`）');
+ok(/netstat -ano -p tcp >[\s\S]{0,40}", 0, True/.test(KA),
+  '\u2605 keepalive 的 netstat 探测走 Run(..., 0, True)：隐藏 + 等写完再读');
+
 console.log('\n通过 ' + pass + ' / ' + (pass + fail));
 process.exit(fail ? 1 : 0);

@@ -12,6 +12,13 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const idx = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
 const emu = fs.readFileSync(path.join(root, 'public/emulator.html'), 'utf8');
+/* ★ v10.44：MOD / 存档 / 修改器 三类端游资源从「手机专区」平级抽出，
+ *   合成第 4 张派生页 public/resources.html。本文件里的断言随之分家：
+ *   —— 手机专区只剩 3 个页签（手游中心 / 机型兼容 / 模拟器指南）
+ *   —— 顶栏由 3 个入口增为 4 个
+ *   —— 守卫由 IS_EMU_PAGE 放宽为 IS_SUB_PAGE
+ *   —— tr/sv 的分区骨架与卡片断言整体搬到「端游资源页」小节 */
+const res = fs.readFileSync(path.join(root, 'public/resources.html'), 'utf8');
 
 const R = [];
 const t = (n, c, e) => R.push([c, n, e || '']);
@@ -19,9 +26,12 @@ const count = (s, re) => (s.match(re) || []).length;
 
 /* ================= 首页 ================= */
 const navBlock = (idx.match(/<nav class="main-nav">[\s\S]*?<\/nav>/) || [''])[0];
-t('首页顶栏恰好 3 个入口（首页 / 手机专区 / 解包匹配）', count(navBlock, /<a /g) === 3, `实际 ${count(navBlock, /<a /g)}`);
-t('首页顶栏含「首页」#navHome 与「手机专区」#navEmu',
-  /id="navHome"/.test(navBlock) && /navEmu/.test(navBlock) && /emulator\.html/.test(navBlock));
+t('首页顶栏恰好 4 个入口（首页 / 手机专区 / 端游资源 / 解包匹配）', count(navBlock, /<a /g) === 4, `实际 ${count(navBlock, /<a /g)}`);
+t('首页顶栏含「首页」#navHome、「手机专区」#navEmu、「端游资源」#navRes',
+  /id="navHome"/.test(navBlock) && /navEmu/.test(navBlock) && /emulator\.html/.test(navBlock)
+  && /<a href="\/resources\.html" id="navRes">🎮 端游资源<\/a>/.test(navBlock));
+t('首页顶栏第 3 项是「端游资源」→ /resources.html（手机专区与解包匹配之间）',
+  /navEmu[\s\S]{0,120}navRes[\s\S]{0,120}navUnpack/.test(navBlock));
 t('首页顶栏已无 navRank / navLatest 旧分段入口', !/id="navRank"|id="navLatest"/.test(navBlock));
 t('首页已移除引导卡 #emuHub', !/id="emuHub"/.test(idx));
 t('首页无 .emu-hub CSS 死规则（注释行除外）', !/^\s*\.emu-hub[-{]/m.test(idx));
@@ -37,32 +47,42 @@ t('首页无手机分区重函数（switchEmuTab/loadPc/initEg）',
 /* ★ v9.3：「手游可玩」+「实测配置」合并为「手游中心」，页签 4 → 3 个
  * ★ v10 ：新增「修改器」「云存档」两个平级页签，3 → 5 个
  *          顺序 = 内容(emu) → 资源(tr/sv) → 工具(dm) → 指南(eg)
- * ★ v10.13：用户要求「模拟器指南放在最后一个」→ eg 从第 4 位挪到末位 */
-t('独立页恰好 5 个平级页签', count(emu, /class="emu-tab[ ">]/g) === 5, `实际 ${count(emu, /class="emu-tab[ ">]/g)}`);
-t('独立页页签顺序为 emu/tr/sv/dm/eg',
-  (emu.match(/data-et="(emu|tr|sv|eg|dm)"/g) || []).slice(0, 5).join(',') ===
-    'data-et="emu",data-et="tr",data-et="sv",data-et="dm",data-et="eg"',
-  (emu.match(/data-et="(emu|tr|sv|eg|dm)"/g) || []).slice(0, 5).join(','));
+ * ★ v10.13：用户要求「模拟器指南放在最后一个」→ eg 从第 4 位挪到末位
+ * ★ v10.44：tr/sv 搬去 /resources.html，本页回到 **3 个页签**
+ *          顺序 = 内容(emu) → 工具(dm) → 指南(eg) */
+t('独立页恰好 3 个平级页签', count(emu, /class="emu-tab[ ">]/g) === 3, `实际 ${count(emu, /class="emu-tab[ ">]/g)}`);
+t('独立页页签顺序为 emu/dm/eg',
+  (emu.match(/data-et="(emu|eg|dm)"/g) || []).slice(0, 3).join(',') ===
+    'data-et="emu",data-et="dm",data-et="eg"',
+  (emu.match(/data-et="(emu|eg|dm)"/g) || []).slice(0, 3).join(','));
 t('第 1 个页签是「手游中心」', /data-et="emu"[\s\S]{0,90}手游中心/.test(emu));
-t('第 2 个页签是「修改器」且带数字 id', /data-et="tr"[\s\S]{0,60}id="tabNumTr"[\s\S]{0,40}修改器/.test(emu));
-t('第 3 个页签是「云存档」且带数字 id', /data-et="sv"[\s\S]{0,60}id="tabNumSv"[\s\S]{0,40}云存档/.test(emu));
-t('第 4 个页签是「机型兼容」且带数字 id', /data-et="dm"[\s\S]{0,60}id="tabNumDm"/.test(emu));
-t('第 5 个页签是「模拟器指南」', /data-et="eg"[\s\S]{0,90}模拟器指南/.test(emu));
+t('第 2 个页签是「机型兼容」且带数字 id', /data-et="dm"[\s\S]{0,60}id="tabNumDm"/.test(emu));
+t('第 3 个页签是「模拟器指南」', /data-et="eg"[\s\S]{0,90}模拟器指南/.test(emu));
+/* ★ v10.44：两个已搬家的页签必须**在本页彻底绝迹** —— 残留一个就会留下
+ *   「点了没反应」的死页签（tr/sv 的 key 已不在本页 ET_MAP 里）。 */
+t('独立页已彻底摘掉「修改器」页签（tr 已搬 /resources.html）',
+  !/data-et="tr"/.test(emu) && !/tabNumTr/.test(emu));
+t('独立页已彻底摘掉「云存档」页签（sv 已搬 /resources.html）',
+  !/data-et="sv"/.test(emu) && !/tabNumSv/.test(emu));
 /* ★ v9.1 核心：二级切换条必须彻底删干净（它是「点了没反应」的根源） */
 t('二级切换条 #egSubbar 已彻底移除', !/id="egSubbar"/.test(emu));
 t('已无 .eg-subbar / .eg-sub 设计残留（注释不计）',
   !/^\s*\.eg-sub[-{]/m.test(emu) && !/<button class="eg-sub/.test(emu));
 t('独立页无 tabNumEg 残留（已改 tabNumDm）', !/id="tabNumEg"/.test(emu));
 t('独立页无 EMU_PAGE_HREF 残留（否则 Tab 绑定 ReferenceError）', !/EMU_PAGE_HREF/.test(emu));
-t('独立页 5 个分区 DOM 齐全',
-  ['id="emulator"', 'id="trainers"', 'id="saves"', 'id="emuguide"', 'id="devmatch"'].every((s) => emu.includes(s)));
+t('独立页 3 个分区 DOM 齐全',
+  ['id="emulator"', 'id="emuguide"', 'id="devmatch"'].every((s) => emu.includes(s)));
+t('独立页已把 #trainers / #saves 两个分区整块交出去（不留空壳）',
+  !/id="trainers"/.test(emu) && !/id="saves"/.test(emu));
 t('独立页已无 #phonecfg（实测配置已并入手游中心）', !/id="phonecfg"/.test(emu));
 /* ★ v9.1 双坑回归：静态测试原本查不出这两个，但它们在真浏览器里都会让「切换失灵」 */
-t('5 个可切换分区全部带 data-et（缺了 main[data-et].et-hide 匹配不上）',
-  [...emu.matchAll(/<main\b[^>]*>/g)].length === 5 &&
+t('3 个可切换分区全部带 data-et（缺了 main[data-et].et-hide 匹配不上）',
+  [...emu.matchAll(/<main\b[^>]*>/g)].length === 3 &&
   [...emu.matchAll(/<main\b[^>]*>/g)].every((m) => /data-et="/.test(m[0])));
-t('ET_MAP 覆盖全部 5 个分区（漏一个就有页签点了没反应）',
-  /ET_MAP = \{ emu: '#emulator', tr: '#trainers', sv: '#saves', eg: '#emuguide', dm: '#devmatch' \}/.test(emu));
+t('ET_MAP 覆盖全部 3 个分区（漏一个就有页签点了没反应）',
+  /ET_MAP = \{ emu: '#emulator', dm: '#devmatch', eg: '#emuguide' \}/.test(emu));
+t('ET_MAP 不含已搬走的 tr / sv（残留 key 会切到不存在的分区）',
+  !/ET_MAP = \{[^}]*\btr:/.test(emu) && !/ET_MAP = \{[^}]*\bsv:/.test(emu));
 t('#emulator 已补 data-et="emu"（否则切走时隐藏不掉、把目标分区顶到屏外）',
   /<main class="wrap" id="emulator" data-et="emu">/.test(emu));
 t('专属 CSS 整段在 <style> 内（掉到外面会被当正文渲染，页面糊一屏 CSS）',
@@ -80,20 +100,11 @@ t('bootTab 默认分支走 switchEmuTab（内含 init，不会空白首屏）',
   /switchEmuTab\(ET_MAP\[t\] \? t : 'emu', \{ scroll: false \}\)/.test(emu));
 t('#emuTabs 为分栏式切换条（flex + 可横滑）',
   /#emuTabs\{[^}]*display:flex/.test(emu) && /#emuTabs\{[^}]*overflow-x:auto/.test(emu));
-/* ★ v10：页签由 3 增到 5，窄屏放不下「数字胶囊 + 文字」，
- *   收起断点从 430px 前移到 760px（分区标题仍有「共 N 款」兜底）。 */
-t('窄屏（≤760px）隐藏数字胶囊以容纳 5 个页签',
+/* ★ v10：页签由 3 增到 5 时窄屏放不下「数字胶囊 + 文字」，收起断点从 430px 前移到 760px。
+ * ★ v10.44：页签回到 3 个，但这条紧凑规则**沿用**（保持三页一致的窄屏按钮宽度），
+ *   分区标题仍有「共 N 款」兜底，收起胶囊不丢信息。 */
+t('窄屏（≤760px）收起页签数字胶囊（保持窄屏按钮等宽）',
   /max-width:760px[\s\S]{0,300}#emuTabs \.emu-tab b\{display:none\}/.test(emu));
-t('独立页有「修改器」分区骨架（搜索/来源/排序/开关/网格）',
-  ['id="trSearch"', 'id="trSource"', 'id="trSorts"', 'id="trToggleLib"', 'id="trGrid"', 'id="trMore"'].every((s) => emu.includes(s)));
-t('独立页有「云存档」分区骨架（搜索/排序/两个开关/网格）',
-  ['id="svSearch"', 'id="svSorts"', 'id="svPhone"', 'id="svCloud"', 'id="svGrid"', 'id="svMore"'].every((s) => emu.includes(s)));
-/* ★ 云存档的卡片把路径铺在卡面上，路径区必须真的存在（否则信息全丢） */
-t('云存档卡片有路径展示区 .paths 与云同步徽标 .tg.cloud', /\.emu-card \.paths\{/.test(emu) && /\.emu-card \.tg\.cloud\{/.test(emu));
-t('云存档网格在窄屏收敛为单列（路径长，两列会挤断）',
-  /max-width:430px[\s\S]{0,200}\.emu-grid\.sv\{grid-template-columns:1fr\}/.test(emu));
-t('修改器卡片带「放置位置」说明（用户本轮明确要的信息）',
-  /tr-note[\s\S]{0,120}放置位置/.test(emu));
 
 /* ================= 幂等 / 无重复注入 ================= */
 t('独立页 <style> 唯一', count(emu, /<style>/g) === 1, `实际 ${count(emu, /<style>/g)}`);
@@ -139,8 +150,16 @@ t('派生页顶栏高亮落在「手机专区」上（首页不抢高亮）',
   /<a href="\/emulator\.html" class="on" id="navEmu">📱 手机专区<\/a>/.test(emu));
 t('派生页 <body> 带 data-page="emulator"（主源脚本据此区分两页语义）',
   /<body data-page="emulator">/.test(emu));
-t('主源脚本对独立页放行顶栏「首页」的默认跳转（IS_EMU_PAGE 守卫）',
-  /IS_EMU_PAGE/.test(idx) && /if \(IS_EMU_PAGE\) return;/.test(idx));
+t('主源脚本对独立页放行顶栏「首页」的默认跳转（IS_SUB_PAGE 守卫）',
+  /IS_SUB_PAGE/.test(idx) && /if \(IS_SUB_PAGE\) return;/.test(idx));
+/* ★ v10.44：守卫原为 `body.dataset.page === 'emulator'`（只认手机专区）。
+ *   端游资源页同样没有 #rankStage，若守卫不放宽，点「🏠 首页」会被 preventDefault 吞掉。
+ *   判据改为「任何带 data-page 标记的都不是首页」。 */
+t('守卫已由「等于 emulator」放宽为「任何带 data-page 标记的都不是首页」',
+  /const IS_SUB_PAGE = \(document\.body\.getAttribute\('data-page'\) \|\| ''\) !== '';/.test(idx)
+  && !/IS_EMU_PAGE/.test(idx));
+t('三张派生页各带自己的 data-page 标记（守卫据此识别）',
+  /<body data-page="emulator">/.test(emu) && /<body data-page="resources">/.test(res));
 t('独立页页内已无「← 返回聚合首页」按钮', !emu.includes('<a href="/">← 返回聚合首页</a>'));
 /* 窄屏（≤760px）下 .main-nav 是 display:none —— 底部 Tab 必须自带回首页入口 */
 t('派生页底部 Tab 有回首页入口（href="/"）',
@@ -236,6 +255,8 @@ const xdFetch = fs.readFileSync(path.join(root, 'fetchers', 'xdgamer.js'), 'utf8
 const xrefSrc = fs.readFileSync(path.join(root, 'data', 'xref.js'), 'utf8');
 const srv = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
 const sec = fs.readFileSync(path.join(root, 'tools', 'emulator-sections.js'), 'utf8');
+/* ★ v10.44：存档 / 修改器的驱动脚本搬去端游资源页，相关断言改读这份 */
+const rsec = fs.readFileSync(path.join(root, 'tools', 'resource-sections.js'), 'utf8');
 
 /* ① XD 详情：改版后标题在 .article-title-text，且旧代码的「|| 短路 + 未 trim」会让 title 恒为空 */
 t('XD 详情按新版结构取标题（.article-title-text + trim 后再判空）',
@@ -245,11 +266,12 @@ t('XD 详情取到厂商 / 发行日期（.article-meta-item）',
 t('XD 详情从版本介绍文本里提容量（容量xxGB）', /容量\\s\*\(\[\\d\.\]\+/.test(xdFetch));
 t('XD 详情返回标签 tags（新版 .article-tags）', /\.article-tags a/.test(xdFetch) && /tags,/.test(xdFetch));
 
-/* ② 云存档卡片：路径区不跳转 + 每行可复制 + 正文可进详情 */
-t('云存档路径行带「复制」按钮', /class="cp"/.test(sec) && /function copyText/.test(sec));
+/* ② 云存档卡片：路径区不跳转 + 每行可复制 + 正文可进详情
+ *   ★ v10.44：这段实现已搬去 tools/resource-sections.js（存档页签在端游资源页） */
+t('云存档路径行带「复制」按钮', /class="cp"/.test(rsec) && /function copyText/.test(rsec));
 t('云存档卡片正文可点进详情（不再整卡吞掉点击）',
-  /if \(e\.target\.closest\('\.paths'\)\) return;/.test(sec));
-t('云存档卡片给出「没对上端游库」的明确提示', /存档路径可直接点「复制」/.test(sec));
+  /if \(e\.target\.closest\('\.paths'\)\) return;/.test(rsec));
+t('云存档卡片给出「没对上端游库」的明确提示', /存档路径可直接点「复制」/.test(rsec));
 
 /* ③ 点击语义统一：libId 优先于 bhk（旧版 bhk 优先导致点正文进配置面板） */
 {
@@ -262,9 +284,15 @@ t('云存档卡片给出「没对上端游库」的明确提示', /存档路径�
   t('「📋 社区配置」按钮有专属样式 .emu-card .cfg-btn', /\.emu-card \.cfg-btn\{/.test(idx));
 }
 
-/* ④ 筛选条分行 + 状态不进文案（定宽伪元素） */
+/* ④ 筛选条分行 + 状态不进文案（定宽伪元素）
+ * ★ v10.44：拆分后 emulator 只剩手游中心一条筛选条（3 行），
+ *   修改器 2 行 / 云存档 2 行随功能去了 resources.html —— 两边分别断言。 */
 const barRowCount = count(emu, /class="emu-bar-row"/g);
-t('三条筛选条共拆成 7 行 .emu-bar-row（手游 3 / 修改器 2 / 云存档 2）', barRowCount === 7, `实际 ${barRowCount} 行`);
+t('手机专区只剩手游中心一条筛选条，共 3 行 .emu-bar-row', barRowCount === 3, `实际 ${barRowCount} 行`);
+{
+  const resRows = count(res, /class="emu-bar-row"/g);
+  t('端游资源页三条筛选条共 6 行 .emu-bar-row（MOD 2 / 存档 2 / 修改器 2）', resRows === 6, `实际 ${resRows} 行`);
+}
 t('手游中心筛选独占一行（行首有「筛选」标签 + 4 个开关）',
   /<div class="emu-bar-row">\s*<span class="emu-bar-lb">筛选<\/span>[\s\S]{0,900}id="emuToggleSv"/.test(emu));
 t('四个筛选开关都在（匹配端游 / 双料 / 有修改器 / 有云存档）',
@@ -274,14 +302,19 @@ t('开关状态标记走定宽伪元素 .em-tg::before（不进文案，盒宽�
 t('开关 JS 不再改 textContent（只切 .on 类）',
   !/\.textContent = \(.*\? '✓ ' : '○ '\)/.test(sec) && /const paint = \(\) => el\.classList\.toggle\('on'/.test(sec));
 {
-  /* 7 个开关按钮（手游 4 + 修改器 1 + 云存档 2）都必须挂 em-tg，
-   * 否则它的状态就会没有标记，或又退回「改文案」的老路 */
-  const tgIds = ['emuToggleLib', 'emuToggleBoth', 'emuToggleTr', 'emuToggleSv', 'trToggleLib', 'svPhone', 'svCloud'];
-  const missing = tgIds.filter((i) => {
-    const m = emu.match(new RegExp('class="([^"]*)" id="' + i + '"'));
-    return !(m && /\bem-tg\b/.test(m[1]));
-  });
-  t('7 个开关按钮都挂了 em-tg 类', missing.length === 0, missing.join(', ') || '全部命中');
+  /* 各页开关按钮都必须挂 em-tg，否则它的状态就没有标记，或又退回「改文案」的老路。
+   * ★ v10.44：按页面拆成两组 —— 手机专区 4 个（手游中心），端游资源页 4 个（MOD / 存档 / 修改器）。 */
+  const chk = (html, tgIds, label) => {
+    const missing = tgIds.filter((i) => {
+      const m = html.match(new RegExp('class="([^"]*)" id="' + i + '"'));
+      return !(m && /\bem-tg\b/.test(m[1]));
+    });
+    t(label, missing.length === 0, missing.join(', ') || '全部命中');
+  };
+  chk(emu, ['emuToggleLib', 'emuToggleBoth', 'emuToggleTr', 'emuToggleSv'],
+    '手机专区 4 个筛选开关都挂了 em-tg 类');
+  chk(res, ['mdToggleLib', 'trToggleLib', 'svPhone', 'svCloud'],
+    '端游资源页 4 个筛选开关都挂了 em-tg 类');
 }
 
 /* ⑤ 横切筛选：交叉索引 + 两端点 */
@@ -364,6 +397,114 @@ t('分组的「首组不加顶部间距」改为排序后按位次决定',
   /groups\.forEach\(\(g, k\) => \{[\s\S]{0,200}k === 0 \? '' : ' style="padding-top:12px"'/.test(idx));
 t('旧的写死顺序（sec(...true) 四连）已移除', !/html \+= sec\('📱'/.test(idx) && !/const sec = \(icon, name, tag/.test(idx));
 
+/* ================= ★ v10.44 增量：端游资源独立页 /resources.html =================
+ * 用户需求①：「手游的样式更新下，也需要划分模块 MOD、存档、修改器」。
+ * 归属决策（用户拍板）：三类资源新建「端游资源」独立专页，手机专区回归 3 块。
+ *
+ * 这张页与 emulator.html 共用同一套生成机制
+ *   （主源抽共享资产 + 生成器里硬编码分区骨架 + 外部驱动脚本 + 幂等哨兵 + 出站自检），
+ * 所以下面这组断言与上面那组是同构的。三条最容易**静默**出错的：
+ *   ⚠️ 分区骨架绝不能从派生页自身回读 —— 生成时丢了会被幂等固化，永远回不来（v9.1 血教训）
+ *   ⚠️ 幂等哨兵必须锚在长期存在的符号上 —— 曾挂在被删的 initPc 上，每跑一次重复注入（v9.3）
+ *   ⚠️ 每个可切换 <main> 必须带 data-et —— 缺了 main[data-et].et-hide 匹配不上，切走也隐藏不掉
+ */
+const rsecAll = rsec;
+t('端游资源页恰好 3 个平级页签', count(res, /class="res-tab[ ">]/g) === 3, `实际 ${count(res, /class="res-tab[ ">]/g)}`);
+t('端游资源页页签顺序为 md/sv/tr（MOD → 存档 → 修改器）',
+  (res.match(/class="res-tab[^"]*" data-et="(\w+)"/g) || []).map((s) => s.replace(/.*data-et="/, '').replace(/"$/, '')).join(',') === 'md,sv,tr',
+  (res.match(/class="res-tab[^"]*" data-et="(\w+)"/g) || []).join(' | '));
+t('三个页签文案依次是 MOD / 存档 / 修改器',
+  /data-et="md"[\s\S]{0,120}MOD/.test(res)
+  && /data-et="sv"[\s\S]{0,120}存档/.test(res)
+  && /data-et="tr"[\s\S]{0,120}修改器/.test(res));
+t('3 个可切换分区全部带 data-et（缺了 main[data-et].et-hide 匹配不上）',
+  [...res.matchAll(/<main\b[^>]*>/g)].length === 3 &&
+  [...res.matchAll(/<main\b[^>]*>/g)].every((m) => /data-et="/.test(m[0])));
+t('ET_MAP 覆盖全部 3 个分区（漏一个就有页签点了没反应）',
+  /ET_MAP = \{ md: '#mods', sv: '#resSaves', tr: '#resTrainers' \}/.test(res));
+/* ★ 类名隔离：本页另起 .res-tab / #resTabs，**不复用** #emuTabs/.emu-tab。
+ *   复用会让「改手机专区页签样式」意外改到这里（用户对样式的基线要求）。
+ * ★ 判据按**类名 token** 判、不按字符串前缀 —— 第一版写的是
+ *   「不含 `<button class="emu-tab`」，反证时发现只要把 emu-tab **追加到类列表尾部**
+ *   （`class="res-tab on emu-tab"`）就绕过去了，而且还被「页签计数」那条抢了命中，
+ *   等于这条判据根本没被证明有效。改成拆 token 后判「整个页面的按钮类名里都没有 emu-tab」。 */
+const resBtnCls = [...res.matchAll(/<button class="([^"]*)"/g)].flatMap((m) => m[1].split(/\s+/));
+t('本页切换条是独立的 #resTabs / .res-tab（未复用手机专区的骨架选择器）',
+  /<div class="emu-tabs" id="resTabs">/.test(res) && !/id="emuTabs"/.test(res)
+  && !resBtnCls.includes('emu-tab')
+  && resBtnCls.filter((c) => c === 'res-tab').length === 3,
+  `按钮类名 token：${resBtnCls.join(' ')}`);
+/* ★ 三个分区骨架必须在**生成器里硬编码**（不能从派生页回读）。
+ *   这里直接查生成器源码 + 产物两侧，任一侧缺了都算失败。 */
+const buildRes = fs.readFileSync(path.join(root, 'tools', 'build-resource-page.js'), 'utf8');
+t('生成器里硬编码了三个分区骨架常量 MODS_HTML / SAVES_HTML / TRAINERS_HTML',
+  /const MODS_HTML = /.test(buildRes) && /const SAVES_HTML = /.test(buildRes) && /const TRAINERS_HTML = /.test(buildRes));
+t('端游资源页有「MOD」分区骨架（计数/搜索/排序/开关/网格/更多）',
+  ['id="mdCount"', 'id="mdBuilt"', 'id="mdStats"', 'id="mdSearch"', 'id="mdSorts"', 'id="mdToggleLib"', 'id="mdGrid"', 'id="mdMore"']
+    .every((s) => res.includes(s)));
+t('端游资源页有「存档」分区骨架（计数/搜索/排序/两个开关/网格/更多）',
+  ['id="svCount"', 'id="svBuilt"', 'id="svStats"', 'id="svSearch"', 'id="svSorts"', 'id="svPhone"', 'id="svCloud"', 'id="svGrid"', 'id="svMore"']
+    .every((s) => res.includes(s)));
+t('端游资源页有「修改器」分区骨架（计数/搜索/来源/排序/开关/网格/更多）',
+  ['id="trCount"', 'id="trBuilt"', 'id="trStats"', 'id="trSearch"', 'id="trSource"', 'id="trSorts"', 'id="trToggleLib"', 'id="trGrid"', 'id="trMore"']
+    .every((s) => res.includes(s)));
+/* ★ 存档的卡片把路径铺在卡面上，路径区必须真的存在（否则信息全丢） */
+t('存档卡片有路径展示区 .paths 与云同步徽标 .tg.cloud',
+  /\.emu-card \.paths\{/.test(res) && /\.emu-card \.tg\.cloud\{/.test(res));
+t('存档网格在窄屏收敛为单列（路径长，两列会挤断）',
+  /max-width:430px[\s\S]{0,200}\.emu-grid\.sv\{grid-template-columns:1fr\}/.test(res));
+t('修改器卡片带「放置位置」说明（用户明确要的信息）',
+  /tr-note[\s\S]{0,120}放置位置/.test(res));
+/* 专属 CSS 泄漏闸：追加的 CSS 必须整段待在 <style> 内 */
+t('端游资源页 <style> 唯一', count(res, /<style>/g) === 1, `实际 ${count(res, /<style>/g)}`);
+t('端游资源页 <script> 数正常（≤3）', count(res, /<script/g) <= 3, `实际 ${count(res, /<script/g)}`);
+t('端游资源页专属 CSS 整段在 <style> 内（掉到外面会被当正文渲染）',
+  (() => {
+    const s1 = res.indexOf('</style>');
+    const between = res.slice(s1 + 8, res.indexOf('</head>'));
+    return s1 > 0 && !/[.#@][\w-]+\s*\{/.test(between);
+  })());
+t('端游资源页 </style> 后紧接 </head>（无 CSS 文本夹层）',
+  /<\/style>\s*<\/head>/.test(res));
+/* 幂等哨兵：三个 init 各只一次，且哨兵锚在长期存在的 initMd 上 */
+t('生成器幂等哨兵锚在 initMd 上（v9.3 曾锚在已删函数上导致重复注入）',
+  /SEC_SENTINEL = \/function initMd\\s\*\\\(\//.test(buildRes));
+t('端游资源页未重复注入 SECTIONS（initMd / initSv / initTr 各只一次）',
+  count(res, /function initMd/g) === 1 && count(res, /function initSv/g) === 1 && count(res, /function initTr/g) === 1,
+  `initMd ${count(res, /function initMd/g)} / initSv ${count(res, /function initSv/g)} / initTr ${count(res, /function initTr/g)}`);
+t('端游资源页 .main-nav 唯一 / .page-back 唯一',
+  count(res, /class="main-nav"/g) === 1 && count(res, /class="wrap page-back"/g) === 1);
+/* ★ 出站自检（生成器内置，这里再独立验一遍）：驱动脚本引用的 id 必须都在产物里，
+ *   否则切到那个页签就是一片空白（不报错，最阴）。 */
+{
+  const ids = new Set();
+  for (const m of rsecAll.matchAll(/getElementById\('([\w-]+)'\)/g)) ids.add(m[1]);
+  for (const m of rsecAll.matchAll(/\$\('#([\w-]+)'\)/g)) ids.add(m[1]);
+  const missing = [...ids].filter((id) => !res.includes(`id="${id}"`));
+  t(`驱动脚本引用的 ${ids.size} 个 id 全部存在于产物中（缺一个就是一页空白）`,
+    missing.length === 0, missing.join(', ') || '全部命中');
+}
+/* 顶栏 / 底部 Tab / 文档头 */
+t('端游资源页顶栏「首页」是真跳转 href="/"', /<a href="\/" id="navHome">🏠 首页<\/a>/.test(res));
+t('端游资源页顶栏高亮落在「端游资源」上（首页不抢高亮）',
+  /<a href="\/resources\.html" class="on" id="navRes">🎮 端游资源<\/a>/.test(res));
+t('端游资源页顶栏保留其余 3 个入口（首页 / 手机专区 / 解包匹配）',
+  /id="navEmu"/.test(res) && /id="navUnpack"/.test(res));
+t('端游资源页 <title> 与文档头已按本页改写',
+  /<title>端游资源 · MOD \/ 存档 \/ 修改器 — GameHub<\/title>/.test(res));
+t('端游资源页底部 Tab 有回首页入口（href="/"）',
+  /<nav class="tabbar"[\s\S]*?href="\/"[\s\S]*?<\/nav>/.test(res));
+t('端游资源页底部 Tab 高亮落在「端游资源」上（tabRes, data-tab="md"）',
+  /<a href="#" data-tab="md" id="tabRes" class="on"/.test(res));
+t('端游资源页底部 Tab 已清掉首页语义死链（latest / about）',
+  !/<nav class="tabbar"[\s\S]*?data-tab="latest"[\s\S]*?<\/nav>/.test(res) &&
+  !/<nav class="tabbar"[\s\S]*?data-tab="about"[\s\S]*?<\/nav>/.test(res));
+/* 底 Tab 的「端游资源」在当前页应当切页签而不是重载到别处 */
+t('bootTab 默认进 MOD 页签（缺省不是空白首屏）',
+  /switchResTab\(ET_MAP\[t\] \? t : 'md', \{ scroll: false \}\)/.test(res));
+t('goEmuPage 兜底指向 /emulator.html（派生页不再依赖主源的绝对地址常量）',
+  /function goEmuPage\(\) \{ location\.href = '\/emulator\.html'; \}/.test(res));
+
 /* ⑤ 派生页必须同步到同样的规则（单源双页的核心约束） */
 t('[派生页] emulator.html 同步了抽屉 clamp 宽度',
   /width:min\(clamp\(680px,50vw,1040px\),100vw\)/.test(emu));
@@ -380,6 +521,16 @@ t('[派生页] emulator.html 同步了 relSlot 新位置',
   })());
 t('[派生页] emulator.html 同步了行距收紧',
   /\.sm-row \.t\{[^}]*line-height:1\.3/.test(emu));
+/* ★ v10.44：新建的第 4 张派生页同样受「单源」约束 —— 主源改一条，它就得跟着改。
+ *   这里挑三条「改了主源最容易忘掉同步」的规则（抽屉宽度 / 搜索行 / 分组排序）。 */
+t('[派生页] resources.html 同步了抽屉 clamp 宽度',
+  /width:min\(clamp\(680px,50vw,1040px\),100vw\)/.test(res));
+t('[派生页] resources.html 同步了 .go2 绝对定位',
+  /\.sm-row \.go2\{position:absolute;right:10px/.test(res));
+t('[派生页] resources.html 同步了分组排序逻辑（pcFit 提权）',
+  /pcFit \+ \(pcFit >= 2 \? 1 : 0\)/.test(res));
+t('[派生页] resources.html 同步了抽屉的抽屉内区块样式（.d-blk / .d-sv）',
+  /\.d-blk\{/.test(res) && /\.d-sv \.p\{/.test(res));
 
 /* ================= 汇总 ================= */
 const fail = R.filter((r) => !r[0]);

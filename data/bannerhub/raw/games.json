@@ -1,19 +1,7 @@
 [
   {
-    "name": "007_First_Light",
-    "count": 1
-  },
-  {
-    "name": "100_Girls_Handsome_Man",
-    "count": 1
-  },
-  {
-    "name": "16100-german-truck-simulator-1-32-en-win",
-    "count": 1
-  },
-  {
     "name": "2K_Sports_NBA_2K14",
-    "count": 11
+    "count": 12
   },
   {
     "name": "33_Immortals",
@@ -33,7 +21,19 @@
   },
   {
     "name": "7-Zip",
-    "count": 3
+    "count": 4
+  },
+  {
+    "name": "7-Zip_SFX",
+    "count": 1
+  },
+  {
+    "name": "7Launcher_-_GTA_5_1_7_1_____________________________________",
+    "count": 1
+  },
+  {
+    "name": "7Launcher_-_GTA_5_1_7_3_____________________________________",
+    "count": 1
   },
   {
     "name": "7Launcher_-_Half-Life_2_1_7_0_7_____________________________",
@@ -41,7 +41,7 @@
   },
   {
     "name": "AC3SP",
-    "count": 24
+    "count": 28
   },
   {
     "name": "AC4BFSP",
@@ -113,6 +113,10 @@
   },
   {
     "name": "Ace_Combat__Assault_Horizon",
+    "count": 1
+  },
+  {
+    "name": "Achilles__Legends_Untold",
     "count": 1
   },
   {
@@ -296,6 +300,10 @@
     "count": 1
   },
   {
+    "name": "Aragami2",
+    "count": 2
+  },
+  {
     "name": "Arc",
     "count": 1
   },
@@ -309,10 +317,6 @@
   },
   {
     "name": "ArmA_2__Combined_Operations",
-    "count": 1
-  },
-  {
-    "name": "Arma_2__Operation_Arrowhead",
     "count": 1
   },
   {
@@ -389,15 +393,15 @@
   },
   {
     "name": "Assassin_s_Creed__Revelations",
-    "count": 19
+    "count": 20
   },
   {
     "name": "Assassin_s_Creed__Rogue",
-    "count": 34
+    "count": 35
   },
   {
     "name": "Assassin_s_Creed__Syndicate",
-    "count": 20
+    "count": 22
   },
   {
     "name": "Assassin_s_Creed__Unity",
@@ -429,7 +433,7 @@
   },
   {
     "name": "Assetto_Corsa",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Assetto_Corsa_Competizione",
@@ -477,7 +481,7 @@
   },
   {
     "name": "Autopatch",
-    "count": 5
+    "count": 6
   },
   {
     "name": "Autorun",
@@ -533,7 +537,7 @@
   },
   {
     "name": "BF2",
-    "count": 1
+    "count": 2
   },
   {
     "name": "BGI",
@@ -592,8 +596,12 @@
     "count": 2
   },
   {
+    "name": "Batman__Arkham_Asylum_-_Advanced_Launcher_2_0",
+    "count": 1
+  },
+  {
     "name": "Batman__Arkham_Asylum_Game_of_the_Year_Edition",
-    "count": 27
+    "count": 26
   },
   {
     "name": "Batman__Arkham_City_-_Game_of_the_Year_Edition",
@@ -624,8 +632,12 @@
     "count": 1
   },
   {
+    "name": "Battle_net_Setup",
+    "count": 1
+  },
+  {
     "name": "Battlefield_3_",
-    "count": 17
+    "count": 18
   },
   {
     "name": "Battlefield_3_______________________________________________",
@@ -649,7 +661,7 @@
   },
   {
     "name": "Battlefield__Bad_Company_2_Vietnam",
-    "count": 6
+    "count": 7
   },
   {
     "name": "Battlefield__Bad_Company__2",
@@ -669,6 +681,10 @@
   },
   {
     "name": "Bayonetta",
+    "count": 2
+  },
+  {
+    "name": "BeamMP-Launcher",
     "count": 2
   },
   {
@@ -700,6 +716,10 @@
     "count": 2
   },
   {
+    "name": "Beyond_Good___Evil",
+    "count": 1
+  },
+  {
     "name": "Beyond__Two_Souls",
     "count": 3
   },
@@ -725,7 +745,7 @@
   },
   {
     "name": "BioShock_Remastered",
-    "count": 2
+    "count": 3
   },
   {
     "name": "BioShock__2",
@@ -773,7 +793,7 @@
   },
   {
     "name": "Black_Myth__Wukong",
-    "count": 11
+    "count": 13
   },
   {
     "name": "Blacklist_DX11_game",
@@ -793,7 +813,7 @@
   },
   {
     "name": "Blasphemous_2",
-    "count": 4
+    "count": 5
   },
   {
     "name": "BlazBlue_Entropy_Effect",
@@ -833,7 +853,7 @@
   },
   {
     "name": "Blur",
-    "count": 15
+    "count": 16
   },
   {
     "name": "Bob_Esponja__Tit_s_da_Mar__-_Demo",
@@ -936,6 +956,10 @@
     "count": 1
   },
   {
+    "name": "Bun",
+    "count": 1
+  },
+  {
     "name": "Burglin__Gnomes",
     "count": 1
   },
@@ -949,7 +973,7 @@
   },
   {
     "name": "Burnout_Paradise__The_Ultimate_Box",
-    "count": 12
+    "count": 13
   },
   {
     "name": "Burnout_TM__Paradise_The_Ultimate_Box",
@@ -981,6 +1005,10 @@
   },
   {
     "name": "CDCode_Application",
+    "count": 1
+  },
+  {
+    "name": "CDS_II______",
     "count": 1
   },
   {
@@ -1097,7 +1125,7 @@
   },
   {
     "name": "Call_of_Duty___Ghosts",
-    "count": 21
+    "count": 22
   },
   {
     "name": "Call_of_Duty___Modern_Warfare__2__2009_",
@@ -1105,7 +1133,7 @@
   },
   {
     "name": "Call_of_Duty___Modern_Warfare__3__2011_",
-    "count": 36
+    "count": 39
   },
   {
     "name": "Call_of_Duty___Modern_Warfare__II",
@@ -1121,7 +1149,7 @@
   },
   {
     "name": "Call_of_Juarez__Gunslinger",
-    "count": 2
+    "count": 3
   },
   {
     "name": "CampWithMomExtend",
@@ -1193,7 +1221,7 @@
   },
   {
     "name": "Castlevania__Lords_of_Shadow___Ultimate_Edition",
-    "count": 10
+    "count": 11
   },
   {
     "name": "Casualties__Unknown_Demo",
@@ -1222,6 +1250,10 @@
   {
     "name": "Chef_RPG",
     "count": 2
+  },
+  {
+    "name": "Children_of_Morta",
+    "count": 1
   },
   {
     "name": "Chona",
@@ -1285,7 +1317,7 @@
   },
   {
     "name": "CoD2SP_s",
-    "count": 5
+    "count": 6
   },
   {
     "name": "CoDMP",
@@ -1312,12 +1344,16 @@
     "count": 1
   },
   {
+    "name": "Colin_McRae_Rally_2005______________________________________",
+    "count": 1
+  },
+  {
     "name": "Colin_Mcrae__Dirt_2",
     "count": 5
   },
   {
     "name": "Colin_Mcrae__Dirt_3",
-    "count": 5
+    "count": 4
   },
   {
     "name": "Combat_Master__Season_4",
@@ -1401,7 +1437,7 @@
   },
   {
     "name": "Counter-Strike_2",
-    "count": 12
+    "count": 14
   },
   {
     "name": "Counter-Strike_Global_Offensive",
@@ -1441,7 +1477,7 @@
   },
   {
     "name": "CrashBandicootNSaneTrilogy",
-    "count": 4
+    "count": 5
   },
   {
     "name": "CrashReportClient",
@@ -1501,7 +1537,7 @@
   },
   {
     "name": "Crysis_2_-_Maximum_Edition",
-    "count": 8
+    "count": 9
   },
   {
     "name": "Crysis_3",
@@ -1569,7 +1605,7 @@
   },
   {
     "name": "DARK_SOULS__II",
-    "count": 16
+    "count": 17
   },
   {
     "name": "DARK_SOULS__III",
@@ -1581,11 +1617,11 @@
   },
   {
     "name": "DARK_SOULS___REMASTERED",
-    "count": 41
+    "count": 42
   },
   {
     "name": "DAVE_THE_DIVER",
-    "count": 3
+    "count": 4
   },
   {
     "name": "DBFighterZ",
@@ -1605,7 +1641,7 @@
   },
   {
     "name": "DEAD_RISING_",
-    "count": 5
+    "count": 6
   },
   {
     "name": "DEATH_STRANDING_DIRECTOR_S_CUT",
@@ -1618,6 +1654,10 @@
   {
     "name": "DELTARUNE",
     "count": 3
+  },
+  {
+    "name": "DEVIL_MAY_CRY_4",
+    "count": 1
   },
   {
     "name": "DEVIL_MAY_CRY_4_TRIAL",
@@ -1673,11 +1713,11 @@
   },
   {
     "name": "DRAGON_BALL_FighterZ",
-    "count": 40
+    "count": 42
   },
   {
     "name": "DRAGON_BALL_Sparking__ZERO",
-    "count": 32
+    "count": 33
   },
   {
     "name": "DRAGON_BALL_XENOVERSE",
@@ -1697,7 +1737,7 @@
   },
   {
     "name": "DRAGON_BALL__Sparking__ZERO",
-    "count": 121
+    "count": 125
   },
   {
     "name": "DRAGON_QUEST_BUILDERS",
@@ -1737,7 +1777,7 @@
   },
   {
     "name": "DYNASTY_WARRIORS__ORIGINS",
-    "count": 2
+    "count": 3
   },
   {
     "name": "DYSMANTLE",
@@ -1789,7 +1829,7 @@
   },
   {
     "name": "Darksiders_III",
-    "count": 6
+    "count": 7
   },
   {
     "name": "Darksiders_II_Deathinitive_Edition",
@@ -1857,7 +1897,7 @@
   },
   {
     "name": "Dead_Island_Definitive_Edition",
-    "count": 12
+    "count": 13
   },
   {
     "name": "Dead_Island_GOTY_LAN",
@@ -1877,11 +1917,11 @@
   },
   {
     "name": "Dead_Space__",
-    "count": 11
+    "count": 12
   },
   {
     "name": "Dead_Space__2",
-    "count": 15
+    "count": 16
   },
   {
     "name": "Dead_Space__2008_",
@@ -1961,7 +2001,7 @@
   },
   {
     "name": "Deluge",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Dementium__The_Ward",
@@ -1981,6 +2021,10 @@
   },
   {
     "name": "Depravity_Level_Alpha",
+    "count": 1
+  },
+  {
+    "name": "Detroit__Become_Human",
     "count": 1
   },
   {
@@ -2005,7 +2049,7 @@
   },
   {
     "name": "Devil_May_Cry_4_Special_Edition",
-    "count": 37
+    "count": 38
   },
   {
     "name": "Devil_May_Cry_4_Special_Edition_MULTi8_-_ElAmigos___________",
@@ -2017,7 +2061,7 @@
   },
   {
     "name": "Devil_May_Cry_5",
-    "count": 37
+    "count": 38
   },
   {
     "name": "Dex",
@@ -2085,7 +2129,7 @@
   },
   {
     "name": "Disney_Dreamlight_Valley_",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Disney_Princesas_Viagem_Encantada",
@@ -2145,7 +2189,7 @@
   },
   {
     "name": "Double_Dragon_Revive",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Dragon-Ball-XenoVerse_nosTEAM_part1",
@@ -2209,7 +2253,7 @@
   },
   {
     "name": "Drift_Legends_2",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Drive_Beyond_Horizons_Demo",
@@ -2217,7 +2261,7 @@
   },
   {
     "name": "Driver",
-    "count": 6
+    "count": 7
   },
   {
     "name": "DriverParallelLines",
@@ -2241,11 +2285,11 @@
   },
   {
     "name": "DyingLight",
-    "count": 3
+    "count": 4
   },
   {
     "name": "Dying_Light",
-    "count": 20
+    "count": 21
   },
   {
     "name": "Dying_Light_2_Stay_Human__Reloaded_Edition",
@@ -2296,6 +2340,10 @@
     "count": 1
   },
   {
+    "name": "EDF41",
+    "count": 1
+  },
+  {
     "name": "EDF5",
     "count": 1
   },
@@ -2305,6 +2353,10 @@
   },
   {
     "name": "ELDEN_RING_",
+    "count": 1
+  },
+  {
+    "name": "ELDEN_RING_NIGHTREIGN",
     "count": 1
   },
   {
@@ -2337,7 +2389,7 @@
   },
   {
     "name": "EasyAntiCheat_Launcher",
-    "count": 15
+    "count": 17
   },
   {
     "name": "EasyDeliveryCo",
@@ -2452,6 +2504,10 @@
     "count": 1
   },
   {
+    "name": "EuroTruckSimulator2_1_30_2_2_to_1_31_2_1_patch",
+    "count": 1
+  },
+  {
     "name": "EuroTruckSimulator2_1_31_2_1_to_1_32_3_14_patch",
     "count": 1
   },
@@ -2465,11 +2521,11 @@
   },
   {
     "name": "Euro_Truck_Simulator_2",
-    "count": 237
+    "count": 256
   },
   {
     "name": "Euro_Truck_Simulator_2_Demo",
-    "count": 12
+    "count": 14
   },
   {
     "name": "Euro_Truck_Simulator_2______________________________________",
@@ -2521,7 +2577,7 @@
   },
   {
     "name": "F1_2013",
-    "count": 9
+    "count": 10
   },
   {
     "name": "F1_2014",
@@ -2534,6 +2590,10 @@
   {
     "name": "F1_2015",
     "count": 2
+  },
+  {
+    "name": "F1_2018",
+    "count": 1
   },
   {
     "name": "F1_2020",
@@ -2645,11 +2705,11 @@
   },
   {
     "name": "FIFA_18",
-    "count": 13
+    "count": 16
   },
   {
     "name": "FIFA_19",
-    "count": 29
+    "count": 31
   },
   {
     "name": "FIFA_19_____________________________________________________",
@@ -2660,12 +2720,16 @@
     "count": 2
   },
   {
+    "name": "FIFA_2004___________________________________________________",
+    "count": 1
+  },
+  {
     "name": "FIFA_2007",
     "count": 1
   },
   {
     "name": "FIFA_22",
-    "count": 10
+    "count": 11
   },
   {
     "name": "FIFA_23",
@@ -2686,6 +2750,10 @@
   {
     "name": "FINAL_FANTASY_IX",
     "count": 6
+  },
+  {
+    "name": "FINAL_FANTASY_TACTICS_-_The_Ivalice_Chronicles",
+    "count": 1
   },
   {
     "name": "FINAL_FANTASY_VIII",
@@ -2765,7 +2833,7 @@
   },
   {
     "name": "F_E_A_R_",
-    "count": 3
+    "count": 4
   },
   {
     "name": "F_E_A_R__3",
@@ -2796,6 +2864,10 @@
     "count": 1
   },
   {
+    "name": "Fallout4VR",
+    "count": 1
+  },
+  {
     "name": "Fallout_-_New_Vegas_Ultimate_Edition________________________",
     "count": 1
   },
@@ -2813,7 +2885,7 @@
   },
   {
     "name": "Fallout_4",
-    "count": 16
+    "count": 17
   },
   {
     "name": "Fallout__New_Vegas",
@@ -2833,7 +2905,7 @@
   },
   {
     "name": "Far_Cry_",
-    "count": 7
+    "count": 8
   },
   {
     "name": "Far_Cry_2",
@@ -2841,7 +2913,7 @@
   },
   {
     "name": "Far_Cry_3",
-    "count": 98
+    "count": 101
   },
   {
     "name": "Far_Cry_3___________________________________________________",
@@ -2861,7 +2933,7 @@
   },
   {
     "name": "Far_Cry__2",
-    "count": 20
+    "count": 21
   },
   {
     "name": "Far_Cry__3",
@@ -2941,6 +3013,10 @@
   },
   {
     "name": "Farthest_Frontier",
+    "count": 1
+  },
+  {
+    "name": "Fate_EXTELLA",
     "count": 1
   },
   {
@@ -3105,7 +3181,7 @@
   },
   {
     "name": "Forza_Horizon_5",
-    "count": 5
+    "count": 10
   },
   {
     "name": "Forza_Horizon_6",
@@ -3216,6 +3292,10 @@
     "count": 1
   },
   {
+    "name": "GOWRagnarok_nocrash",
+    "count": 1
+  },
+  {
     "name": "GRID",
     "count": 3
   },
@@ -3289,7 +3369,7 @@
   },
   {
     "name": "GTA_IV__San_Andreas_Setup",
-    "count": 4
+    "count": 5
   },
   {
     "name": "GTA_SA__Liberty_City_Beta_7_Install_Program_________________",
@@ -3440,6 +3520,10 @@
     "count": 1
   },
   {
+    "name": "Getting_Over_It_with_Bennett_Foddy",
+    "count": 2
+  },
+  {
     "name": "GhostSong",
     "count": 1
   },
@@ -3469,7 +3553,7 @@
   },
   {
     "name": "God_of_War",
-    "count": 148
+    "count": 150
   },
   {
     "name": "God_of_War_1_de_ps2_",
@@ -3485,11 +3569,11 @@
   },
   {
     "name": "God_of_War_Ragnar_k",
-    "count": 19
+    "count": 22
   },
   {
     "name": "God_of_War__________________________________________________",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Goddesses__Whim",
@@ -3509,6 +3593,10 @@
   },
   {
     "name": "Google_Play_Games",
+    "count": 1
+  },
+  {
+    "name": "Goose_Goose_Duck",
     "count": 1
   },
   {
@@ -3541,6 +3629,10 @@
   },
   {
     "name": "GrabPack",
+    "count": 1
+  },
+  {
+    "name": "Graduated",
     "count": 1
   },
   {
@@ -3589,7 +3681,7 @@
   },
   {
     "name": "Grand_Theft_Auto_IV__The_Complete_Edition",
-    "count": 375
+    "count": 395
   },
   {
     "name": "Grand_Theft_Auto_IV__The_Complete_Edition_",
@@ -3613,7 +3705,7 @@
   },
   {
     "name": "Grand_Theft_Auto_V",
-    "count": 76
+    "count": 77
   },
   {
     "name": "Grand_Theft_Auto_V_",
@@ -3621,7 +3713,7 @@
   },
   {
     "name": "Grand_Theft_Auto_V_Enhanced",
-    "count": 17
+    "count": 18
   },
   {
     "name": "Grand_Theft_Auto_V_Enhanced_________________________________",
@@ -3629,7 +3721,7 @@
   },
   {
     "name": "Grand_Theft_Auto_V_Legacy",
-    "count": 1409
+    "count": 1509
   },
   {
     "name": "Grand_Theft_Auto_V_Legacy22",
@@ -3693,7 +3785,7 @@
   },
   {
     "name": "GraveyardKeeper2",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Graveyard_Keeper",
@@ -3705,7 +3797,7 @@
   },
   {
     "name": "Green_Hell",
-    "count": 1
+    "count": 3
   },
   {
     "name": "Griftlands",
@@ -3733,6 +3825,10 @@
   },
   {
     "name": "Gta3bt",
+    "count": 1
+  },
+  {
+    "name": "Guitar_Hero_III",
     "count": 1
   },
   {
@@ -3777,7 +3873,7 @@
   },
   {
     "name": "Hades",
-    "count": 16
+    "count": 17
   },
   {
     "name": "Hades_II",
@@ -3850,6 +3946,10 @@
   {
     "name": "Hatred",
     "count": 3
+  },
+  {
+    "name": "Have_a_Nice_Death",
+    "count": 1
   },
   {
     "name": "HaveaNiceDeath",
@@ -3941,7 +4041,7 @@
   },
   {
     "name": "HitmanBloodMoney",
-    "count": 3
+    "count": 2
   },
   {
     "name": "Hitman_2__Silent_Assassin",
@@ -3954,6 +4054,10 @@
   {
     "name": "Hitman__Absolution_",
     "count": 33
+  },
+  {
+    "name": "HoMM4_Repack_by_Roman2211___________________________________",
+    "count": 2
   },
   {
     "name": "HoYoPlay",
@@ -3973,7 +4077,7 @@
   },
   {
     "name": "Hollow_Knight",
-    "count": 26
+    "count": 27
   },
   {
     "name": "Hollow_Knight_Silksong",
@@ -3981,7 +4085,7 @@
   },
   {
     "name": "Hollow_Knight__Silksong",
-    "count": 44
+    "count": 47
   },
   {
     "name": "Hollow_Knight_______________________________________________",
@@ -4121,7 +4225,7 @@
   },
   {
     "name": "INSIDE",
-    "count": 16
+    "count": 17
   },
   {
     "name": "INSIDE_Demo",
@@ -4137,6 +4241,10 @@
   },
   {
     "name": "IW4x",
+    "count": 1
+  },
+  {
+    "name": "Immoral-Bathhouse",
     "count": 1
   },
   {
@@ -4353,7 +4461,7 @@
   },
   {
     "name": "Kena__Bridge_of_Spirits",
-    "count": 4
+    "count": 6
   },
   {
     "name": "Kerbal_Space_Program",
@@ -4384,11 +4492,19 @@
     "count": 1
   },
   {
+    "name": "Kingdom_____________________________________________________",
+    "count": 1
+  },
+  {
     "name": "Kinjo_no_Hitozuma",
     "count": 2
   },
   {
     "name": "Kmotr__II",
+    "count": 1
+  },
+  {
+    "name": "Knight_Online",
     "count": 1
   },
   {
@@ -4481,7 +4597,7 @@
   },
   {
     "name": "LEGOPirates",
-    "count": 3
+    "count": 5
   },
   {
     "name": "LEGO_DC_Super-villains_DX11",
@@ -4501,7 +4617,7 @@
   },
   {
     "name": "LEGO__Marvel_Super_Heroes_2",
-    "count": 3
+    "count": 4
   },
   {
     "name": "LEGO__Marvel__Super_Heroes",
@@ -4553,7 +4669,7 @@
   },
   {
     "name": "L_A__Noire",
-    "count": 3
+    "count": 5
   },
   {
     "name": "Language_Changer",
@@ -4589,7 +4705,7 @@
   },
   {
     "name": "Left_4_Dead",
-    "count": 12
+    "count": 13
   },
   {
     "name": "Left_4_Dead_1___2",
@@ -4597,10 +4713,14 @@
   },
   {
     "name": "Left_4_Dead_2",
-    "count": 62
+    "count": 64
   },
   {
     "name": "Left_4_Dead_MULTi26_-_ElAmigos______________________________",
+    "count": 1
+  },
+  {
+    "name": "Legacy_Launcher_Stable______________________________________",
     "count": 1
   },
   {
@@ -4629,6 +4749,10 @@
   },
   {
     "name": "Lethalmon",
+    "count": 1
+  },
+  {
+    "name": "Level_Devil",
     "count": 1
   },
   {
@@ -4697,7 +4821,7 @@
   },
   {
     "name": "Little_Nightmares_II",
-    "count": 13
+    "count": 15
   },
   {
     "name": "Little_Nightmares_III",
@@ -4709,6 +4833,10 @@
   },
   {
     "name": "Little_Nightmares_VR",
+    "count": 1
+  },
+  {
+    "name": "Live_for_Speed",
     "count": 1
   },
   {
@@ -4770,6 +4898,10 @@
   {
     "name": "Lucky_Tower_Ultimate",
     "count": 2
+  },
+  {
+    "name": "LumaPlay_x64",
+    "count": 1
   },
   {
     "name": "LumenTale_Memories_of_Trey",
@@ -4837,7 +4969,7 @@
   },
   {
     "name": "METAL_GEAR_SOLID_V__GROUND_ZEROES",
-    "count": 8
+    "count": 9
   },
   {
     "name": "METAL_GEAR_SOLID_V__THE_PHANTOM_PAIN",
@@ -4865,6 +4997,10 @@
   },
   {
     "name": "METAL_SLUG_X",
+    "count": 1
+  },
+  {
+    "name": "MEmu-setup-abroad-956f11cf",
     "count": 1
   },
   {
@@ -4989,7 +5125,7 @@
   },
   {
     "name": "MadMax",
-    "count": 3
+    "count": 2
   },
   {
     "name": "Mad_Max",
@@ -5009,7 +5145,7 @@
   },
   {
     "name": "Mafia_2",
-    "count": 3
+    "count": 2
   },
   {
     "name": "Mafia_2_____________________________________________________",
@@ -5029,7 +5165,7 @@
   },
   {
     "name": "Mafia_II__Classic_",
-    "count": 35
+    "count": 36
   },
   {
     "name": "Mafia_II__Definitive_Edition",
@@ -5061,6 +5197,10 @@
   },
   {
     "name": "MallRivals",
+    "count": 1
+  },
+  {
+    "name": "Maneater",
     "count": 1
   },
   {
@@ -5101,11 +5241,11 @@
   },
   {
     "name": "Marvel_s_Spider-Man_Remastered",
-    "count": 18
+    "count": 19
   },
   {
     "name": "Marvel_s_Spider-Man__Miles_Morales",
-    "count": 27
+    "count": 29
   },
   {
     "name": "Marvel_vs__Capcom__Infinite",
@@ -5157,7 +5297,7 @@
   },
   {
     "name": "Max_Payne_3",
-    "count": 11
+    "count": 12
   },
   {
     "name": "Max_Payne_3__Complete_Edition_______________________________",
@@ -5209,7 +5349,7 @@
   },
   {
     "name": "Metro_Exodus",
-    "count": 1
+    "count": 3
   },
   {
     "name": "Metro__Last_Light_Redux",
@@ -5265,7 +5405,7 @@
   },
   {
     "name": "Microsoft__NET_Framework_4",
-    "count": 1
+    "count": 5
   },
   {
     "name": "Microsoft__Visual_Studio_",
@@ -5273,7 +5413,7 @@
   },
   {
     "name": "Microsoft__Windows__Operating_System",
-    "count": 3
+    "count": 4
   },
   {
     "name": "Microsoft__Windows__Operating_Systemgryyy",
@@ -5325,7 +5465,7 @@
   },
   {
     "name": "MinecraftInstaller",
-    "count": 2
+    "count": 3
   },
   {
     "name": "MinecraftStoryMode",
@@ -5337,11 +5477,15 @@
   },
   {
     "name": "Minecraft_Dungeons",
-    "count": 2
+    "count": 3
   },
   {
     "name": "Minecraft__Story_Mode",
     "count": 5
+  },
+  {
+    "name": "Minecraft_installer_by_me__",
+    "count": 2
   },
   {
     "name": "Mini_Motor_Evo",
@@ -5429,11 +5573,11 @@
   },
   {
     "name": "Mortal_Kombat_11",
-    "count": 13
+    "count": 15
   },
   {
     "name": "Mortal_Kombat_Komplete_Edition",
-    "count": 44
+    "count": 45
   },
   {
     "name": "Mortal_Kombat_Project_",
@@ -5445,7 +5589,7 @@
   },
   {
     "name": "Mortal_Kombat_X",
-    "count": 38
+    "count": 39
   },
   {
     "name": "Mortal_Kombat_XL",
@@ -5581,7 +5725,7 @@
   },
   {
     "name": "NARUTO_SHIPPUDEN__Ultimate_Ninja_STORM_4",
-    "count": 61
+    "count": 66
   },
   {
     "name": "NARUTO_SHIPPUDEN__Ultimate_Ninja_STORM_Revolution",
@@ -5589,7 +5733,7 @@
   },
   {
     "name": "NARUTO_STORM_3_FB",
-    "count": 14
+    "count": 16
   },
   {
     "name": "NARUTO_STORM_REVOLUTION",
@@ -5597,7 +5741,7 @@
   },
   {
     "name": "NARUTO_X_BORUTO_Ultimate_Ninja_STORM_CONNECTIONS",
-    "count": 47
+    "count": 53
   },
   {
     "name": "NARUTO_X_BORUTO_Ultimate____________________________________",
@@ -5629,7 +5773,7 @@
   },
   {
     "name": "NBA_2K22",
-    "count": 1
+    "count": 2
   },
   {
     "name": "NBA_2K23",
@@ -5736,6 +5880,10 @@
     "count": 1
   },
   {
+    "name": "NSUNS4_Launcher",
+    "count": 1
+  },
+  {
     "name": "NTR_Soccer",
     "count": 1
   },
@@ -5821,7 +5969,7 @@
   },
   {
     "name": "Need_for_Speed_9",
-    "count": 109
+    "count": 114
   },
   {
     "name": "Need_for_Speed_MONST_WANTEND",
@@ -5849,7 +5997,7 @@
   },
   {
     "name": "Need_for_Speed_Most_Wanted_2005_____________________________",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Need_for_Speed_Most_Wanted_Portugu_s_do_Brasil",
@@ -5917,7 +6065,7 @@
   },
   {
     "name": "Need_for_Speed_most_wanted",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Need_for_Speed_most_wanted_black",
@@ -6069,7 +6217,7 @@
   },
   {
     "name": "ONE_PIECE__PIRATE_WARRIORS_4",
-    "count": 5
+    "count": 6
   },
   {
     "name": "OPU3",
@@ -6109,7 +6257,7 @@
   },
   {
     "name": "OneShot",
-    "count": 1
+    "count": 2
   },
   {
     "name": "One_Gun_Guy",
@@ -6141,7 +6289,7 @@
   },
   {
     "name": "OpenIV",
-    "count": 2
+    "count": 3
   },
   {
     "name": "Ori_and_the_Blind_Forest",
@@ -6233,7 +6381,7 @@
   },
   {
     "name": "PES2017",
-    "count": 7
+    "count": 6
   },
   {
     "name": "PES2017-_PATCH_LENGEDS_LITE_part1",
@@ -6253,7 +6401,7 @@
   },
   {
     "name": "PES_2013",
-    "count": 26
+    "count": 29
   },
   {
     "name": "PES_2013_Fix",
@@ -6341,7 +6489,7 @@
   },
   {
     "name": "PRO_EVOLUTION_SOCCER_2018",
-    "count": 32
+    "count": 35
   },
   {
     "name": "PRO_EVO_17",
@@ -6413,7 +6561,7 @@
   },
   {
     "name": "Persona_3_Reload",
-    "count": 3
+    "count": 4
   },
   {
     "name": "Persona_4_Golden",
@@ -6492,6 +6640,10 @@
     "count": 2
   },
   {
+    "name": "Plantera",
+    "count": 1
+  },
+  {
     "name": "Plants_vs__Zombies",
     "count": 2
   },
@@ -6505,7 +6657,7 @@
   },
   {
     "name": "PlayGTAV",
-    "count": 104
+    "count": 114
   },
   {
     "name": "PlayGTAVOptiJuegos7Z",
@@ -6525,7 +6677,11 @@
   },
   {
     "name": "Plutonium_Launcher",
-    "count": 2
+    "count": 3
+  },
+  {
+    "name": "Plutonium_Updater_App",
+    "count": 1
   },
   {
     "name": "Poke_Abby_HD",
@@ -6601,7 +6757,7 @@
   },
   {
     "name": "Portrait_of_a_Torn_-_Demo",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Postal2",
@@ -6638,6 +6794,10 @@
   {
     "name": "Prince_of_Persia_-_The_Forgotten_Sands",
     "count": 6
+  },
+  {
+    "name": "Prince_of_Persia_-_The_Forgotten_Sands______________________",
+    "count": 1
   },
   {
     "name": "Prince_of_Persia_The_Sands_of_Time__________________________",
@@ -6681,7 +6841,7 @@
   },
   {
     "name": "Pro_Evolution_Soccer_2011",
-    "count": 15
+    "count": 18
   },
   {
     "name": "Pro_Evolution_Soccer_2011_Settings_",
@@ -6701,7 +6861,7 @@
   },
   {
     "name": "Pro_Evolution_Soccer_2013",
-    "count": 2886
+    "count": 2979
   },
   {
     "name": "Pro_Evolution_Soccer_20132",
@@ -6709,6 +6869,10 @@
   },
   {
     "name": "Pro_Evolution_Soccer_2013DEMO",
+    "count": 1
+  },
+  {
+    "name": "Pro_Evolution_Soccer_2013_",
     "count": 1
   },
   {
@@ -6725,7 +6889,7 @@
   },
   {
     "name": "Pro_Evolution_Soccer_2013_DEMO_______________________",
-    "count": 7
+    "count": 10
   },
   {
     "name": "Pro_Evolution_Soccer_2013_Yure",
@@ -6781,7 +6945,7 @@
   },
   {
     "name": "Pro_Evolution_Soccer_2017",
-    "count": 172
+    "count": 181
   },
   {
     "name": "Pro_Evolution_Soccer_2017seting",
@@ -6805,7 +6969,7 @@
   },
   {
     "name": "Pro_Evolution_Soccer_6",
-    "count": 8
+    "count": 9
   },
   {
     "name": "Pro_Evolution_Soccer_6_DEMO__________________________________________",
@@ -6857,11 +7021,11 @@
   },
   {
     "name": "Prototype_",
-    "count": 34
+    "count": 35
   },
   {
     "name": "Prototype_2",
-    "count": 29
+    "count": 30
   },
   {
     "name": "Prototype___________________________________________________",
@@ -7077,7 +7241,7 @@
   },
   {
     "name": "Red_Dead_Redemption",
-    "count": 45
+    "count": 47
   },
   {
     "name": "Red_Dead_Redemption_2",
@@ -7117,7 +7281,7 @@
   },
   {
     "name": "Resident_Evil_2",
-    "count": 98
+    "count": 105
   },
   {
     "name": "Resident_Evil_2_2019_Deluxe_Edition_MULTi12_-_ElAmigos______",
@@ -7137,7 +7301,7 @@
   },
   {
     "name": "Resident_Evil_3",
-    "count": 69
+    "count": 72
   },
   {
     "name": "Resident_Evil_3__Raccoon_City_Demo_",
@@ -7161,7 +7325,7 @@
   },
   {
     "name": "Resident_Evil_4__2005_",
-    "count": 33
+    "count": 34
   },
   {
     "name": "Resident_Evil_4___Biohazard_4",
@@ -7173,7 +7337,7 @@
   },
   {
     "name": "Resident_Evil_5",
-    "count": 92
+    "count": 94
   },
   {
     "name": "Resident_Evil_5_",
@@ -7197,7 +7361,7 @@
   },
   {
     "name": "Resident_Evil_6",
-    "count": 61
+    "count": 63
   },
   {
     "name": "Resident_Evil_6_MULTi9_-_ElAmigos___________________________",
@@ -7205,7 +7369,7 @@
   },
   {
     "name": "Resident_Evil_7_Biohazard",
-    "count": 31
+    "count": 34
   },
   {
     "name": "Resident_Evil_7_Teaser__Beginning_Hour",
@@ -7281,7 +7445,7 @@
   },
   {
     "name": "RimWorld",
-    "count": 4
+    "count": 5
   },
   {
     "name": "RiotClient",
@@ -7333,7 +7497,7 @@
   },
   {
     "name": "Roblox_Bootstrapper",
-    "count": 17
+    "count": 18
   },
   {
     "name": "RockNES_X",
@@ -7349,6 +7513,10 @@
   },
   {
     "name": "Rockstar_Games_Launcher_Redirector",
+    "count": 1
+  },
+  {
+    "name": "Romancing_SaGa_2__Revenge_of_the_Seven",
     "count": 1
   },
   {
@@ -7385,7 +7553,7 @@
   },
   {
     "name": "Ryse__Son_of_Rome",
-    "count": 6
+    "count": 7
   },
   {
     "name": "Ryse__TM_",
@@ -7441,7 +7609,7 @@
   },
   {
     "name": "SILENT_HILL_f",
-    "count": 2
+    "count": 3
   },
   {
     "name": "SKPeachBeachSplash",
@@ -7509,6 +7677,10 @@
   },
   {
     "name": "STAR_WARS__Empire_at_War_-_Gold_Pack",
+    "count": 1
+  },
+  {
+    "name": "STEINS_GATE_ELITE",
     "count": 1
   },
   {
@@ -7613,7 +7785,11 @@
   },
   {
     "name": "Schedule_I",
-    "count": 6
+    "count": 8
+  },
+  {
+    "name": "Schedule_I__________________________________________________",
+    "count": 1
   },
   {
     "name": "Scrap_Mechanic",
@@ -7652,6 +7828,10 @@
     "count": 1
   },
   {
+    "name": "SexaroidGirl_ver_1_30",
+    "count": 1
+  },
+  {
     "name": "Shadow_Warrior_2",
     "count": 1
   },
@@ -7680,6 +7860,10 @@
     "count": 1
   },
   {
+    "name": "Shapes",
+    "count": 1
+  },
+  {
     "name": "SharpEmu",
     "count": 3
   },
@@ -7705,7 +7889,7 @@
   },
   {
     "name": "Shift_2_Unleashed",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Shift_At_Midnight_Demo",
@@ -7741,7 +7925,7 @@
   },
   {
     "name": "Sifu",
-    "count": 19
+    "count": 20
   },
   {
     "name": "Signal",
@@ -7781,6 +7965,10 @@
   },
   {
     "name": "Sims",
+    "count": 1
+  },
+  {
+    "name": "Sims_3",
     "count": 1
   },
   {
@@ -7833,7 +8021,7 @@
   },
   {
     "name": "Sleeping_Dogs",
-    "count": 64
+    "count": 66
   },
   {
     "name": "Sleeping_Dogs_",
@@ -7849,7 +8037,11 @@
   },
   {
     "name": "Sleeping_Dogs__Definitive_Edition",
-    "count": 9
+    "count": 10
+  },
+  {
+    "name": "Slender_-_The_Arrival",
+    "count": 1
   },
   {
     "name": "Slendytubbies_0",
@@ -8008,6 +8200,10 @@
     "count": 6
   },
   {
+    "name": "South_Park_-_The_Stick_of_Truth",
+    "count": 1
+  },
+  {
     "name": "South_Park___The_Stick_of_Truth_",
     "count": 2
   },
@@ -8093,7 +8289,7 @@
   },
   {
     "name": "Stardew_Valley",
-    "count": 8
+    "count": 9
   },
   {
     "name": "Starlink__Battle_for_Atlas",
@@ -8117,11 +8313,11 @@
   },
   {
     "name": "State_of_Decay",
-    "count": 6
+    "count": 7
   },
   {
     "name": "State_of_Decay_2__Juggernaut_Edition",
-    "count": 6
+    "count": 7
   },
   {
     "name": "States_of_Power_Demo",
@@ -8308,6 +8504,10 @@
     "count": 2
   },
   {
+    "name": "Symphonic_Rain",
+    "count": 1
+  },
+  {
     "name": "System_Shock________________________________________________",
     "count": 1
   },
@@ -8353,11 +8553,11 @@
   },
   {
     "name": "THE_KING_OF_FIGHTERS_XIII_GLOBAL_MATCH",
-    "count": 30
+    "count": 33
   },
   {
     "name": "THE_KING_OF_FIGHTERS_XV",
-    "count": 2
+    "count": 3
   },
   {
     "name": "THE_KING_OF_FIGHTERS__98_ULTIMATE_MATCH_FINAL_EDITION",
@@ -8382,6 +8582,14 @@
   {
     "name": "TODO_________",
     "count": 5
+  },
+  {
+    "name": "TOKYO_GHOUL_re__CALL_to_EXIST_",
+    "count": 1
+  },
+  {
+    "name": "TOMB_RAIDER_I-II-III__REMASTERED",
+    "count": 1
   },
   {
     "name": "TRIANGLE_STRATEGY",
@@ -8469,7 +8677,7 @@
   },
   {
     "name": "Terraria",
-    "count": 5
+    "count": 6
   },
   {
     "name": "Test_Drive_Unlimited",
@@ -8517,7 +8725,7 @@
   },
   {
     "name": "TheLongDrive",
-    "count": 13
+    "count": 15
   },
   {
     "name": "TheWalkingDead2",
@@ -8552,6 +8760,10 @@
     "count": 2
   },
   {
+    "name": "The_Bunnyman",
+    "count": 1
+  },
+  {
     "name": "The_Callisto_Protocol_",
     "count": 3
   },
@@ -8561,11 +8773,11 @@
   },
   {
     "name": "The_Crew_Motorfest",
-    "count": 4
+    "count": 5
   },
   {
     "name": "The_Crew__2",
-    "count": 15
+    "count": 16
   },
   {
     "name": "The_Dark_Queen_of_Mortholme_________________________________",
@@ -8584,12 +8796,16 @@
     "count": 1
   },
   {
+    "name": "The_Elder_Scrolls_V_-_Skyrim_Special_Edition________________",
+    "count": 1
+  },
+  {
     "name": "The_Elder_Scrolls_V__Skyrim",
     "count": 57
   },
   {
     "name": "The_Elder_Scrolls_V__Skyrim_Special_Edition",
-    "count": 6
+    "count": 7
   },
   {
     "name": "The_Evil_Within",
@@ -8629,7 +8845,7 @@
   },
   {
     "name": "The_Killing_Antidote",
-    "count": 20
+    "count": 22
   },
   {
     "name": "The_King_Of_Fighters_Wing_EX_",
@@ -8713,6 +8929,10 @@
   },
   {
     "name": "The_Mortuary_Assistant",
+    "count": 2
+  },
+  {
+    "name": "The_Planet_Crafter__________________________________________",
     "count": 2
   },
   {
@@ -8809,7 +9029,7 @@
   },
   {
     "name": "The_Witcher_3__Wild_Hunt",
-    "count": 34
+    "count": 35
   },
   {
     "name": "The_Witcher_3__Wild_Hunt_-_Complete_Edition",
@@ -8845,7 +9065,7 @@
   },
   {
     "name": "Thymesia",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Titan_Quest_II",
@@ -8885,7 +9105,7 @@
   },
   {
     "name": "Tomb_Raider",
-    "count": 141
+    "count": 146
   },
   {
     "name": "Tomb_Raider_-_Definitive_Edition",
@@ -8929,7 +9149,11 @@
   },
   {
     "name": "Tomb_Raider__Underworld",
-    "count": 6
+    "count": 7
+  },
+  {
+    "name": "Tomb_Raider_________________________________________________",
+    "count": 1
   },
   {
     "name": "Tomb_Rider_Anniversary_",
@@ -8937,11 +9161,11 @@
   },
   {
     "name": "Toontown_Rewritten",
-    "count": 2
+    "count": 3
   },
   {
     "name": "TormentedSouls",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Tormented_Souls_2",
@@ -9081,7 +9305,7 @@
   },
   {
     "name": "UE4Game",
-    "count": 6
+    "count": 8
   },
   {
     "name": "UFL_Launcher________________________________________________",
@@ -9141,7 +9365,7 @@
   },
   {
     "name": "Undertale",
-    "count": 7
+    "count": 8
   },
   {
     "name": "Undisputed",
@@ -9249,7 +9473,7 @@
   },
   {
     "name": "Vampyr",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Vanguard_Launcher",
@@ -9308,6 +9532,10 @@
     "count": 1
   },
   {
+    "name": "Voodoo_Vince__Remastered",
+    "count": 1
+  },
+  {
     "name": "Voxel_Project",
     "count": 1
   },
@@ -9320,6 +9548,10 @@
     "count": 1
   },
   {
+    "name": "WARRIORS_OROCHI_3_Ultimate_Definitive_Edition",
+    "count": 1
+  },
+  {
     "name": "WARRIORS_OROCHI_4",
     "count": 4
   },
@@ -9329,6 +9561,10 @@
   },
   {
     "name": "WL3",
+    "count": 1
+  },
+  {
+    "name": "WOLF_RPG_Editor",
     "count": 1
   },
   {
@@ -9384,6 +9620,10 @@
     "count": 1
   },
   {
+    "name": "WalkingDead101",
+    "count": 1
+  },
+  {
     "name": "Wandering_Sword",
     "count": 4
   },
@@ -9425,11 +9665,11 @@
   },
   {
     "name": "Watch_Dogs_",
-    "count": 32
+    "count": 33
   },
   {
     "name": "Watch_Dogs_2",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Watch_Dogs__2",
@@ -9441,6 +9681,10 @@
   },
   {
     "name": "WayOfTheSamurai4",
+    "count": 1
+  },
+  {
+    "name": "Well_Dweller________________________________________________",
     "count": 1
   },
   {
@@ -9473,6 +9717,10 @@
   },
   {
     "name": "WintersWarmth",
+    "count": 1
+  },
+  {
+    "name": "WitchSpring_R",
     "count": 1
   },
   {
@@ -9533,7 +9781,7 @@
   },
   {
     "name": "World_War_Z",
-    "count": 3
+    "count": 4
   },
   {
     "name": "World_in_Conflict",
@@ -9577,7 +9825,7 @@
   },
   {
     "name": "XR_3DA",
-    "count": 2
+    "count": 3
   },
   {
     "name": "XboxInstaller",
@@ -9609,7 +9857,7 @@
   },
   {
     "name": "Yanpai_Simulator",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Yellow_Taxi_Goes_Vroom",
@@ -9674,6 +9922,10 @@
   {
     "name": "_",
     "count": 3
+  },
+  {
+    "name": "_DRIVE_Rally",
+    "count": 1
   },
   {
     "name": "_Dragon_Age______________",
@@ -9745,7 +9997,7 @@
   },
   {
     "name": "____2016",
-    "count": 45
+    "count": 48
   },
   {
     "name": "____33____",
@@ -9781,7 +10033,7 @@
   },
   {
     "name": "_____2019",
-    "count": 32
+    "count": 34
   },
   {
     "name": "_____5",
@@ -9881,7 +10133,7 @@
   },
   {
     "name": "_____v1_0",
-    "count": 1
+    "count": 2
   },
   {
     "name": "_p_s2013",
@@ -9900,12 +10152,16 @@
     "count": 1
   },
   {
+    "name": "_trashed-1793982716-Language_Selector",
+    "count": 1
+  },
+  {
     "name": "ac_zero_launcher",
     "count": 1
   },
   {
     "name": "activation",
-    "count": 3
+    "count": 4
   },
   {
     "name": "advmenu",
@@ -9992,7 +10248,15 @@
     "count": 1
   },
   {
+    "name": "d",
+    "count": 1
+  },
+  {
     "name": "dacapo",
+    "count": 1
+  },
+  {
+    "name": "deadpool",
     "count": 1
   },
   {
@@ -10012,6 +10276,10 @@
     "count": 1
   },
   {
+    "name": "dude",
+    "count": 1
+  },
+  {
     "name": "eFootball",
     "count": 1
   },
@@ -10025,7 +10293,7 @@
   },
   {
     "name": "eFootball_PES_2021_SEASON_UPDATE",
-    "count": 52
+    "count": 53
   },
   {
     "name": "eFootball__PES_2020",
@@ -10033,6 +10301,10 @@
   },
   {
     "name": "ed8jp",
+    "count": 1
+  },
+  {
+    "name": "enb",
     "count": 1
   },
   {
@@ -10077,7 +10349,7 @@
   },
   {
     "name": "fifa14-3dm",
-    "count": 3
+    "count": 4
   },
   {
     "name": "fifa15",
@@ -10109,7 +10381,7 @@
   },
   {
     "name": "forzahorizon6_loader",
-    "count": 2
+    "count": 3
   },
   {
     "name": "fs19",
@@ -10136,6 +10408,10 @@
     "count": 2
   },
   {
+    "name": "game_original",
+    "count": 1
+  },
+  {
     "name": "german-truck-simulator-1-32",
     "count": 1
   },
@@ -10153,7 +10429,7 @@
   },
   {
     "name": "gta-sa",
-    "count": 11
+    "count": 13
   },
   {
     "name": "gta-vc",
@@ -10177,7 +10453,7 @@
   },
   {
     "name": "gta_sa",
-    "count": 16
+    "count": 17
   },
   {
     "name": "gta_ss",
@@ -10208,6 +10484,10 @@
     "count": 4
   },
   {
+    "name": "iMyFone_LockWiper__Android_",
+    "count": 4
+  },
+  {
     "name": "ib",
     "count": 1
   },
@@ -10221,7 +10501,7 @@
   },
   {
     "name": "iw3mp",
-    "count": 7
+    "count": 9
   },
   {
     "name": "iw3sp",
@@ -10257,6 +10537,10 @@
   },
   {
     "name": "kicksalot",
+    "count": 1
+  },
+  {
+    "name": "kof13_win32_Release",
     "count": 1
   },
   {
@@ -10385,7 +10669,7 @@
   },
   {
     "name": "mysummercar",
-    "count": 7
+    "count": 8
   },
   {
     "name": "mywintercar",
@@ -10417,6 +10701,10 @@
   },
   {
     "name": "need_for_speed_street",
+    "count": 1
+  },
+  {
+    "name": "need_for_speed_underground_2",
     "count": 1
   },
   {
@@ -10520,6 +10808,10 @@
     "count": 1
   },
   {
+    "name": "plants-vs-zombies-1-0-25m",
+    "count": 1
+  },
+  {
     "name": "play_grand_Theft_Auto_v",
     "count": 1
   },
@@ -10600,6 +10892,10 @@
     "count": 1
   },
   {
+    "name": "resident_evil_5",
+    "count": 1
+  },
+  {
     "name": "resident_evil_7_",
     "count": 1
   },
@@ -10629,10 +10925,14 @@
   },
   {
     "name": "samp",
-    "count": 1
+    "count": 3
   },
   {
     "name": "saw",
+    "count": 1
+  },
+  {
+    "name": "sdaemon",
     "count": 1
   },
   {
@@ -10681,6 +10981,10 @@
   },
   {
     "name": "skate_",
+    "count": 1
+  },
+  {
+    "name": "slw",
     "count": 1
   },
   {
@@ -10789,7 +11093,7 @@
   },
   {
     "name": "unins000",
-    "count": 47
+    "count": 50
   },
   {
     "name": "unins003",
@@ -10838,6 +11142,10 @@
   {
     "name": "windows-7-sp1-64-bits-sp1",
     "count": 1
+  },
+  {
+    "name": "wmn6r",
+    "count": 2
   },
   {
     "name": "xca",

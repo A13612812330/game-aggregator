@@ -28,6 +28,9 @@ const ROOT = path.resolve(__dirname, '..');
 const FILES = [
   ['index.html', 'public/index.html'],
   ['emulator.html', 'public/emulator.html'],
+  /* ★ v10.44：第 4 张派生页（端游资源）用的是**同一族卡片**（.emu-card /
+   *   .cov / .noimg / .pill …），不纳入扫描就等于这类卡片有 1/4 没上闸。 */
+  ['resources.html', 'public/resources.html'],
 ];
 
 /* 卡片族选择器（判定「这条规则属不属于卡片」） */
@@ -58,6 +61,12 @@ const RAD_EXCEPT = new Set([
   '.emu-card .cfg-btn',       // ★ 闸门新增：配置入口小按钮（比卡片小一号）
   '.emu-card .paths .p i',    // 路径图标底
   '.emu-card .paths .p .cp',  // 复制键
+  /* ★ v10.44 闸门新增：MOD 卡上的**盘口取件按钮**（迅雷/百度/夸克…）。
+   *   它是「卡片内部的小按钮」，与 .cp / .cov-btn 同类：比卡片小一号才是对的，
+   *   走 --cd-r 会跟卡片同圆角、看起来像卡片里嵌了张小卡片。
+   *   ⚠️ 这条选择器只出现在派生页 resources.html 的专属 CSS 里（主源没有）——
+   *     例外表仍按选择器登记、不按页面，陈旧自检遍历全部受扫描页面。 */
+  '.emu-card.md .md-lk .lk',
   '.row-card .go',            // 行卡尾部箭头钮
   '.sm-row .go2',             // ★ 闸门新增：小行卡尾部箭头钮
   '.rel-row .rel-it .why',    // ★ 闸门新增：「为什么推荐」角标

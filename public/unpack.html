@@ -1865,6 +1865,7 @@
     <nav class="main-nav">
       <a href="/" id="navHome">🏠 首页</a>
       <a href="/emulator.html" id="navEmu">📱 手机专区</a>
+      <a href="/resources.html" id="navRes">🎮 端游资源</a>
       <a href="/unpack.html" class="on" id="navUnpack">📦 解包匹配</a>
     </nav>
     <span class="spacer"></span>
@@ -3110,9 +3111,12 @@ $('#tabbar').addEventListener('click', (e) => {
      —— 那里没有 #rankStage，若也拦成「回顶部」就等于点了没反应。历史上正是因为这个，
      页内又塞了一个「← 返回聚合首页」按钮，同一个出口在屏幕上出现两次。
      这里用 body 上的页面标记区分两页语义，而不是各写一份脚本。 */
-const IS_EMU_PAGE = document.body.getAttribute('data-page') === 'emulator';
+/* ★ v10.44：独立页不再只有「手机专区」—— 端游资源(/resources.html) 与
+   解包匹配同样没有 #rankStage，点「🏠 首页」必须是真跳转回 `/`。
+   判据由「等于 emulator」放宽为「任何带 data-page 标记的都不是首页」。 */
+const IS_SUB_PAGE = (document.body.getAttribute('data-page') || '') !== '';
 $('#navHome').addEventListener('click', (e) => {
-  if (IS_EMU_PAGE) return;              // 独立页：交回 href="/" 正常跳转
+  if (IS_SUB_PAGE) return;              // 独立页：交回 href="/" 正常跳转
   e.preventDefault();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });

@@ -28,11 +28,14 @@ const { execFileSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
 const OUTDIR = path.join(ROOT, '_test-out');
-/* 默认查**三个页面**：派生页各有自己的内联块，只查主源会漏。
- * （改主源后忘了重建派生页 ⇒ 派生页仍带旧脚本，这条顺手能兜住语法层面的一半。） */
+/* 默认查**四个页面**：派生页各有自己的内联块，只查主源会漏。
+ * （改主源后忘了重建派生页 ⇒ 派生页仍带旧脚本，这条顺手能兜住语法层面的一半。）
+ * ★ v10.44：第 4 张派生页 public/resources.html（端游资源）加进来 ——
+ *   它的驱动脚本 tools/resource-sections.js 是**新写的**，
+ *   而「注释里写了 script 标签字面量 ⇒ 被算成两个 script 块」正是本轮踩到的坑。 */
 const files = process.argv.slice(2).length
   ? process.argv.slice(2)
-  : ['public/index.html', 'public/emulator.html', 'public/unpack.html'];
+  : ['public/index.html', 'public/emulator.html', 'public/resources.html', 'public/unpack.html'];
 
 if (!fs.existsSync(OUTDIR)) fs.mkdirSync(OUTDIR, { recursive: true });
 

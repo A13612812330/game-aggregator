@@ -1,8 +1,9 @@
-/* 派生页与主源的同步防线（v10.20 新增）
+/* 派生页与主源的同步防线（v10.20 新增 / v10.44 增补第 4 张派生页）
  *
  * 本项目的结构是「单源派生」：
- *   public/index.html   主源：CSS / 顶栏 / 遮罩 / 通用脚本的唯一编辑入口
+ *   public/index.html    主源：CSS / 顶栏 / 遮罩 / 通用脚本的唯一编辑入口
  *   public/emulator.html ← tools/build-emulator-page.js 生成
+ *   public/resources.html← tools/build-resource-page.js 生成（v10.44：MOD / 存档 / 修改器）
  *   public/unpack.html   ← tools/build-unpack-page.js   生成
  *
  * ★ 为什么必须有这个测试：
@@ -45,6 +46,15 @@ const PAGES = [
     own: ['id="emuTabs"', 'function switchEmuTab', 'function initEmu'],
   },
   {
+    /* ★ v10.44 新增：MOD / 存档 / 修改器 抽成第 4 张派生页。
+     *   它的「自身节点」刻意挑三样**不同层次**的东西：
+     *     ① 骨架 id（resTabs） ② 本页专属切换函数（switchResTab）
+     *     ③ 三个分区各自的 init（三个都要查 —— 少一个就是「切换过去一片空白」） */
+    file: 'public/resources.html', name: '端游资源',
+    own: ['id="resTabs"', 'class="res-tab', 'function switchResTab',
+      'function initMd', 'function initSv', 'function initTr'],
+  },
+  {
     file: 'public/unpack.html', name: '解包匹配',
     own: ['id="upInput"', 'initUp()', 'window.initUp', 'id="upMatch"'],
   },
@@ -66,9 +76,10 @@ for (const p of PAGES) {
   ok(missFn.length === 0, '★ 通用脚本与主源同步（函数无缺失）',
     missFn.length ? '缺函数：' + missFn.join(', ') + ' → 请重跑对应的 build-*.js' : FN_NAMES.length + ' 个函数齐备');
 
-  /* ② 顶栏三入口必须在（导航是共享资产，最容易漏） */
-  ok(/id="navHome"/.test(txt) && /id="navEmu"/.test(txt) && /id="navUnpack"/.test(txt),
-    '顶栏含三个入口（首页 / 手机专区 / 解包匹配）');
+  /* ② 顶栏四入口必须在（导航是共享资产，最容易漏；v10.44 由 3 增至 4）
+   *    ⚠️ 用 `id="navRes"` 而不是文案匹配 —— 文案会改，id 是契约。 */
+  ok(/id="navHome"/.test(txt) && /id="navEmu"/.test(txt) && /id="navRes"/.test(txt) && /id="navUnpack"/.test(txt),
+    '顶栏含四个入口（首页 / 手机专区 / 端游资源 / 解包匹配）');
   ok(!/id="navHome"[^>]*href="#/.test(txt), '★ 顶栏「首页」是真链接而非死锚点（历史坑）');
 
   /* ③ 通用脚本的 DOM 依赖：搜索弹层缺了会整段脚本中断 */

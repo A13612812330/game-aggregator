@@ -1,10 +1,8 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GameHub 聚合 · 机地 × XDGAME 单机游戏库</title>
-<meta name="description" content="合并机地(jidiyouxi.com)与 XDGAME(xdgame.com)爬取内容库：全站游戏库浏览、分类筛选、聚合搜索与详情。仅聚合信息，不提供下载。">
+<title>端游资源 · MOD / 存档 / 修改器 — GameHub</title>
+<meta name="description" content="PC 游戏 MOD、存档位置、修改器一站式查询。MOD 带网盘直链，存档给出文件路径与云同步支持，修改器标注来源与获取方式。">
 <style>
   :root{
     --c-primary:#2E6BFF; --c-primary-deep:#1B4FD8; --c-primary-soft:#EAF1FF;
@@ -1682,11 +1680,70 @@
     color:var(--c-xd);background:rgba(11,123,255,.08);border:1px solid rgba(11,123,255,.28);
     border-radius:8px;padding:6px 11px;transition:.14s}
   .dl-go:hover{background:var(--c-xd);color:#fff;border-color:transparent}
+  /* ===== 独立页专属：一条 3 页签切换条（.res-tabs / .res-tab） =====
+   *  ★ 为什么另起 .res-* 而不是复用 #emuTabs/.emu-tab：那是手机专区页的骨架选择器，
+   *    本页是**另一张页面**，复用会让「改手机专区页签样式」意外改到这里。
+   *    视觉语言保持一致（灰轨 + 白块 + 渐变选中），类名独立、互不牵连。 */
+  .page-back{display:flex;align-items:center;gap:12px;padding:14px 0 0;flex-wrap:wrap}
+  #resTabs{display:flex;gap:4px;padding:4px;background:#EEF1F7;border:1px solid var(--c-border);
+    border-radius:13px;max-width:100%;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  #resTabs::-webkit-scrollbar{display:none}
+  #resTabs .res-tab{display:inline-flex;align-items:center;gap:7px;flex:none;min-width:0;
+    padding:8px 16px;border:none;border-radius:10px;background:transparent;cursor:pointer;
+    font:650 12.5px/1 var(--font);color:var(--c-t2);white-space:nowrap;transition:.15s;
+    -webkit-tap-highlight-color:transparent}
+  #resTabs .res-tab:hover{background:rgba(255,255,255,.7);color:var(--c-t1)}
+  #resTabs .res-tab b{font:800 11.5px/1 var(--font-num);color:#6D28D9;background:rgba(124,58,237,.10);
+    padding:3px 7px;border-radius:6px;min-width:22px;text-align:center}
+  #resTabs .res-tab span{color:inherit}
+  #resTabs .res-tab.on{background:linear-gradient(135deg,#7C3AED,#4F46E5);color:#fff;
+    box-shadow:0 3px 10px rgba(124,58,237,.30)}
+  #resTabs .res-tab.on b{background:rgba(255,255,255,.22);color:#fff}
+  @media(max-width:760px){
+    .page-back{gap:9px}
+    #resTabs{margin-left:0;width:100%}
+    #resTabs .res-tab{flex:1;padding:8px 6px;gap:5px;font-size:12px;justify-content:center}
+    /* 窄屏收起页签数字胶囊（分区标题有「共 N 款」兜底），与手机专区页同款紧凑规则 */
+    #resTabs .res-tab b{display:none}
+  }
+  @media(max-width:430px){
+    /* 超窄屏：字号再收一档；存档路径长，网格收敛为单列（两列会挤断） */
+    #resTabs .res-tab{font-size:10.5px;padding:8px 3px}
+    .emu-grid.sv{grid-template-columns:1fr}
+  }
+
+  /* ===== MOD 分区专属（卡片上的盘口按钮行）=====
+     盘口配色与详情页下载弹窗的 .lk 同源语义（迅雷蓝 / 百度蓝 / 夸克紫…），
+     一处定义，两处读起来一致。 */
+  .emu-card.md .md-lk{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+  .emu-card.md .md-lk .lk{font-size:10.5px;font-weight:750;color:#fff;background:#8892A6;
+    border-radius:6px;padding:4px 8px;text-decoration:none;white-space:nowrap;transition:.14s}
+  .emu-card.md .md-lk .lk:hover{filter:brightness(1.12)}
+  .emu-card.md .md-lk .lk.bd-baidu{background:#2B6DE5}
+  .emu-card.md .md-lk .lk.bd-xunlei{background:#2A6FD6}
+  .emu-card.md .md-lk .lk.bd-quark{background:#5A6BF5}
+  .emu-card.md .md-lk .lk.bd-189{background:#1A73E8}
+  .emu-card.md .md-lk .lk.bd-139{background:#0FA968}
+  .emu-card.md .md-lk .lk.bd-ali{background:#5B6BF0}
+  .emu-card.md .md-lk .lk.bd-123{background:#3C7DF5}
+  .emu-card.md .md-lk .lk.bd-lanzou{background:#4C8BF5}
+  .emu-card.md .md-lk .lk.bd-steam{background:#1B2838}
+  .emu-card.md .md-lk .lk.bd-uc{background:#3C7DF5}
+  .emu-card.md .md-lk .lk.bd-pikpak{background:#3D5AFE}
+  .emu-card.md .md-lk .lk.bd-other{background:#9AA3B5}
+  .emu-card.md .md-lk .lk-more{font-size:10.5px;font-weight:700;color:var(--c-t3);padding:4px 4px}
+  .emu-card.md .md-go{margin-top:7px}
+  .emu-card.md .md-go a{font-size:11px;font-weight:700;color:var(--c-primary);text-decoration:none}
+  .emu-card.md .md-go a:hover{text-decoration:underline}
+  /* MOD 分区的分区主色（青蓝），与存档天蓝 / 修改器青绿区分开 */
+  .bar.md{background:linear-gradient(90deg,#2E6BFF,#4F8CFF)}
+  .emu-intro.md{background:linear-gradient(135deg,#EEF4FF,#F7FAFF);border-color:#D8E4FF}
+  .emu-refresh.md.on{background:rgba(46,107,255,.1);border-color:rgba(46,107,255,.34);color:var(--c-primary)}
+  .emu-card.md .tg.md{background:rgba(46,107,255,.1);color:var(--c-primary)}
 </style>
 </head>
-<body>
+<body data-page="resources">
 
-<!-- ===== 顶栏 ===== -->
 <header class="topbar">
   <div class="wrap in">
     <a class="brand" href="/">
@@ -1695,9 +1752,9 @@
       <span class="sub hidden" style="margin-left:2px">机地 × XDGAME 聚合库</span>
     </a>
     <nav class="main-nav">
-      <a href="#rankStage" class="on" id="navHome">🏠 首页</a>
+      <a href="/" id="navHome">🏠 首页</a>
       <a href="/emulator.html" id="navEmu">📱 手机专区</a>
-      <a href="/resources.html" id="navRes">🎮 端游资源</a>
+      <a href="/resources.html" class="on" id="navRes">🎮 端游资源</a>
       <a href="/unpack.html" id="navUnpack">📦 解包匹配</a>
     </nav>
     <span class="spacer"></span>
@@ -1710,54 +1767,112 @@
   </div>
 </header>
 
-<!-- ===== 🔥 首页主体：全站热榜舞台（搜索已收进弹窗） ===== -->
-<section class="stage" id="rankStage">
-  <div class="wrap in">
-    <div class="stage-h">
-      <div>
-        <h1><span class="fire">🔥</span>全站热榜</h1>
-        <div class="sub">XD 官方热度（本周 / 当月 / 全站）+ 机地社区热度 · 双源合并榜</div>
-      </div>
-      <span class="sp"></span>
-      <div class="stage-pills" id="rankPills">
-        <button class="stage-pill on" data-p="week" type="button">周榜</button>
-        <button class="stage-pill" data-p="month" type="button">月榜</button>
-        <button class="stage-pill" data-p="year" type="button">全站榜</button>
-        <button class="stage-pill" data-p="community" type="button">社区榜</button>
-      </div>
-      <div class="stage-meta">
-        <span id="rankMeta">加载中…</span>
-        <button class="stage-refresh" id="rankRefresh" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>刷新</button>
-      </div>
-    </div>
-    <div id="rankList" class="rk-list"><div class="rk-skel" style="height:162px"></div></div>
+<div class="wrap page-back">
+  <div class="emu-tabs" id="resTabs">
+    <button class="res-tab on" data-et="md" type="button"><b id="tabNumMd">—</b><span>MOD</span></button>
+    <button class="res-tab" data-et="sv" type="button"><b id="tabNumSv">—</b><span>存档</span></button>
+    <button class="res-tab" data-et="tr" type="button"><b id="tabNumTr">—</b><span>修改器</span></button>
   </div>
-</section>
+</div>
 
-<!-- ===== 次级分区：最新收录（分类 + 列表 + 内容库状态） ===== -->
-<main class="wrap" id="latest">
-  <div class="sec-h" style="margin-top:26px"><span class="bar"></span><h2 id="listTitle">最新收录</h2><span class="en">LATEST LIBRARY</span><span class="more" id="listCount"></span></div>
-  <div class="cat-panel"><div class="cat-row" id="catRow"></div></div>
-  <div class="grid2" style="margin-top:16px">
-    <div id="colMain"></div>
-    <aside id="colSide"></aside>
+
+<main class="wrap" id="mods" data-et="md">
+  <div class="sec-h"><span class="bar md"></span><h2>MOD</h2><span class="en">MODS</span><span class="more" id="mdCount"></span></div>
+  <div class="emu-intro md">
+    <span class="ic">🧩</span>
+    <div class="tx">
+      <b>PC 游戏 MOD，一处查全</b>——数据来自<b>机地社区 MOD 专区</b>，每条都带<b>网盘直链</b>，
+      点「打开源站帖」或盘口按钮即可取件；能对上端游库的<b>直接点进游戏详情</b>。
+      <span style="opacity:.75">本站只做聚合与指路，<b>不转存、不提供文件</b>。装 MOD 前请先备份存档。</span>
+      <span id="mdBuilt" style="opacity:.75"></span>
+    </div>
   </div>
+  <div class="emu-stats" id="mdStats"></div>
+  <div class="emu-bar">
+    <div class="emu-bar-row">
+      <input class="emu-search" id="mdSearch" type="text" placeholder="搜索：赛博朋克2077 / 艾尔登法环 / 剑星…" autocomplete="off">
+    </div>
+    <div class="emu-bar-row">
+      <span class="emu-bar-lb">排序</span>
+      <div class="emu-sorts" id="mdSorts">
+        <button class="emu-sort on" data-s="new" type="button">最新发布</button>
+        <button class="emu-sort" data-s="hot" type="button">最热</button>
+        <button class="emu-sort" data-s="game" type="button">按游戏</button>
+      </div>
+      <span class="emu-bar-sp"></span>
+      <button class="emu-refresh md on em-tg" id="mdToggleLib" type="button" title="只显示能对上端游库的游戏">仅看匹配端游</button>
+    </div>
+  </div>
+  <div class="emu-grid md" id="mdGrid"></div>
+  <button class="load-more" id="mdMore" style="display:none">加载更多</button>
 </main>
 
-<!-- ===== 📱 手机模拟器专区 =====
-     专区内含四个分区（手游可玩 / 实测配置 / 模拟器指南 / 机型兼容），已独立成页。
-     按需求首页不再放跳转引导卡 —— 入口统一收在顶栏「📱 手机专区」与底部 Tab。
--->
-
-<footer>
-  <div class="wrap">
-    <span>GameHub 聚合站 · 仅聚合游戏详情与更新情报，不提供任何下载 / 网盘 / 磁力资源 · © 2026</span>
-    <span style="display:flex;gap:14px;flex-wrap:wrap">
-      <a class="f-link" href="https://jidiyouxi.com/" target="_blank" rel="noopener">机地 jidiyouxi.com</a>
-      <a class="f-link" href="https://www.xdgame.com/" target="_blank" rel="noopener">XDGAME xdgame.com</a>
-    </span>
+<main class="wrap et-hide" id="resSaves" data-et="sv">
+  <div class="sec-h"><span class="bar sv"></span><h2>存档</h2><span class="en">SAVE DATA</span><span class="more" id="svCount"></span></div>
+  <div class="emu-intro sv">
+    <span class="ic">💾</span>
+    <div class="tx">
+      <b>存档到底放在哪？</b>——这张表给出每款游戏的<b>存档文件位置</b>与<b>注册表存档项</b>，
+      照着路径就能备份、迁移、跨设备接档；同时标出<b>是否支持云同步</b>（Steam / GOG / Epic / Origin…）。
+      数据来自开源存档清单 <b>Ludusavi</b>（MIT 许可，社区长期维护）。
+      <span style="opacity:.75">路径里的 <code>&lt;用户名&gt;</code> 换成你自己的系统用户名即可；模拟器里则是虚拟 C 盘下的同一路径。</span>
+      <span id="svBuilt" style="opacity:.75"></span>
+    </div>
   </div>
-</footer>
+  <div class="emu-stats" id="svStats"></div>
+  <div class="emu-bar">
+    <div class="emu-bar-row">
+      <input class="emu-search" id="svSearch" type="text" placeholder="搜索：艾尔登法环 / ELDEN RING / 博德之门3…" autocomplete="off">
+    </div>
+    <div class="emu-bar-row">
+      <span class="emu-bar-lb">排序</span>
+      <div class="emu-sorts" id="svSorts">
+        <button class="emu-sort on" data-s="paths" type="button" title="存档项多的游戏优先">存档最多</button>
+        <button class="emu-sort" data-s="cloud" type="button">云同步优先</button>
+        <button class="emu-sort" data-s="name" type="button">名称</button>
+      </div>
+      <span class="emu-bar-sp"></span>
+      <button class="emu-refresh sv em-tg" id="svPhone" type="button" title="只显示手游中心里能玩的游戏">仅看手机能玩</button>
+      <button class="emu-refresh sv em-tg" id="svCloud" type="button" title="只显示支持云同步的游戏">仅看云同步</button>
+    </div>
+  </div>
+  <div class="emu-grid sv" id="svGrid"></div>
+  <button class="load-more" id="svMore" style="display:none">加载更多</button>
+</main>
+
+<main class="wrap et-hide" id="resTrainers" data-et="tr">
+  <div class="sec-h"><span class="bar tr"></span><h2>修改器</h2><span class="en">TRAINERS</span><span class="more" id="trCount"></span></div>
+  <div class="emu-intro tr">
+    <span class="ic">🛠</span>
+    <div class="tx">
+      <b>单机游戏修改器，一处查全</b>——数据来自 <b>Game Cheats Manager</b> 的公开清单，
+      汇总 <b>5 个来源</b>：<b>风灵月影</b>（业界标准、数量最多）、<b>CE 修改表</b>、<b>社区贡献</b>、<b>小幸修改器</b>、<b>GCM 精选</b>。
+      每条都标了<b>来源与版本</b>，并<b>自动关联端游库</b>——能对上库的可以直接点进游戏详情。
+      <span style="opacity:.75">本站<b>不托管修改器文件</b>：官方下载走的是一次性签名链接，无法离线复现，请用卡片上的「获取方式」到官方渠道取。</span>
+      <span id="trBuilt" style="opacity:.75"></span>
+    </div>
+  </div>
+  <div class="emu-stats" id="trStats"></div>
+  <div class="emu-bar">
+    <div class="emu-bar-row">
+      <input class="emu-search" id="trSearch" type="text" placeholder="搜索：艾尔登法环 / ELDEN RING / 只狼…" autocomplete="off">
+      <select class="emu-sel" id="trSource"><option value="">全部来源</option></select>
+    </div>
+    <div class="emu-bar-row">
+      <span class="emu-bar-lb">排序</span>
+      <div class="emu-sorts" id="trSorts">
+        <button class="emu-sort on" data-s="lib" type="button" title="能对上端游库（有封面、点得进详情）的优先">匹配优先</button>
+        <button class="emu-sort" data-s="zh" type="button">中文名</button>
+        <button class="emu-sort" data-s="name" type="button">英文名</button>
+        <button class="emu-sort" data-s="source" type="button">按来源</button>
+      </div>
+      <span class="emu-bar-sp"></span>
+      <button class="emu-refresh tr on em-tg" id="trToggleLib" type="button" title="只显示能对上端游库的游戏">仅看匹配端游</button>
+    </div>
+  </div>
+  <div class="emu-grid tr" id="trGrid"></div>
+  <button class="load-more" id="trMore" style="display:none">加载更多</button>
+</main>
 
 <!-- ===== 🔍 搜索弹窗（命令面板式：联想 + 结果 + 源站兜底，均在此完成） ===== -->
 <div class="smask" id="smask"></div>
@@ -1780,6 +1895,29 @@
     <span><kbd>Esc</kbd>关闭</span>
     <span class="rt">看完详情自动回到这里</span>
   </div>
+</div>
+
+
+<!-- 独立页无热榜分区：这里只为满足通用脚本的 DOM 依赖，整块隐藏 -->
+<div class="emu-deadnodes" hidden aria-hidden="true">
+      <div class="stage-pills" id="rankPills">
+        <button class="stage-pill on" data-p="week" type="button">周榜</button>
+        <button class="stage-pill" data-p="month" type="button">月榜</button>
+        <button class="stage-pill" data-p="year" type="button">全站榜</button>
+        <button class="stage-pill" data-p="community" type="button">社区榜</button>
+      </div>
+      <div class="stage-meta">
+        <span id="rankMeta">加载中…</span>
+        <button class="stage-refresh" id="rankRefresh" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>刷新</button>
+      </div>
+</div>
+<div class="emu-deadnodes" hidden aria-hidden="true">
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="mini-btn" id="idxBtn" style="flex:1.35">↻ 增量更新</button>
+        <button class="mini-btn" id="calBtn" style="flex:1;background:#fff;color:var(--c-t2);border-color:var(--c-border2)">校准续跑</button>
+      </div>
+      <button class="mini-btn" id="jidiBtn" style="background:rgba(230,65,93,.07);border-color:rgba(230,65,93,.3);color:var(--c-jidi)">⇅ 同步机地话题入本地库</button>
+      <div class="idx-bar" id="idxBar"><i id="idxBarI"></i></div>
 </div>
 
 <div class="mask" id="mask"></div>
@@ -1812,12 +1950,9 @@
 
 <!-- 移动端底部 Tab（<=760px 显示，桌面隐藏） -->
 <nav class="tabbar" id="tabbar" aria-label="移动端导航">
-  <a href="#" data-tab="rank" class="on" aria-label="热榜"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s5 4.5 5 9.5a5 5 0 0 1-10 0C7 6.5 12 2 12 2z"/><path d="M12 22a3 3 0 0 0 3-3c0-1.5-1-2.5-3-4-2 1.5-3 2.5-3 4a3 3 0 0 0 3 3z"/></svg>热榜</a>
-  <a href="#" data-tab="latest" aria-label="最新"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>最新</a>
+  <a href="/" aria-label="首页"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.6 12 3.4l9 7.2"/><path d="M5.6 9.4V19a1.6 1.6 0 0 0 1.6 1.6h3.3V15h3v5.6h3.3A1.6 1.6 0 0 0 18.4 19V9.4"/></svg>首页</a>
+  <a href="#" data-tab="md" id="tabRes" class="on" aria-label="端游资源"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h18v12H3z"/><path d="M3 8l2-4h14l2 4"/><path d="M12 4v16"/></svg>端游资源</a>
   <a href="#" data-tab="search" aria-label="搜索"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>搜索</a>
-  <a href="#" data-tab="emu" id="tabEmu" aria-label="手机专区"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18.5h2"/></svg>手机专区</a>
-  <a href="/resources.html" aria-label="端游资源"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h18v12H3z"/><path d="M3 8l2-4h14l2 4"/><path d="M12 4v16"/></svg>端游资源</a>
-  <a href="#" data-tab="about" aria-label="关于"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>关于</a>
 </nav>
 
 <script>
@@ -2215,7 +2350,7 @@ function bindRankUI() {
     const b = e.target.closest('.stage-pill'); if (!b || b.dataset.p === rankPeriod) return;
     rankPeriod = b.dataset.p;
     $$('#rankPills .stage-pill').forEach(x => x.classList.toggle('on', x === b));
-    refreshRank(false);
+  /* refreshRank：独立页无热榜分区，跳过 */
   });
   $('#rankRefresh').addEventListener('click', () => { toast('正在刷新榜单…'); refreshRank(true); });
 }
@@ -2924,27 +3059,566 @@ $('#navHome').addEventListener('click', (e) => {
 });
 /* 三个手机分区已拆到独立页 /emulator.html，点击 = 页面跳转（见下方专区跳转块） */
 
-/* ================= 📱 手机模拟器专区（独立页跳转） =================
-   专区已独立成页 public/emulator.html（三段式：手游可玩 / 实测配置 / 兼容·指南），
-   首页顶栏只留「手机专区」一个入口，点击直达。
-   由 tools/build-emulator-page.js 从本文件派生 emulator.html（单源双页，样式不漂移）。
+
+/* ============================================================================
+ * tools/resource-sections.js — 「端游资源」独立专页（/resources.html）三页签驱动
+ *
+ * 为什么有这一页（v10.44）：
+ *   用户口径：「手游的样式更新下，也需要划分模块 MOD，存档，修改器，
+ *             手机专区保留手机中心+机型兼容+模拟器指南」。
+ *   ⇒ MOD / 存档 / 修改器 三者本质是**端游资源**，挂在「手机专区」下语义不成立
+ *     （用户为此迷路过一次：找存档得先去手机专区）。本页把它们平级抽出来。
+ *
+ * 分区与数据源（一个分区一套数据，互不替代）：
+ *   · MOD     #mods      → data/mods.json   的 kind='mod'      （机地社区帖，带网盘直链）
+ *   · 存档    #resSaves  → data/saves.json                      （Ludusavi 存档位置库）
+ *   · 修改器  #resTrainers → data/trainers.json                 （GCM 公开清单元数据）
+ *
+ * ⚠️ 本文件是**被整段注入到页面主脚本块里**的（同 emulator-sections.js），
+ *    所以不能出现 require / module.exports；只能依赖主源共享脚本的
+ *    esc / api / toast / openDetailById 这些既有全局。
+ *    （写注释时也别出现 script 标签字面量 —— 语法闸按它数块数，会被算成两块。）
+ * ⚠️ 三个分区虽在本页，但「修改器」与「存档」的**阅读语义没变**：
+ *    它们是搬家，不是重写 —— 卡片的正文与判据与 v10.43 时逐字一致。
+ * ========================================================================== */
+
+/* 每页条数（原 emulator-sections.js 的 EMU_PAGE_SIZE —— 搬家后改本页口径） */
+const RES_PAGE_SIZE = 24;
+
+/* 盘口 → 徽标类名 / 展示名（与详情页下载弹窗的 .lk 配色共用一份语义） */
+const RES_PAN_CLS = {
+  '迅雷网盘': 'xunlei', '百度网盘': 'baidu', '夸克网盘': 'quark', '阿里云盘': 'ali',
+  '天翼云盘': '189', '移动云盘': '139', '123网盘': '123', '蓝奏云': 'lanzou',
+  'UC网盘': 'uc', 'Steam': 'steam', 'PikPak': 'pikpak',
+};
+const resPanCls = (k) => RES_PAN_CLS[k] || 'other';
+const resPanName = (k) => String(k || '外部页面').replace(/网盘$/, '');
+
+/* ============================================================================
+ * ① MOD 分区（#mods）
+ *  数据：data/mods.json 里 kind='mod' 的机地社区帖（带网盘直链）
+ * ========================================================================== */
+const mdState = { q: '', sort: 'new', matched: true, offset: 0, total: 0, items: [], inited: false, loading: false };
+
+function mdCard(it) {
+  const title = it.title || '?';
+  const game = it.game || '';
+  const cov = it.cover
+    ? '<div class="cov"><img src="' + esc(it.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+      + (it.libId ? '<button class="cov-btn" data-lib="' + esc(it.libId) + '" data-title="' + esc(it.libTitle || game || title) + '" type="button">查看游戏详情</button>' : '')
+      + '</div>'
+    : '<div class="cov noimg"><span>' + esc(String(game || title).slice(0, 2).toUpperCase()) + '</span></div>';
+
+  /* 盘口按钮：只取真正的取件口（「其他链接」是源站内链，不足以当下载口） */
+  const lks = (it.links || []).filter((l) => l && l.url && l.kind && l.kind !== '其他链接');
+  const lkHtml = lks.slice(0, 3)
+    .map((l) => '<a class="lk bd-' + resPanCls(l.kind) + '" href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer">' + esc(resPanName(l.kind)) + '</a>')
+    .join('');
+  const lkMore = lks.length > 3 ? '<span class="lk-more">+' + (lks.length - 3) + '</span>' : '';
+
+  const src = it.url || ('https://52jidi.com/post/detail/' + it.id);
+  const altHtml = (game && game !== title) ? '<div class="alt" title="' + esc(game) + '">' + esc(String(game).slice(0, 46)) + '</div>' : '';
+
+  return '<article class="emu-card md' + (it.cover ? ' has-cov' : '') + '" data-name="' + esc(title) + '" data-lib="' + esc(it.libId || '') + '" data-libt="' + esc(it.libTitle || '') + '">'
+    + cov
+    + '<div class="bd">'
+    + '<h4 title="' + esc(title) + '">' + esc(title) + '</h4>'
+    + altHtml
+    + '<div class="meta">'
+    + '<span class="tg md">MOD</span>'
+    + (lks.length ? '<span class="pill">' + lks.length + ' 个网盘</span>' : '<span class="tg dim">无直链</span>')
+    + (it.pv ? '<span class="pill">' + Number(it.pv).toLocaleString() + ' 浏览</span>' : '')
+    + (it.libId ? '<span class="tg">已关联端游库</span>' : '')
+    + '</div>'
+    + (lkHtml ? '<div class="md-lk">' + lkHtml + lkMore + '</div>' : '')
+    + '<div class="md-go"><a href="' + esc(src) + '" target="_blank" rel="noopener noreferrer">打开源站帖 ↗</a></div>'
+    + '</div>'
+    + '</article>';
+}
+
+function bindMdCards() {
+  const g = document.getElementById('mdGrid'); if (!g || g.dataset.bound) return;
+  g.dataset.bound = '1';
+  g.addEventListener('click', (e) => {
+    /* 盘口按钮 / 源站帖 是外链，别被卡片点击吞掉 */
+    if (e.target.closest('.lk') || e.target.closest('.md-go a')) return;
+    const btn = e.target.closest('.cov-btn');
+    const card = e.target.closest('.emu-card'); if (!card) return;
+    if (btn && btn.dataset.lib && typeof openDetailById === 'function') {
+      e.stopPropagation();
+      openDetailById(btn.dataset.lib, btn.dataset.title || card.dataset.libt || card.dataset.name);
+      return;
+    }
+    if (card.dataset.lib && typeof openDetailById === 'function') {
+      openDetailById(card.dataset.lib, card.dataset.libt || card.dataset.name);
+      return;
+    }
+    if (typeof toast === 'function') toast('这款未收录进本地端游库，暂无详情页');
+  });
+}
+
+async function loadMd(more) {
+  if (mdState.loading) return;
+  mdState.loading = true;
+  const grid = document.getElementById('mdGrid');
+  if (!more) { mdState.offset = 0; if (grid) grid.innerHTML = '<div class="emu-loading">正在拉取 MOD 清单…</div>'; }
+  try {
+    const qs = new URLSearchParams({
+      q: mdState.q, kind: 'mod', sort: mdState.sort,
+      limit: RES_PAGE_SIZE, offset: mdState.offset,
+    });
+    if (!mdState.matched) qs.set('all', '1');
+    const j = await fetch(api('/api/mods/list?' + qs)).then((r) => r.json());
+    mdState.total = j.total || 0;
+    const items = j.items || [];
+    mdState.items = more ? mdState.items.concat(items) : items;
+    mdState.offset = mdState.items.length;
+    if (grid) grid.innerHTML = mdState.items.length ? mdState.items.map(mdCard).join('') : '<div class="emu-empty">没有匹配的 MOD，换个关键词试试</div>';
+    const cnt = document.getElementById('mdCount'); if (cnt) cnt.textContent = '共 ' + mdState.total.toLocaleString() + ' 条';
+    const mo = document.getElementById('mdMore');
+    if (mo) mo.style.display = mdState.items.length < mdState.total ? '' : 'none';
+  } catch (e) {
+    if (grid) grid.innerHTML = '<div class="emu-empty">拉取失败，请稍后重试</div>';
+  } finally { mdState.loading = false; }
+}
+
+async function initMd() {
+  if (mdState.inited) return; mdState.inited = true;
+  bindMdCards();
+  try {
+    const s = await fetch(api('/api/mods/stats')).then((r) => r.json());
+    const box = document.getElementById('mdStats');
+    if (box) {
+      box.innerHTML = [
+        ['MOD 总数', (s.byKind && s.byKind.mod) || s.total], ['已关联端游', s.matched],
+        ['网盘地址', s.linkTotal], ['覆盖游戏', s.games],
+      ].map(([k, v]) => '<div class="st"><b>' + (v == null ? '—' : (typeof v === 'number' ? v.toLocaleString() : esc(v))) + '</b><span>' + k + '</span></div>').join('');
+    }
+    const built = document.getElementById('mdBuilt');
+    if (built && s.builtAt) built.textContent = '（清单更新于 ' + new Date(s.builtAt).toLocaleString('zh-CN', { hour12: false }) + '）';
+  } catch (e) {}
+  const si = document.getElementById('mdSearch');
+  if (si && !si.dataset.bound) {
+    si.dataset.bound = '1';
+    let t;
+    si.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { mdState.q = si.value.trim(); loadMd(false); }, 260); });
+  }
+  const sorts = document.getElementById('mdSorts');
+  if (sorts && !sorts.dataset.bound) {
+    sorts.dataset.bound = '1';
+    sorts.addEventListener('click', (e) => {
+      const b = e.target.closest('.emu-sort'); if (!b) return;
+      sorts.querySelectorAll('.emu-sort').forEach((x) => x.classList.toggle('on', x === b));
+      mdState.sort = b.dataset.s; loadMd(false);
+    });
+  }
+  const mo = document.getElementById('mdMore');
+  if (mo && !mo.dataset.bound) { mo.dataset.bound = '1'; mo.addEventListener('click', () => loadMd(true)); }
+  const tg = document.getElementById('mdToggleLib');
+  if (tg) {
+    const paint = () => { tg.classList.toggle('on', mdState.matched); };
+    paint();
+    if (!tg.dataset.bound) {
+      tg.dataset.bound = '1';
+      tg.addEventListener('click', () => { mdState.matched = !mdState.matched; paint(); loadMd(false); });
+    }
+  }
+  await loadMd(false);
+}
+
+/* ============================================================================
+ * ② 存档分区（#resSaves）—— 自 emulator-sections.js 搬家，正文逐字未改
+ *
+ * ★ 这一节的核心产出就是**存档路径本身**（用户要的「放置位置」）。
+ *   所以卡片不做折叠 —— 直接把路径铺在卡面上，
+ *   等宽字体、允许换行、**不截断**（截断了用户就没法照着找文件）。
+ * ★ 搬到本页后默认口径变更：原来是「手机专区」语境（默认仅看手机能玩），
+ *   本页是端游资源语境 ⇒ **默认给全量**（phone=false），口径与页签标题一致。
+ * ========================================================================== */
+const svState = { q: '', sort: 'paths', phone: false, cloud: false, offset: 0, total: 0, items: [], inited: false, loading: false };
+
+function svCard(it) {
+  const title = it.title || it.name || '?';
+  const paths = it.paths || [];
+  const regs = it.regs || [];
+  const cloud = it.cloud || [];
+
+  const cov = it.libCover
+    ? '<div class="cov"><img src="' + esc(it.libCover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+      + (it.libId ? '<button class="cov-btn" data-lib="' + esc(it.libId) + '" data-title="' + esc(title) + '" type="button">查看游戏详情</button>' : '')
+      + '</div>'
+    : '<div class="cov noimg"><span>' + esc(String(title).slice(0, 2).toUpperCase()) + '</span></div>';
+
+  const altHtml = (it.name && it.name !== title) ? '<div class="alt" title="' + esc(it.name) + '">' + esc(String(it.name).slice(0, 46)) + '</div>' : '';
+
+  /* 路径行：最多铺 3 条文件路径 + 2 条注册表项，其余折叠成「另有 N 条」 */
+  const MAXP = 3, MAXR = 2;
+  const rows = [];
+  for (const p of paths.slice(0, MAXP)) {
+    const tag = (p.tags && p.tags.length) ? String(p.tags[0]) : '存档';
+    const label = tag === 'save' ? '存档' : (tag === 'config' ? '配置' : tag);
+    const full = p.shown || p.raw;
+    rows.push('<div class="p"><i>' + esc(label) + '</i><span>' + esc(full) + '</span>'
+      + '<button class="cp" type="button" data-cp="' + esc(full) + '" title="复制这条路径">复制</button></div>');
+  }
+  for (const r of regs.slice(0, MAXR)) {
+    rows.push('<div class="p reg"><i>注册表</i><span>' + esc(r.raw) + '</span>'
+      + '<button class="cp" type="button" data-cp="' + esc(r.raw) + '" title="复制这条注册表项">复制</button></div>');
+  }
+  const hidden = (paths.length - Math.min(paths.length, MAXP)) + (regs.length - Math.min(regs.length, MAXR));
+  const moreLine = hidden > 0 ? '<div class="more">另有 ' + hidden + ' 条存档位置未展示，进游戏详情查看</div>' : '';
+
+  const cloudTags = cloud.length
+    ? cloud.map((c) => '<span class="tg cloud">☁ ' + esc(String(c).toUpperCase()) + '</span>').join('')
+    : '<span class="tg dim">不支持云同步</span>';
+
+  return '<article class="emu-card sv' + (it.libCover ? ' has-cov' : '') + '" data-name="' + esc(title) + '" data-lib="' + esc(it.libId || '') + '">'
+    + cov
+    + '<div class="bd">'
+    + '<h4 title="' + esc(title) + '">' + esc(title) + '</h4>'
+    + altHtml
+    + '<div class="meta">'
+    + (it.phone ? '<span class="tg phone">手机能玩</span>' : '')
+    + '<span class="pill">' + paths.length + ' 条存档</span>'
+    + (regs.length ? '<span class="pill">' + regs.length + ' 项注册表</span>' : '')
+    + '</div>'
+    + '<div class="tgs">' + cloudTags + '</div>'
+    + '<div class="paths">' + (rows.join('') || '<div class="p"><span>暂无文件路径记录</span></div>') + moreLine + '</div>'
+    + '</div>'
+    + '</article>';
+}
+
+/** 复制文本：优先 Clipboard API，失败退回隐藏 textarea + execCommand
+ *  （http 非 localhost / 老内核下 Clipboard API 不可用，别让「复制」按钮点了没反应） */
+function copyText(txt) {
+  const s = String(txt || '');
+  if (!s) return;
+  const fallback = () => {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = s;
+      ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      return true;
+    } catch (e) { return false; }
+  };
+  const done = () => { if (typeof toast === 'function') toast('已复制：' + (s.length > 42 ? s.slice(0, 42) + '…' : s)); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(s).then(done).catch(() => { if (fallback()) done(); });
+  } else if (fallback()) done();
+}
+
+function bindSvCards() {
+  const g = document.getElementById('svGrid'); if (!g || g.dataset.bound) return;
+  g.dataset.bound = '1';
+  /* 点击分流：点 .cp 只复制；点 .paths 区允许选中；其余有 libId 就进详情 */
+  g.addEventListener('click', (e) => {
+    const cp = e.target.closest('.cp');
+    if (cp) { e.stopPropagation(); copyText(cp.dataset.cp || ''); return; }
+    const card = e.target.closest('.emu-card'); if (!card) return;
+    if (e.target.closest('.paths')) return;   // 路径区不触发跳转（要能选中文字）
+    const btn = e.target.closest('.cov-btn');
+    const lib = (btn && btn.dataset.lib) || card.dataset.lib;
+    if (lib && typeof openDetailById === 'function') {
+      openDetailById(lib, (btn && btn.dataset.title) || card.dataset.name);
+      return;
+    }
+    if (typeof toast === 'function') toast('这条没对上端游库，没有详情页；存档路径可直接点「复制」');
+  });
+}
+
+async function loadSv(more) {
+  if (svState.loading) return;
+  svState.loading = true;
+  const grid = document.getElementById('svGrid');
+  if (!more) { svState.offset = 0; if (grid) grid.innerHTML = '<div class="emu-loading">正在拉取存档位置库…</div>'; }
+  try {
+    const qs = new URLSearchParams({
+      q: svState.q, sort: svState.sort, limit: RES_PAGE_SIZE, offset: svState.offset,
+    });
+    /* ★ 开关语义：phone 关掉 = 放开到全量（stats=all）。本页默认关（看全部端游） */
+    if (svState.phone) qs.set('phone', '1'); else qs.set('stats', 'all');
+    if (svState.cloud) qs.set('cloud', '1');
+    const j = await fetch(api('/api/saves/list?' + qs)).then((r) => r.json());
+    svState.total = j.total || 0;
+    const items = j.items || [];
+    svState.items = more ? svState.items.concat(items) : items;
+    svState.offset = svState.items.length;
+    if (grid) grid.innerHTML = svState.items.length ? svState.items.map(svCard).join('') : '<div class="emu-empty">没有匹配的游戏，换个关键词试试</div>';
+    const cnt = document.getElementById('svCount'); if (cnt) cnt.textContent = '共 ' + svState.total.toLocaleString() + ' 款';
+    const mo = document.getElementById('svMore');
+    if (mo) mo.style.display = svState.items.length < svState.total ? '' : 'none';
+  } catch (e) {
+    if (grid) grid.innerHTML = '<div class="emu-empty">拉取失败，请稍后重试</div>';
+  } finally { svState.loading = false; }
+}
+
+async function initSv() {
+  if (svState.inited) return; svState.inited = true;
+  bindSvCards();
+  try {
+    const s = await fetch(api('/api/saves/stats')).then((r) => r.json());
+    const box = document.getElementById('svStats');
+    if (box) {
+      box.innerHTML = [
+        ['收录游戏', s.total], ['存档位置', s.pathCount], ['支持云同步', s.withCloud], ['手机能玩', s.phonePlayable],
+      ].map(([k, v]) => '<div class="st"><b>' + (v == null ? '—' : (typeof v === 'number' ? v.toLocaleString() : esc(v))) + '</b><span>' + k + '</span></div>').join('');
+    }
+    const built = document.getElementById('svBuilt');
+    if (built && s.builtAt) built.textContent = '（清单更新于 ' + new Date(s.builtAt).toLocaleString('zh-CN', { hour12: false }) + '，源：' + s.source + '）';
+  } catch (e) {}
+  const si = document.getElementById('svSearch');
+  if (si && !si.dataset.bound) {
+    si.dataset.bound = '1';
+    let t;
+    si.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { svState.q = si.value.trim(); loadSv(false); }, 260); });
+  }
+  const sorts = document.getElementById('svSorts');
+  if (sorts && !sorts.dataset.bound) {
+    sorts.dataset.bound = '1';
+    sorts.addEventListener('click', (e) => {
+      const b = e.target.closest('.emu-sort'); if (!b) return;
+      sorts.querySelectorAll('.emu-sort').forEach((x) => x.classList.toggle('on', x === b));
+      svState.sort = b.dataset.s; loadSv(false);
+    });
+  }
+  const mo = document.getElementById('svMore');
+  if (mo && !mo.dataset.bound) { mo.dataset.bound = '1'; mo.addEventListener('click', () => loadSv(true)); }
+  const ph = document.getElementById('svPhone');
+  if (ph) {
+    const paint = () => { ph.classList.toggle('on', svState.phone); };
+    paint();
+    if (!ph.dataset.bound) {
+      ph.dataset.bound = '1';
+      ph.addEventListener('click', () => { svState.phone = !svState.phone; paint(); loadSv(false); });
+    }
+  }
+  const cl = document.getElementById('svCloud');
+  if (cl) {
+    const paint = () => { cl.classList.toggle('on', svState.cloud); };
+    paint();
+    if (!cl.dataset.bound) {
+      cl.dataset.bound = '1';
+      cl.addEventListener('click', () => { svState.cloud = !svState.cloud; paint(); loadSv(false); });
+    }
+  }
+  await loadSv(false);
+}
+
+/* ============================================================================
+ * ③ 修改器分区（#resTrainers）—— 自 emulator-sections.js 搬家，正文逐字未改
+ *
+ * ★ 关于「放置位置」：修改器是**独立 exe，不需要放进游戏目录**。
+ *   直接运行即可，它会自己挂上游戏进程。
+ * ★ 本页**刻意不做下载按钮**：GCM 官方下载走一次性 S3 签名 URL（依赖客户端密钥），
+ *   无法离线复现也不该绕过。所以改为「信息展示 + 获取方式引导」。
+ * ========================================================================== */
+const trState = { q: '', source: '', sort: 'lib', matched: true, offset: 0, total: 0, items: [], inited: false, loading: false };
+
+/** 5 个来源的展示名与官方获取入口（链接均已实测 200） */
+const TR_SRC = {
+  fling: { label: '风灵月影', go: 'https://flingtrainer.com/', goLabel: '风灵月影官网' },
+  cheat_table: { label: 'CE 修改表', go: 'https://gamezonelabs.com/products/gcm/trainers', goLabel: 'GCM 修改器库' },
+  community: { label: '社区贡献', go: 'https://gamezonelabs.com/products/gcm/trainers', goLabel: 'GCM 修改器库' },
+  xiaoxing: { label: '小幸修改器', go: 'https://gamezonelabs.com/products/gcm/trainers', goLabel: 'GCM 修改器库' },
+  gcm: { label: 'GCM 精选', go: 'https://github.com/dyang886/Game-Cheats-Manager/releases', goLabel: 'GCM 下载页' },
+};
+
+function trCard(it) {
+  const zh = it.zh || '';
+  const en = it.name || '';
+  const title = zh || en || '?';
+  const meta = TR_SRC[it.source] || { label: it.source || '未知来源', go: '', goLabel: '' };
+
+  const cov = it.libCover
+    ? '<div class="cov"><img src="' + esc(it.libCover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+      + (it.libId ? '<button class="cov-btn" data-lib="' + esc(it.libId) + '" data-title="' + esc(it.libTitle || title) + '" type="button">查看游戏详情</button>' : '')
+      + '</div>'
+    : '<div class="cov noimg"><span>' + esc(String(title).slice(0, 2).toUpperCase()) + '</span></div>';
+
+  /* 中文名优先做标题，英文名降级成别名行；两者相同时不重复渲染 */
+  const altHtml = (zh && en && zh !== en) ? '<div class="alt" title="' + esc(en) + '">' + esc(String(en).slice(0, 46)) + '</div>' : '';
+
+  const go = meta.go
+    ? '<div class="tr-go"><a href="' + esc(meta.go) + '" target="_blank" rel="noopener noreferrer">获取方式 ↗ ' + esc(meta.goLabel) + '</a></div>'
+    : '';
+
+  return '<article class="emu-card' + (it.libCover ? ' has-cov' : '') + '" data-name="' + esc(title) + '" data-lib="' + esc(it.libId || '') + '" data-libt="' + esc(it.libTitle || '') + '">'
+    + cov
+    + '<div class="bd">'
+    + '<h4 title="' + esc(title) + '">' + esc(title) + '</h4>'
+    + altHtml
+    + '<div class="meta">'
+    + '<span class="tg src ' + esc(it.source) + '">' + esc(meta.label) + '</span>'
+    + (it.version ? '<span class="pill ver">v ' + esc(it.version) + '</span>' : '')
+    + (it.libId ? '<span class="tg">已关联端游库</span>' : '')
+    + '</div>'
+    + go
+    + '<div class="tr-note">💡 <b>放置位置</b>：独立 exe，<b>不用放进游戏目录</b>，双击运行即可（会自动挂上游戏进程）。</div>'
+    + '</div>'
+    + '</article>';
+}
+
+function bindTrCards() {
+  const g = document.getElementById('trGrid'); if (!g || g.dataset.bound) return;
+  g.dataset.bound = '1';
+  g.addEventListener('click', (e) => {
+    const btn = e.target.closest('.cov-btn');
+    const card = e.target.closest('.emu-card'); if (!card) return;
+    if (btn && btn.dataset.lib && typeof openDetailById === 'function') {
+      e.stopPropagation();
+      openDetailById(btn.dataset.lib, btn.dataset.title || card.dataset.libt || card.dataset.name);
+      return;
+    }
+    if (card.dataset.lib && typeof openDetailById === 'function') {
+      openDetailById(card.dataset.lib, card.dataset.libt || card.dataset.name);
+      return;
+    }
+    if (typeof toast === 'function') toast('这款未收录进本地端游库，暂无详情页');
+  });
+}
+
+async function loadTr(more) {
+  if (trState.loading) return;
+  trState.loading = true;
+  const grid = document.getElementById('trGrid');
+  if (!more) { trState.offset = 0; if (grid) grid.innerHTML = '<div class="emu-loading">正在拉取修改器清单…</div>'; }
+  try {
+    const qs = new URLSearchParams({
+      q: trState.q, source: trState.source, sort: trState.sort,
+      limit: RES_PAGE_SIZE, offset: trState.offset,
+    });
+    if (!trState.matched) qs.set('stats', 'all');
+    const j = await fetch(api('/api/trainers/list?' + qs)).then((r) => r.json());
+    trState.total = j.total || 0;
+    const items = j.items || [];
+    trState.items = more ? trState.items.concat(items) : items;
+    trState.offset = trState.items.length;
+    if (grid) grid.innerHTML = trState.items.length ? trState.items.map(trCard).join('') : '<div class="emu-empty">没有匹配的修改器，换个关键词试试</div>';
+    const cnt = document.getElementById('trCount'); if (cnt) cnt.textContent = '共 ' + trState.total.toLocaleString() + ' 条';
+    const mo = document.getElementById('trMore');
+    if (mo) mo.style.display = trState.items.length < trState.total ? '' : 'none';
+  } catch (e) {
+    if (grid) grid.innerHTML = '<div class="emu-empty">拉取失败，请稍后重试</div>';
+  } finally { trState.loading = false; }
+}
+
+async function initTr() {
+  if (trState.inited) return; trState.inited = true;
+  bindTrCards();
+  try {
+    const s = await fetch(api('/api/trainers/stats')).then((r) => r.json());
+    const box = document.getElementById('trStats');
+    if (box) {
+      box.innerHTML = [
+        ['修改器总数', s.total], ['已关联端游', s.matched], ['来源数', (s.sources || []).length], ['匹配率', s.matchedRate + '%'],
+      ].map(([k, v]) => '<div class="st"><b>' + (v == null ? '—' : (typeof v === 'number' ? v.toLocaleString() : esc(v))) + '</b><span>' + k + '</span></div>').join('');
+    }
+    const built = document.getElementById('trBuilt');
+    if (built && s.builtAt) built.textContent = '（清单更新于 ' + new Date(s.builtAt).toLocaleString('zh-CN', { hour12: false }) + '）';
+    const sel = document.getElementById('trSource');
+    if (sel && s.sources) {
+      sel.innerHTML = '<option value="">全部来源</option>' + s.sources
+        .map((x) => '<option value="' + esc(x.key) + '">' + esc(x.label) + '（' + Number(x.count).toLocaleString() + '）</option>').join('');
+    }
+  } catch (e) {}
+  const si = document.getElementById('trSearch');
+  if (si && !si.dataset.bound) {
+    si.dataset.bound = '1';
+    let t;
+    si.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { trState.q = si.value.trim(); loadTr(false); }, 260); });
+  }
+  const sel = document.getElementById('trSource');
+  if (sel && !sel.dataset.bound) {
+    sel.dataset.bound = '1';
+    sel.addEventListener('change', () => { trState.source = sel.value; loadTr(false); });
+  }
+  const sorts = document.getElementById('trSorts');
+  if (sorts && !sorts.dataset.bound) {
+    sorts.dataset.bound = '1';
+    sorts.addEventListener('click', (e) => {
+      const b = e.target.closest('.emu-sort'); if (!b) return;
+      sorts.querySelectorAll('.emu-sort').forEach((x) => x.classList.toggle('on', x === b));
+      trState.sort = b.dataset.s; loadTr(false);
+    });
+  }
+  const mo = document.getElementById('trMore');
+  if (mo && !mo.dataset.bound) { mo.dataset.bound = '1'; mo.addEventListener('click', () => loadTr(true)); }
+  const tg = document.getElementById('trToggleLib');
+  if (tg) {
+    const paint = () => { tg.classList.toggle('on', trState.matched); };
+    paint();
+    if (!tg.dataset.bound) {
+      tg.dataset.bound = '1';
+      tg.addEventListener('click', () => { trState.matched = !trState.matched; paint(); loadTr(false); });
+    }
+  }
+  await loadTr(false);
+}
+
+/* ================= 🎮 端游资源 · 子页签（独立页） =================
+   v10.44：MOD(#mods) / 存档(#resSaves) / 修改器(#resTrainers) 三个平级页签。
+   URL hash 同步：/resources.html#md / #sv / #tr（非法值归一为 #md）
 */
-const EMU_PAGE_HREF = '/emulator.html';
-function goEmuPage(hash) { location.href = EMU_PAGE_HREF + (hash ? '#' + hash : ''); }
-/* 顶栏「手机专区」入口 → 直达独立页（落「手游可玩」默认页签） */
-(function bindNavEmu() {
-  const el = document.getElementById('navEmu');
-  if (!el) return;
-  el.setAttribute('href', EMU_PAGE_HREF);
+const ET_MAP = { md: '#mods', sv: '#resSaves', tr: '#resTrainers' };
+let etCur = 'md';
+
+/* 主脚本底部 Tab 的 emu 分支会调 goEmuPage()，那个定义在「独立页跳转块」里、
+   本页已把整块替换掉 —— 补一个，万一被调到就是回手机专区（而不是 ReferenceError）。 */
+function goEmuPage() { location.href = '/emulator.html'; }
+
+/** 各分区懒加载入口（在 initXxx 声明之后调用，避免 TDZ） */
+function etInit(t) {
+  if (t === 'md') return initMd();
+  if (t === 'sv') return initSv();
+  if (t === 'tr') return initTr();
+}
+
+function switchResTab(t, opts) {
+  if (!ET_MAP[t]) return;
+  etCur = t;
+  for (const [k, sel] of Object.entries(ET_MAP)) {
+    const el = document.querySelector(sel);
+    if (el) el.classList.toggle('et-hide', k !== t);
+  }
+  document.querySelectorAll('#resTabs .res-tab').forEach((b) => b.classList.toggle('on', b.dataset.et === t));
+  try { etInit(t); } catch (e) {}
+  if (opts && opts.scroll !== false) window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+/* 顶栏「端游资源」入口：本页已在资源页，改为切「MOD」 */
+(function bindNavRes() {
+  const el = document.getElementById('navRes'); if (!el) return;
+  el.setAttribute('href', '#md');
+  el.addEventListener('click', (e) => { e.preventDefault(); switchResTab('md'); });
 })();
-/* 首页底部 Tab 的手机入口：直达独立页的「手游可玩」默认页签
-   （独立页内部再分 手游可玩 / 实测配置 / 兼容·指南，不再各占一个首页 Tab） */
-(function bindTabEmu() {
-  const el = document.getElementById('tabEmu');
-  if (!el) return;
-  el.setAttribute('href', EMU_PAGE_HREF + '#emu');
+/** 子页签数字回填（MOD 条数 / 存档收录数 / 修改器条数） */
+async function fillTabNums() {
+  const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.textContent = Number(v).toLocaleString(); };
+  try { const s = await fetch(api('/api/mods/stats')).then((r) => r.json()); if (s && s.byKind) set('tabNumMd', s.byKind.mod || s.total); } catch (e) {}
+  try { const s = await fetch(api('/api/saves/stats')).then((r) => r.json()); if (s && s.total != null) set('tabNumSv', s.total); } catch (e) {}
+  try { const s = await fetch(api('/api/trainers/stats')).then((r) => r.json()); if (s && s.total != null) set('tabNumTr', s.total); } catch (e) {}
+}
+/* 底部 Tab */
+const tb = document.getElementById('tabbar');
+if (tb) tb.addEventListener('click', (e) => {
+  const a = e.target.closest('a[data-tab]'); if (!a) return;
+  const t = a.dataset.tab;
+  if (Object.prototype.hasOwnProperty.call(ET_MAP, t)) { e.preventDefault(); switchResTab(t); }
+});
+/* 切换条点击 */
+document.getElementById('resTabs').addEventListener('click', (e) => {
+  const b = e.target.closest('.res-tab'); if (!b) return;
+  switchResTab(b.dataset.et);
+});
+/* 首屏：按 hash 决定进哪个页签，默认 MOD */
+(function bootTab() {
+  const t = location.hash.slice(1);
+  switchResTab(ET_MAP[t] ? t : 'md', { scroll: false });
+  fillTabNums();
 })();
-/* [派生页锚点] 以下内容由 tools/build-emulator-page.js 整体替换，请勿删除本行 */
 
 /* ================= 详情抽屉 ================= */
 let drawerMode = 'game';   // 'game'=游戏详情 | 'bh'=BannerHub 社区配置面板 | 'pc'=实测配置面板
@@ -4312,10 +4986,10 @@ $('#mask').addEventListener('click', closeDetail);
 
 /* ================= 启动 ================= */
 async function init() {
-  bindRankUI();      // 顶栏搜索触发 + 榜单周期切换/刷新
-  renderSide();
-  renderCats();
-  renderList(true);
+  /* bindRankUI：独立页无榜单 UI，跳过 */
+  /* renderSide：独立页无右栏，跳过 */
+  /* renderCats：独立页无分类行，跳过 */
+  /* renderList：独立页无最新收录列表，跳过 */
   refreshRank(false); // 首页主体：热榜（缓存秒显 / 首次拉取）
   // 手机三个分区（社区配置 / 实测配置 / 指南）已拆到 /emulator.html，
   // 首页只保留入口卡（数字由上面的专区跳转块异步回填），此处不再初始化。
