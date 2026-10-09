@@ -212,7 +212,14 @@ eq(dl.serverOf('https://store.steampowered.com/app/1/'), '其他链接',
   console.log('\n=== ⑥ 前端下载弹窗接线 ===');
   const idx = read('public/index.html');
   ok(/id="dlPop"/.test(idx), '主源有弹窗节点 #dlPop');
-  ok(/function openDownload/.test(idx) && /function closeDownload/.test(idx), '主源有 open/closeDownload');
+  ok(/function openUniDownload/.test(idx) && /function closeDownload/.test(idx),
+    '主源有 openUniDownload / closeDownload');
+  /* ★ v10.45：下载弹窗**合并成一个**（四模块页签）。旧的两个入口随之删除 ——
+     删掉而不是留着：留着会让下一个人以为还有第二条路能走到「一次性铺全部专区」的老弹窗。 */
+  ok(!/function openDownload\s*\(/.test(idx) && !/function openModList\s*\(/.test(idx),
+    '★ 旧的 openDownload / openModList 已删除（合并版 openUniDownload 取代）');
+  ok(!/function setDlCounts\s*\(/.test(idx) && !/data-dlmod-open/.test(idx),
+    '★ 旧的 setDlCounts / data-dlmod-open 已清掉 —— 入口不再靠条数显隐');
   ok(/data-dl-open/.test(idx), '主源有唤起入口 data-dl-open');
   ok(/\.dlpop\{[^}]*z-index\s*:\s*(\d+)/.test(idx), '弹窗有 z-index 声明');
 
@@ -229,45 +236,61 @@ eq(dl.serverOf('https://store.steampowered.com/app/1/'), '其他链接',
     zPop + ' > ' + zDrawer);
   ok(zPop > zMask, '弹窗层级高于遮罩 #mask', zPop + ' > ' + zMask);
 
-  /* 详情页必须把「跳转链接」升级成下载入口，且带双源参数 */
-  /* ★ v10.25：下载从「详情页底部一个 go dl 按钮」升级成**三个并排按钮**
-   *   （下载本体 / 修改器 / Mod）。这条随之改查动作条的第一个按钮。 */
-  ok(/class="ds ds-main"[^>]*id="dlBtn"[\s\S]{0,320}?data-dl-open/.test(idx),
-    '★ 详情页底部有「⬇ 下载本体」主按钮（v10.25 三按钮动作条的第一个）');
-  /* ★ v10.25 ⑥：动作条 = 三个并排 + 后两个按 counts 显隐 */
-  ok(/\.dl-strip\{[^}]*display:flex/.test(idx) && /\.dl-strip > \.ds\{[^}]*flex:1 1 0/.test(idx),
-    '★ 下载动作条 .dl-strip 是横向 flex 且三个按钮等宽并排');
-  ok(/hidden[^>]*data-dlmod-open="modifier"/.test(idx) && /hidden[^>]*data-dlmod-open="mod"/.test(idx),
-    '★ 修改器 / Mod 两个按钮**默认 hidden** —— 条数未知期间不出现（不给「点开是空列表」的按钮）');
-  ok(/data-dlmod-open="modifier"[\s\S]{0,200}?<i>0<\/i>/.test(idx)
-    && /data-dlmod-open="mod"[\s\S]{0,200}?<i>0<\/i>/.test(idx),
-    '★ 两个按钮各带条数占位 <i>（回填前是 0）');
-  ok(/function setDlCounts\(/.test(idx), '★ 有 setDlCounts() 按 counts 回填条数并显隐');
-  /* ★ v10.28：条数来源从 /api/mods/match 的 counts 换成 /api/download 的 sections[] ——
-     详情页新增的「三专区预览」用的就是后者，两套统计并存会出现
-     「按钮写 190、点开只有 110」（同一个语义两条链路，PITFALLS 2）。 */
-  ok(/const cnt = \{\};[\s\S]{0,240}?setDlCounts\(cnt\)/.test(idx),
-    '★ counts 在 loadDlBlock 里、按 /api/download 的 sections 现算后回填（不是别处）');
-  ok(/s\.key === 'mod' \|\| s\.key === 'modifier'/.test(idx),
-    '★ 回填用的两个 key 与底部按钮的 data-dlmod-open 一致（mod / modifier）');
-  ok(/if \(dlSecs\.some\(\(s\) => s\.key === kind\)\) \{ openDlSecPop\(kind\); return; \}/.test(idx),
-    '★ 底部「修改器 / Mod」按钮优先开**同一份** dlSecs 的专区弹窗（按钮上的条数与点开的内容同源）');
-  ok(/openModList\(\{/.test(idx),
-    '★ …但 mods/match 那条链路仍保留作兜底（XD 源没有专区概念，dlSecs 只有一块 key=all）');
-  ok(/kind=' \+ kind/.test(idx) && /limit=' \+ D_MOD_CAP/.test(idx),
-    '★ openModList 按 kind 拉**分类**列表（mod / modifier 分别取，不是混合 count）');
+  /* ---- 四模块合并弹窗（★ v10.45） ---- */
+  ok(/id="dlModTabs"/.test(idx) && /class="dlmod" id="dlModTabs"/.test(idx),
+    '★ 弹窗外壳里有常驻的模块页签容器 #dlModTabs');
+  /* ⚠️ 页签条必须挂在 `.dlpop-h` 与 `.dlpop-b` 之间（弹窗的直接子节点）——
+     放进 .dlpop-b 会随内容滚走，滚到第 30 条就点不到「换模块」。 */
+  ok(/id="dlBody"><\/div>/.test(idx) && /id="dlModTabs" hidden><\/div>[\s\S]{0,80}?<div class="dlpop-b" id="dlBody">/.test(idx),
+    '★★ 页签条在 .dlpop-b **之外**（放进去会跟着内容滚走，用户滚到一半就换不了模块）');
+  ok(/\.dlmod\{[^}]*border-bottom/.test(idx), '模块页签条有下边框（与内容区分开）');
+  ok(/\.dlm\.on\{/.test(idx), '有当前模块的高亮态 .dlm.on');
+  ok(/const DL_UNI = \[[\s\S]{0,160}?'body'[\s\S]{0,160}?'mod'[\s\S]{0,160}?'modifier'[\s\S]{0,160}?'save'/.test(idx),
+    '★ 四个模块顺序固定：本体 / Mod / 修改器 / 存档（顺序由一处常量定义，不散在各处）');
+  ok(/function dlGoModule\(/.test(idx), '有模块切换 dlGoModule()（只改状态再重绘，不重新取数）');
+
+  /* 入口：三个按钮合并成一个，且**不再带 hidden** */
+  ok(/class="ds ds-all"[^>]*id="dlBtn"[\s\S]{0,340}?data-dl-open/.test(idx),
+    '★ 详情页底部只有一个「⬇ 下载与资源」入口（v10.25 的三按钮 → v10.45 合一）');
+  ok(/\.ds-all\{/.test(idx), '有 .ds-all 样式（三色渐变，暗示这个入口管全部四类）');
+  /* ★★ 这条是本轮修复的**根因断言**：
+     旧实现的 .dl-strip 在「既无 d.url 又无 fb.jidiUrl」时整条 hidden，而三个按钮又各自
+     按 /api/download 的成败显隐 —— XD 要求登录的游戏（Skyrim SE）因此**连 Mod 都看不到**。 */
+  ok(/<div class="dl-strip" id="dlStrip">/.test(idx),
+    '★★ 下载动作条不再带 hidden —— 入口可见性不许由「本体能不能取到」决定（Skyrim 看不到 Mod 的根因）');
   ok(/data-dl-url="\$\{esc\(d\.url/.test(idx), '下载按钮把当前源详情页 URL 传给弹窗');
   ok(/data-dl-jidi="\$\{esc\(fb\.jidiUrl/.test(idx), '下载按钮把机地详情页 URL 也带上（双源一次取全）');
+  ok(/data-dl-id="\$\{esc\(fb\.id \|\| d\.id/.test(idx),
+    '入口把 libId 也传给弹窗（存档卡片那条链路要用它反查源站详情页）');
   /* ★ v10.23：跨源那处的取值口径改了 —— 目标是机地时就是 hit.url；
      目标是 XD 时机地详情页是**当前这一页**（d.url）。原先写死 hit.jidiUrl 只会取到空串。 */
   ok(/jidiUrl: it\.jidiUrl/.test(idx)
     && /jidiUrl: hitSource === 'jidi' \? hit\.url : \(d\.source === 'jidi' \? d\.url : ''\)/.test(idx),
     '★ 三处 fb 兜底都补了 jidiUrl（列表行 / 热榜 / 搜索跨源），漏一处那条链路就取不到机地侧');
 
-  for (const page of ['public/emulator.html', 'public/unpack.html']) {
+  /* 四个模块**各自取数** —— 这是「不再连坐」的落地 */
+  ok(/async function dlUniFetchBody\(/.test(idx), '本体模块走 /api/download');
+  ok(/async function dlUniFetchMods\(/.test(idx) && /kind=' \+ kind/.test(idx) && /limit=' \+ D_MOD_CAP/.test(idx),
+    '★ Mod / 修改器各自按 kind 拉 /api/mods/match（条数不再由 /api/download 的成败决定）');
+  ok(/async function dlUniFetchSave\(/.test(idx), '存档模块走 /api/saves/match');
+  ok(/async function dlUniFetchGcm\(/.test(idx) && /\.dl-gcm\{/.test(idx),
+    '★ 修改器模块另取 GCM 元数据并单独一段（它没有下载地址，不能长得像能点开的社区帖）');
+  ok(/function dlUniResolveItem\(/.test(idx) && /\/api\/library\/item\?id=/.test(idx),
+    '★ 只有 libId / 标题时先反查端游库拿详情页 —— 否则「本体」会误报「这条没有源站详情页」');
+  /* ★ 惰性加载：只加载当前页签，但三个便宜的先并行发出（本地索引，毫秒级） */
+  ok(/for \(const k of \['mod', 'modifier', 'save'\]\) dlUniLoad\(k\)/.test(idx),
+    '★ 打开弹窗时三个本地索引模块并行预热（页签条数尽快填上；最贵的 /api/download 留给当前页签）');
+  ok(/dlUniLoad\(k\)/.test(idx) && /st\.data\[k\] !== undefined \|\| st\.busy\[k\]/.test(idx),
+    '★ 每个模块只取一次数（切回已加载的页签不再打请求）');
+  ok(/box\.hidden = true; box\.innerHTML = ''/.test(idx),
+    '★ 关弹窗 / 打开「查看全部」子视图时把页签条藏掉（两套导航不许并存）');
+  ok(/function openDlSecPop\(/.test(idx) && /data-df-open/.test(idx),
+    '★ 详情页三专区预览的「全部 N 帖」入口仍走 openDlSecPop（没被合并版吃掉）');
+
+  for (const page of ['public/emulator.html', 'public/resources.html', 'public/unpack.html']) {
     const t = read(page);
-    ok(/id="dlPop"/.test(t) && /function openDownload/.test(t),
-      '★ ' + page + ' 已重建并带上弹窗（改了主源不重建派生页，那边就没有弹窗且不报错）');
+    ok(/id="dlPop"/.test(t) && /function openUniDownload/.test(t) && /id="dlModTabs"/.test(t),
+      '★ ' + page + ' 已重建并带上合并弹窗（改了主源不重建派生页，那边就没有弹窗且不报错）');
   }
 
   /* ★ 权限受限时的「说明 + 出口」必须真的接上去：
@@ -308,9 +331,67 @@ eq(dl.serverOf('https://store.steampowered.com/app/1/'), '其他链接',
   ok(!/对照库：Steam 官方配置要求/.test(up), '★ 判定依据面板不再写死「Steam 官方配置要求 N 款」这种过期口径');
 
   /* ============================================================
-   *  ⑦ 服务端路由存在性
+   *  ⑦ 广告 / 帮助站链接清洗（★ v10.45 新增）
+   * ============================================================
+   * 用户口径：「游戏下载本体中 有个其他：元素为 <img src="//static2.52jidi.com/...
+   *           icon_from_xunlei_helper..."> 实际是一个广告链接，帮我清洗掉」。
+   * 实测那条 = `https://52leiqu.com/problemTutorial`（迅雷「雷区」问题教程页），
+   * 机地资源帖正文结尾的固定引导句。它既不是站内域名（INTERNAL_HOST_RE 管不到），
+   * 也不是任何网盘 ⇒ kind 退成 '其他链接' ⇒ 前端渲染成一个名叫「其他」的下载按钮。
+   * ★ 必须在**抽取阶段**丢 —— 前端隐藏只是把广告藏起来，库里那 34 处还在（详见 data/mods.json 清洗）。 */
+  console.log('\n=== ⑦ 广告 / 帮助站链接清洗 ===');
+  const shared = require('../shared');
+  ok(shared.JUNK_HOST_RE instanceof RegExp, 'shared 导出 JUNK_HOST_RE');
+  ok(shared.JUNK_HOST_RE.test('52leiqu.com') && shared.JUNK_HOST_RE.test('www.52leiqu.com'),
+    '★ 命中广告站 52leiqu.com（含子域写法）');
+  ok(!shared.JUNK_HOST_RE.test('52jidi.com') && !shared.JUNK_HOST_RE.test('pan.xunlei.com')
+    && !shared.JUNK_HOST_RE.test('leiqupan.com'),
+    '★★ 不误伤机地主站与真网盘域名（护栏写宽了会把正常资源一起吃掉，且界面看不出来）');
+  const ex = shared.extractLinks('如仍有问题，请看：https://52leiqu.com/problemTutorial 下载：https://pan.baidu.com/s/1abc'
+    + ' 另一帖 https://jidiyouxi.com/post/detail/1');
+  ok(ex.length === 1 && /pan\.baidu\.com/.test(ex[0].url),
+    '★★ 抽取阶段就丢掉广告链与站内链（只留真网盘）—— 不是靠前端 hide()',
+    JSON.stringify(ex.map((x) => x.url)));
+  /* 存量清洗：库里不许再有 52leiqu —— 抽取层修好只保证「新抓的干净」，
+     已经入库的那批必须靠 _clean-junk-links.js 摘掉（否则老数据继续渲染「其他」按钮）。 */
+  const modsJson = JSON.parse(read('data/mods.json'));
+  const junkLeft = (modsJson.items || []).reduce((n, it) =>
+    n + (it.links || []).filter((l) => /52leiqu/i.test(String((l && l.url) || ''))).length, 0);
+  ok(junkLeft === 0, '★★ data/mods.json 存量广告链已清空', '残留 ' + junkLeft + ' 条');
+
+  /* ---- ⑦b 「用户看得到的字段」必须比 links 更宽地清干净 ----
+   * ★ 为什么再加这一组：上面那条只查了 `links[]`。用户反馈的**本体下载弹窗**还有别的渲染出口
+   *   （条目 URL、标题），只守 `links` 会出现「links 清了、别处又漏出来」的缺口。
+   *   实测：`content`（帖子原文）里仍有 17 处 `52leiqu.com/problemTutorial` ——
+   *   它来自源帖自带的引导句，**目前服务端与前端一行都不读**（`data/mods.js` 只用它做截断说明），
+   *   所以用户看不到。但「今天不读」不等于「明天不读」⇒ 用一条判据把这个前提钉死：
+   *   一旦有人开始渲染 `content`，这条立刻变红，逼他先把广告站清掉再渲染。 */
+  const JUNK = /52leiqu/i;
+  let badUrl = 0, badTitle = 0;
+  for (const it of (modsJson.items || [])) {
+    if (JUNK.test(String(it.url || ''))) badUrl++;
+    if (JUNK.test(String(it.title || ''))) badTitle++;
+  }
+  ok(badUrl === 0 && badTitle === 0,
+    '★★ 可见字段（条目 url / 标题）也零残留 —— 不能只守 links[]',
+    `url ${badUrl} 条 / title ${badTitle} 条`);
+
+  const modsRead = read('data/mods.js');
+  const srvSrc = read('server.js');
+  let contentRendered = JUNK.test(modsRead) || JUNK.test(srvSrc);
+  for (const pg of ['public/index.html', 'public/resources.html', 'public/emulator.html', 'public/unpack.html']) {
+    if (JUNK.test(read(pg))) contentRendered = true;
+  }
+  ok(!contentRendered,
+    '★★ 广告站串不许出现在任何**渲染层**（mods 读取层 / 服务端 / 四张页面）');
+  ok(!/\.content\b/.test(srvSrc) && !/\.content\b/.test(read('public/index.html')),
+    '★ 帖子的 `content`（含广告原文）目前无人渲染 —— 这是上面「用户看不到」的前提，'
+    + '前提变了就必须连带把 content 一起清（否则这条会红）');
+
+  /* ============================================================
+   *  ⑧ 服务端路由存在性
    * ============================================================ */
-  console.log('\n=== ⑦ 服务端路由 ===');
+  console.log('\n=== ⑧ 服务端路由 ===');
   const srv = read('server.js');
   ok(/app\.get\('\/api\/download'/.test(srv), '/api/download 路由存在');
   ok(/app\.get\('\/api\/jiditopics\/stats'/.test(srv), '/api/jiditopics/stats 路由存在');

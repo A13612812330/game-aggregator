@@ -119,6 +119,8 @@ let pass = 0, fail = 0;
 const crashed = [];
 const missing = [];
 const noExit = [];
+/* 收尾格式不合约定（成绩只能从明细里猜）的套件 —— 2026-10-09 新增，见下面的取成绩段落 */
+const warnFmt = [];
 
 /**
  * 套件是否**把退出码挂在失败数上**。
@@ -185,12 +187,42 @@ for (const s of SUITES) {
     out = String(e.stdout || '') + String(e.stderr || '');
   }
 
-  /* 取输出里**最后一个** `n / m` 作为该套件的成绩 */
-  const m = out.match(/(\d+)\s*\/\s*(\d+)/g);
+  /* 取该套件的成绩。
+   *
+   * ★★ 2026-10-09 收口（原实现：无脑取「最后一个 `n / m`」）：
+   *   实测 `test-related-dl.js` 被记成 **8/8**，而它自己打印的是 **42** —— 少算 34 条。
+   *   根因：它的收尾写成 `✅  42 通过 / 0 失败`，**数字中间夹着「通过」**，
+   *   `\d+\s*\/\s*\d+` 匹配不上；于是 regex 取到了上面 PASS 明细里的
+   *   「多标签游戏…共享至少一个标签 —— **8/8**」⇒ 整套成绩被一个**明细串**顶掉。
+   *
+   *   为什么这个 bug 比「某条断言写错」更危险：**它让防线自己报假数**。
+   *   汇总少算 34 条不会让任何一条断言变红，只会让「通过 N 条」这个数字长期偏低，
+   *   而所有人拿它当防线规模的唯一口径。v10.44 日志里那处「未能定位的 ±3」同源
+   *   （明细里换了输出，取到的数字就跟着换）。
+   *
+   *   两条一起改：
+   *     ① 优先认**收尾汇总行**（同行含「通过 / 失败 / pass / fail」且带 `n / m`）——
+   *        从**整份输出**倒着找，不设「末 N 行」窗口：实测 `test-alias-guard.js` 的汇总
+   *        `结果：7 / 7 通过` 后面还跟着一长串样例映射，窗口一卡就找不到它了；
+   *     ② 认不出汇总行时，**把「该套件收尾格式不合约定」记进 warnings** ——
+   *        不静默降级，否则这个坑下次换个套件还会原样复现。
+   */
+  const lines = out.split(/\r?\n/).filter((l) => l.trim());
+  const SUMMARY = /(\d+)\s*\/\s*(\d+)/;
+  let picked = null;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (SUMMARY.test(lines[i]) && /通过|失败|pass|fail/i.test(lines[i])) { picked = lines[i].match(SUMMARY); break; }
+  }
   let p = null, t = null;
-  if (m && m.length) {
-    const last = m[m.length - 1].split('/');
-    p = Number(last[0]); t = Number(last[1]);
+  if (picked) { p = Number(picked[1]); t = Number(picked[2]); }
+  else {
+    /* 退回老行为（兼容还没改成约定格式的套件），但**记一笔** */
+    const mAll = out.match(/^.*(\d+)\s*\/\s*(\d+).*$/gm) || [];
+    if (mAll.length) {
+      const last = mAll[mAll.length - 1].match(SUMMARY);
+      p = Number(last[1]); t = Number(last[2]);
+      warnFmt.push(`${s}（收尾 12 行内没有「… 通过 …」形态的汇总行，成绩取自：${mAll[mAll.length - 1].trim().slice(0, 60)}）`);
+    }
   }
   if (p != null) { pass += p; fail += (t - p); }
   if (code !== 0) crashed.push(`${s} (exit ${code})`);
@@ -213,9 +245,14 @@ if (noExit.length) {
   console.log('   ⇒ 在该套件末尾补 `process.exit(fail ? 1 : 0)`');
 }
 console.log(`异常退出：${crashed.length ? crashed.join(', ') : '无'}`);
+if (warnFmt.length) {
+  console.log(`⚠️ 收尾格式不合约定（成绩是从明细里取的最后一行，可能不是真成绩）：`);
+  warnFmt.forEach((w) => console.log(`   · ${w}`));
+  console.log('   ⇒ 把该套件末尾改成「通过 n/m」或「n / m 通过」（同行含「通过」）');
+}
 console.log(`${'#'.repeat(52)}`);
 
-if (fail || crashed.length || missing.length || noExit.length) {
+if (fail || crashed.length || missing.length || noExit.length || warnFmt.length) {
   console.log('\n⚠️ 静态防线未全绿 —— 先修这里，别急着跑实拍。');
   process.exit(1);
 }

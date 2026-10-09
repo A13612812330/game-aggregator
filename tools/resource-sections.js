@@ -16,8 +16,9 @@
  *    所以不能出现 require / module.exports；只能依赖主源共享脚本的
  *    esc / api / toast / openDetailById 这些既有全局。
  *    （写注释时也别出现 script 标签字面量 —— 语法闸按它数块数，会被算成两块。）
- * ⚠️ 三个分区虽在本页，但「修改器」与「存档」的**阅读语义没变**：
- *    它们是搬家，不是重写 —— 卡片的正文与判据与 v10.43 时逐字一致。
+ * ⚠️ 三个分区虽在本页，但「修改器」与「MOD」的**阅读语义没变**：它们是搬家，不是重写。
+ *    ★ v10.45 例外一处：**存档卡片改版**（卡面不再铺路径，改为按钮直达合并弹窗的
+ *    「存档」模块）—— 这是用户明确要求，不是搬家过程中顺手改的。
  * ========================================================================== */
 
 /* 每页条数（原 emulator-sections.js 的 EMU_PAGE_SIZE —— 搬家后改本页口径） */
@@ -165,13 +166,16 @@ async function initMd() {
 }
 
 /* ============================================================================
- * ② 存档分区（#resSaves）—— 自 emulator-sections.js 搬家，正文逐字未改
+ * ② 存档分区（#resSaves）—— 自 emulator-sections.js 搬家，路径展示于 v10.45 改版
  *
- * ★ 这一节的核心产出就是**存档路径本身**（用户要的「放置位置」）。
- *   所以卡片不做折叠 —— 直接把路径铺在卡面上，
- *   等宽字体、允许换行、**不截断**（截断了用户就没法照着找文件）。
- * ★ 搬到本页后默认口径变更：原来是「手机专区」语境（默认仅看手机能玩），
- *   本页是端游资源语境 ⇒ **默认给全量**（phone=false），口径与页签标题一致。
+ * ★ v10.45：**卡面不再铺路径**。用户口径：
+ *   「存档位置显示有点多以及杂（先优化存档页面中的卡片，不在卡片中显示位置）」，
+ *   并拍板「卡面留按钮，点开合并弹窗的『存档』模块」。
+ *   旧版把最多 3 条路径 + 2 条注册表（`.paths` / `.cp`）直接铺在卡面上，
+ *   卡又高又花、一屏扫不完；路径本身在**详情页「云存档位置」块**与
+ *   **合并下载弹窗的「存档」模块**（`dlUniPaintSave`，逐条带复制）里都有，
+ *   这里再铺一份属于「同一份数据三套渲染」。
+ * ★ 搬到本页后默认口径保持不变：本页是端游资源语境 ⇒ 默认给全量（phone=false）。
  * ========================================================================== */
 const svState = { q: '', sort: 'paths', phone: false, cloud: false, offset: 0, total: 0, items: [], inited: false, loading: false };
 
@@ -189,26 +193,17 @@ function svCard(it) {
 
   const altHtml = (it.name && it.name !== title) ? '<div class="alt" title="' + esc(it.name) + '">' + esc(String(it.name).slice(0, 46)) + '</div>' : '';
 
-  /* 路径行：最多铺 3 条文件路径 + 2 条注册表项，其余折叠成「另有 N 条」 */
-  const MAXP = 3, MAXR = 2;
-  const rows = [];
-  for (const p of paths.slice(0, MAXP)) {
-    const tag = (p.tags && p.tags.length) ? String(p.tags[0]) : '存档';
-    const label = tag === 'save' ? '存档' : (tag === 'config' ? '配置' : tag);
-    const full = p.shown || p.raw;
-    rows.push('<div class="p"><i>' + esc(label) + '</i><span>' + esc(full) + '</span>'
-      + '<button class="cp" type="button" data-cp="' + esc(full) + '" title="复制这条路径">复制</button></div>');
-  }
-  for (const r of regs.slice(0, MAXR)) {
-    rows.push('<div class="p reg"><i>注册表</i><span>' + esc(r.raw) + '</span>'
-      + '<button class="cp" type="button" data-cp="' + esc(r.raw) + '" title="复制这条注册表项">复制</button></div>');
-  }
-  const hidden = (paths.length - Math.min(paths.length, MAXP)) + (regs.length - Math.min(regs.length, MAXR));
-  const moreLine = hidden > 0 ? '<div class="more">另有 ' + hidden + ' 条存档位置未展示，进游戏详情查看</div>' : '';
-
   const cloudTags = cloud.length
     ? cloud.map((c) => '<span class="tg cloud">☁ ' + esc(String(c).toUpperCase()) + '</span>').join('')
     : '<span class="tg dim">不支持云同步</span>';
+
+  /* 唯一动作：打开合并下载弹窗并直接落在「存档」模块（`data-sv-open` 由 bindSvCards 分流）。
+     ⚠️ 条数写进按钮文案 —— 卡面上没有路径了，用户需要一个「值不值得点」的量。
+     注册表项也算一条记录（`dlUniPaintSave` 里两类都逐条列出），所以合计。 */
+  const total = paths.length + regs.length;
+  const open = '<button class="sv-open" type="button" data-sv-open'
+    + ' data-title="' + esc(title) + '" data-lib="' + esc(it.libId || '') + '">'
+    + (total ? '查看 ' + total + ' 条存档位置' : '查看存档位置') + '</button>';
 
   return '<article class="emu-card sv' + (it.libCover ? ' has-cov' : '') + '" data-name="' + esc(title) + '" data-lib="' + esc(it.libId || '') + '">'
     + cov
@@ -221,50 +216,38 @@ function svCard(it) {
     + (regs.length ? '<span class="pill">' + regs.length + ' 项注册表</span>' : '')
     + '</div>'
     + '<div class="tgs">' + cloudTags + '</div>'
-    + '<div class="paths">' + (rows.join('') || '<div class="p"><span>暂无文件路径记录</span></div>') + moreLine + '</div>'
+    + open
     + '</div>'
     + '</article>';
-}
-
-/** 复制文本：优先 Clipboard API，失败退回隐藏 textarea + execCommand
- *  （http 非 localhost / 老内核下 Clipboard API 不可用，别让「复制」按钮点了没反应） */
-function copyText(txt) {
-  const s = String(txt || '');
-  if (!s) return;
-  const fallback = () => {
-    try {
-      const ta = document.createElement('textarea');
-      ta.value = s;
-      ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      return true;
-    } catch (e) { return false; }
-  };
-  const done = () => { if (typeof toast === 'function') toast('已复制：' + (s.length > 42 ? s.slice(0, 42) + '…' : s)); };
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(s).then(done).catch(() => { if (fallback()) done(); });
-  } else if (fallback()) done();
 }
 
 function bindSvCards() {
   const g = document.getElementById('svGrid'); if (!g || g.dataset.bound) return;
   g.dataset.bound = '1';
-  /* 点击分流：点 .cp 只复制；点 .paths 区允许选中；其余有 libId 就进详情 */
+  /* 点击分流：点 .sv-open 开弹窗「存档」模块；点正文其余位置有 libId 就进游戏详情。 */
   g.addEventListener('click', (e) => {
-    const cp = e.target.closest('.cp');
-    if (cp) { e.stopPropagation(); copyText(cp.dataset.cp || ''); return; }
-    const card = e.target.closest('.emu-card'); if (!card) return;
-    if (e.target.closest('.paths')) return;   // 路径区不触发跳转（要能选中文字）
-    const btn = e.target.closest('.cov-btn');
-    const lib = (btn && btn.dataset.lib) || card.dataset.lib;
-    if (lib && typeof openDetailById === 'function') {
-      openDetailById(lib, (btn && btn.dataset.title) || card.dataset.name);
+    const btn = e.target.closest('[data-sv-open]');
+    if (btn) {
+      e.stopPropagation();
+      /* 跨页共享：openUniDownload 在主脚本里（派生页同样带上），这里只负责把参数递过去。
+         ⚠️ 兜底也要有 —— 万一某天主脚本那块被裁掉，按钮不能变成「点了没反应」。 */
+      if (typeof openUniDownload === 'function') {
+        openUniDownload({
+          title: btn.dataset.title || '', id: btn.dataset.lib || '', tab: 'save',
+        });
+      } else if (typeof toast === 'function') {
+        toast('暂时打不开存档弹窗，请刷新页面重试');
+      }
       return;
     }
-    if (typeof toast === 'function') toast('这条没对上端游库，没有详情页；存档路径可直接点「复制」');
+    const card = e.target.closest('.emu-card'); if (!card) return;
+    const cbtn = e.target.closest('.cov-btn');
+    const lib = (cbtn && cbtn.dataset.lib) || card.dataset.lib;
+    if (lib && typeof openDetailById === 'function') {
+      openDetailById(lib, (cbtn && cbtn.dataset.title) || card.dataset.name);
+      return;
+    }
+    if (typeof toast === 'function') toast('这条没对上端游库，没有详情页；可以点「查看存档位置」看路径');
   });
 }
 

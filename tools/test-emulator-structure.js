@@ -266,12 +266,23 @@ t('XD 详情取到厂商 / 发行日期（.article-meta-item）',
 t('XD 详情从版本介绍文本里提容量（容量xxGB）', /容量\\s\*\(\[\\d\.\]\+/.test(xdFetch));
 t('XD 详情返回标签 tags（新版 .article-tags）', /\.article-tags a/.test(xdFetch) && /tags,/.test(xdFetch));
 
-/* ② 云存档卡片：路径区不跳转 + 每行可复制 + 正文可进详情
- *   ★ v10.44：这段实现已搬去 tools/resource-sections.js（存档页签在端游资源页） */
-t('云存档路径行带「复制」按钮', /class="cp"/.test(rsec) && /function copyText/.test(rsec));
-t('云存档卡片正文可点进详情（不再整卡吞掉点击）',
-  /if \(e\.target\.closest\('\.paths'\)\) return;/.test(rsec));
-t('云存档卡片给出「没对上端游库」的明确提示', /存档路径可直接点「复制」/.test(rsec));
+/* ② 云存档卡片：v10.45 改版后卡面**不再铺路径**，改成整宽按钮开合并弹窗的「存档」模块。
+ *   ★ v10.44：这段实现已搬去 tools/resource-sections.js（存档页签在端游资源页）
+ *   ★ v10.45：`.paths` / `.cp` / `copyText` 全部撤出卡面 ⇒ 断言按铁律「搬家 + 反向断言」处理：
+ *      正向锚点（.sv-open 真的渲染 + 真的把 tab:'save' 递出去）保证反向断言不是「选择器写错才为真」；
+ *      反向断言（.paths / copyText 不许回来）保证哪天有人把路径又铺回卡面会当场变红。 */
+t('存档卡片改成 .sv-open 整宽按钮（卡面唯一动作，正向锚点）',
+  /class="sv-open"/.test(rsec) && /data-sv-open/.test(rsec));
+t('★ .sv-open 把 tab:\'save\' 递给合并弹窗（落点要跟着入口走，不是默认的「本体」）',
+  /tab:\s*'save'/.test(rsec));
+t('★ .sv-open 带兜底：主脚本那块被裁掉时给 toast，不能变成「点了没反应」',
+  /typeof openUniDownload === 'function'/.test(rsec) && /暂时打不开存档弹窗/.test(rsec));
+t('★★ 反向断言：卡面实现里已无 .paths 铺路径（本轮改版的核心诉求）',
+  !/class="paths"/.test(rsec) && !/closest\('\.paths'\)/.test(rsec));
+t('★★ 反向断言：copyText 已从派生页驱动里删除（复制搬进了弹窗的 dlUniPaintSave）',
+  !/function copyText/.test(rsec));
+t('云存档卡片给出「没对上端游库」的明确提示',
+  /可以点「查看存档位置」看路径/.test(rsec));
 
 /* ③ 点击语义统一：libId 优先于 bhk（旧版 bhk 优先导致点正文进配置面板） */
 {
@@ -448,10 +459,15 @@ t('端游资源页有「存档」分区骨架（计数/搜索/排序/两个开�
 t('端游资源页有「修改器」分区骨架（计数/搜索/来源/排序/开关/网格/更多）',
   ['id="trCount"', 'id="trBuilt"', 'id="trStats"', 'id="trSearch"', 'id="trSource"', 'id="trSorts"', 'id="trToggleLib"', 'id="trGrid"', 'id="trMore"']
     .every((s) => res.includes(s)));
-/* ★ 存档的卡片把路径铺在卡面上，路径区必须真的存在（否则信息全丢） */
-t('存档卡片有路径展示区 .paths 与云同步徽标 .tg.cloud',
-  /\.emu-card \.paths\{/.test(res) && /\.emu-card \.tg\.cloud\{/.test(res));
-t('存档网格在窄屏收敛为单列（路径长，两列会挤断）',
+/* ★ v10.45：存档卡面不再铺路径 ⇒ `.emu-card .paths` 规则已删。
+ *   先反向断言「真的删了」，再给一条**正向锚点**（.sv-open 规则存在），否则上一条
+ *   在「CSS 整块丢了」的情况下也会为真 —— 反向断言必须配正向锚点才有意义。 */
+t('★★ 存档卡片不再铺路径：resources.html 里 .emu-card .paths 规则已删除（反向）',
+  !/\.emu-card \.paths\{/.test(res));
+t('存档卡片改用 .emu-card .sv-open 整宽按钮（正向锚点，防止上一条「丢了才为真」）',
+  /\.emu-card \.sv-open\{/.test(res));
+t('存档卡片云同步徽标 .tg.cloud 仍在', /\.emu-card \.tg\.cloud\{/.test(res));
+t('存档网格在窄屏收敛为单列（卡内有整宽按钮 + 徽标行，两列会挤断）',
   /max-width:430px[\s\S]{0,200}\.emu-grid\.sv\{grid-template-columns:1fr\}/.test(res));
 t('修改器卡片带「放置位置」说明（用户明确要的信息）',
   /tr-note[\s\S]{0,120}放置位置/.test(res));

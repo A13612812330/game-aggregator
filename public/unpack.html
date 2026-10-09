@@ -496,9 +496,15 @@
     border:1px solid #99F6E4;background:#F0FDFA;color:#0F766E;transition:.15s}
   .emu-card .tr-go a:hover{background:#0F766E;color:#fff;border-color:transparent}
 
-  /* ============ 💾 云存档分区（手机专区·第六页签） ============
-     核心内容就是**存档路径本身**（用户要的「放置位置」），所以卡片直接把路径铺出来，
-     用等宽字体、可换行，不做截断——截断了就没法照着找文件了。 */
+  /* ============ 💾 云存档分区（端游资源页·第二页签） ============
+     ★ v10.45：卡片**不再铺路径**。用户口径：
+       「存档位置显示有点多以及杂（先优化存档页面中的卡片，不在卡片中显示位置）」。
+     旧版把最多 3 条路径 + 2 条注册表直接铺在卡面（下面那组 `.paths` / `.cp` 规则），
+     卡又高又花，一屏扫不完；而这些内容的正确落点是**合并下载弹窗的「存档」模块**
+     （`dlUniPaintSave`，逐条带「复制」）与详情页的「云存档位置」块。
+     ⚠️ 原 `.emu-card .paths` / `.paths .p` / `.paths .p i` / `.paths .more` / `.cp` 六组规则
+        **已整组删除**（不是留着不用）—— 留着会让人以为卡面还有路径区，
+        进而把「不渲染」改回「渲染」（本项目对死样式的一贯处理：删）。 */
   .sec-h .bar.sv{background:linear-gradient(180deg,#0284C7,#0369A1)}
   .emu-intro.sv{background:linear-gradient(120deg,#EFF6FF,#F0F9FF);border-color:#BAE6FD}
   .emu-intro.sv .ic{background:linear-gradient(135deg,#0284C7,#38BDF8)}
@@ -506,23 +512,14 @@
   .emu-grid.sv{grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
   .emu-grid.sv .emu-card{border-color:#DBEAFE}
   .emu-grid.sv .emu-card:hover{border-color:#7DD3FC;box-shadow:0 8px 22px rgba(2,132,199,.14)}
-  .emu-card .paths{margin-top:3px;border-top:1px dashed var(--c-border);padding-top:8px;
-    display:flex;flex-direction:column;gap:5px}
-  .emu-card .paths .p{display:flex;align-items:flex-start;gap:6px;font-size:10.5px;line-height:1.5;
-    color:var(--c-t2);word-break:break-all;font-family:var(--font-num)}
-  .emu-card .paths .p i{flex:none;font-style:normal;font-size:9.5px;font-weight:800;color:#0369A1;
-    background:#E0F2FE;border-radius:4px;padding:1px 5px;font-family:var(--font);margin-top:1px;white-space:nowrap}
-  .emu-card .paths .p.reg i{color:#7C2D12;background:#FFEDD5}
-  /* ★ v10.5 路径行「复制」按钮：
-   *   路径文字既要求能照着抄（选中/复制），整卡正文又要求点了能进游戏详情 ——
-   *   这两件事靠分工实现：点 .paths 区不跳转、点 .cp 只复制、点卡上其它地方进详情。 */
-  .emu-card .paths .p > span{flex:1 1 auto;min-width:0}
-  .emu-card .paths .p .cp{flex:none;margin-left:auto;font:700 9.5px/1 var(--font);color:#0369A1;
-    background:#F0F9FF;border:1px solid #BAE6FD;border-radius:5px;padding:3px 6px;cursor:pointer;
-    transition:.15s;-webkit-tap-highlight-color:transparent}
-  .emu-card .paths .p .cp:hover{background:#0369A1;color:#fff;border-color:transparent}
-  .emu-card .paths .p .cp.done{background:#15803D;border-color:transparent;color:#fff}
-  .emu-card .paths .more{font-size:10px;color:var(--c-t3);padding-left:2px}
+  /* 存档卡片的唯一动作：打开合并弹窗的「存档」模块。
+     `margin-top:auto` 让它在卡片被同行其它卡撑高时沉到底部（`.emu-card` 已是 flex column，
+     但按钮在 `.bd` 里，所以同时给 `.bd` 补一条 flex 纵向布局）。 */
+  .emu-card.sv .bd{display:flex;flex-direction:column;flex:1 1 auto;min-width:0}
+  .emu-card .sv-open{display:block;width:100%;margin-top:auto;font-family:inherit;font-size:11.5px;
+    font-weight:750;color:#0369A1;background:#F0F9FF;border:1px solid #BAE6FD;border-radius:8px;
+    padding:7px 9px;cursor:pointer;transition:.15s;-webkit-tap-highlight-color:transparent}
+  .emu-card .sv-open:hover{background:#0369A1;border-color:transparent;color:#fff}
   .emu-card .tg.cloud{color:#0369A1;background:#E0F2FE;font-weight:750}
   .emu-card .tg.phone{color:#15803D;background:#DCFCE7;font-weight:750}
   .emu-refresh.sv{color:#0369A1;border-color:#7DD3FC;background:rgba(255,255,255,.85)}
@@ -1280,12 +1277,16 @@
   .d-dock .d-actions:first-child{margin-top:0}
   .go{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px;font-weight:700;padding:12px;border-radius:12px;transition:.15s}
   .go svg{width:15px;height:15px}
-  /* ★ v10.25：下载动作条 —— 「下载本体 / 修改器 / Mod」三个并排，取代 v10.22 那个
-     独占一行的单个「⬇ 网盘下载」。
-     用 flex 而不是 grid 是有原因的：修改器 / Mod 的条数要等 /api/mods/match 回来才
-     知道，条数为 0 时按钮要**直接隐藏** —— flex:1 会让剩下的按钮自动把整行铺满，
-     不需要像 .d-actions 那样再养一个 syncDActions() 去改列数。
-     ⚠️ `[hidden]` 必须显式写 display:none：本文件的 .ds 是 display:flex，
+  /* ★ v10.25：下载动作条。v10.45 起**合并成一个按钮**（用户口径：
+     「底部只留一个「⬇ 下载与资源」按钮」）—— 四种资源收进同一个弹窗的四个模块页签。
+     ★ 为什么必须合并（根因，不只是版式偏好）：
+       旧实现是三个按钮（下载本体 / 修改器 / Mod），而它们的**条数只从 /api/download 的
+       dlSecs 推导**。XD 对部分游戏（实测 Skyrim SE id=2765、钢铁雄心4 id=3967）
+       要求登录才给网盘地址 ⇒ real=0 ⇒ dlSecs 为空 ⇒ 三个按钮全部 hidden
+       ⇒ 用户在这款游戏的详情页里**连「有 60 条 Mod」这件事都看不到**（他反馈的原话）。
+       现在按钮不再承载条数，也不再依赖 XD 是否放行；条数在弹窗的模块页签上，
+       每个模块各自取数、各自计数。
+     ⚠️ 仍保留 `[hidden]` 显式 display:none 这条：本文件的 .ds 是 display:flex，
         会盖掉浏览器默认的 `[hidden]{display:none}`（本项目在 .dm-info 上踩过同款坑）。 */
   .dl-strip{display:flex;gap:9px;margin-top:16px}
   .dl-strip[hidden],.dl-strip > .ds[hidden]{display:none}
@@ -1300,6 +1301,10 @@
   .ds-main{background:linear-gradient(135deg,#0F9D58,#22C55E);color:#fff;box-shadow:0 6px 16px rgba(15,157,88,.28)}
   .ds-mf{background:linear-gradient(135deg,#7C3AED,#A855F7);color:#fff;box-shadow:0 6px 16px rgba(124,58,237,.26)}
   .ds-mo{background:linear-gradient(135deg,#0B7BFF,#38BDF8);color:#fff;box-shadow:0 6px 16px rgba(11,123,255,.26)}
+  /* ★ v10.45：合并后的唯一入口。用「绿→蓝→紫」的三色渐变把原来的三个按钮
+     在视觉上收拢成一个动作 —— 单色绿会让人以为「这只管本体」。 */
+  .ds-all{background:linear-gradient(120deg,#0F9D58,#0B7BFF 52%,#7C3AED);color:#fff;
+    box-shadow:0 6px 16px rgba(11,123,255,.3)}
   /* ★ v10.25：详情页**竖向定位条**（用户口径：「详情页弹窗能有个定位条（竖着的）」，
      位置选了「右侧固定」）。默认只露序号圆点、悬停整条展开标签，避免长期遮住正文。
      ⚠️ 它必须是 `.drawer` 的**兄弟节点**而不是子节点：抽屉隐藏时是
@@ -1544,6 +1549,43 @@
     border-radius:50%;animation:dlspin .7s linear infinite}
   @keyframes dlspin{to{transform:rotate(360deg)}}
   .dlpop-empty{padding:20px 4px;text-align:center;font-size:12.5px;line-height:1.8;color:var(--c-t3)}
+  /* ★ v10.45：合并下载弹窗的**模块页签**（本体 / Mod / 修改器 / 存档）。
+     位置在 `.dlpop-h` 与 `.dlpop-b` **之间**（弹窗的直接子节点）—— 放进 `.dlpop-b`
+     会随内容一起滚走，用户滚到第 30 条就再也点不到「换模块」了。
+     ★ 与 `.df-tab`（弹窗**内部**的子分区签）分开命名：两者层级不同
+       （模块是外壳级的、子分区是内容级的），复用一个类名会让「改模块签样式」
+       顺手改坏 `dlsec` 弹窗里的三专区签。 */
+  .dlmod{display:flex;gap:6px;padding:11px 15px 0;border-bottom:1px solid var(--c-border);flex:none;
+    overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .dlmod::-webkit-scrollbar{display:none}
+  .dlm{display:inline-flex;align-items:center;gap:5px;font:inherit;font-size:12px;font-weight:750;
+    color:var(--c-t2);background:#F3F5FA;border:1px solid var(--c-border);border-bottom:0;
+    border-radius:9px 9px 0 0;padding:7px 12px;margin-bottom:-1px;cursor:pointer;white-space:nowrap;flex:none}
+  .dlm:hover{border-color:var(--c-border2);color:var(--c-t1)}
+  .dlm.on{color:var(--c-primary);background:#fff;border-color:var(--c-border);border-bottom:1px solid #fff;
+    box-shadow:inset 0 -2px 0 var(--c-primary)}
+  .dlm i{font-style:normal;font-family:var(--font-num);font-size:10.5px;font-weight:800;
+    color:var(--c-t3);background:#fff;border-radius:999px;padding:1px 6px;border:1px solid var(--c-border)}
+  .dlm.on i{color:var(--c-primary);border-color:rgba(46,107,255,.3)}
+  /* 第三方（GCM 元数据）段：与社区帖段视觉上分开 —— 前者没有下载地址，不能长得像能点 */
+  .dl-gcm{margin-top:14px;padding-top:11px;border-top:1px dashed var(--c-border2)}
+  .dlpop .emu-loading{padding:22px 4px;text-align:center;font-size:12.5px;color:var(--c-t2)}
+  .dlpop .emu-empty{padding:20px 4px;text-align:center;font-size:12.5px;line-height:1.8;color:var(--c-t3)}
+  .dl-note+.dl-sv-list{margin-top:9px}
+  .dl-sv-list{display:flex;flex-direction:column;gap:6px}
+  .dl-sv-row{display:flex;align-items:flex-start;gap:8px;background:#F7F9FC;border:1px solid var(--c-border);
+    border-radius:9px;padding:8px 10px}
+  .dl-sv-row .ix{flex:none;font:800 10px/1.7 var(--font-num);color:var(--c-t3);min-width:20px;text-align:center;
+    background:#fff;border:1px solid var(--c-border);border-radius:6px;padding:1px 4px}
+  .dl-sv-row .bd{flex:1;min-width:0}
+  .dl-sv-row .tg{display:inline-block;font-size:10px;font-weight:800;color:var(--c-primary);
+    background:var(--c-primary-soft);border-radius:5px;padding:1px 6px;margin-bottom:3px}
+  .dl-sv-row code{display:block;font-family:var(--font-num);font-size:11.5px;line-height:1.6;color:var(--c-t1);
+    word-break:break-all;white-space:normal;-webkit-user-select:all;user-select:all}
+  .dl-sv-row .dl-cp{flex:none;align-self:center;font:inherit;font-size:10.5px;font-weight:750;
+    color:var(--c-primary);background:var(--c-primary-soft);border:0;border-radius:7px;padding:5px 9px;cursor:pointer}
+  .dl-sv-row .dl-cp:hover{filter:brightness(.96)}
+  .dl-sv-row .dl-cp.done{background:rgba(15,157,88,.14);color:#0F9D58}
   .dl-grp{margin-bottom:14px}
   .dl-grp:last-child{margin-bottom:2px}
   .dl-grp>.h{display:flex;align-items:center;gap:7px;margin-bottom:8px}
@@ -1979,12 +2021,17 @@
        所以 /emulator.html 与 /unpack.html 会自动带上同一个弹窗。 -->
 <div class="dlpop" id="dlPop" hidden>
   <div class="dlpop-bg" data-dl="close"></div>
-  <div class="dlpop-box" role="dialog" aria-modal="true" aria-label="网盘下载链接">
+  <div class="dlpop-box" role="dialog" aria-modal="true" aria-label="下载与资源">
     <div class="dlpop-h">
       <span class="ic">📥</span>
-      <div class="tx"><b id="dlTitle">网盘下载</b><span id="dlSub"></span></div>
+      <div class="tx"><b id="dlTitle">下载与资源</b><span id="dlSub"></span></div>
       <button class="dlpop-x" type="button" data-dl="close" aria-label="关闭">✕</button>
     </div>
+    <!-- ★ v10.45：合并下载弹窗的模块页签容器（本体 / Mod / 修改器 / 存档）。
+         ★ 为什么挂在 `.dlpop-h` 与 `.dlpop-b` 之间：页签要**常驻**，
+           放进滚动区会随内容滚走。`hidden` 由 openUniDownload 摘掉，
+           其它复用 #dlPop 外壳的弹窗（查看全部 / 三专区全部）保持隐藏。 -->
+    <div class="dlmod" id="dlModTabs" hidden></div>
     <div class="dlpop-b" id="dlBody"></div>
     <div class="dlpop-f" id="dlFoot"></div>
   </div>
@@ -3494,14 +3541,17 @@ function paintDetail(d, fb, merge) {
          ⚠️ 本段位于模板字符串内部：注释里**不能出现反引号**，否则会提前终止模板串
             （v10.28 实测踩到：写成 markdown 行内代码，整段变成裸 JS，报 Unexpected identifier）。 -->
     <div class="d-dock">
-      <div class="dl-strip" id="dlStrip"${(d.url || fb.jidiUrl) ? '' : ' hidden'}>
-        ${(d.url || fb.jidiUrl) ? `<button class="ds ds-main" type="button" id="dlBtn"
-           data-dl-open data-dl-title="${esc(n.zh)}" data-dl-sub="${esc(n.en || '')}"
-           data-dl-url="${esc(d.url || '')}" data-dl-jidi="${esc(fb.jidiUrl || '')}">⬇ <em>下载本体</em></button>` : ''}
-        <button class="ds ds-mf" type="button" hidden data-dlmod-open="modifier"
-          data-dlmod-title="${esc(title)}" data-dlmod-id="${esc(fb.id || d.id || '')}">🛠 <em>修改器</em><i>0</i></button>
-        <button class="ds ds-mo" type="button" hidden data-dlmod-open="mod"
-          data-dlmod-title="${esc(title)}" data-dlmod-id="${esc(fb.id || d.id || '')}">🧩 <em>Mod</em><i>0</i></button>
+      <div class="dl-strip" id="dlStrip">
+        <!-- ★ v10.45：三个按钮（下载本体 / 修改器 / Mod）合并成**一个入口**。
+             ★ 为什么**不再带 hidden**：旧实现在「既无 d.url 又无 fb.jidiUrl」时整条收起 ——
+               可 Mod / 存档 与 XD 有没有详情页无关（Skyrim SE 就是 XD 有详情页、
+               但盘口要登录；而它的 Mod 有 60 条）。入口的可见性不该由「本体能不能取到」
+               决定。所以无条件渲染，四模块在弹窗里各自取数、各自给空态说明。
+             ⚠️ 本段在模板串内部：注释里**不能出现反引号**（会把模板串提前闭合）。 -->
+        <button class="ds ds-all" type="button" id="dlBtn" data-dl-open
+          data-dl-title="${esc(title)}" data-dl-sub="${esc(n.en || '')}"
+          data-dl-url="${esc(d.url || '')}" data-dl-jidi="${esc(fb.jidiUrl || '')}"
+          data-dl-id="${esc(fb.id || d.id || '')}">⬇ <em>下载与资源</em></button>
       </div>
       <div class="d-actions">
         <!-- ★ v10.22：「前往源站详情」**仍然保留** ——
@@ -4294,28 +4344,388 @@ function syncDActions() {
   box.classList.toggle('one', n <= 1);
   box.style.display = n ? '' : 'none';
 }
-/** 回填底部下载条里「修改器 / Mod」两个按钮的条数（v10.25）。
- *  @param {{mod?:number, modifier?:number}|null} counts 来自 /api/mods/match 的 counts
+/* ================= 📥 合并下载弹窗（v10.45 新增） =================
+ * 用户口径：
+ *   ①「部分游戏并未匹配：比如 The Elder Scrolls V: Skyrim Special Edition，他有 Mod/存档等，
+ *      但是在手机专区中点击查看游戏详情页并没有下载存档/修改器/Mod 等功能」
+ *   ②「我认为可以将下载弹窗合并成一个，并分模块展示即可（本体/mod/修改器/存档）」
+ *   ③ 追问后拍板：底部只留一个「⬇ 下载与资源」按钮；存档卡片留按钮、点开合并弹窗的「存档」模块
  *
- *  三条规则，都是为了「不让用户点到一个空弹窗」：
- *    ① 条数为 0（或拿不到 counts）→ 保持 hidden，不显示这个按钮；
- *    ② 按钮是 `hidden` 属性 + `.dl-strip > .ds[hidden]{display:none}` —— 必须显式写，
- *       因为 `.ds` 自己声明了 display:flex 会盖掉浏览器默认的 `[hidden]`；
- *    ③ 三个按钮全部隐藏时，把整条 `.dl-strip` 也收起来，不留一段空 margin。
- *  不去改列数：.dl-strip 是 flex，剩下的按钮自动铺满。 */
-function setDlCounts(counts) {
-  const strip = $('#dlStrip');
-  if (!strip) return;
-  const pair = [['modifier', '.ds-mf'], ['mod', '.ds-mo']];
-  for (const [k, sel] of pair) {
-    const b = strip.querySelector(sel);
-    if (!b) continue;
-    const n = (counts && Number(counts[k])) || 0;
-    b.hidden = !n;
-    const i = b.querySelector('i');
-    if (i) i.textContent = String(n);
+ * ★ 根因（不是版式问题，是**取数路径**问题）：
+ *   旧版的底部按钮条把「修改器 / Mod」的**条数**当作 `hidden` 的开关，而那份条数
+ *   **只从 /api/download 的 dlSecs 推**。XD 对部分游戏要求登录才给网盘地址
+ *   （实测 Skyrim SE `id=2765` 的 8 个盘口全返回「源站要求登录 / 权限」，`real:0`）
+ *   ⇒ `dlSecs` 为空 ⇒ 三个按钮全 hidden ⇒ 用户**连「这款游戏有 60 条 Mod」都看不到**。
+ *   而数据一直在：`/api/mods/match?t=…` 返回 60 条、`/api/saves/match` 有命中。
+ *   ⇒ 修法是**把入口与条数解耦**：入口无条件可见；四个模块各自取数、各自计数、
+ *     各自给空态说明（XD 需登录只影响「本体」一块，不再连坐其它三块）。
+ *
+ * ★ 四个模块**不是四个数据源的一一映射**，是「用户想拿什么」的四类：
+ *   本体    → /api/download（XD 官方盘口 + 机地「本体」专区的社区帖，要跟随 302 解析）
+ *   Mod     → /api/mods/match?kind=mod        （机地社区帖，带网盘直链）
+ *   修改器  → /api/mods/match?kind=modifier   （社区帖，能取件）
+ *             + /api/trainers/match            （GCM 元数据，**没有下载地址**，单独一段）
+ *   存档    → /api/saves/match                （Ludusavi 路径库，给的是「放哪」不是「下什么」）
+ *   ⚠️「修改器」模块里两段数据的性质完全不同（一个能点、一个不能），所以视觉上必须分开，
+ *      否则用户会把 GCM 的来源名当成下载按钮（旧版 `#trBlock` 就是纯文字列表，不带链接）。
+ *
+ * ★ 惰性加载：只加载**当前页签**。但 Mod / 修改器 / 存档三个走本地索引（毫秒级），
+ *   所以在打开的瞬间就并行发出去，让页签上的条数尽快填上 —— 最贵的 `/api/download`
+ *   （XD 逐个跟随 302，3-8 秒）留给「本体」页签按需取。
+ *   页签条数未回来时显示 `·` 而不是 `0`：`0` 是结论，`·` 是「还不知道」，不能混。
+ */
+const DL_UNI = [
+  { k: 'body', nm: '本体', ic: '📦' },
+  { k: 'mod', nm: 'Mod', ic: '🧩' },
+  { k: 'modifier', nm: '修改器', ic: '🛠' },
+  { k: 'save', nm: '存档', ic: '💾' },
+];
+const DL_UNI_KEYS = DL_UNI.map((m) => m.k);
+/** 当前合并弹窗的会话状态。`null` = 弹窗不是合并模式（查看全部 / 三专区全部）。
+ *  换游戏 / 关弹窗都会作废 —— 否则会出现「新游戏点开看到上一款的 Mod 清单」。 */
+let dlUni = null;
+
+/** 页签条（只有合并模式才有内容；其它复用 #dlPop 外壳的弹窗保持隐藏） */
+function dlUniTabs() {
+  const box = $('#dlModTabs');
+  if (!box) return;
+  if (!dlUni) { box.hidden = true; box.innerHTML = ''; return; }
+  box.hidden = false;
+  box.innerHTML = DL_UNI.map((m) => {
+    const n = dlUni.cnt[m.k];
+    /* 未回来给 `·`，回来了才给数字 —— `0` 是结论（真的没有），`·` 是还不知道 */
+    const badge = (n === undefined || n === null) ? '·' : String(n);
+    return `<button type="button" class="dlm${dlUni.tab === m.k ? ' on' : ''}" data-dlm="${m.k}">` +
+      `${m.ic} ${m.nm}<i>${esc(badge)}</i></button>`;
+  }).join('');
+}
+
+/** 切模块：只改状态再重绘（数据已缓存在 dlUni.data 里，不重复取数） */
+function dlGoModule(k) {
+  if (!dlUni || !DL_UNI_KEYS.includes(k) || dlUni.tab === k) return;
+  dlUni.tab = k;
+  dlUniTabs();
+  dlUniPane();
+}
+
+/** 画当前模块：先出加载态（或缓存内容），再按需取数 */
+function dlUniPane() {
+  if (!dlUni) return;
+  const k = dlUni.tab;
+  const st = dlUni;
+  const d = st.data[k];
+  if (d === undefined) {
+    $('#dlBody').innerHTML = '<div class="emu-loading">正在读取' +
+      DL_UNI.find((m) => m.k === k).nm + '…</div>';
+    dlUniLoad(k);
+    return;
   }
-  strip.hidden = !strip.querySelector('.ds:not([hidden])');
+  if (k === 'body') { dlUniPaintBody(d); return; }
+  if (k === 'mod' || k === 'modifier') { dlUniPaintMod(d, k); return; }
+  dlUniPaintSave(d);
+}
+
+/** 取数（每个模块只取一次；失败也记进 data，切回来能看到原因而不是无限转圈） */
+async function dlUniLoad(k) {
+  const st = dlUni;
+  if (!st || st.data[k] !== undefined || st.busy[k]) return;
+  st.busy[k] = true;
+  try {
+    if (k === 'body') {
+      const d = await dlUniFetchBody(st.ctx);
+      st.data.body = d;
+      st.cnt.body = d.links;
+    } else if (k === 'mod' || k === 'modifier') {
+      const [community, gcm] = await Promise.all([
+        dlUniFetchMods(st.ctx, k),
+        k === 'modifier' ? dlUniFetchGcm(st.ctx) : Promise.resolve([]),
+      ]);
+      st.data[k] = { community, gcm };
+      st.cnt[k] = community.count + gcm.length;
+    } else {
+      const h = await dlUniFetchSave(st.ctx);
+      st.data.save = h;
+      st.cnt.save = h ? (h.paths || []).length + (h.regs || []).length : 0;
+    }
+  } catch (e) {
+    st.data[k] = { error: String((e && e.message) || e) };
+  } finally {
+    st.busy[k] = false;
+  }
+  /* 只在「还是同一次会话」且「用户没切走」时才重绘 —— 否则会把用户刚切的页签覆盖掉 */
+  if (dlUni === st) { dlUniTabs(); if (st.tab === k) dlUniPane(); }
+}
+
+/** 反查端游库条目（只有 libId / 标题时用）—— 从存档卡片进来时 ctx 里没有 url。
+ *  ⚠️ 必须做这一步：否则「本体」页签会把「我们没查」显示成「这条没有源站详情页」，
+ *     同一个空态背后是两件完全不同的事（有详情页但没查 vs 真的没有）。 */
+async function dlUniResolveItem(ctx) {
+  if (ctx.id) {
+    try {
+      const j = await fetch(api('/api/library/item?id=' + encodeURIComponent(ctx.id))).then((r) => r.json());
+      if (j && j.ok && j.item) return j.item;
+    } catch (e) { /* 落到按名检索 */ }
+  }
+  if (ctx.title) {
+    try {
+      const j = await fetch(api('/api/library?q=' + encodeURIComponent(ctx.title) + '&limit=1')).then((r) => r.json());
+      if (j && j.ok && (j.items || []).length) return j.items[0];
+    } catch (e) { /* 放弃，退回空态 */ }
+  }
+  return null;
+}
+
+/** ① 本体：`/api/download`。只保留「本体」专区 —— Mod / 修改器有自己的模块，
+ *  且那边走 /api/mods/match（本地索引，覆盖更全），没必要把同一批帖渲染两遍。 */
+async function dlUniFetchBody(ctx) {
+  if (!ctx.url) {
+    const it = await dlUniResolveItem(ctx);
+    if (it) { ctx.url = it.url || ''; ctx.jidi = it.jidiUrl || ctx.jidi; }
+  }
+  const isJidi = (u) => /jidiyouxi\.com/.test(String(u || ''));
+  const jobs = [];
+  if (ctx.url) jobs.push({ tag: isJidi(ctx.url) ? 'jidi' : 'xd', u: ctx.url });
+  if (ctx.jidi && ctx.jidi !== ctx.url && !jobs.some((j) => j.u === ctx.jidi)) jobs.push({ tag: 'jidi', u: ctx.jidi });
+  if (!jobs.length) return { links: 0, posts: 0, xdItems: [], secs: [], noSrc: true, blocked: {} };
+  const res = await Promise.all(jobs.map((j) => {
+    /* 详情页打开时 loadDlBlock 已经把这份取回来了 → 秒开，不必再跑一次 302 解析。
+       ⚠️ 必须比 url：换一款游戏后 dlPre 指向上一款，用错会把别人的资源帖画进来。 */
+    if (dlPre && dlPre.url === j.u && dlPre.data && dlPre.data.ok) {
+      return Promise.resolve({ tag: j.tag, d: dlPre.data });
+    }
+    return fetch(api('/api/download?url=' + encodeURIComponent(j.u)))
+      .then((r) => r.json()).then((d) => ({ tag: j.tag, d }))
+      .catch((e) => ({ tag: j.tag, d: { ok: false, error: e.message } }));
+  }));
+  const good = res.filter((x) => x.d && x.d.ok);
+  const xd = good.find((x) => x.tag === 'xd');
+  const ji = good.find((x) => x.tag === 'jidi');
+  const xdItems = xd ? (xd.d.items || []).filter((i) => i.real) : [];
+  const jiAll = ji ? (ji.d.items || []).filter((i) => i.real) : [];
+  /* 服务端给 sections 就是权威分区；没有 sections（老服务）时把条目当「本体」一块，
+     行为与改造前一致 —— 不能让新增的模块划分把「本来能显示的链接」变成空白。 */
+  const rawSecs = (ji && Array.isArray(ji.d.sections) ? ji.d.sections.filter((s) => s && s.key) : []);
+  let secs = [];
+  if (rawSecs.length) {
+    secs = rawSecs.filter((s) => s.key === 'body')
+      .map((s) => ({ ...s, items: jiAll.filter((i) => i.section === s.key) }))
+      .filter((s) => s.items.length);
+  } else if (jiAll.length) {
+    secs = [{ key: 'body', name: '本体', count: jiAll.length, returned: jiAll.length, merged: false, items: jiAll }];
+  }
+  const links = xdItems.length + secs.reduce((n, s) => n + s.items.length, 0);
+  return {
+    links,
+    posts: secs.reduce((n, s) => n + dlGroupByPost(s.items).length, 0),
+    xdItems, secs,
+    head: good.map((x) => x.d.title).filter(Boolean)[0] || '',
+    sub: good.map((x) => x.d.version || x.d.subtitle).filter(Boolean)[0] || '',
+    topicUrl: (ji && ji.d.url) || 'https://jidiyouxi.com/',
+    /* 全军覆没时要把「为什么」带出来（源站要登录 / 解析失败是两种完全不同的处置） */
+    blocked: {
+      xd: (xd && !xdItems.length) ? xd.d : null,
+      ji: (ji && !jiAll.length) ? ji.d : null,
+    },
+    noGood: !good.length,
+  };
+}
+
+/** ② Mod / 修改器：`/api/mods/match`（机地社区帖，带网盘直链） */
+async function dlUniFetchMods(ctx, kind) {
+  const qs = [];
+  if (ctx.id) qs.push('id=' + encodeURIComponent(ctx.id));
+  if (ctx.title) qs.push('t=' + encodeURIComponent(ctx.title));
+  qs.push('kind=' + kind, 'limit=' + D_MOD_CAP);
+  const j = await fetch(api('/api/mods/match?' + qs.join('&'))).then((r) => r.json());
+  const items = (j && j.items) || [];
+  return { items, count: (j && j.count) || items.length, error: (j && j.error) || null };
+}
+
+/** ②b 修改器模块的第三方段落：Game Cheats Manager 元数据（**没有下载地址**） */
+async function dlUniFetchGcm(ctx) {
+  const t = String(ctx.title || '').trim();
+  if (t.length < 2) return [];
+  try {
+    const j = await fetch(api('/api/trainers/match?t=' + encodeURIComponent(t))).then((r) => r.json());
+    return (j && j.items) || [];
+  } catch (e) { return []; }
+}
+
+/** ③ 存档：`/api/saves/match`（给的是「放哪」，不是「下什么」） */
+async function dlUniFetchSave(ctx) {
+  const t = String(ctx.title || '').trim();
+  if (t.length < 2) return null;
+  const j = await fetch(api('/api/saves/match?t=' + encodeURIComponent(t))).then((r) => r.json());
+  return (j && j.hit) || null;
+}
+
+/** 打开合并下载弹窗。
+ *  @param {{title?:string, sub?:string, url?:string, jidi?:string, id?:string, tab?:string}} ctx
+ *    tab —— 直接落到哪个模块（存档卡片进来时给 'save'） */
+function openUniDownload(ctx) {
+  const pop = $('#dlPop');
+  if (!pop) return;
+  const o = ctx || {};
+  const tab = DL_UNI_KEYS.includes(o.tab) ? o.tab : 'body';
+  dlUni = {
+    ctx: {
+      title: String(o.title || '').trim(),
+      sub: String(o.sub || '').trim(),
+      url: String(o.url || '').trim(),
+      jidi: String(o.jidi || '').trim(),
+      id: String(o.id || '').trim(),
+    },
+    tab, cnt: {}, data: {}, busy: {},
+  };
+  const nm = splitName(dlUni.ctx.title);
+  $('#dlTitle').textContent = nm.zh || dlUni.ctx.title || '下载与资源';
+  $('#dlSub').textContent = dlUni.ctx.sub || '本体 / Mod / 修改器 / 存档';
+  pop.hidden = false;
+  requestAnimationFrame(() => pop.classList.add('on'));
+  dlUniTabs();
+  dlUniPane();
+  /* 便宜的三个先并行发出（本地索引，毫秒级）—— 页签上的数字尽早填上。
+     最贵的 /api/download 交给「本体」页签按需取。 */
+  for (const k of ['mod', 'modifier', 'save']) dlUniLoad(k);
+}
+
+/* ---------- 各模块的正文渲染 ---------- */
+/** 本体：整块复用现有 `dlView` + `paintDownload()` —— 排序 / 盘口筛选 / 展开全部
+ *  那套交互一行都不用重写，只是把 `secs` 限制在「本体」一块。 */
+function dlUniPaintBody(d) {
+  const body = $('#dlBody');
+  if (!d || d.error) {
+    body.innerHTML = '<div class="dlpop-empty">读取失败：' + esc((d && d.error) || '未知错误') +
+      '<br><span style="font-size:11.5px">稍后重试</span></div>';
+    return;
+  }
+  if (d.noSrc) {
+    body.innerHTML = '<div class="dlpop-empty">这一条没有源站详情页<br>' +
+      '<span style="font-size:11.5px">本体下载要跟着源站页面解析，没有详情页就没有出口；' +
+      'Mod / 修改器 / 存档 不受影响，点上面的页签看</span></div>';
+    return;
+  }
+  if (!d.xdItems.length && !d.secs.length) {
+    const blocks = [];
+    if (d.blocked.xd) blocks.push(dlBlocked('XDGAME 官方盘口', 'xd', 'XD', d.blocked.xd));
+    if (d.blocked.ji) blocks.push(dlBlocked('机地社区分享', 'jidi', '机地', d.blocked.ji));
+    body.innerHTML = '<div class="dl-note">这款游戏暂时<b>没有可直接打开的网盘地址</b>，下面是原因与出口</div>' +
+      (blocks.length ? blocks.join('')
+        : '<div class="dlpop-empty">这些条目在源站也可能只是话题、尚无资源帖' +
+          '<br><span style="font-size:11.5px">Mod / 修改器 / 存档 请点上面的页签</span></div>');
+    return;
+  }
+  const sec = {};
+  for (const s of d.secs) sec[s.key] = { all: false };
+  if (d.xdItems.length) sec.xd = { all: false };
+  const jiItems = d.secs.reduce((a, s) => a.concat(s.items), []);
+  dlView = {
+    sort: 'hot', filt: '',
+    tab: d.secs.some((s) => s.key === 'body') ? 'body' : (d.xdItems.length ? 'xd' : ''),
+    xdItems: d.xdItems, jiItems,
+    items: d.xdItems.concat(jiItems),
+    secs: d.secs, sec,
+    topicUrl: d.topicUrl,
+  };
+  paintDownload();
+}
+
+/** 社区帖行（Mod / 修改器共用；与旧 openModList 的行版式一致） */
+function dlModRowsHtml(items, kind) {
+  const M = D_MOD_META[kind];
+  return items.map((it) => {
+    const nets = [...new Set((it.links || []).map((l) => l.kind).filter(Boolean))].slice(0, 3).join(' / ');
+    const cn = (it.links || []).length;
+    const when = it.ut ? new Date(it.ut * 1000).toISOString().slice(0, 10) : '';
+    const meta = [nets || '', cn ? cn + ' 个直链' : '未见直链', when].filter(Boolean).join(' · ');
+    return '<a class="d-dl-it" href="' + esc(it.url || D_JIDI_MODS) + '" target="_blank" rel="noopener">' +
+      '<span class="k' + (kind === 'modifier' ? ' mf' : '') + '">' + esc(M.nm) + '</span>' +
+      '<span class="bd"><span class="t" title="' + esc(it.title || '') + '">' + esc(it.title || '') + '</span>' +
+      '<span class="m">' + esc(meta) + '</span></span>' +
+      '<span class="go">打开帖子 ↗</span></a>';
+  }).join('');
+}
+
+function dlUniPaintMod(d, kind) {
+  const body = $('#dlBody');
+  const M = D_MOD_META[kind];
+  const nm = splitName(dlUni.ctx.title).zh || dlUni.ctx.title || '';
+  if (!d || d.error) {
+    body.innerHTML = '<div class="dlpop-empty">读取失败：' + esc((d && d.error) || '未知错误') + '</div>';
+    return;
+  }
+  const c = d.community || { items: [], count: 0 };
+  const out = [];
+  /* 模块说明先摆出来：「修改器」与「Mod」的风险差异是用户决策要用到的信息 */
+  if (M.hint) out.push('<div class="dl-note" style="margin:0 0 8px">' + esc(M.hint) + '</div>');
+  if (!c.items.length) {
+    out.push('<div class="dlpop-empty">这款游戏在机地社区没有收录 ' + M.nm +
+      '<br><span style="font-size:11.5px">可以点下面的按钮到机地 MOD / 修改器区自己搜</span></div>');
+  } else {
+    out.push('<div class="dl-note">机地社区共 <b>' + c.count + '</b> 条 ' + M.nm +
+      ' 帖（本页铺 ' + c.items.length + ' 条）· 点任意一条去源站帖子取件</div>');
+    out.push(dlModRowsHtml(c.items, kind));
+    if (c.count > c.items.length) {
+      out.push('<div class="dl-note" style="margin:10px 0 0">另有 ' + (c.count - c.items.length) +
+        ' 条未展示，去机地搜「' + esc(nm) + '」看全部</div>');
+    }
+  }
+  /* 修改器模块的第三方段落：GCM 元数据**没有下载地址**，与「能点开的社区帖」视觉上必须分开 */
+  if (kind === 'modifier' && (d.gcm || []).length) {
+    out.push('<div class="dl-gcm"><div class="dl-note">另有 <b>' + d.gcm.length +
+      '</b> 个第三方修改器来源（Game Cheats Manager 元数据，<b>不含下载地址</b>，仅供确认「有没有 / 什么版本」）' +
+      ' · <a href="' + D_GCM_URL + '" target="_blank" rel="noopener">打开 GCM 下载页 ↗</a></div>' +
+      d.gcm.map((it) => {
+        const src = it.source || 'gcm';
+        const nmz = it.zh || it.name || '';
+        const en = (it.name && it.name !== nmz) ? it.name : '';
+        const meta = [en, it.version ? 'v ' + it.version : ''].filter(Boolean).join(' · ');
+        return '<div class="df-row"><span class="ix">·</span><span class="bd">' +
+          '<span class="t"><span class="tagx">' + esc(D_TR_SRC[src] || src) + '</span>' + esc(nmz) + '</span>' +
+          (meta ? '<span class="m">' + esc(meta) + '</span>' : '') + '</span></div>';
+      }).join('') + '</div>');
+  }
+  out.push('<div class="d-dl-links">' + dModLinks() + '</div>');
+  body.innerHTML = out.join('');
+}
+
+/** 存档：路径 / 注册表逐条给「复制」。这里是**唯一**展示存档落地路径的地方之一
+ *  （另一处是详情页的「云存档位置」块）—— 端游资源页的卡片已不再铺路径。 */
+function dlUniPaintSave(h) {
+  const body = $('#dlBody');
+  if (!h) {
+    body.innerHTML = '<div class="dlpop-empty">这款游戏在 Ludusavi 存档清单里没有记录<br>' +
+      '<span style="font-size:11.5px">清单只覆盖有公开存档目录约定的游戏；也可能是名称没对上</span></div>' +
+      '<div class="d-dl-links"><a href="/resources.html#sv">去存档库按名搜 ↗</a></div>';
+    return;
+  }
+  const paths = h.paths || [], regs = h.regs || [];
+  const tagOf = (t) => (t === 'config' ? '配置' : (t === 'save' ? '存档' : (t || '存档')));
+  const out = [];
+  const tags = [];
+  (h.cloud || []).forEach((c) => tags.push('<span class="d-tg cloud">☁ ' + esc(String(c).toUpperCase()) + '</span>'));
+  if (h.phone) tags.push('<span class="d-tg phone">手机能玩</span>');
+  if (h.installDir) tags.push('<span class="d-tg dim">安装目录 ' + esc(h.installDir) + '</span>');
+  out.push('<div class="dl-note">共 <b>' + (paths.length + regs.length) + '</b> 条记录 · ' +
+    '数据来自 Ludusavi 开源清单（MIT）。路径里的 <code>&lt;用户名&gt;</code> / ' +
+    '<code>&lt;平台账号ID&gt;</code> 是占位符，按自己的账号替换；<b>存档前请先退出游戏</b>。</div>');
+  if (tags.length) out.push('<div class="d-tg-row" style="margin:8px 0 2px">' + tags.join('') + '</div>');
+  const rows = [];
+  paths.forEach((p, i) => {
+    const full = p.shown || p.raw || '';
+    rows.push('<div class="dl-sv-row"><span class="ix">' + (i + 1) + '</span><span class="bd">' +
+      '<span class="tg">' + esc(tagOf((p.tags || [])[0])) + '</span>' +
+      '<code>' + esc(full) + '</code></span>' +
+      '<button class="dl-cp" type="button" data-dl-copy="' + esc(full) + '">复制</button></div>');
+  });
+  regs.forEach((r, i) => {
+    rows.push('<div class="dl-sv-row"><span class="ix">R' + (i + 1) + '</span><span class="bd">' +
+      '<span class="tg">注册表</span><code>' + esc(r.raw || '') + '</code></span>' +
+      '<button class="dl-cp" type="button" data-dl-copy="' + esc(r.raw || '') + '">复制</button></div>');
+  });
+  out.push(rows.length ? '<div class="dl-sv-list">' + rows.join('') + '</div>'
+    : '<div class="dlpop-empty">这份记录里只有游戏条目，没有具体的路径</div>');
+  body.innerHTML = out.join('');
 }
 /* 同分类推荐 ★ v10.11：改走后端多因子打分（类型 IDF + 系列名 + 评分接近度 + 容量接近度）
  *
@@ -4451,7 +4861,14 @@ async function loadDlBlock(d, fb, title) {
   const t = String(title || (d && d.title) || (fb && fb.title) || '').trim();
   const u = String((d && d.url) || (fb && fb.jidiUrl) || '').trim();
   dlSecs = []; dlSecTitle = t; dlPre = null;
-  if (!u) { slot.innerHTML = ''; return; }
+  /* ★ v10.45：没有源站详情页 ≠ 没有资源 —— Mod / 修改器 / 存档 都不依赖它。
+     所以这里给一句说明而不是清空（清空会让整块消失，正是用户反馈的那个观感）。 */
+  if (!u) {
+    slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>下载资源<span class="cnt">无源站页</span></h4>
+      <div class="d-hint2" style="border:0;padding-top:2px">这条没有源站详情页，<b>本体</b>取不到；
+        但 <b>Mod / 修改器 / 存档</b> 仍可查 —— 点底部「⬇ 下载与资源」。</div></div>`;
+    return;
+  }
   /* 先占位：/api/download 要跟随 302 逐个解析（XD 约 3-8 秒）。不能什么都不显示 ——
      空白会被读成「这一块功能没了」（v10.13 在手机配置上踩过同款坑）。 */
   slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>下载资源（本体 / Mod / 修改器）<span class="cnt">解析中</span></h4>
@@ -4466,14 +4883,26 @@ async function loadDlBlock(d, fb, title) {
         可直接去 <a href="${esc(u)}" target="_blank" rel="noopener">源站帖子</a> 看看。</div></div>`;
     return;
   }
-  dlPre = { url: u, data: j };            // 缓存：点「下载本体」时秒开，不再解析第二遍
+  dlPre = { url: u, data: j };            // 缓存：弹窗「本体」模块秒开，不再解析第二遍
   dlSecs = dlSecsOf(j);
-  if (!dlSecs.length) { slot.innerHTML = ''; return; }
-  /* 底部三个下载按钮的条数也从这份数据回填（原来是 /api/mods/match 的 counts）——
-     同一个语义只留一个来源，避免出现「按钮写 190、点开只有 110」这种数字对不上。 */
-  const cnt = {};
-  for (const s of dlSecs) if (s.key === 'mod' || s.key === 'modifier') cnt[s.key] = s.count || s.posts.length;
-  setDlCounts(cnt);
+  /* ★ v10.45：整组取不到时**不再 `slot.innerHTML=''` 一走了之**。
+     旧写法让整块下载区凭空消失 —— XD 对部分游戏（实测 Skyrim SE id=2765）要求登录，
+     8 个盘口全 `real:0` ⇒ dlSecs 为空 ⇒ 用户以为「这款游戏没有下载」，
+     而它的 Mod / 存档其实都在。现在给一句实话 + 指出真正的出口。 */
+  if (!dlSecs.length) {
+    /* ⚠️ 徽标必须跟着**真实原因**走：`items: []`（源站这次没给）与 `needAuth`（要登录）
+     *   是两件不同的事，写死成「需登录源站」就是 over-claim ——
+     *   用户去登录后照样没有，会以为是站点坏了。 */
+    const needAuth = (j.items || []).some((i) => i.needAuth);
+    const why = needAuth
+      ? '源站要求<b>登录 / 权限</b>才给网盘地址'
+      : '源站这次没有返回可直接打开的网盘地址';
+    slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>下载资源<span class="cnt">${needAuth ? '需登录源站' : '无可用地址'}</span></h4>
+      <div class="d-hint2" style="border:0;padding-top:2px">${why} —— <b>只影响「本体」</b>；
+        <b>Mod / 修改器 / 存档</b> 与它无关，点底部「⬇ 下载与资源」逐模块看。
+        也可以直接去 <a href="${esc(u)}" target="_blank" rel="noopener">源站帖子</a>${needAuth ? ' 登录后取件' : ' 看看'}。</div></div>`;
+    return;
+  }
   const totalPosts = dlSecs.reduce((n, s) => n + s.posts.length, 0);
   const totalLinks = dlSecs.reduce((n, s) => n + s.links, 0);
   slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>下载资源<span class="cnt">${dlSecs.map((s) => esc(s.name) + ' ' + s.posts.length).join(' · ')}</span></h4>
@@ -4482,7 +4911,7 @@ async function loadDlBlock(d, fb, title) {
     ${dlSecs.map(dlPrevBlock).join('')}
     <div class="d-dl-links">
       <a href="${esc(u)}" target="_blank" rel="noopener">源站帖子 ↗</a>
-      <a href="/emulator.html#sv">云存档位置</a>
+      <a href="/resources.html#sv">云存档位置库</a>
       <a href="${D_JIDI_MODS}" target="_blank" rel="noopener">机地 MOD / 修改器区 ↗</a>
     </div></div>`;
 }
@@ -4674,7 +5103,9 @@ function dlRow(g) {
  *   把「用户选了什么」（dlView）与「怎么渲染」（paintDownload 一个出口）分开，
  *   就不必在三个地方各写一遍 innerHTML —— 本项目踩过「同一份 UI 有两个独立渲染分支、
  *   只改了其中一个，界面自相矛盾」的坑（PITFALLS 16）。
- * ★ 每次 openDownload 重置：上一款游戏的选择不能带到下一款。
+ * ★ 每次打开弹窗都会重置：上一款游戏的选择不能带到下一款。
+ * ★ v10.45：它现在只服务**合并弹窗的「本体」页签**（`dlUniPaintBody` 每次重建它），
+ *   其它三个模块不读它。所以事件委托里那批开关都加了 `dlUni.tab === 'body'` 的判定。
  */
 let dlView = null;
 
@@ -4907,120 +5338,18 @@ function closeDownload() {
   /* ★ v10.28：翻页状态一并作废 —— 留着的话下次打开会先按旧页码画一帧，
      而那时 `dFullCur.p` 指向的仍是**上一次**那份载荷（数据已经不对了）。 */
   dFullCur = null;
+  /* ★ v10.45：合并弹窗的会话状态同样作废（否则换一款游戏点开会看到上一款的 Mod / 存档）。
+     模块页签条也要一起藏掉 —— 其它复用 #dlPop 外壳的弹窗不该带这排签。 */
+  dlUni = null;
+  const mt = $('#dlModTabs');
+  if (mt) { mt.hidden = true; mt.innerHTML = ''; }
   setTimeout(() => { pop.hidden = true; const b = $('#dlBody'); if (b) b.innerHTML = ''; }, 180);
 }
-/**
- * 打开下载弹窗。
- * @param {{title?:string, sub?:string, url?:string, jidi?:string}} ctx
- *   url  —— 当前源详情页（XD 或机地，服务端 parseDetailUrl 兼容两者）
- *   jidi —— 另一侧的机地详情页（库里合并进来的 XD 条目才有）
- */
-async function openDownload(ctx) {
-  const pop = $('#dlPop');
-  if (!pop) return;
-  const o = ctx || {};
-  /* 去重：url 本身就是机地详情页时，jidi 不再重复请求 */
-  const isJidi = (u) => /jidiyouxi\.com/.test(String(u || ''));
-  const jobs = [];
-  if (o.url) jobs.push({ tag: isJidi(o.url) ? 'jidi' : 'xd', u: o.url });
-  if (o.jidi && o.jidi !== o.url && !jobs.some((j) => j.u === o.jidi)) jobs.push({ tag: 'jidi', u: o.jidi });
-
-  $('#dlTitle').textContent = o.title || '网盘下载';
-  $('#dlSub').textContent = o.sub || '';
-  $('#dlFoot').innerHTML = '';
-  pop.hidden = false;
-  requestAnimationFrame(() => pop.classList.add('on'));
-
-  if (!jobs.length) {
-    $('#dlBody').innerHTML = '<div class="dlpop-empty">这款游戏没有可解析的下载来源<br>' +
-      '<span style="font-size:11.5px">库里既没有 XD 详情页，也没有合并的机地话题</span></div>';
-    return;
-  }
-  $('#dlBody').innerHTML = '<div class="dlpop-load"><i></i><span>正在解析网盘地址（XD 需逐个跟随跳转，约 3-8 秒）…</span></div>';
-
-  /* ★ v10.28：详情页打开时 `loadDlBlock` 已经把这份数据取回来了（存在 dlPre）——
-     命中就直接复用，用户点「下载本体」是**秒开**，而不是再等一次 3-8 秒的 302 解析。
-     ⚠️ 必须比对 url：换一款游戏后 dlPre 会指向上一款，用错会把别人的资源帖画进来
-        （而且看起来完全正常，是最难发现的那类错串）。 */
-  const res = await Promise.all(jobs.map((j) => {
-    if (dlPre && dlPre.url === j.u && dlPre.data && dlPre.data.ok) {
-      return Promise.resolve({ tag: j.tag, d: dlPre.data });
-    }
-    return fetch(api('/api/download?url=' + encodeURIComponent(j.u)))
-      .then((r) => r.json())
-      .then((d) => ({ tag: j.tag, d }))
-      /* ★ 单个源失败不能拖垮另一个 —— 兜成同一个返回形状，下面统一渲染 */
-      .catch((e) => ({ tag: j.tag, d: { ok: false, error: e.message } }));
-  }));
-
-  /* 标题优先用源站返回的**完整标题**（用户要的就是「完整的标题」，别用库里的短名盖掉） */
-  const good = res.filter((x) => x.d && x.d.ok);
-  const head = good.map((x) => x.d.title).filter(Boolean)[0];
-  if (head) $('#dlTitle').textContent = head;
-  const subs = [];
-  for (const x of good) { if (x.d.version) subs.push(x.d.version); else if (x.d.subtitle) subs.push(x.d.subtitle); }
-  if (subs.length) $('#dlSub').textContent = subs.join(' · ');
-
-  if (!good.length) {
-    const errs = res.map((x) => (x.d && x.d.error) || '未知错误').join('；');
-    $('#dlBody').innerHTML = '<div class="dlpop-empty">没有取到可用的下载链接<br>' +
-      '<span style="font-size:11.5px">' + esc(errs) + '</span></div>';
-    $('#dlFoot').innerHTML = '<b>说明</b>：链接由源站实时解析，可能因为源站改版 / 网络抖动失败，稍后重试即可。';
-    return;
-  }
-
-  const xd = good.find((x) => x.tag === 'xd');
-  const ji = good.find((x) => x.tag === 'jidi');
-  const xdItems = xd ? (xd.d.items || []).filter((i) => i.real) : [];
-  const jiItems = ji ? (ji.d.items || []).filter((i) => i.real) : [];
-  /* ★ v10.26：机地按源站的话题专区（本体 / mod / 修改器）分区；服务端给的 sections 是权威口径
-     （带源站总帖数与「是否并入最近发布」）。老服务没有 sections 时把条目当成「本体」一块，
-     行为与改造前一致 —— 不能让一个新增的分区逻辑把「本来能显示的链接」变成空白。 */
-  const jiSecs = (ji && Array.isArray(ji.d.sections) ? ji.d.sections.filter((s) => s && s.key) : [])
-    .map((s) => ({ ...s, items: jiItems.filter((i) => i.section === s.key) }))
-    .filter((s) => s.items.length);
-  const secs = jiSecs.length ? jiSecs
-    : (jiItems.length ? [{ key: 'body', name: '本体', count: jiItems.length, returned: jiItems.length, merged: false, items: jiItems }] : []);
-
-  if (!xdItems.length && !jiItems.length) {
-    dlView = null;
-    const blocks = [];
-    if (xd) blocks.push(dlBlocked('XDGAME 官方盘口', 'xd', 'XD', xd.d));
-    if (ji) blocks.push(dlBlocked('机地社区分享', 'jidi', '机地', ji.d));
-    $('#dlBody').innerHTML = '<div class="dl-note">这款游戏暂时<b>没有可直接打开的网盘地址</b>，下面是原因与出口</div>' +
-      (blocks.length ? blocks.join('') : '<div class="dlpop-empty">这些条目在源站也可能只是话题、尚无资源帖</div>');
-    $('#dlFoot').innerHTML = '<b>链接来自源站</b>：XD 的地址由 <code>/plus/download.php</code> 跳转解析，' +
-      '机地的来自社区帖正文。本站只做聚合与解析，<b>不转存、不提供文件</b>；下载前请自行核对文件安全。';
-    return;
-  }
-
-  /* ===== 初始化视图状态（每次打开重置）=====
-     ★ v10.29：`sec[key]` 只留 `all`（该分区是否点了「展开全部 N 帖」）；
-       `open` 随折叠一起废掉 —— 一次只画一个分区，当前分区由 `tab` 决定。
-       ⚠️ 状态与渲染分开仍然是本块的规矩（见上方 dlView 的注释）：
-          切签 / 换排序 / 换筛选都只改 dlView 再调 paintDownload 一次。 */
-  const sec = {};
-  for (const s of secs) sec[s.key] = { all: false };
-  if (xdItems.length) sec.xd = { all: false };
-  /* 本体优先：用户点「下载」多半是冲本体来的（源站那三个 tab 里本体也是默认页）。
-     本体这次没有条目时开第一个有内容的分区 —— 否则打开就是一片折叠标题，等于什么都没看到。
-     ★ v10.29：机地一个专区都没有时（纯 XD 条目）回落到 XD 那一块，而不是留空。 */
-  const firstTab = secs.some((s) => s.key === 'body') ? 'body'
-    : ((secs[0] && secs[0].key) || (xdItems.length ? 'xd' : ''));
-
-  dlView = {
-    sort: 'hot',
-    filt: '',
-    tab: firstTab,
-    xdItems, jiItems,
-    items: xdItems.concat(jiItems),
-    secs, sec,
-    topicUrl: (ji && ji.d.url) || 'https://jidiyouxi.com/',
-  };
-  paintDownload();
-  $('#dlFoot').innerHTML = '<b>链接来自源站</b>：XD 的地址由 <code>/plus/download.php</code> 跳转解析，' +
-    '机地的来自社区帖正文。本站只做聚合与解析，<b>不转存、不提供文件</b>；下载前请自行核对文件安全。';
-}
+/* ★ v10.45：原 openDownload()（异步解析 + 一次性铺全部专区的网盘弹窗）**已删除**。
+   它被 openUniDownload() 取代 —— 后者把「本体 / Mod / 修改器 / 存档」拆成四个模块页签，
+   并且不再把「入口是否可见」绑在 /api/download 的成败上
+   （那是 Skyrim SE 详情页看不到 Mod / 存档的根因）。
+   ⚠️ 旧函数里的取数逻辑**不是丢掉**，而是原样搬进了 dlUniFetchBody() —— 改那块前先读上面的注释。 */
 /* ============ 📚 「查看全部」弹窗（v10.25 新增） ============
  * 用户口径：「详情页中如果数量较大，则增加一个按钮（更多）查看该专区的全部内容弹窗」。
  *
@@ -5218,6 +5547,12 @@ async function openFullPop(token) {
   pop.hidden = false;
   requestAnimationFrame(() => pop.classList.add('on'));
   dFullCur = null;
+  /* ★ v10.45：这不是合并弹窗（是「查看全部 / 三专区全部」这类子视图）——
+     把模块页签藏掉，否则会出现「点了『全部 N 帖』却还留着一排模块签」的两套导航并存。
+     同时作废 dlUni：子视图里没有模块语境，留着会让 dlGoModule 作用到一份看不见的状态上。 */
+  dlUni = null;
+  const mt = $('#dlModTabs');
+  if (mt) { mt.hidden = true; mt.innerHTML = ''; }
   const needLoad = typeof src.load === 'function';
   $('#dlBody').innerHTML = '<div class="dlpop-load"><i></i><span>正在读取全部内容…</span></div>';
   let p = src;
@@ -5256,71 +5591,7 @@ const D_MOD_META = {
 const D_MOD_CAP = 60;
 function dModLinks() {
   return '<a href="' + D_JIDI_MODS + '" target="_blank" rel="noopener">机地 MOD / 修改器区 ↗</a>' +
-    '<a href="/emulator.html#tr">修改器库</a><a href="/emulator.html#sv">云存档位置</a>';
-}
-/**
- * 打开「修改器 / Mod」列表弹窗。
- * @param {{kind?:string, title?:string, id?:string}} ctx
- *   kind  —— 'mod' | 'modifier'（其余值一律当 mod）
- *   title —— 完整游戏标题（与 loadDlBlock 的查询串一致）
- *   id    —— 机地 libId（fb.id）；有它就能只按库内配对取，比按名检索准
- */
-async function openModList(ctx) {
-  const pop = $('#dlPop');
-  if (!pop) return;
-  const o = ctx || {};
-  const kind = o.kind === 'modifier' ? 'modifier' : 'mod';
-  const M = D_MOD_META[kind];
-  const t = String(o.title || '').trim();
-  const id = String(o.id || '').trim();
-  const shown = splitName(t).zh || t;
-  $('#dlTitle').textContent = shown ? shown + ' · ' + M.nm : M.nm;
-  $('#dlSub').textContent = M.hint;
-  $('#dlFoot').innerHTML = '<b>来源</b>：机地社区帖（MOD / 修改器区）。本站只做聚合与跳转，' +
-    '网盘链接与文件都在源站帖子内，<b>不转存、不提供文件</b>；下载前请自行核对文件安全。';
-  pop.hidden = false;
-  requestAnimationFrame(() => pop.classList.add('on'));
-  if (t.length < 2 && !id) {
-    $('#dlBody').innerHTML = '<div class="dlpop-empty">这一条拿不到可检索的游戏名，无法在机地社区定位帖子</div>';
-    return;
-  }
-  $('#dlBody').innerHTML = '<div class="dlpop-load"><i></i><span>正在读取机地社区的 ' + M.nm + ' 帖…</span></div>';
-  try {
-    const qs = [];
-    if (id) qs.push('id=' + encodeURIComponent(id));
-    if (t) qs.push('t=' + encodeURIComponent(t));
-    qs.push('kind=' + kind, 'limit=' + D_MOD_CAP);
-    const j = await fetch(api('/api/mods/match?' + qs.join('&'))).then((r) => r.json());
-    const items = (j && j.items) || [];
-    const cnt = (j && j.count) || items.length;
-    if (!items.length) {
-      $('#dlBody').innerHTML = '<div class="dlpop-empty">这款游戏在机地社区没有收录 ' + M.nm +
-        '<br><span style="font-size:11.5px">可以点下面的按钮到机地 MOD / 修改器区自己搜</span></div>' +
-        '<div class="d-dl-links">' + dModLinks() + '</div>';
-      return;
-    }
-    const rows = items.map((it) => {
-      const nets = [...new Set((it.links || []).map((l) => l.kind).filter(Boolean))].slice(0, 3).join(' / ');
-      const cn = (it.links || []).length;
-      const when = it.ut ? new Date(it.ut * 1000).toISOString().slice(0, 10) : '';
-      const meta = [nets || '', cn ? cn + ' 个直链' : '未见直链', when].filter(Boolean).join(' · ');
-      return '<a class="d-dl-it" href="' + esc(it.url || D_JIDI_MODS) + '" target="_blank" rel="noopener">' +
-        '<span class="k' + (kind === 'modifier' ? ' mf' : '') + '">' + esc(M.nm) + '</span>' +
-        '<span class="bd"><span class="t" title="' + esc(it.title || '') + '">' + esc(it.title || '') + '</span>' +
-        '<span class="m">' + esc(meta) + '</span></span>' +
-        '<span class="go">打开帖子 ↗</span></a>';
-    }).join('');
-    const rest = cnt > items.length
-      ? '<div class="dl-note" style="margin:10px 0 0">另有 ' + (cnt - items.length) + ' 条未展示（本页只铺 ' +
-        items.length + ' 条），去机地搜「' + esc(shown) + '」看全部</div>' : '';
-    $('#dlBody').innerHTML = '<div class="dl-note">机地社区共 <b>' + cnt + '</b> 条 ' + M.nm +
-      ' 帖 · 点任意一条去源站帖子取件</div>' + rows + rest +
-      '<div class="d-dl-links">' + dModLinks() + '</div>';
-  } catch (e) {
-    $('#dlBody').innerHTML = '<div class="dlpop-empty">读取失败：' + esc(e.message) + '<br>' +
-      '<span style="font-size:11.5px">稍后重试，或直接去机地 MOD / 修改器区</span></div>' +
-      '<div class="d-dl-links">' + dModLinks() + '</div>';
-  }
+    '<a href="/resources.html#tr">修改器库</a><a href="/resources.html#sv">云存档位置</a>';
 }
 /* 绑定一次（弹层与 Toggle 都是共享资产的常驻节点）。
    ★ 用**事件委托**而不是给每个按钮绑：解包匹配页的卡片是动态重绘的，
@@ -5345,8 +5616,11 @@ async function openModList(ctx) {
        为什么必须委托：#dlBody 每次都是整块 innerHTML 重建，直接绑在按钮上的监听会全掉
        （v10.25 已记过这条）。这里先判，命中就 return，不再往下走下载入口的分支。
        ★ v10.29：原来的「折叠 / 展开专区」开关（data-dl-sec）随 tab 化一起删了 ——
-          现在没有「折叠着但标题仍留在页面上」的中间态。 */
-    if (dlView) {
+          现在没有「折叠着但标题仍留在页面上」的中间态。
+       ★ v10.45：加 `dlView && dlUni && dlUni.tab === 'body'` 的三段判 ——
+          `dlView` 现在只是**合并弹窗「本体」页签**的子状态；用户在 Mod / 存档 页签时
+          它仍然留着上一次的排序/筛选，不判就会让那几个开关作用到看不见的画布上。 */
+    if (dlView && dlUni && dlUni.tab === 'body') {
       const go = e.target.closest('[data-dl-go]');
       if (go) { dlGoTab(go.dataset.dlGo); return; }
       const st = e.target.closest('[data-dl-sort]');
@@ -5398,38 +5672,21 @@ async function openModList(ctx) {
       $('#dlBody').scrollTop = 0;
       return;
     }
-    /* ★ v10.25：Mod / 修改器按钮 —— **必须先于** data-dl-open 判（两者都可能是
-       button.ds，且 data-dlmod-open 的按钮不带 data-dl-open，顺序其实无所谓；
-       但显式分开判，避免以后有人给同一个按钮挂两个属性时行为不确定）。 */
-    const mb = e.target.closest('[data-dlmod-open]');
-    if (mb) {
-      e.preventDefault();
-      e.stopPropagation();
-      const kind = mb.dataset.dlmodOpen || 'mod';
-      /* ★ v10.28：三专区预览把「本体 / Mod / 修改器」的**权威清单**搬进了 #dlSlot
-         （/api/download 按源站专区切分），而底部这两个按钮的条数也由 setDlCounts
-         按同一份回填 —— 所以只要该专区在 dlSecs 里，就开那份分页弹窗。
-         否则会出现「按钮写 190、点开只有 110」：按钮走 download、弹窗走 /api/mods/match，
-         同一个语义两个统计口径（PITFALLS 2「同一字段多条链路」）。
-         ⚠️ 两条链路都留着 —— XD 源没有「专区」概念（dlSecs 退成一块 key=all），
-            那种条目仍走 mods/match 的 id ∪ 名称联合匹配，不能让它变成空弹窗。 */
-      if (dlSecs.some((s) => s.key === kind)) { openDlSecPop(kind); return; }
-      openModList({
-        kind,
-        title: mb.dataset.dlmodTitle || '',
-        id: mb.dataset.dlmodId || '',
-      });
-      return;
-    }
+    /* ★ v10.45：合并弹窗的**模块页签**切换。放在最前面判 ——
+       它挂在 `#dlModTabs`（`#dlBody` 之外），与下面那批只有正文里才有的
+       `data-dl-*` 控件不重叠，但先判能省掉一串 closest()。 */
+    const dm = e.target.closest('[data-dlm]');
+    if (dm && dlUni) { e.preventDefault(); e.stopPropagation(); dlGoModule(dm.dataset.dlm); return; }
     const b = e.target.closest('[data-dl-open]');
     if (!b) return;
     e.preventDefault();
     e.stopPropagation();
-    openDownload({
+    openUniDownload({
       title: b.dataset.dlTitle || '',
       sub: b.dataset.dlSub || '',
       url: b.dataset.dlUrl || '',
       jidi: b.dataset.dlJidi || '',
+      id: b.dataset.dlId || '',
     });
   });
 })();

@@ -199,9 +199,18 @@ const idx = read('public/index.html');
 ok(/function dlBlock\(o\)/.test(idx), '★ 有 dlBlock() 画「当前分区」的面板（本体 / mod / 修改器共用同一骨架）');
 /* ★ v10.29：工具条与正文共用同一份分区清单（两处各算一遍必然漂移） */
 ok(/function dlTabList\(v\)/.test(idx), '★ 有 dlTabList() —— 分区的唯一真源（签与面板都从它取数）');
-ok(/const secs = jiSecs\.length \? jiSecs/.test(idx),
-  '★ 专区清单以服务端 sections 为权威口径（拿不到才把条目当成「本体」一块）');
-ok(/ji\.d\.sections\.filter\(\(s\) => s && s\.key\)/.test(idx), 'openDownload 从 sections 分区');
+/* ★ v10.45：这段逻辑随 `/api/download` 的取数一起从 `openDownload()` 搬进了
+ *   `dlUniFetchBody()`（「下载弹窗合并成一个、分模块展示」那轮改造）——
+ *   锚点**跟着搬家**，不是删掉。判据本身逐字保留：服务端给了 `sections` 就以它为权威口径，
+ *   拿不到（老服务 / 该源没分区）才把条目当成「本体」一块 ——
+ *   不能让新增的模块划分把「本来能显示的链接」变成空白。
+ *   ⚠️ 别只留 `Array.isArray(ji.d.sections)` 一条：那只证明「读了」，证明不了「拿不到时有兜底」，
+ *      而兜底才是这段最容易在重构里被顺手删掉的部分（删了界面只是少几行，不报错）。 */
+ok(/const rawSecs = \(ji && Array\.isArray\(ji\.d\.sections\)/.test(idx) && /rawSecs\.length\) \{/.test(idx),
+  '★ 专区清单以服务端 sections 为权威口径（拿得到就按它分区）');
+ok(/else if \(jiAll\.length\)/.test(idx) && /key: 'body'/.test(idx),
+  '★ 拿不到 sections 时退回「把条目当成『本体』一块」（老服务不能让正文空白）');
+ok(/ji\.d\.sections\.filter\(\(s\) => s && s\.key\)/.test(idx), 'dlUniFetchBody 从 sections 分区');
 /* ★ v10.29：`.dl-secs`（三专区纵向叠放）与 `.dl-tg`（折叠开关）随 tab 化一起删了 ——
    折叠态下其余专区仍以自己的标题行留在页面上，用户看到的就是
    「本体下面还压着 Mod / 修改器」，正是他要求「就分开显示」要消掉的东西。

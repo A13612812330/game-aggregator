@@ -200,8 +200,13 @@ console.log('\n=== ④ 下载弹窗分区 tab ===');
     '★ 切分区后滚动位置归零（否则看到的是新分区的中段，会以为「这块只有这么几条」）');
   ok(/dlGoTab\(go\.dataset\.dlGo\)/.test(IDX), '★ 委托里 data-dl-go 走 dlGoTab（不是旧的展开折叠）');
 
-  const od = (/async function openDownload\([\s\S]*?\n\}/.exec(IDX) || [''])[0];
-  ok(/tab: firstTab/.test(od), '★ openDownload 初始化 dlView.tab');
+  /* ★ v10.45：这段初始化随 `/api/download` 的取数从 `openDownload()` 搬进了
+     `dlUniPaintBody()`（「本体」从独立弹窗变成合并弹窗的一个模块）—— 锚点跟着**搬家**。
+     判据本身逐字保留：本体优先、源站连一个专区都没有时回落 XD、`sec[key]` 只剩 `all`。 */
+  const od = (/function dlUniPaintBody\([\s\S]*?\n\}/.exec(IDX) || [''])[0];
+  ok(od.length > 0, '★ 取到 dlUniPaintBody（合并弹窗的「本体」模块渲染器）');
+  ok(/tab: d\.secs\.some\(\(s\) => s\.key === 'body'\) \? 'body'/.test(od),
+    '★ dlUniPaintBody 初始化 dlView.tab（本体优先）');
   ok(/s\.key === 'body'\) \? 'body'/.test(od), '本体优先（源站三个 tab 里本体也是默认页）');
   ok(/xdItems\.length \? 'xd' : ''/.test(od), '机地一个专区都没有时回落到 XD 那一块');
   ok(!/open: (true|false)/.test(od), '★ sec[key] 只剩 all —— open 随折叠一起废掉');

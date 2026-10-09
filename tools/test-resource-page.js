@@ -178,23 +178,57 @@ async function main() {
     !q('#resSaves').classList.contains('et-hide') && q('#mods').classList.contains('et-hide'));
   ok('切「存档」→ 页签高亮同步', (q('#resTabs .res-tab.on') || {}).dataset?.et === 'sv');
   ok('存档网格已渲染卡片', qa('#svGrid .emu-card').length > 0, `实际 ${qa('#svGrid .emu-card').length}`);
-  /* ★ 核心诉求：卡片上必须真的把「存档路径」铺出来（用户照它找文件） */
-  ok('存档卡片渲染出路径行（.paths .p）', qa('#svGrid .emu-card .paths .p').length > 0,
-    `实际 ${qa('#svGrid .emu-card .paths .p').length}`);
-  ok('存档卡片带「复制」按钮（路径行右侧）', qa('#svGrid .emu-card .paths .cp').length > 0,
-    `实际 ${qa('#svGrid .emu-card .paths .cp').length} 个`);
+  /* ★★ v10.45 改版（用户口径：「存档位置显示有点多以及杂，先优化存档页面中的卡片，
+   *   不在卡片中显示位置」）——卡面**不再铺路径**，改成一个整宽按钮开合并弹窗的「存档」模块。
+   *   所以这里第一组是**反向断言**：卡面必须干净。反向断言最容易「因为选择器写错而平白变绿」
+   *   （选择器不存在 ⇒ 计数 0 ⇒ 通过），所以下面还有一条正向断言钉住 `.sv-open` 真的渲染出来了。 */
+  ok('★★ 存档卡面已不再铺路径（.paths 必须为 0）——本轮改版的核心诉求',
+    qa('#svGrid .emu-card .paths').length === 0,
+    `实际 ${qa('#svGrid .emu-card .paths').length} 个 .paths`);
+  ok('★★ 存档卡面也没有路径行右侧的「复制」键（.cp 已搬进弹窗）',
+    qa('#svGrid .emu-card .cp').length === 0,
+    `实际 ${qa('#svGrid .emu-card .cp').length} 个 .cp`);
+  const svOpens = qa('#svGrid .emu-card .sv-open');
+  ok('存档卡片带「查看 N 条存档位置」整宽按钮（卡面唯一动作，正向锚点）',
+    svOpens.length > 0, `实际 ${svOpens.length} 个 .sv-open`);
+  ok('按钮文案含条数（卡面没有路径了，条数是「值不值得点」的量）',
+    svOpens.length > 0 && /查看\s*\d+\s*条存档位置/.test(svOpens[0].textContent || ''),
+    svOpens.length ? svOpens[0].textContent.trim() : '(缺失)');
+  ok('按钮带 data-sv-open / data-title（点它要能把游戏名递给合并弹窗）',
+    svOpens.length > 0 && svOpens[0].hasAttribute('data-sv-open') && !!svOpens[0].dataset.title,
+    svOpens.length ? JSON.stringify({ title: svOpens[0].dataset.title, lib: svOpens[0].dataset.lib }) : '(缺失)');
   {
-    /* ★ 判据别钉死盘符：Ludusavi 的存档位置大量以占位词开头
+    /* ★ 路径**可读性**判据「搬家」（不是删掉）：卡面已不铺路径，取样点换成弹窗里的
+     *   `.dl-sv-row code`，判据本身逐字保留 —— 这样「路径解析退化成原样透出占位 token」
+     *   仍然会被抓住，只是抓住它的地方换了。
+     *   ★ 判据别钉死盘符：Ludusavi 的存档位置大量以占位词开头
      *   （`<游戏安装目录>\…` / `<winAppData>\…`），带盘符的只是其中一部分
      *   （实测首个卡片就是 `<游戏安装目录>\Hannah and Joseph Games\…`，
      *     钉 `[A-Z]:\\` 会当场假红）。
      *   这里只要求「解析出了路径分隔符或注册表头」——即它确实是条路径，
      *   而不是原样透出的占位 token；并且**抽全量**看比例，不看单张卡。 */
-    const all = qa('#svGrid .emu-card .paths .p span').map((s) => s.textContent || '');
-    const hit = all.filter((t) => /[\\/]|HKEY_/.test(t)).length;
+    svOpens[0].dispatchEvent(new W.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await sleep(1500);
+    const pop = q('#dlPop');
+    const open = !!(pop && !pop.hidden);
+    ok('点「查看 N 条存档位置」→ 合并弹窗打开（这是卡面唯一动作，必须真有反应）', open,
+      pop ? `hidden=${pop.hidden}` : '(无 #dlPop)');
+    const onTab = q('#dlModTabs .dlm.on');
+    ok('★ 弹窗自动落在「存档」模块（不是默认的「本体」）—— 落点要跟着入口走',
+      !!(onTab && /存档/.test(onTab.textContent || '')),
+      onTab ? onTab.textContent.trim() : '(无 .dlm.on)');
+    const codes = qa('#dlBody .dl-sv-row code').map((c) => c.textContent || '');
+    const hit = codes.filter((t) => /[\\/]|HKEY_/.test(t)).length;
     ok('存档路径已解析为可读形式（≥9 成路径行含路径分隔符 / 注册表头）',
-      all.length > 0 && hit >= Math.ceil(all.length * 0.9),
-      `${hit} / ${all.length}  例：${(all[0] || '').slice(0, 70)}`);
+      codes.length > 0 && hit >= Math.ceil(codes.length * 0.9),
+      `${hit} / ${codes.length}  例：${(codes[0] || '').slice(0, 70)}`);
+    ok('弹窗里每条路径都配了「复制」键（复制从卡面搬到了这里）',
+      codes.length > 0 && qa('#dlBody .dl-sv-row .dl-cp').length === codes.length,
+      `rows=${codes.length} cp=${qa('#dlBody .dl-sv-row .dl-cp').length}`);
+    /* 关掉弹窗，别影响后面的用例 */
+    const cb = q('#dlPop [data-dl="close"]');
+    if (cb) cb.dispatchEvent(new W.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await sleep(500);
   }
   ok('存档卡片带云同步 / 不支持徽标',
     qa('#svGrid .emu-card .tg.cloud, #svGrid .emu-card .tg.dim').length > 0);
@@ -218,17 +252,33 @@ async function main() {
     click(q('#svPhone'));  // 复原
     await sleep(1500);
   }
-  /* 点击分流：.paths 不跳（要能选中文字）/ .cp 只复制 / 正文进详情 */
+  /* 点击分流（v10.45 改版后只剩两条路）：.sv-open 开弹窗「存档」模块 / 正文进详情。
+     ⚠️ 旧用例测的 `.paths` / `.cp` 已随卡面一起消失，这里换成对应的**新**分流，
+        并保留一条反向断言钉住「卡面真的没有 .paths 了」，防止哪天有人把路径又铺回卡面。 */
   {
     const svCard = qa('#svGrid .emu-card').find((c) => c.dataset.lib);
     if (svCard) {
-      const p = svCard.querySelector('.paths .p');
-      if (p) { click(p); await sleep(600); }
-      ok('点 .paths 路径行 → 不跳转（保证能选中 / 复制文字）', !q('#drawer').classList.contains('show'));
+      const p = svCard.querySelector('.paths');
+      ok('★ 反向断言：这条卡片上确实没有 .paths（新分流用例的前提成立）', !p);
       const errN = e1.length;
-      click(svCard.querySelector('.paths .cp'));
-      await sleep(400);
-      ok('点「复制」按钮 → 不抛异常（剪贴板降级路径要能兜住）', e1.length === errN, e1.slice(errN).join(' | '));
+      const btn = svCard.querySelector('.sv-open');
+      ok('卡片带 .sv-open（新分流的入口）', !!btn);
+      if (btn) {
+        click(btn);
+        await sleep(1200);
+        const pop = q('#dlPop');
+        ok('点「查看 N 条存档位置」→ 弹窗打开且**没有**同时进详情（分流不能两头都触发）',
+          !!(pop && !pop.hidden) && !q('#drawer').classList.contains('show'),
+          JSON.stringify({ pop: !!(pop && !pop.hidden), drawer: q('#drawer').classList.contains('show') }));
+        const cp = q('#dlBody .dl-sv-row .dl-cp');
+        if (cp) {
+          click(cp);
+          await sleep(400);
+          ok('点弹窗里的「复制」→ 不抛异常（剪贴板降级路径要能兜住）', e1.length === errN, e1.slice(errN).join(' | '));
+        }
+        const cb = q('#dlPop [data-dl="close"]');
+        if (cb) { click(cb); await sleep(500); }
+      }
       click(svCard.querySelector('h4'));
       await sleep(1500);
       ok('点存档卡片正文 → 打开游戏详情抽屉', q('#drawer').classList.contains('show'), q('#drawer').className);

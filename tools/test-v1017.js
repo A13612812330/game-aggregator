@@ -112,17 +112,33 @@ ok(/devicesSummaryCnt/.test(srv) && /devicesAdded/.test(srv), '返回里带上�
     const h = r.hit;
     ok(h.devicesSummaryCnt === 6, '该游戏摘要确实是 6 台（复现用户截图）', h.devicesSummaryCnt + ' 台');
     ok(h.devicesCnt > h.devicesSummaryCnt, '★ 合并后比摘要多（不再卡在 6 台）', h.devicesSummaryCnt + ' → ' + h.devicesCnt + ' 台');
-    ok(h.devicesCnt === 9, '★ 合并后 9 台（样本固定值，变了要复核数据）', h.devicesCnt + ' 台');
+    /* ★★ 2026-10-09 复核（原值 9 台 / 新增 3 台 = 假红，**不是**回归 —— 见下面的复核记录）：
+     *
+     * 【为什么先怀疑是假红】判据依赖的是 `/api/mobilehub/match`，它由
+     *   `data/bhparams.json`（每日同步刷新）+ `data/mobilehub.json` + `data/deviceset.js` 决定，
+     *   而这三个文件在当轮改动里**一个都没被碰过**。
+     * 【怎么证的】按本项目铁律「回退到 HEAD 跑同套件」的等价做法 —— 直接看 HEAD 里那份数据：
+     *   `git show HEAD:data/bhparams.json` ⇒ `ULTIMATE_MARVEL_VS__CAPCOM_3` 的 12 行配置去重后
+     *   只有 6 台（INFINIX X6887 / HONOR BRP-NX3 / HONOR MTN-NX3 / motorola moto g24 /
+     *   samsung SM-A057M / ITEL itel S666LN）。摘要 6 台与它求并集 = 8 台，
+     *   与 `deviceset.mergeReport` 的结果一致 ⇒ **在 HEAD 上同样会得到 8，不是 9**。
+     * 【数据到底怎么变的】上游 bannerhub 那边原先的「moto g20」已不在该游戏的配置里了；
+     *   而 `motorola moto g24` **本来就在摘要那 6 台之内**，所以它从来不算「新增」。
+     *   ⇒ 真实新增就是 samsung SM-A057M + ITEL itel S666LN 这 2 台。
+     * 【判据本身没放宽】「合并后必须比摘要多」与「新增项必须逐条报出来」两条都还在，
+     *   改的只是样本数字，并附上复核依据（下一个人看到数字变了能直接顺着这里查）。 */
+    ok(h.devicesCnt === 8, '★ 合并后 8 台（2026-10-09 复核：上游 moto g20 已移除；详见上方复核记录）', h.devicesCnt + ' 台');
     ok(h.devices.every((x) => !/^MTN NX3$|^BRP NX3$/.test(x)), '★ 残缺写法已被规范写法取代', h.devices.slice(0, 3).join(' | '));
     ok(h.devices.filter((x) => /HONOR/i.test(x)).length === 2, 'HONOR 两台在位（MTN-NX3 / BRP-NX3）');
-    ok(h.devicesAdded.length === 3, '如实报告新增了 3 台（samsung / ITEL / moto g20）', h.devicesAdded.join(' | '));
+    ok(h.devicesAdded.length === 2, '如实报告新增了 2 台（samsung SM-A057M / ITEL itel S666LN）', h.devicesAdded.join(' | '));
     /* 每台都能给出「要显示什么」——不能出现空 display */
     const bad = h.devices.filter((m) => !dmk.resolve(m).display);
     ok(bad.length === 0, '★ 每台机型都能得到非空显示名', bad.join(' | ') || '全部 OK');
-    /* 译出比例：这个样本里有 4 台**本来就是营销名**（motorola moto g24 / AYANEO Pocket FIT /
-       ITEL itel S666LN / motorola moto g(20)），没有代号可译 → 5/9 是正确值，不是退坡。 */
+    /* 译出比例：这个样本里有 3 台**本来就是营销名**（motorola moto g24 /
+       INFINIX Infinix X6887 / ITEL itel S666LN），没有代号可译 → 5/8 是正确值，不是退坡。
+       （2026-10-09 复核时随上面两条一起校准：原记账里的 moto g20 已不在上游 ⇒ 8 台里 3 台无代号可译。） */
     const rs = h.devices.map((m) => dmk.resolve(m));
-    ok(rs.filter((x) => x.resolved).length === 5, '★ 该样本译出 5 台（另 4 台本来就是营销名，无代号可译）', rs.filter((x) => x.resolved).length + '/' + rs.length);
+    ok(rs.filter((x) => x.resolved).length === 5, '★ 该样本译出 5 台（另 3 台本来就是营销名，无代号可译）', rs.filter((x) => x.resolved).length + '/' + rs.length);
     const unresolved = h.devices.filter((m) => !dmk.resolve(m).resolved);
     /* 判据要打得准：`ITEL S666LN` 这种「品牌 + 型号」本身**就是**合法营销名，
        第一版用「不像代号」的正则把它误判成漏译（误报的代价和漏报一样大）。 

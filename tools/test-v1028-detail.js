@@ -318,18 +318,37 @@ console.log('\n=== ⑧ 被替换掉的旧实现已清 ===');
 }
 
 /* ============================================================
- *  ⑨ 底部按钮与三专区**同源**
+ *  ⑨ 底部入口与专区**同源**
  * ============================================================ */
-console.log('\n=== ⑨ 底部按钮与专区同源 ===');
+console.log('\n=== ⑨ 底部入口与专区同源 ===');
 {
-  ok(/if \(dlSecs\.some\(\(s\) => s\.key === kind\)\) \{ openDlSecPop\(kind\); return; \}/.test(IDX),
-    '★ 底部「修改器 / Mod」优先开**同一份** dlSecs 的专区弹窗（按钮条数与点开内容同源）');
-  ok(/setDlCounts\(cnt\)/.test(IDX) && /setDlCounts\(j && j\.counts\)/.test(IDX) === false,
-    '★ 条数改由 /api/download 现算后回填（不再走 /api/mods/match 的 counts，避免两套统计）');
-  ok(/openModList\(\{/.test(IDX),
-    '★ mods/match 那条链路仍保留作兜底（XD 源没有专区概念，dlSecs 只有一块 key=all）');
+  /* ★★ v10.45 重写：底部由「本体 / 修改器 / Mod 三个按钮」改为**单个**「⬇ 下载与资源」，
+   *   点开是合并弹窗（本体 / Mod / 修改器 / 存档 四个模块页签）。
+   *   ⚠️ 旧实现最要命的地方不是「三个按钮」而是**按钮的显隐与条数只从 /api/download 的
+   *      dlSecs 推** —— XD 对部分游戏（实测 Skyrim SE id=2765）要求登录 ⇒ real=0 ⇒
+   *      dlSecs 空 ⇒ 三个按钮全部 hidden ⇒ 用户连「这款游戏有 60 条 Mod」都看不到。
+   *      所以下面先钉一条**根因断言**（入口不许带 hidden、切模块不依赖 dlSecs），再钉数据同源。 */
+  ok(/<div class="dl-strip" id="dlStrip">/.test(IDX),
+    '★★ 底部动作条不许自带 hidden（旧实现把它与 dlSecs 绑死 ⇒ 源站要登录时入口整块消失）');
+  ok(/<button class="ds ds-all" type="button" id="dlBtn" data-dl-open/.test(IDX),
+    '★ 底部只剩一个「下载与资源」入口（用户拍板：不要三个按钮）');
+  ok(!/class="ds ds-main"/.test(IDX) && !/class="ds ds-mf"/.test(IDX) && !/class="ds ds-mo"/.test(IDX),
+    '★ 旧的三个按钮样式类已撤（撤不干净会有幽灵按钮被别处选择器命中）');
+  ok(/openUniDownload\(\{/.test(IDX) && /data-dl-open/.test(IDX),
+    '★ 点底部入口走 openUniDownload（合并弹窗），不再按 kind 直接开专区弹窗');
+  ok(/openDlSecPop\(dfo\.dataset\.dfOpen\)/.test(IDX),
+    '★ 详情页内联「下载资源」块的 data-df-open 仍走 openDlSecPop（这条链路没被牵连）');
+  ok(!/setDlCounts/.test(IDX),
+    '★★ setDlCounts 已整块删除（它的唯一职责就是「按 dlSecs 定按钮显隐 + 条数」= 本轮根因）');
+  ok(!/function openModList\s*\(/.test(IDX),
+    '★ openModList 已由 dlUniPaintMod 取代（同一个弹窗里的 Mod 模块，不再单开一路）');
+  ok(/for \(const k of \['mod', 'modifier', 'save'\]\) dlUniLoad\(k\);/.test(IDX),
+    '★ 便宜的三个模块（本地索引）打开即并行预热 —— 页签条数尽早填上');
+  ok(/dlUni\.cnt\[k\] = community\.count \+ gcm\.length/.test(IDX) ||
+    /st\.cnt\[k\] = community\.count \+ gcm\.length/.test(IDX),
+    '★ 页签条数由模块自己的取数回填（不再由 /api/download 一份数据推四个模块）');
   ok(/dlPre = \{ url: u, data: j \};/.test(IDX),
-    '★ /api/download 结果缓存进 dlPre（点「下载本体」秒开，不必把 302 解析再跑一遍）');
+    '★ /api/download 结果仍缓存进 dlPre（弹窗「本体」模块秒开，不必把 302 解析再跑一遍）');
   ok(/if \(dlPre && dlPre\.url === j\.u/.test(IDX),
     '★ 复用缓存前**必须比对 url**（不然换一款游戏后会串台，而且看起来完全正常）');
 }

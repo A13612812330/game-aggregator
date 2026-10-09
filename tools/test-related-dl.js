@@ -323,7 +323,21 @@ function makeDom() {
   t(/openDetail\(/.test(rel), '每条都走 openDetail 直达详情');
   t(!/library\/browse/.test(relCall), '不再退回旧的 browse+洗牌 端点');
 
-  /* B4. 接口空 → 区块必须清空（不能残留上一个游戏的内容） */
+  /* B4. 接口空 → 判别「不留上一款的残影」 + 空态必须**说实话**
+   *
+   * ★ v10.45 改写（原判据：`#dlSlot.innerHTML === ''`）。
+   *   起因：用户反馈「Skyrim 有 Mod/存档，详情页却看不到下载功能」。根因之一就是
+   *   旧 `loadDlBlock` 在整组取不到时 `slot.innerHTML = ''` **一走了之** ——
+   *   整块下载区凭空消失，用户读成「这款游戏没有下载」，而它的 Mod / 存档其实都在。
+   *   ⇒ 现在改成渲染一句说明。所以「清空」这个**形式**作废，但它的**本意**
+   *     （不许留下上一款的内容）一个字都不能丢，只是换成更准的判据：
+   *       ① `#relSlot` 仍然清空（这条链路没动，判据逐字保留）；
+   *       ② `#dlSlot` 里**不许**出现上一款的任何内容（分区块 / 帖子行 / 旧帖标题 / 源站帖链接）；
+   *       ③ `#dlSlot` 必须给出**说明**（`.d-hint2`）而不是沉默清空 ——
+   *          否则「空态」与「功能被删」在界面上无法区分（v10.13 在手机配置上踩过同款坑）；
+   *       ④ 徽标不许 over-claim：本次桩数据没有 `needAuth` ⇒ 不许写「需登录源站」。
+   *          （「要登录」与「源站这次没给」是两件事，混成一句会让用户登录后仍然没有，以为是站点坏了。） */
+  const prevDl = doc.querySelector('#dlSlot').innerHTML;
   w.fetch = function (u) {
     const url = String(u);
     if (url.includes('/api/download')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, items: [], sections: [] }) });
@@ -332,10 +346,29 @@ function makeDom() {
   };
   await w.loadDlBlock(d, fb, d.title);
   await w.loadRelated(d, fb);
-  t(doc.querySelector('#dlSlot').innerHTML === '' && doc.querySelector('#relSlot').innerHTML === '',
-    '接口无数据时两个区块清空（不留上一个游戏的残影）');
+  const nowDl = doc.querySelector('#dlSlot').innerHTML;
 
-  console.log(`\n${fail ? '❌' : '✅'}  ${pass} 通过 / ${fail} 失败`);
+  t(/data-sec="body"/.test(prevDl) && /class="dl-it"/.test(prevDl),
+    '  [前提] 上一轮 #dlSlot 里确实有内容（否则「不留残影」这条断言恒真）');
+  t(doc.querySelector('#relSlot').innerHTML === '',
+    '推荐位接口无数据时清空（不留上一个游戏的残影）');
+  t(!/data-sec=/.test(nowDl) && !/class="dl-it"/.test(nowDl)
+    && !/本体免安装版/.test(nowDl) && !/jidiyouxi\.com\/post\/detail\/1/.test(nowDl),
+    '★ 下载区接口无数据时不留上一款的残影（分区块 / 帖子行 / 旧帖标题 / 源站帖链接都不许在）',
+    nowDl.slice(0, 80));
+  t(/d-hint2/.test(nowDl) && /Mod \/ 修改器 \/ 存档/.test(nowDl),
+    '★ 空态必须给出说明并指出真正的出口（沉默清空会被读成「这块功能没了」）');
+  t(/无可用地址/.test(nowDl) && !/需登录源站/.test(nowDl),
+    '★★ 徽标跟着真实原因走：没有 needAuth 就不许写「需登录源站」（over-claim 会让用户白登录一次）',
+    (nowDl.match(/class="cnt">[^<]*</) || [''])[0]);
+
+  /* ★ 2026-10-09 收尾格式修正（**这不是排版洁癖，是汇总口径**）：
+     原写法 `✅  42 通过 / 0 失败` —— 数字中间夹着「通过」，`\d+\s*\/\s*\d+` 匹配不上，
+     而 `run-all.js` 当时是「取输出里最后一个 `n / m`」⇒ 它取到了上面 PASS 明细里的
+     「多标签游戏…共享至少一个标签 —— **8/8**」，**整套被记成 8 条（少算 34）**。
+     汇总少算不会让任何一条断言变红，只会让「通过 N 条」这个数字长期偏低 —— 静默的那种错。
+     现在统一成与 test-mods / test-emulator-structure 同款：`n / m 通过`。 */
+  console.log(`\n${fail ? '❌' : '✅'}  ${pass} / ${pass + fail} 通过`);
   if (bad.length) console.log('失败项：\n  · ' + bad.join('\n  · '));
   dom.window.close();
   process.exit(fail ? 1 : 0);

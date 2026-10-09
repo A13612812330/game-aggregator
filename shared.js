@@ -117,6 +117,26 @@ const NETDISK = [
 const INTERNAL_HOST_RE = /(^|\.)(jidiyouxi\.com|52jidi\.com|xgamer?\.[a-z]+)$/i;
 
 /**
+ * ★ v10.45：**广告 / 帮助站**链接也不是下载。
+ *
+ * 实测反例（用户口径「游戏下载本体中 有个其他……实际是一个广告链接」）：
+ * 机地资源帖正文结尾常带一句「如仍有问题，请看：https://52leiqu.com/problemTutorial」
+ * —— 这是**迅雷「雷区」问题教程页**（源站的引导/推广页，页面上就是那个
+ * `icon_from_xunlei_helper` 小图标）。
+ *
+ * 它为什么能混进来：
+ *   · 不是站内域名 ⇒ `INTERNAL_HOST_RE` 管不到（it's a 姐妹站，不是 `52jidi.com` 本身）
+ *   · 不是任何网盘 ⇒ `NETDISK` 匹配不到 ⇒ `kind` 退成 `'其他链接'`
+ *   ⇒ 前端拿 `kind` 当盘口名渲染，于是列表里凭空多出一个名叫**「其他」的下载按钮**，
+ *     点开是广告页。实测全库命中 **34 处**。
+ *
+ * 与 `INTERNAL_HOST_RE` 分开写而不是并进去：两者的**语义不同**
+ * （一个是「本站内链」，一个是「第三方引导页」），合并后注释会说不清；
+ * 而且广告域名会随源站运营变化，单独一张表才好替换。
+ */
+const JUNK_HOST_RE = /(^|\.)(52leiqu\.com|leiqu\.[a-z]+)$/i;
+
+/**
  * 从一段自由文本里抽网盘链接。
  * @param {string} text
  * @param {object} [o]
@@ -136,7 +156,8 @@ function extractLinks(text, { max = 20, dropInternal = true } = {}) {
     if (dropInternal) {
       let host = '';
       try { host = new URL(u).hostname; } catch { continue; }
-      if (INTERNAL_HOST_RE.test(host)) continue;
+      /* 站内链接与广告 / 帮助站链接都不是下载 —— 两条规则分开判，各自有各自的理由 */
+      if (INTERNAL_HOST_RE.test(host) || JUNK_HOST_RE.test(host)) continue;
     }
     const hit = NETDISK.find(([re2]) => re2.test(u));
     out.push({ url: u, kind: hit ? hit[1] : '其他链接' });
@@ -147,5 +168,5 @@ function extractLinks(text, { max = 20, dropInternal = true } = {}) {
 
 module.exports = {
   UA, HOST_JIDI, HOST_XD, abs, getHtml, ts2label, fmtDateTime, normDate, dateTs,
-  NETDISK, INTERNAL_HOST_RE, extractLinks,
+  NETDISK, INTERNAL_HOST_RE, JUNK_HOST_RE, extractLinks,
 };
