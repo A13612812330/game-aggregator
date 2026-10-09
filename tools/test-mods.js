@@ -13,7 +13,9 @@
  *   E. 落盘数据与查询模块的不变量（对真实 data/mods.json 断言）
  */
 const { websign, extractLinks, shape, BODY_SALT } = require('../fetchers/jidiModify');
-const { normKey, keyUsable, buildLibIndex, matchLib } = require('../data/mod-match');
+/* ★ v10.46：`normKey` 走**唯一真源** name-normalize（mod-match 不再转发它） */
+const { keyUsable, buildLibIndex, matchLib } = require('../data/mod-match');
+const { normKey } = require('../data/name-normalize');
 const crypto = require('crypto');
 
 let pass = 0, fail = 0;

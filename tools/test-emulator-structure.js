@@ -279,7 +279,7 @@ t('★ .sv-open 带兜底：主脚本那块被裁掉时给 toast，不能变成�
   /typeof openUniDownload === 'function'/.test(rsec) && /暂时打不开存档弹窗/.test(rsec));
 t('★★ 反向断言：卡面实现里已无 .paths 铺路径（本轮改版的核心诉求）',
   !/class="paths"/.test(rsec) && !/closest\('\.paths'\)/.test(rsec));
-t('★★ 反向断言：copyText 已从派生页驱动里删除（复制搬进了弹窗的 dlUniPaintSave）',
+t('★★ 反向断言：copyText 已从派生页驱动里删除（复制搬进了弹窗的 #svLoc 位置弹窗）',
   !/function copyText/.test(rsec));
 t('云存档卡片给出「没对上端游库」的明确提示',
   /可以点「查看存档位置」看路径/.test(rsec));

@@ -81,7 +81,8 @@ const m = require(${JSON.stringify(path.join(dir, 'bhparams.js'))});
   }));
 })();
 `);
-  const stdout = execFileSync(process.execPath, [runner], { encoding: 'utf8', timeout: 60000 });
+  const stdout = execFileSync(process.execPath, [runner],
+    { encoding: 'utf8', timeout: 60000, stdio: ['ignore', 'pipe', 'pipe'] });
   const disk = JSON.parse(fs.readFileSync(path.join(dir, 'bhparams.json'), 'utf8'));
   return { result: JSON.parse(stdout), disk };
 }

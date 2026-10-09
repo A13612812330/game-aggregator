@@ -28,7 +28,10 @@ function log(...a) { if (!JSON_OUT) console.log(...a); }
  *  注意：GNU tar 会把 `C:\...` 当成远程主机（rsh 语法）而报 "Cannot connect to C"，
  *  所以一律用「cwd + 相对文件名」，不传绝对路径。 */
 function tar(args, opts = {}) {
-  return execFileSync('tar', args, { maxBuffer: 256 * 1024 * 1024, ...opts });
+  /* ★ v10.46：`stdio` 放在最后 ⇒ **永远生效**，调用方即使传了自己的 opts 也覆盖不掉。
+   *   沙箱里 node 起子进程时 stdin 是 pipe（默认）会 EBUSY，tar 一个都跑不动。
+   *   守卫：tools/check-stdio-guard.js */
+  return execFileSync('tar', args, { maxBuffer: 256 * 1024 * 1024, ...opts, stdio: ['ignore', 'pipe', 'pipe'] });
 }
 
 async function main() {
@@ -66,7 +69,8 @@ async function main() {
 
     // ④ 重建索引
     log('④ 重建索引…');
-    const out = execFileSync(process.execPath, [path.join(__dirname, 'build-bannerhub.js')], { encoding: 'utf8' });
+    const out = execFileSync(process.execPath, [path.join(__dirname, 'build-bannerhub.js')],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
     if (!JSON_OUT) process.stdout.write(out);
 
     const idx = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'bannerhub.json'), 'utf8'));

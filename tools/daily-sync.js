@@ -288,7 +288,10 @@ function runProc(cmd, args, opts) {
     let out = '', err = '', killed = false, settled = false;
     let p;
     try {
-      p = spawn(cmd, args, { cwd: o.cwd || ROOT, windowsHide: true });
+      /* ★ v10.46：stdin 必须 'ignore'。沙箱里 node 起子进程时 stdin 若是 pipe（默认）
+       *   会 EBUSY，每日自动化的**每一步都会起不来**（且会被当成"步骤失败"而非"环境问题"）。
+       *   见 tools/check-stdio-guard.js。 */
+      p = spawn(cmd, args, { cwd: o.cwd || ROOT, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     } catch (e) {
       return resolve({ ok: false, code: null, stdout: '', stderr: String(e.message), ms: 0, killed: false });
     }

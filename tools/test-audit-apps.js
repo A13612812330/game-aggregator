@@ -31,7 +31,8 @@ console.log('=== A. 脚本存在与离线可跑 ===');
 ok(SRC.length > 2000, 'tools/audit-apps.js 存在且有实质内容', Buffer.byteLength(SRC, 'utf8'));
 let out = '', code = 0;
 try {
-  out = execFileSync(process.execPath, ['tools/audit-apps.js', '--no-net'], { cwd: ROOT, encoding: 'utf8', timeout: 60000 });
+  out = execFileSync(process.execPath, ['tools/audit-apps.js', '--no-net'],
+    { cwd: ROOT, encoding: 'utf8', timeout: 60000, stdio: ['ignore', 'pipe', 'pipe'] });
 } catch (e) { code = e.status == null ? -1 : e.status; out = String(e.stdout || '') + String(e.stderr || ''); }
 ok(code === 0, '`--no-net` 跑通（exit 0）', 'exit=' + code);
 ok(!/undefined|NaN|\[object/.test(out), '★ 输出里没有 undefined/NaN/[object（表格值都取到了）');

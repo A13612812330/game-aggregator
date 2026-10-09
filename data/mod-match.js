@@ -1,5 +1,9 @@
 /**
- * data/mod-match.js — 「跨源名称匹配」的匹配键与索引构建（**单一真源**）
+ * data/mod-match.js — 「跨源名称匹配」的匹配键与索引构建
+ *
+ * ★ 归一化的**唯一真源**是 `data/name-normalize.js`；本模块只负责「键怎么用」——
+ *   `/` 切段、长度护栏（CJK 放行 2 字）、索引构建与命中。
+ *   v10.46 之前本文件自带一份字符类，与 SYMBOLS 不等价（见下面 normKey 处的说明）。
  *
  * 被 tools/fetch-mods.js 使用；从该脚本里抽出来是为了能**离线单测**
  * （tools/test-mods.js 直接 require 本模块，不用真的联网跑一遍抓取）。
@@ -18,11 +22,17 @@
  *      2 字中文游戏名（`剑星`/`鸣潮`/`仁王`/`传送门`）会被整类误杀，而它们在库里明明有。
  *      → 含 CJK 放行 2 字；纯 ASCII 仍要求 ≥3，避免 `ab` 这类噪声键。
  */
-function normKey(s) {
-  return String(s || '').toLowerCase()
-    .replace(/[\s\u3000]+/g, '')
-    .replace(/[：:·・,，.。!！?？'"“”‘’()（）\[\]【】《》<>~～\-–—_+*&/／|｜\\]/g, '');
-}
+/* ★ v10.46：归一化实现**收口到 data/name-normalize.js**（项目声明的唯一真源），
+ *   本模块不再自带字符类。
+ *   为什么必须收：这里原来有一份**独立**字符类，与 name-normalize 的 SYMBOLS 不等价 ——
+ *   本份缺 `™®©°′″#@$%^;；＊`（实测 23,529 个真实名称里 **293 个键不同 = 1.245%**，
+ *   例如 `#DRIVE Rally` / `STEINS;GATE` / `180°`）。
+ *   同一份数据只要「索引用 A、查询用 B」，这 1.245% 就会**静默漏配**（本项目铁律 17）。
+ *   收口的影响面已实测：游侠存档带书名号的 1,625 条命中数 **1211 → 1211（差异 0）** ——
+ *   索引与查询同时换键，结果不变；这正是「唯一真源」在本项目里唯一安全的换法。
+ *   ⚠️ 是 `tools/test-shared-destructure.js` 的第 ⑤ 段（自动发现共享模块 + 比对解构完整性）
+ *     把这处漏网点抓出来的 —— 上一轮 v10.36 收口 SYMBOLS 时漏了本文件。 */
+const { normKey } = require('./name-normalize');
 
 const CJK_RE = /[\u3400-\u4dbf\u4e00-\u9fff]/;
 
@@ -58,4 +68,10 @@ function matchLib(game, byName) {
   return byName.get(normKey(g)) || null;
 }
 
-module.exports = { normKey, keyUsable, buildLibIndex, matchLib, CJK_RE };
+/* ★ v10.46：本模块**不再导出 `normKey`**。
+ *   导出它就等于对外开了一条「从 mod-match 拿键」的路 —— 而键的算法已收口到
+ *   data/name-normalize.js（见上面 normKey 的定义处），多一条转发路径只会让下一个人
+ *   继续从两个地方取键。要用键请直接 `require('../data/name-normalize')`。
+ *   （`tools/test-shared-destructure.js` 的规则是「用了某模块的导出名就必须从该模块解构」，
+ *     所以「转发导出」在这里不是无害的兼容层，而是会持续产生告警的错位。） */
+module.exports = { keyUsable, buildLibIndex, matchLib, CJK_RE };

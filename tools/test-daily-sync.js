@@ -201,7 +201,8 @@ console.log('\n=== ⑧ 服务在线时的字段实测 ===');
     '.then(function(r){return r.json()})' +
     '.then(function(j){console.log(JSON.stringify(j))})' +
     '.catch(function(){console.log("{}")})';
-  const r = spawnSync(process.execPath, ['-e', code], { encoding: 'utf8', timeout: 20000 });
+  const r = spawnSync(process.execPath, ['-e', code],
+    { encoding: 'utf8', timeout: 20000, stdio: ['ignore', 'pipe', 'pipe'] });
   let st = null;
   try { st = JSON.parse(String(r.stdout || '{}').trim()); } catch (e) { st = null; }
   if (st && st.bySource) {

@@ -129,6 +129,8 @@ function fetchPage(href) {
     html = execFileSync('curl', ['-s', '-L', '-m', '35', '-A', UA, url], {
       maxBuffer: 32 * 1024 * 1024,
       encoding: 'utf8',
+      /* ★ v10.46：stdin 必须 'ignore'（沙箱内 pipe ⇒ EBUSY）。守卫：tools/check-stdio-guard.js */
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
   } catch (e) {
     console.error('  curl 失败:', href, e.message);

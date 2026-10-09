@@ -23,7 +23,8 @@ try {
   fs.writeFileSync(F, orig.replace(GOOD, BAD));
   console.log('\u25b6 已打坏 smRows()：退回「list.map(smRow)」平铺，不做聚拢\n');
   try {
-    out = execFileSync(process.execPath, [path.join(__dirname, 'test-v1025-search.js')], { encoding: 'utf8', timeout: 300000 });
+    out = execFileSync(process.execPath, [path.join(__dirname, 'test-v1025-search.js')],
+      { encoding: 'utf8', timeout: 300000, stdio: ['ignore', 'pipe', 'pipe'] });
   } catch (e) { out = (e.stdout || '') + (e.stderr || ''); }
 } finally {
   fs.writeFileSync(F, orig);

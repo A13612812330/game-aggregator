@@ -197,35 +197,74 @@ async function main() {
   ok('按钮带 data-sv-open / data-title（点它要能把游戏名递给合并弹窗）',
     svOpens.length > 0 && svOpens[0].hasAttribute('data-sv-open') && !!svOpens[0].dataset.title,
     svOpens.length ? JSON.stringify({ title: svOpens[0].dataset.title, lib: svOpens[0].dataset.lib }) : '(缺失)');
+  /* ★★ v10.46：下面要断「主区铺出的是文件卡（.svf）」。**不能随便挑第一张卡** ——
+   *   存档网格里的游戏是 Ludusavi 那份（只有路径），而 .svf 来自游侠存档区那份（有文件），
+   *   两份库的交集不是全部：抽到没有游侠存档的游戏，这条断言就会**平白变红**
+   *   （上一版就是这样：78/79，红的其实不是代码而是取样）。
+   *   ⇒ 先问服务端要「有游侠存档的 libId 集合」，再挑一张 data-lib 落在集合里的卡。
+   *   取不到集合时退回第一张，并如实把「未按 libId 取样」写进证据串（不许静默降级成假绿）。 */
+  let svPick = svOpens[0];
+  let svPickWhy = '未按 libId 取样（接口没取到）';
+  try {
+    const r = await fetch('http://127.0.0.1:8123/api/saves-yx/index');
+    const j = await r.json();
+    const ids = new Set(Object.keys(j.byLib || {}));
+    const hit = svOpens.find((b) => ids.has(b.dataset.lib || ''));
+    if (hit) { svPick = hit; svPickWhy = `libId=${hit.dataset.lib}（在游侠存档索引内）`; }
+    else if (ids.size) svPickWhy = `索引 ${ids.size} 个 libId 与 ${svOpens.length} 张卡无交集`;
+  } catch (e) { svPickWhy = '接口异常：' + String((e && e.message) || e); }
   {
-    /* ★ 路径**可读性**判据「搬家」（不是删掉）：卡面已不铺路径，取样点换成弹窗里的
-     *   `.dl-sv-row code`，判据本身逐字保留 —— 这样「路径解析退化成原样透出占位 token」
-     *   仍然会被抓住，只是抓住它的地方换了。
+    svPick.dispatchEvent(new W.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await sleep(1500);
+    const pop = q('#dlPop');
+    ok('点「查看 N 条存档位置」→ 合并弹窗打开（这是卡面唯一动作，必须真有反应）',
+      !!(pop && !pop.hidden), pop ? `hidden=${pop.hidden}` : '(无 #dlPop)');
+    const onTab = q('#dlModTabs .dlm.on');
+    ok('★ 弹窗自动落在「存档」模块（不是默认的「本体」）—— 落点要跟着入口走',
+      !!(onTab && /存档/.test(onTab.textContent || '')),
+      onTab ? onTab.textContent.trim() : '(无 .dlm.on)');
+    /* ★ v10.46：主区的**正向锚点**也要有 —— 只有反向断言（「没有路径」）
+       会被「主区整个空掉」满足，等于什么都没守住。
+       ★ 取样已按上方 svPick 收窄到「该游戏确实在游侠存档索引里」，否则会平白变红。 */
+    ok('★ 存档模块主区铺出的是**文件**卡（.svf）',
+      qa('#dlBody .svf').length > 0,
+      `实际 ${qa('#dlBody .svf').length} 张 .svf（取样 ${svPickWhy}）`);
+    /* ★ v10.46 **第二次搬家**（不是删掉）：路径从「合并弹窗的存档模块主区」
+     *   又下移一层 —— 主区现在铺的是可下载的**文件**（游侠存档区），
+     *   路径收进模块**右上角**的「📍 存档位置」按钮 → #svLoc 二级弹窗。
+     *   ⇒ 取样点再换一次：`#svLocBody .dl-sv-row code`；
+     *     判据本身（≥9 成含分隔符 / 注册表头、每条配复制键）**逐字保留** ——
+     *     判据不变的搬家才是安全的搬家；同时补一条反向断言守住老位置（主区不许再有路径行）。
      *   ★ 判据别钉死盘符：Ludusavi 的存档位置大量以占位词开头
      *   （`<游戏安装目录>\…` / `<winAppData>\…`），带盘符的只是其中一部分
      *   （实测首个卡片就是 `<游戏安装目录>\Hannah and Joseph Games\…`，
      *     钉 `[A-Z]:\\` 会当场假红）。
      *   这里只要求「解析出了路径分隔符或注册表头」——即它确实是条路径，
      *   而不是原样透出的占位 token；并且**抽全量**看比例，不看单张卡。 */
-    svOpens[0].dispatchEvent(new W.MouseEvent('click', { bubbles: true, cancelable: true }));
-    await sleep(1500);
-    const pop = q('#dlPop');
-    const open = !!(pop && !pop.hidden);
-    ok('点「查看 N 条存档位置」→ 合并弹窗打开（这是卡面唯一动作，必须真有反应）', open,
-      pop ? `hidden=${pop.hidden}` : '(无 #dlPop)');
-    const onTab = q('#dlModTabs .dlm.on');
-    ok('★ 弹窗自动落在「存档」模块（不是默认的「本体」）—— 落点要跟着入口走',
-      !!(onTab && /存档/.test(onTab.textContent || '')),
-      onTab ? onTab.textContent.trim() : '(无 .dlm.on)');
-    const codes = qa('#dlBody .dl-sv-row code').map((c) => c.textContent || '');
+    ok('★★ 反向断言：存档模块**主区**不再铺路径（用户诉求「要文件不要位置」）',
+      qa('#dlBody .dl-sv-row').length === 0,
+      `实际 ${qa('#dlBody .dl-sv-row').length} 条 .dl-sv-row`);
+    const svBtn = q('#dlBody [data-dl-svloc]');
+    ok('存档模块右上角有「📍 存档位置」入口（没文件的游戏上它也必须在）',
+      !!svBtn, svBtn ? svBtn.textContent.trim() : '(无 [data-dl-svloc])');
+    if (svBtn) svBtn.dispatchEvent(new W.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await sleep(900);
+    const svPop = q('#svLoc');
+    ok('点「📍 存档位置」→ 位置弹窗打开（二级弹窗，压在下载弹窗之上）',
+      !!(svPop && !svPop.hidden), svPop ? `hidden=${svPop.hidden}` : '(无 #svLoc)');
+    const codes = qa('#svLocBody .dl-sv-row code').map((c) => c.textContent || '');
     const hit = codes.filter((t) => /[\\/]|HKEY_/.test(t)).length;
     ok('存档路径已解析为可读形式（≥9 成路径行含路径分隔符 / 注册表头）',
       codes.length > 0 && hit >= Math.ceil(codes.length * 0.9),
       `${hit} / ${codes.length}  例：${(codes[0] || '').slice(0, 70)}`);
-    ok('弹窗里每条路径都配了「复制」键（复制从卡面搬到了这里）',
-      codes.length > 0 && qa('#dlBody .dl-sv-row .dl-cp').length === codes.length,
-      `rows=${codes.length} cp=${qa('#dlBody .dl-sv-row .dl-cp').length}`);
-    /* 关掉弹窗，别影响后面的用例 */
+    ok('位置弹窗里每条路径都配了「复制」键（复制从卡面搬到了这里）',
+      codes.length > 0 && qa('#svLocBody .dl-sv-row .dl-cp').length === codes.length,
+      `rows=${codes.length} cp=${qa('#svLocBody .dl-sv-row .dl-cp').length}`);
+    /* 关掉弹窗，别影响后面的用例。★ 顺序不能反：位置弹窗压在下载弹窗**之上**，
+       先关下面那层会把它留成一张浮在空页面上的孤卡。 */
+    const svx = q('#svLoc .svloc-x');
+    if (svx) svx.dispatchEvent(new W.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await sleep(500);
     const cb = q('#dlPop [data-dl="close"]');
     if (cb) cb.dispatchEvent(new W.MouseEvent('click', { bubbles: true, cancelable: true }));
     await sleep(500);

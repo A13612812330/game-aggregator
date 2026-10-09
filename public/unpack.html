@@ -1586,6 +1586,43 @@
     color:var(--c-primary);background:var(--c-primary-soft);border:0;border-radius:7px;padding:5px 9px;cursor:pointer}
   .dl-sv-row .dl-cp:hover{filter:brightness(.96)}
   .dl-sv-row .dl-cp.done{background:rgba(15,157,88,.14);color:#0F9D58}
+  /* ★ v10.46：存档模块改成「文件为主 + 位置收进右上角」。
+     为什么必须分开：位置是「放哪」（一屏十几行路径，抄一次就够），
+     文件是「下什么」（每次进来都要点）。并排铺满会把下载按钮挤出可视区。 */
+  .dl-sv-head{display:flex;align-items:center;gap:8px;margin:0 0 9px}
+  .dl-sv-head .t{flex:1;min-width:0;font-size:12.5px;font-weight:800;color:var(--c-t1)}
+  .dl-sv-head .t b{font-family:var(--font-num);color:var(--c-primary)}
+  .dl-sv-loc{flex:none;font:inherit;font-size:11px;font-weight:750;color:var(--c-t2);
+    background:#F3F5FA;border:1px solid var(--c-border);border-radius:7px;padding:5px 9px;cursor:pointer;white-space:nowrap}
+  .dl-sv-loc:hover{border-color:var(--c-border2);color:var(--c-t1)}
+  /* 存档**文件**卡（与 `.dl-sv-row` 的「路径行」分开命名：
+     这里每条带下载通道按钮，路径行只有「复制」—— 混用类名会让复制按钮样式被套到下载按钮上） */
+  .dl-svf-list{display:flex;flex-direction:column;gap:7px}
+  .svf{background:#fff;border:1px solid var(--c-border);border-radius:10px;padding:9px 10px}
+  .svf .h{display:flex;align-items:flex-start;gap:8px}
+  .svf .nm{flex:1;min-width:0;font-size:12px;font-weight:750;line-height:1.55;color:var(--c-t1);word-break:break-word}
+  .svf .sz{flex:none;font:800 10.5px/1.6 var(--font-num);color:var(--c-t2);background:#F3F5FA;
+    border:1px solid var(--c-border);border-radius:6px;padding:1px 6px}
+  .svf .m{margin-top:3px;font-size:10.5px;line-height:1.65;color:var(--c-t3);word-break:break-all}
+  .svf .m code{font-family:var(--font-num);font-size:10.5px;color:var(--c-t2)}
+  .svf .k{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .svf .k a{display:inline-flex;align-items:center;font-size:11px;font-weight:750;text-decoration:none;
+    border-radius:7px;padding:5px 9px;border:1px solid var(--c-border);color:var(--c-t2);background:#F7F9FC}
+  .svf .k a:hover{filter:brightness(.97);border-color:var(--c-border2)}
+  .svf .k a.pri{color:#fff;background:var(--c-primary);border-color:transparent}
+  .svf .k a.pri:hover{filter:brightness(1.06)}
+  /* 📍 存档**位置**二级弹窗（v10.46）。外壳复用 `.dlpop-h` / `.dlpop-b` / `.dlpop-x`
+     （见 #svLoc 的 HTML 双类名），这里只写容器本身。
+     ★ z-index 定 120：必须**高于**下载弹窗(110) —— 否则从存档模块点开会整个被盖住，
+       而「元素存在、可点、占版面」全都成立，属于最难发现的那类假绿（v10.22 踩过）。 */
+  .svloc{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;padding:22px}
+  .svloc-bg{position:absolute;inset:0;background:rgba(12,18,38,.42);
+    -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);opacity:0;transition:.18s}
+  .svloc.on .svloc-bg{opacity:1}
+  .svloc-box{position:relative;width:min(600px,100%);max-height:min(74vh,640px);display:flex;flex-direction:column;
+    background:var(--c-surface);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);overflow:hidden;
+    transform:translateY(10px) scale(.985);opacity:0;transition:.2s cubic-bezier(.2,.8,.3,1)}
+  .svloc.on .svloc-box{transform:none;opacity:1}
   .dl-grp{margin-bottom:14px}
   .dl-grp:last-child{margin-bottom:2px}
   .dl-grp>.h{display:flex;align-items:center;gap:7px;margin-bottom:8px}
@@ -2034,6 +2071,27 @@
     <div class="dlmod" id="dlModTabs" hidden></div>
     <div class="dlpop-b" id="dlBody"></div>
     <div class="dlpop-f" id="dlFoot"></div>
+  </div>
+</div>
+
+<!-- ===== 📍 存档「位置」小弹窗（v10.46 新增 · 三页共享资产，勿在派生页单独改） =====
+     用户口径：「存档我需要的是文件，而不是文件位置，位置则在存档的右上角点击弹窗查看（可复制）」。
+     ★ 为什么另开一层，而不是并排画在「存档」模块里：
+       a) `#dlBody` 每次切模块/重绘都是整块重建，位置列表放里面会随页签切换一起消失；
+       b) 位置是「抄下来粘到资源管理器」的东西，需要一个不被其它内容挤走的独立容器。
+     ★ 位置在**弹窗骨架段**（`#dlPop` 之后、`.tabbar` 之前）—— 这一段是 tools/page-assets.js
+       抽取的 OVERLAY，所以 /emulator.html / /unpack.html / /resources.html 会自动带上同一个。
+     ★ 外壳类名双写（`dlpop-h` + `svloc-h`）：直接复用下载弹窗的头部/正文/关闭按钮样式，
+       零重复 CSS；后面若要单独调位置弹窗，用 `.svloc-h` 覆盖即可，不会连带改坏下载弹窗。 -->
+<div class="svloc" id="svLoc" hidden>
+  <div class="svloc-bg" data-svloc="close"></div>
+  <div class="svloc-box" role="dialog" aria-modal="true" aria-label="存档位置">
+    <div class="dlpop-h svloc-h">
+      <span class="ic">📍</span>
+      <div class="tx"><b>存档位置</b><span id="svLocSub"></span></div>
+      <button class="dlpop-x svloc-x" type="button" data-svloc="close" aria-label="关闭">✕</button>
+    </div>
+    <div class="dlpop-b svloc-b" id="svLocBody"></div>
   </div>
 </div>
 
@@ -4365,7 +4423,11 @@ function syncDActions() {
  *   Mod     → /api/mods/match?kind=mod        （机地社区帖，带网盘直链）
  *   修改器  → /api/mods/match?kind=modifier   （社区帖，能取件）
  *             + /api/trainers/match            （GCM 元数据，**没有下载地址**，单独一段）
- *   存档    → /api/saves/match                （Ludusavi 路径库，给的是「放哪」不是「下什么」）
+ *   存档    → /api/saves-yx/match             （游侠存档区，**可下载的存档包**：真直链 + 网盘 + eD2K）
+ *             + /api/saves/match               （Ludusavi 路径库，给的是「放哪」不是「下什么」）
+ *   ★ v10.46 用户口径：「存档我需要的是文件，而不是文件位置，位置则在存档的右上角点击弹窗查看」。
+ *     所以**两条线都取，但只把「文件」铺在主区**；「位置」降级为右上角按钮 → #svLoc 二级弹窗。
+ *     两条线必须分别请求、分别判空 —— 位置拿不到 ≠ 文件拿不到，空态文案完全不同。
  *   ⚠️「修改器」模块里两段数据的性质完全不同（一个能点、一个不能），所以视觉上必须分开，
  *      否则用户会把 GCM 的来源名当成下载按钮（旧版 `#trBlock` 就是纯文字列表，不带链接）。
  *
@@ -4414,6 +4476,10 @@ function dlUniPane() {
   const k = dlUni.tab;
   const st = dlUni;
   const d = st.data[k];
+  /* ★ v10.46：`#dlFoot` 是所有模块共用的页脚节点，每次换页签先清空 ——
+     否则「存档」页脚那句「其中 N 条没能解析出下载通道」会跟到「本体」页签上，
+     变成一条和当前内容无关的提示（共享节点必须先清后写）。 */
+  $('#dlFoot').innerHTML = '';
   if (d === undefined) {
     $('#dlBody').innerHTML = '<div class="emu-loading">正在读取' +
       DL_UNI.find((m) => m.k === k).nm + '…</div>';
@@ -4443,9 +4509,16 @@ async function dlUniLoad(k) {
       st.data[k] = { community, gcm };
       st.cnt[k] = community.count + gcm.length;
     } else {
-      const h = await dlUniFetchSave(st.ctx);
-      st.data.save = h;
-      st.cnt.save = h ? (h.paths || []).length + (h.regs || []).length : 0;
+      /* ★ v10.46：存档 = 两条线并行取（文件 / 位置），互不阻塞 ——
+         某一条挂了另一条照样能画，不会出现「文件接口慢就把整页卡在加载态」。 */
+      const [files, loc] = await Promise.all([
+        dlUniFetchSaveFiles(st.ctx),
+        dlUniFetchSaveLoc(st.ctx),
+      ]);
+      st.data.save = { files, loc };
+      /* 页签角标只认**文件数**：模块主区就是文件，把位置条数加进来会 over-claim
+         （用户看到「12」点进去只有 2 个能下载，剩下 10 条是路径） */
+      st.cnt.save = files.count;
     }
   } catch (e) {
     st.data[k] = { error: String((e && e.message) || e) };
@@ -4551,12 +4624,32 @@ async function dlUniFetchGcm(ctx) {
   } catch (e) { return []; }
 }
 
-/** ③ 存档：`/api/saves/match`（给的是「放哪」，不是「下什么」） */
-async function dlUniFetchSave(ctx) {
+/** ③a 存档**文件**：`/api/saves-yx/match`（游侠补丁网存档区）
+ *  回的是 `{count, items[]}`，每条带 `files.direct / netdisk[] / ed2k / thunder`。
+ *  ★ 与 ③b 的位置是**两个源、两个口径**，后端也没合并（见 server.js 注释），前端同样分开取。 */
+async function dlUniFetchSaveFiles(ctx) {
+  const t = String(ctx.title || '').trim();
+  const id = String(ctx.id || '').trim();
+  if (!t && !id) return { count: 0, items: [] };
+  try {
+    const j = await fetch(api('/api/saves-yx/match?t=' + encodeURIComponent(t) +
+      '&id=' + encodeURIComponent(id))).then((r) => r.json());
+    return { count: (j && j.count) || 0, items: (j && j.items) || [] };
+  } catch (e) {
+    /* 失败要如实回给画布（`error`）——否则会退化成「这款游戏没有存档」这种假结论 */
+    return { count: 0, items: [], error: String((e && e.message) || e) };
+  }
+}
+
+/** ③b 存档**位置**：`/api/saves/match`（哨兵：给的是「放哪」，不是「下什么」）
+ *  只喂给右上角的 #svLoc 弹窗，不进主区。 */
+async function dlUniFetchSaveLoc(ctx) {
   const t = String(ctx.title || '').trim();
   if (t.length < 2) return null;
-  const j = await fetch(api('/api/saves/match?t=' + encodeURIComponent(t))).then((r) => r.json());
-  return (j && j.hit) || null;
+  try {
+    const j = await fetch(api('/api/saves/match?t=' + encodeURIComponent(t))).then((r) => r.json());
+    return (j && j.hit) || null;
+  } catch (e) { return null; }
 }
 
 /** 打开合并下载弹窗。
@@ -4576,6 +4669,10 @@ function openUniDownload(ctx) {
       id: String(o.id || '').trim(),
     },
     tab, cnt: {}, data: {}, busy: {},
+    /* ★ v10.46：存档文件列表的展开态（默认截断到 SVF_CAP 条）。
+       挂在会话对象上 ⇒ 换游戏 / 关弹窗自动重置，不会「上一款展开过、这一款也全铺」。
+       注意各模块自带的展开态位置不同：本体在 `dlView.all`（那是 paintDownload 的状态）。 */
+    svfAll: false,
   };
   const nm = splitName(dlUni.ctx.title);
   $('#dlTitle').textContent = nm.zh || dlUni.ctx.title || '下载与资源';
@@ -4689,15 +4786,101 @@ function dlUniPaintMod(d, kind) {
   body.innerHTML = out.join('');
 }
 
-/** 存档：路径 / 注册表逐条给「复制」。这里是**唯一**展示存档落地路径的地方之一
- *  （另一处是详情页的「云存档位置」块）—— 端游资源页的卡片已不再铺路径。 */
-function dlUniPaintSave(h) {
+/** 存档文件一次最多铺几张。
+ *  ★ 为什么必须截断：实测单款最多 **215 条**（鬼谷八荒 —— 这游戏存档区就是火，全是真命中，
+ *    不是误配），全铺的话光 DOM 就 150KB+。与「本体」模块的 `D_MOD_CAP = 60` 同一套思路。
+ *  ★ 截断必须**明说并给出口**（本项目铁律：不许静默丢条）—— 页面顶部仍显示真实总数。 */
+const SVF_CAP = 20;
+
+/** 网盘通道的显示名。**顺序即优先级**（`netdisk` 数组本身已按源站给的顺序），
+ *  未登记的 kind 不丢 —— 退回「<kind> 网盘」，避免新通道静默消失。 */
+const SVF_ND = {
+  xunlei: '迅雷云盘', thunder_pan: '迅雷云盘', quark: '夸克网盘', baidu: '百度网盘',
+  aliyun: '阿里云盘', aliyundrive: '阿里云盘', uc: 'UC 网盘', '123pan': '123 云盘', lanzou: '蓝奏云',
+};
+/** 源站标题里的运营后缀，展示时剥掉（「…下载_游侠网」→「…」）—— 只用于显示，不改数据 */
+const svfTitle = (x) => String(x.title || x.game || '').replace(/_游侠网$/, '').replace(/下载$/, '').trim();
+
+/** 单条存档**文件**卡：标题 + 大小 + 通道按钮组。
+ *  ★ 通道按钮里**必须有一个主按钮**（直链优先），否则用户在 5 个网盘里挑不出该点哪个。
+ *  ★ 全部通道都没有时给「去源站页面取」出口 —— 不静默丢条（文件解析失败的那批就靠这条兜）。 */
+function svfCard(x) {
+  const f = x.files || {};
+  const ks = [];
+  if (f.direct) ks.push('<a class="pri" href="' + esc(f.direct) + '" target="_blank" rel="noopener">⬇ 直接下载</a>');
+  (f.netdisk || []).forEach((n) => {
+    ks.push('<a href="' + esc(n.url) + '" target="_blank" rel="noopener">' +
+      esc(SVF_ND[n.kind] || (String(n.kind || '') + ' 网盘')) + ' ↗</a>');
+  });
+  if (f.thunder) ks.push('<a href="' + esc(f.thunder) + '">迅雷链接</a>');
+  if (f.ed2k) ks.push('<a href="' + esc(f.ed2k) + '">eD2K 链接</a>');
+  if (!ks.length) ks.push('<a class="pri" href="' + esc(x.sourceUrl || '') + '" target="_blank" rel="noopener">去源站页面取 ↗</a>');
+  const meta = [x.date, x.matchHow === 'bracket' ? '书名号匹配' : (x.matchHow === 'prefix' ? '前缀匹配' : '')]
+    .filter(Boolean).join(' · ');
+  return '<div class="svf"><div class="h"><span class="nm">' + esc(svfTitle(x) || '存档文件') + '</span>' +
+    (x.size ? '<span class="sz">' + esc(x.size) + '</span>' : '') + '</div>' +
+    (f.fileName ? '<div class="m">文件 <code>' + esc(f.fileName) + '</code></div>' : '') +
+    '<div class="m">' + esc(meta) + (x.id ? ' · 源站条目 #' + esc(x.id) : '') + '</div>' +
+    '<div class="k">' + ks.join('') + '</div></div>';
+}
+
+/** 存档模块：主区 = **可下载的文件**（v10.46 起）。
+ *  位置不再铺在这里 —— 收进右上角「📍 存档位置」按钮 → #svLoc 弹窗（可复制）。
+ *  ★ 位置入口**无论有没有文件都要在**：反过来的话，没文件的游戏上「位置」会凭空消失，
+ *    而用户恰恰是在「下不到文件」时最想去看本机存档在哪。 */
+function dlUniPaintSave(d) {
   const body = $('#dlBody');
+  const files = (d && d.files) || { count: 0, items: [] };
+  const loc = (d && d.loc) || null;
+  const items = files.items || [];
+  const locN = loc ? ((loc.paths || []).length + (loc.regs || []).length) : 0;
+  const out = [];
+  out.push('<div class="dl-sv-head"><span class="t">💾 存档文件 <b>' + items.length + '</b> 个</span>' +
+    '<button class="dl-sv-loc" type="button" data-dl-svloc="1">📍 存档位置' +
+    (locN ? '（' + locN + '）' : '') + '</button></div>');
+  if (!items.length) {
+    out.push('<div class="dlpop-empty">' +
+      (files.error ? '存档文件索引读取失败：' + esc(files.error)
+        : '游侠补丁网的存档区里没有这款游戏的可下载存档') +
+      '<br><span style="font-size:11.5px">存档区按游戏名匹配，冷门 / 新发售的游戏可能还没人上传；' +
+      '也可以点右上角看<b>本机存档位置</b>，或去存档库按名搜</span></div>');
+    out.push('<div class="d-dl-links">' +
+      '<a href="https://patch.ali213.net/showclass/class5_1.html" target="_blank" rel="noopener">游侠存档区 ↗</a>' +
+      '<a href="/resources.html#sv">存档库</a></div>');
+    body.innerHTML = out.join('');
+    return;
+  }
+  out.push('<div class="dl-note">来源 <b>游侠补丁网 · 存档区</b>。' +
+    '「直接下载」是源站文件直链，<b>免登录、免网盘客户端</b>；网盘 / 迅雷 / eD2K 是同一份文件的备用通道，' +
+    '哪个通用哪个。<b>覆盖前先退出游戏并备份原存档</b>。</div>');
+  const all = !!(dlUni && dlUni.svfAll);
+  const shown = all ? items : items.slice(0, SVF_CAP);
+  out.push('<div class="dl-svf-list">' + shown.map((x) => svfCard(x)).join('') + '</div>');
+  /* 展开 / 收起（与「本体」模块的 `data-dl-all` 同款交互：数据已在手上，不再发请求） */
+  if (items.length > SVF_CAP) {
+    out.push('<div class="d-dl-links">' + (all
+      ? '<button type="button" class="dl-more" data-dl-svf="less">收起，只看前 ' + SVF_CAP + ' 条</button>'
+      : '<button type="button" class="dl-more" data-dl-svf="all">展开全部 ' + items.length +
+        ' 条（已显示前 ' + SVF_CAP + ' 条）</button>') + '</div>');
+  }
+  /* 页脚只在这一屏有额外信息时才写 —— 空话不写（`.dlpop-f` 是共享节点，
+     不主动清空会把上一次「本体」模块的页脚留在存档页上） */
+  const noFile = items.filter((x) => !(x.files && (x.files.direct || (x.files.netdisk || []).length ||
+    x.files.ed2k || x.files.thunder))).length;
+  $('#dlFoot').innerHTML = noFile
+    ? '其中 <b>' + noFile + '</b> 条没能解析出下载通道（源站改版或着陆页异常），已给出「去源站页面取」出口，未丢弃。'
+    : '';
+  body.innerHTML = out.join('');
+}
+
+/** 位置弹窗正文：路径 / 注册表逐条给「复制」。
+ *  这一版把原来的 `dlUniPaintSave` 路径渲染整段搬过来 —— 视觉与旧版一致
+ *  （`.dl-sv-row` + `.dl-cp`，用户已经认这个版式），只是换了容器。 */
+function svLocHtml(h) {
   if (!h) {
-    body.innerHTML = '<div class="dlpop-empty">这款游戏在 Ludusavi 存档清单里没有记录<br>' +
+    return '<div class="dlpop-empty">Ludusavi 存档清单里没有这款游戏的记录<br>' +
       '<span style="font-size:11.5px">清单只覆盖有公开存档目录约定的游戏；也可能是名称没对上</span></div>' +
       '<div class="d-dl-links"><a href="/resources.html#sv">去存档库按名搜 ↗</a></div>';
-    return;
   }
   const paths = h.paths || [], regs = h.regs || [];
   const tagOf = (t) => (t === 'config' ? '配置' : (t === 'save' ? '存档' : (t || '存档')));
@@ -4725,7 +4908,45 @@ function dlUniPaintSave(h) {
   });
   out.push(rows.length ? '<div class="dl-sv-list">' + rows.join('') + '</div>'
     : '<div class="dlpop-empty">这份记录里只有游戏条目，没有具体的路径</div>');
-  body.innerHTML = out.join('');
+  return out.join('');
+}
+
+/** 打开位置弹窗。数据从 `dlUni.data.save.loc` 取 —— **不在这里重新发请求**，
+ *  否则会出现「主区已加载完、位置按钮转圈」这种两套加载态。
+ *  ★ 若 `loc` 还没回来（用户点得快），给一次兜底加载并等它。 */
+async function openSvLoc() {
+  const pop = $('#svLoc');
+  if (!pop) return;
+  const st = dlUni;
+  const nm = (st && st.ctx && st.ctx.title) || '';
+  $('#svLocSub').textContent = nm ? (splitName(nm).zh || nm) : '';
+  pop.hidden = false;
+  requestAnimationFrame(() => pop.classList.add('on'));
+  const d = st && st.data && st.data.save;
+  if (d === undefined || d === null) {
+    $('#svLocBody').innerHTML = '<div class="dlpop-load"><i></i>正在读取存档位置…</div>';
+    if (st) {
+      await dlUniLoad('save');
+      /* ⚠️ dlUniLoad 在「已在加载中」时是**直接 return** 的，不能只 await 它一次就往下画 ——
+         那样会把「还在读」误画成「Ludusavi 里没有这款游戏」（假空态，比转圈更糟）。
+         所以再显式等 busy 落下（上限约 4.8s，超时就按当前数据画，不无限转）。 */
+      for (let i = 0; i < 40 && dlUni === st && st.busy.save; i++) {
+        await new Promise((r) => setTimeout(r, 120));
+      }
+    }
+  }
+  const now = dlUni === st ? (st.data.save || {}) : {};
+  $('#svLocBody').innerHTML = svLocHtml(now.loc || null);
+  $('#svLocBody').scrollTop = 0;
+}
+
+function closeSvLoc() {
+  const pop = $('#svLoc');
+  if (!pop || pop.hidden) return;
+  pop.classList.remove('on');
+  /* 等过渡结束再 hidden，否则 0.2s 的退场动画看不到（与 closeDownload 同款处理） */
+  setTimeout(() => { if (!pop.classList.contains('on')) pop.hidden = true; }, 200);
+  $('#svLocBody').innerHTML = '';
 }
 /* 同分类推荐 ★ v10.11：改走后端多因子打分（类型 IDF + 系列名 + 评分接近度 + 容量接近度）
  *
@@ -5343,6 +5564,9 @@ function closeDownload() {
   dlUni = null;
   const mt = $('#dlModTabs');
   if (mt) { mt.hidden = true; mt.innerHTML = ''; }
+  /* ★ v10.46：位置弹窗是压在下载弹窗**之上**的一层，父层关掉时它必须跟着关 ——
+     否则会留下一张「浮在空页面上、背景全透明」的孤零零位置卡，且 z-index 更高点不到别处。 */
+  closeSvLoc();
   setTimeout(() => { pop.hidden = true; const b = $('#dlBody'); if (b) b.innerHTML = ''; }, 180);
 }
 /* ★ v10.45：原 openDownload()（异步解析 + 一次性铺全部专区的网盘弹窗）**已删除**。
@@ -5601,13 +5825,35 @@ function dModLinks() {
   if (!pop) return;
   pop.addEventListener('click', (e) => {
     if (e.target.closest('[data-dl="close"]')) { closeDownload(); return; }
+    /* ★ v10.46：存档模块右上角的「📍 存档位置」→ 开二级弹窗。
+       同一个委托里处理，因为它也在 #dlBody 内（会被整块重建，直接绑必掉）。 */
+    if (e.target.closest('[data-dl-svloc]')) { openSvLoc(); return; }
+    /* ★ v10.46：存档文件列表的展开 / 收起（数据已在手上，只改状态重绘，不再打请求） */
+    const sfv = e.target.closest('[data-dl-svf]');
+    if (sfv) { if (dlUni) { dlUni.svfAll = sfv.dataset.dlSvf === 'all'; dlUniPane(); } return; }
     const cp = e.target.closest('[data-dl-copy]');
     if (cp) dlCopy(cp);
   });
+  /* ★ v10.46：位置弹窗是**独立浮层**（#svLoc 与 #dlPop 是兄弟节点，冒泡到不了上面那个委托），
+     所以复制 / 关闭要自己接一遍。
+     ⚠️ 这里的 `[data-dl-copy]` 与下载弹窗里的是同一套（dlCopy 也是同一个）——
+        不要以为「弹窗里的复制已经能用」就把这块省掉：省掉后按钮长得一模一样但点了没反应。 */
+  const sv = $('#svLoc');
+  if (sv) {
+    sv.addEventListener('click', (e) => {
+      if (e.target.closest('[data-svloc="close"]')) { closeSvLoc(); return; }
+      const cp = e.target.closest('[data-dl-copy]');
+      if (cp) dlCopy(cp);
+    });
+  }
   /* ESC 关弹窗：用捕获阶段并截断 —— 搜索弹窗也监听 ESC，
-     不截断会出现「一下 ESC 把两个都关掉」。只在弹窗真的开着时才抢。 */
+     不截断会出现「一下 ESC 把两个都关掉」。只在弹窗真的开着时才抢。
+     ★ v10.46：位置弹窗叠在下载弹窗**之上**，ESC 必须先关最上面那一层 ——
+        否则用户在位置弹窗上按 ESC，会看到下面那层也一起没了（「一下关两层」）。 */
   document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || pop.hidden) return;
+    if (e.key !== 'Escape') return;
+    if (sv && !sv.hidden) { e.stopPropagation(); closeSvLoc(); return; }
+    if (pop.hidden) return;
     e.stopPropagation();
     closeDownload();
   }, true);

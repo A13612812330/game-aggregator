@@ -397,6 +397,7 @@ const xref = require('./data/xref');
 const trainers = require('./data/trainers');
 const mods = require('./data/mods');
 const saves = require('./data/saves');
+const savesYx = require('./data/savesYx');
 const pcreq = require('./data/pcreq');
 const bhparams = require('./data/bhparams');
 const emuguide = require('./data/emuguide');
@@ -460,7 +461,11 @@ app.post('/api/bh/refresh', (_req, res) => {
   if (bhRun && !bhRun.done) return res.json({ ok: true, running: true, startedAt: bhRun.startedAt });
   bhRun = { startedAt: Date.now(), done: false, ok: false, error: null, result: null };
   console.log('[GameHub] BannerHub 刷新开始…');
-  const p = spawn(process.execPath, [path.join(__dirname, 'tools', 'refresh-bannerhub.js'), '--json'], { cwd: __dirname });
+  /* ★ v10.46：`stdio` 的 stdin 必须 'ignore' —— 沙箱（WorkBuddy）里 node 起子进程时
+   *   stdin 若是 pipe（**node 默认值**）⇒ 直接 EBUSY，`/api/bh/refresh` 会永远起不来。
+   *   见 tools/check-stdio-guard.js 与 PITFALLS.md 第十八节 6。 */
+  const p = spawn(process.execPath, [path.join(__dirname, 'tools', 'refresh-bannerhub.js'), '--json'],
+    { cwd: __dirname, stdio: ['ignore', 'pipe', 'pipe'] });
   let out = '', err = '';
   p.stdout.on('data', (d) => { out += d; });
   p.stderr.on('data', (d) => { err += d; });
@@ -794,6 +799,33 @@ app.get('/api/saves/match', (req, res) => {
     hit = (r.items || [])[0] || null;
   }
   res.json({ ok: true, t, id, hit });
+});
+
+/* ================= 💾 游侠「存档文件」 =================
+ *
+ * 与上面 /api/saves/*（存档**位置**，Ludusavi manifest）互补：
+ * 这里回的是**可下载的存档包**（真直链 / 网盘 / eD2K），源站 = 游侠补丁网存档区。
+ *
+ * ★ 为什么两条线要分开而不是合并成一条：
+ *   位置是「每款游戏多行路径」、文件是「每款游戏 N 个可下载包」，且文件侧只在
+ *   匹配上端游库的条目上才有 —— 合并会把 saves.js 的 stats / 分页口径全部搞乱。
+ *   前端在「存档」模块里同时展示，但后端保持两个独立口径。
+ */
+
+// GET /api/saves-yx/stats — 概览（含直链/网盘/eD2K 各通道条数、解析失败率）
+app.get('/api/saves-yx/stats', (_req, res) => res.json(savesYx.stats()));
+
+// GET /api/saves-yx/index — { byLib: {libId: 文件数} } —— 卡片计数用（体积小）
+app.get('/api/saves-yx/index', (_req, res) => res.json(savesYx.index()));
+
+// GET /api/saves-yx/match?t=<游戏名>&id=<端游库id> — 某款游戏的存档**文件**
+//   ★ v10.46：走 `matchSlim` —— 完整条目带 desc / steps / shots 长文（p50 1.8KB/条），
+//     前端一个字段都不用；热门游戏十几条就是几十 KB 的纯浪费。要长文请用 savesYx.match()。
+app.get('/api/saves-yx/match', (req, res) => {
+  const t = String(req.query.t || '').trim();
+  const id = String(req.query.id || '').trim();
+  const r = savesYx.matchSlim({ t, id });
+  res.json({ ok: true, t, id, count: r.count, items: r.items });
 });
 
 /* ================= 🖥 PC 配置要求（最低 / 推荐） =================

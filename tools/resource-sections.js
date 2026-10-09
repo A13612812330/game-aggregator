@@ -173,8 +173,16 @@ async function initMd() {
  *   并拍板「卡面留按钮，点开合并弹窗的『存档』模块」。
  *   旧版把最多 3 条路径 + 2 条注册表（`.paths` / `.cp`）直接铺在卡面上，
  *   卡又高又花、一屏扫不完；路径本身在**详情页「云存档位置」块**与
- *   **合并下载弹窗的「存档」模块**（`dlUniPaintSave`，逐条带复制）里都有，
+ *   **合并下载弹窗的「存档」模块**里都有，
  *   这里再铺一份属于「同一份数据三套渲染」。
+ *   ★ v10.46：那处落点又下移一层 —— 弹窗的存档模块主区改成「可下载的**文件**」
+ *     （游侠存档区），位置收进模块**右上角**的「📍 存档位置」按钮 → #svLoc 二级弹窗。
+ *     ⚠️ 所以本页卡片的按钮文案「查看 N 条存档位置」点进去**先看到的是文件**，
+ *       位置要在弹窗里再点一次右上角 —— 文案没说谎（位置确实在里面），但下轮若要改措辞，
+ *       记得同步 test-emulator-structure.js 里那条 toast 文案断言。
+ *     ⚠️⚠️ 这段注释里**故意不复述那条 toast 的原文**：断言是用 `indexOf` 式字符串去
+ *       `resources.html` 源码里搜的，注释里出现同一串会让断言**恒真**
+ *       （本项目在 PITFALLS 里记过这个坑）。
  * ★ 搬到本页后默认口径保持不变：本页是端游资源语境 ⇒ 默认给全量（phone=false）。
  * ========================================================================== */
 const svState = { q: '', sort: 'paths', phone: false, cloud: false, offset: 0, total: 0, items: [], inited: false, loading: false };
@@ -199,7 +207,7 @@ function svCard(it) {
 
   /* 唯一动作：打开合并下载弹窗并直接落在「存档」模块（`data-sv-open` 由 bindSvCards 分流）。
      ⚠️ 条数写进按钮文案 —— 卡面上没有路径了，用户需要一个「值不值得点」的量。
-     注册表项也算一条记录（`dlUniPaintSave` 里两类都逐条列出），所以合计。 */
+     注册表项也算一条记录（弹窗右上角「📍 存档位置」里两类都逐条列出），所以合计。 */
   const total = paths.length + regs.length;
   const open = '<button class="sv-open" type="button" data-sv-open'
     + ' data-title="' + esc(title) + '" data-lib="' + esc(it.libId || '') + '">'

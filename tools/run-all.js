@@ -41,6 +41,12 @@ const SUITES = [
    * 同 test-emulator-page.js，它也要 8123 在跑。 */
   'test-resource-page.js',
   'test-saves-match.js',
+  /* ★ v10.46 新增：「游侠存档 × 端游库」**名称匹配**层（前缀通道 + 代际护栏口径）。
+   * 起因：这条链路此前零覆盖（test-saves-match.js 测的是 Ludusavi 路径匹配，另一条路），
+   *       而 v10.46 真的出过一次静默事故 —— 护栏误用整条标题当查询参数，
+   *       匹配数 2,043 → 1,952，页面照常渲染、没有任何东西变红。
+   * 纯离线、秒级，不依赖 8123。 */
+  'test-youxia-match.js',
   'test-date-norm.js',
   'test-mods.js',
   'test-related-dl.js',
@@ -111,8 +117,20 @@ const SUITES = [
  *   ⚠️ 它维护两张**显式例外表**（.emu-card .cov 顶部横幅 92px 等），并**自检陈旧**：
  *     表里登记、代码里已不存在的选择器也会报错，避免「例外表」退化成「静默跳过」。 */
 const PREFLIGHT = [
-  { name: 'check-inline-syntax.js', args: ['public/index.html', 'public/emulator.html', 'public/unpack.html'] },
+  /* ★ v10.46：**故意不传 args**。
+   *   原来传了 `['public/index.html','public/emulator.html','public/unpack.html']` ——
+   *   三个页面的硬编码清单，在 v10.44 新增第 4 张派生页 `public/resources.html` 之后
+   *   **没人同步**，于是这条闸在包里只查 3 页、**静默漏掉 resources 页**
+   *   （工具自己的默认清单反而是 4 页，还专门写了 v10.44 的注释）。
+   *   ⇒ 不传参数、用工具自带的清单，新增页面只需改一处。
+   *   教训同铁律 34「新增派生页 ⇒ 三处清单同时加」，这里是第四处。 */
+  { name: 'check-inline-syntax.js', args: [] },
   { name: 'check-card-rules.js', args: [] },
+  /* ★ v10.46 新增：子进程 stdin 沙箱守卫。
+   *   起因：沙箱里 node 起子进程时 stdin 若是 pipe（**node 默认值**）⇒ EBUSY。
+   *   后果是**防线自己说谎**：反证把"起不来"当"没变红"，报成"护栏是假绿"。
+   *   静态检查、秒级；本环境实测一次揪出 29 处（含 24 个反证脚本、日报、server.js）。 */
+  { name: 'check-stdio-guard.js', args: [] },
 ];
 
 let pass = 0, fail = 0;

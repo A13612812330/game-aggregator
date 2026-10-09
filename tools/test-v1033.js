@@ -173,7 +173,7 @@ console.log('\n=== ⑤ 预热脚本：批模式 / 进度 / --dry ===');
   let out = '', threw = '';
   try {
     out = execFileSync(process.execPath, [path.join(ROOT, 'tools', 'build-steam-req.js'), '--dry'],
-      { encoding: 'utf8', cwd: ROOT, timeout: 90000 });
+      { encoding: 'utf8', cwd: ROOT, timeout: 90000, stdio: ['ignore', 'pipe', 'pipe'] });
   } catch (e) { threw = String(e.message || e).slice(0, 120); }
   ok(!threw, '⑤e --dry 能跑通', threw);
   ok(/--dry：只报计划，不抓取/.test(out), '⑤f --dry 明确声明只报计划');

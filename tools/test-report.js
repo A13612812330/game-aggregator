@@ -201,6 +201,11 @@ let out = '';
 try {
   out = execFileSync(process.execPath, ['tools/report.js', '--no-net', '--md'], {
     encoding: 'utf8', cwd: ROOT, timeout: 90000, maxBuffer: 1 << 22,
+    /* ★ v10.46：stdin 必须显式 'ignore'。在 WorkBuddy 沙箱里，node 起子进程时
+     *   stdin 若是 pipe（默认值）会直接 EBUSY（errno -4082）—— 实测：默认/显式 'pipe'
+     *   一律失败，'ignore' / 'inherit' 一律成功；与 NODE_OPTIONS 无关（清空无效）。
+     *   详见 PITFALLS.md 第十八节 6。 */
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
 } catch (e) {
   out = String((e.stdout || '') + (e.stderr || ''));
@@ -298,7 +303,8 @@ ok(/process\.exit\(fail \? 1 : 0\)/.test(doc(path.join('tools', 'test-alias-guar
 console.log('\n=== ⑥ 本地真实数据自检 ===');
 const idx = fs.readFileSync(path.join(ROOT, 'public/index.html'), 'utf8');
 ok(idx.length > 100000, 'public/index.html 有内容可算 md5', (Buffer.byteLength(idx, 'utf8') / 1024).toFixed(1) + 'KB');
-const dirty = execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8', cwd: ROOT }).trim();
+const dirty = execFileSync('git', ['status', '--porcelain'],
+  { encoding: 'utf8', cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 ok(typeof dirty === 'string', 'git status 可读（工作区自检）', dirty ? dirty.split(/\r?\n/).length + ' 项未提交' : '干净');
 
 console.log('\n结果：' + pass + ' / ' + (pass + fail) + ' 通过');

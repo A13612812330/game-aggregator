@@ -32,7 +32,11 @@ const MAX = parseInt(val('--max', '0'), 10) || 0;
 
 /* 匹配逻辑抽在 data/mod-match.js（**单一真源**，可离线单测）：
  * 按 `/` 分段 + CJK 友好长度护栏。这里不重复实现，避免两边漂移。 */
-const { normKey, buildLibIndex, matchLib } = require('../data/mod-match');
+/* 匹配逻辑抽在 data/mod-match.js（「键怎么用」：切段 / 护栏 / 索引）；
+ * ★ v10.46：`normKey` 从**唯一真源** name-normalize 取 —— mod-match 不再转发它，
+ *   因为两份字符类曾经不等价（1.245% 的名称键不同）。 */
+const { buildLibIndex, matchLib } = require('../data/mod-match');
+const { normKey } = require('../data/name-normalize');
 
 void normKey;
 

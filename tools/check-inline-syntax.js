@@ -53,7 +53,12 @@ for (const rel of files) {
   fs.writeFileSync(out, body, 'utf8');
   let ok = true, msg = '';
   try {
-    execFileSync(process.execPath, ['--check', out], { stdio: 'pipe' });
+    /* ★ v10.46：原来是 `stdio: 'pipe'`（三路都 pipe）—— 在 WorkBuddy 沙箱里
+     *   **stdin 为 pipe ⇒ node 起子进程直接 EBUSY**，于是 `node --check` 一次都跑不成，
+     *   四页全被报成「语法有错」，成了**前置闸的假红**（实测四页 `node --check` 全 OK）。
+     *   改成 stdin='ignore' 即可；stdout/stderr 保持 pipe（要读错误信息）。
+     *   详见 PITFALLS.md 第十八节 6。 */
+    execFileSync(process.execPath, ['--check', out], { stdio: ['ignore', 'pipe', 'pipe'] });
   } catch (e) {
     ok = false;
     msg = String((e.stderr || e.stdout || '')).split('\n').slice(0, 6).join('\n');

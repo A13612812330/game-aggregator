@@ -41,6 +41,8 @@ function fetchPage(p) {
   const url = p === 1 ? BASE : `${BASE}?page=${p}`;
   const html = execFileSync('curl', ['-s', '-L', '-m', '30', '-A', UA, url], {
     encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
+    /* ★ v10.46：stdin 必须 'ignore'（沙箱内 pipe ⇒ EBUSY）。守卫：tools/check-stdio-guard.js */
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
   return html;
 }

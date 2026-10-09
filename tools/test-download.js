@@ -272,7 +272,15 @@ eq(dl.serverOf('https://store.steampowered.com/app/1/'), '其他链接',
   ok(/async function dlUniFetchBody\(/.test(idx), '本体模块走 /api/download');
   ok(/async function dlUniFetchMods\(/.test(idx) && /kind=' \+ kind/.test(idx) && /limit=' \+ D_MOD_CAP/.test(idx),
     '★ Mod / 修改器各自按 kind 拉 /api/mods/match（条数不再由 /api/download 的成败决定）');
-  ok(/async function dlUniFetchSave\(/.test(idx), '存档模块走 /api/saves/match');
+  /* ★ v10.46：「存档」模块拆成**两条线** —— 文件（主区）与位置（右上角弹窗）。
+     旧的单一 dlUniFetchSave 已不存在 ⇒ 按铁律「搬家 + 反向断言」处理：
+     正向锚点证明新名字真的在，反向断言证明旧名字没有以死代码形式留下来。 */
+  ok(/async function dlUniFetchSaveFiles\(/.test(idx) && /\/api\/saves-yx\/match\?t=/.test(idx),
+    '★ 存档模块主区走 /api/saves-yx/match（游侠存档区的**可下载文件**）');
+  ok(/async function dlUniFetchSaveLoc\(/.test(idx) && /\/api\/saves\/match\?t=/.test(idx),
+    '★ 存档位置走 /api/saves/match（Ludusavi 路径库，哨兵口径：给的是「放哪」）');
+  ok(!/async function dlUniFetchSave\(/.test(idx),
+    '★★ 反向断言：旧的单一 dlUniFetchSave 已删除（拆成 Files / Loc，留着就是永不执行的死代码）');
   ok(/async function dlUniFetchGcm\(/.test(idx) && /\.dl-gcm\{/.test(idx),
     '★ 修改器模块另取 GCM 元数据并单独一段（它没有下载地址，不能长得像能点开的社区帖）');
   ok(/function dlUniResolveItem\(/.test(idx) && /\/api\/library\/item\?id=/.test(idx),
@@ -287,10 +295,69 @@ eq(dl.serverOf('https://store.steampowered.com/app/1/'), '其他链接',
   ok(/function openDlSecPop\(/.test(idx) && /data-df-open/.test(idx),
     '★ 详情页三专区预览的「全部 N 帖」入口仍走 openDlSecPop（没被合并版吃掉）');
 
+  /* ===== v10.46：存档 = 「文件」铺主区 + 「位置」收进右上角二级弹窗 =====
+   * 用户口径原文：「存档我需要的是文件，而不是文件位置，位置则在存档的右上角点击弹窗查看（可复制）」。 */
+  ok(/id="svLoc"/.test(idx) && /id="svLocBody"/.test(idx),
+    '★ 主源有 #svLoc 位置二级弹窗（位置不再铺在存档主区）');
+  ok(/\.svloc\{position:fixed[^}]*z-index:120/.test(idx),
+    '★★ .svloc 的 z-index 必须高于 .dlpop(110) —— 否则位置弹窗被下载弹窗整个盖住，'
+    + '而「节点存在 / 可点 / 占版面」全都成立（v10.22 同款最难发现的假绿）');
+  ok(/function dlUniPaintSave\(d\)/.test(idx) && /class="dl-sv-head"/.test(idx),
+    '★ 存档主区有标题行（文件数 + 右上角位置入口）');
+  ok(/data-dl-svloc="1"/.test(idx) && /closest\('\[data-dl-svloc\]'\)/.test(idx),
+    '★ 「📍 存档位置」按钮走**事件委托**（#dlBody 每次整块重建，直接绑监听必掉）');
+  ok(/'<a class="pri" href="' \+ esc\(f\.direct\)/.test(idx),
+    '★ 文件卡把**直链**做成主按钮（网盘再多也要有一个「直接下载」能点）');
+  ok(/function svfCard\(/.test(idx) && /去源站页面取 ↗/.test(idx),
+    '★ 解析不出任何下载通道的条目给「去源站页面取」出口 —— 不静默丢条');
+  /* ★★ 位置弹窗的版式断言必须**切出函数体再查**：`dl-sv-row` / `data-dl-copy` 这两串
+     在下载弹窗里到处都是，裸搜顶层源码等于恒真（断言名就会 over-claim）。 */
+  {
+    const i0 = idx.indexOf('function svLocHtml(');
+    const i1 = idx.indexOf('function openSvLoc(', i0);
+    const svBody = i0 >= 0 && i1 > i0 ? idx.slice(i0, i1) : '';
+    ok(/dl-sv-row/.test(svBody) && /data-dl-copy/.test(svBody) && /dl-sv-list/.test(svBody),
+      '★ 位置弹窗**函数体内**复用 .dl-sv-row + data-dl-copy（沿用旧版式，用户已经认这个版式）');
+    const o0 = idx.indexOf('async function openSvLoc(');
+    const o1 = idx.indexOf('function closeSvLoc(', o0);
+    const openBody = o0 >= 0 && o1 > o0 ? idx.slice(o0, o1) : '';
+    ok(/svLocHtml\(now\.loc \|\| null\)/.test(openBody),
+      '★ 位置弹窗画的是**本次会话的 loc 数据**（换游戏后不会画出上一款的路径）');
+  }
+  ok(/const sv = \$\('#svLoc'\)/.test(idx) && /sv\.addEventListener\('click'/.test(idx),
+    '★★ #svLoc 与 #dlPop 是**兄弟节点**，冒泡到不了下载弹窗的委托 —— '
+    + '复制 / 关闭必须自己接一遍（省掉后按钮长得一样但点了没反应）');
+  ok(/if \(sv && !sv\.hidden\) \{ e\.stopPropagation\(\); closeSvLoc\(\); return; \}/.test(idx),
+    '★★ ESC 先关最上面那一层 —— 否则在位置弹窗上按 ESC 会把下两层一起关掉');
+  ok(/closeSvLoc\(\);\s*\n\s*setTimeout\(\(\) => \{ pop\.hidden = true/.test(idx),
+    '★ 关下载弹窗时一并关位置弹窗（否则留下浮在空页面上的孤立卡片，且它 z-index 更高挡着点击）');
+  ok(/\$\('#dlFoot'\)\.innerHTML = '';/.test(idx),
+    '★ #dlFoot 是共享页脚，换页签先清 —— 否则存档那句「其中 N 条没能解析出下载通道」会跟到「本体」页签上');
+  ok(/st\.cnt\.save = files\.count;/.test(idx),
+    '★ 页签角标只认**文件数**（把位置条数加进来 = over-claim：显示 12 点进去只有 2 个能下载）');
+  /* ★★ 这条的判据必须锚到**尾分号**：第一版写成 `/st\.cnt\.save = files\.count/` 是**假绿** ——
+     变异成 `files.count + locN` 后前缀照样匹配，反证时一条都没红（本轮反证实测抓出）。 */
+  ok(!/st\.cnt\.save = files\.count \+ /.test(idx),
+    '★★ 反向断言：角标不再叠加任何东西（over-claim 回归会当场变红）');
+  ok(/await dlUniLoad\('save'\)/.test(idx)
+    && /for \(let i = 0; i < 40 && dlUni === st && st\.busy\.save; i\+\+\)/.test(idx),
+    '★★ 位置弹窗在数据未回时先兜底取数并**等 busy 落下** —— dlUniLoad 在加载中会直接 return，'
+    + '只 await 一次会把「还在读」误画成「Ludusavi 里没有这款游戏」（假空态比转圈更糟）');
+  ok(/function closeSvLoc\(/.test(idx) && /function openSvLoc\(/.test(idx),
+    '★ 位置弹窗有独立的开 / 关函数（复用 #dlPop 外壳的那批弹窗不能顺手把它一起带走）');
+  ok(/const SVF_CAP = 20;/.test(idx) && /items\.slice\(0, SVF_CAP\)/.test(idx),
+    '★ 存档文件列表有上限 SVF_CAP（实测单款最多 215 条 —— 鬼谷八荒，全是真命中，全铺 DOM 太重）');
+  ok(/data-dl-svf="all">展开全部 ' \+ items\.length/.test(idx) && /data-dl-svf="less"/.test(idx),
+    '★★ 截断必须**明说条数 + 给展开/收起出口** —— 静默丢条是本项目明令禁止的');
+  ok(/dlUni\.svfAll = sfv\.dataset\.dlSvf === 'all'/.test(idx) && /svfAll: false,/.test(idx),
+    '★ 展开态挂在会话对象上（换游戏 / 关弹窗自动重置，不会「上一款展开过这一款也全铺」）');
+
   for (const page of ['public/emulator.html', 'public/resources.html', 'public/unpack.html']) {
     const t = read(page);
     ok(/id="dlPop"/.test(t) && /function openUniDownload/.test(t) && /id="dlModTabs"/.test(t),
       '★ ' + page + ' 已重建并带上合并弹窗（改了主源不重建派生页，那边就没有弹窗且不报错）');
+    ok(/id="svLoc"/.test(t) && /function svLocHtml/.test(t) && /function svfCard/.test(t),
+      '★★ ' + page + ' 已重建并带上 v10.46 的「存档文件主区 + 位置弹窗」（少重建一页那页就还是纯路径）');
   }
 
   /* ★ 权限受限时的「说明 + 出口」必须真的接上去：

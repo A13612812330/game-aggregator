@@ -64,7 +64,8 @@ for (const c of CASES) {
     fs.writeFileSync(p, broken);
     console.log('\u25b6 ' + c.label);
     try {
-      out = execFileSync(process.execPath, [SUITE], { encoding: 'utf8', timeout: 120000 });
+      out = execFileSync(process.execPath, [SUITE],
+        { encoding: 'utf8', timeout: 120000, stdio: ['ignore', 'pipe', 'pipe'] });
     } catch (e) { out = String(e.stdout || '') + String(e.stderr || ''); }
   } finally {
     fs.writeFileSync(p, orig);
@@ -87,7 +88,8 @@ for (const c of CASES) {
 
 /* 还原后必须复跑一次全绿，否则「还原」本身可能是假的 */
 let out2 = '';
-try { out2 = execFileSync(process.execPath, [SUITE], { encoding: 'utf8', timeout: 120000 }); }
+try { out2 = execFileSync(process.execPath, [SUITE],
+  { encoding: 'utf8', timeout: 120000, stdio: ['ignore', 'pipe', 'pipe'] }); }
 catch (e) { out2 = String(e.stdout || '') + String(e.stderr || ''); }
 const sum2 = (out2.match(/\u901a\u8fc7 \d+ \/ \d+/) || ['(\u65e0\u6c47\u603b)'])[0];
 console.log('\u25c0 \u5168\u90e8\u8fd8\u539f\u540e\u590d\u8dd1\uff1a' + sum2);

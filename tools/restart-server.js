@@ -25,8 +25,11 @@ const ROOT = path.join(__dirname, '..');
 
 function pidsOnPort(port) {
   let out = '';
-  try { out = execFileSync('netstat', ['-ano'], { encoding: 'utf8' }); }
-  catch (e) { try { out = execFileSync('C:/Windows/System32/netstat.exe', ['-ano'], { encoding: 'utf8' }); } catch (e2) { return []; } }
+  /* ★ v10.46：stdin 必须 'ignore'，否则沙箱内 EBUSY ⇒ 这里会**静默返回 []**（当成"端口没人占"），
+   *   于是 restart 会以为可以随便起，实际端口被占 —— 属于最危险的那种静默失败。 */
+  const NETSTAT_STDIO = { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] };
+  try { out = execFileSync('netstat', ['-ano'], NETSTAT_STDIO); }
+  catch (e) { try { out = execFileSync('C:/Windows/System32/netstat.exe', ['-ano'], NETSTAT_STDIO); } catch (e2) { return []; } }
   const pids = new Set();
   for (const line of out.split(/\r?\n/)) {
     if (!/LISTENING/i.test(line)) continue;
