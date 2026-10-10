@@ -259,6 +259,21 @@
   .src-badge.sv{color:#0369A1;background:#E0F2FE}
   .sm-row .pill.src-tr{color:#0F766E;background:#ECFDF5}
   .sm-row .pill.ver2{color:#334155;background:#F1F5F9;font-family:var(--font-num);font-weight:750}
+  /* ★ v10.52：搜索结果行里的「资源计数」chip
+   *   搜到游戏本体时顺带说明它有多少 MOD / 修改器 / 存档 —— 数字来自 /api/search/all
+   *   新挂的 `res` 字段（服务端复用 resGroups.countsFor，5 路来源已按游戏聚合，不重做匹配）。
+   *   chip 是**独立按钮**：点它直接进详情并落到对应下载页签，与整行的「查看详情」分开
+   *   （所以 bindSmRows 里必须先判 chip、再判行，否则会同时开抽屉又开弹窗）。
+   *   圆角 7px 属「卡片内部小按钮」，与 `.sm-row .go2` 同类 ⇒ 已登记进
+   *   tools/check-card-rules.js 的 RAD_EXCEPT（不登记会被闸门判成「新增卡片容器」）。 */
+  .sm-row .sm-res{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:3px}
+  .sm-row .sm-res-b{font-family:var(--font);font-size:10.5px;font-weight:750;border-radius:7px;padding:2px 7px;cursor:pointer;transition:.14s;flex:none}
+  .sm-row .sm-res-b.mod{color:#6D28D9;background:#F5F3FF;border:1px solid #DDD6FE}
+  .sm-row .sm-res-b.mod:hover{background:#EDE9FE;border-color:#C4B5FD}
+  .sm-row .sm-res-b.modifier{color:#0F766E;background:#ECFDF5;border:1px solid #A7F3D0}
+  .sm-row .sm-res-b.modifier:hover{background:#D1FAE5;border-color:#6EE7B7}
+  .sm-row .sm-res-b.save{color:#0369A1;background:#E0F2FE;border:1px solid #BAE6FD}
+  .sm-row .sm-res-b.save:hover{background:#BAE6FD;border-color:#7DD3FC}
   .sm-row .pill.cld{color:#0369A1;background:#E0F2FE}
   /* 云存档结果行直接把「存档路径」亮出来 —— 这是用户搜索时最想看到的信息 */
   .sm-row .pth{font-size:10.5px;color:var(--c-t2);font-family:var(--font-num);line-height:1.3;
@@ -3039,6 +3054,21 @@ function openDetailFromSearch(el) {
   closeSearch();
   openDetail(el.dataset.url, el.dataset.fb, true);
 }
+/** ★ v10.52：搜索结果行里的**资源 chip** —— 一步进详情并直落对应下载页签。
+ *  与 openDetailFromSearch 的分工：那个是「整行 = 看这款游戏」，
+ *  这个是「chip = 直接去看它的 Mod / 修改器 / 存档」，两者终点不同。
+ *  弹窗自己会按 `id` 解析该游戏的 url / jidi（dlUniResolveItem 优先用 id 查
+ *  /api/library/item），所以这里只给 id + title + tab 就够，不必搬 fb 那串。
+ *  ⚠️ 必须先 await openDetailById 再开弹窗：抽屉是同步铺基础信息的，
+ *     先开弹窗会被随后的一次 #drawerBody 重绘抢走层级。 */
+async function openResTab(id, title, tab) {
+  if (!id) { toast('这一项未关联本地端游库，暂无资源入口'); return; }
+  const body = $('#smBody');
+  smSnapshot = { q: (lastQ || $('#searchInput').value.trim()), html: body.innerHTML, scroll: body.scrollTop };
+  closeSearch();
+  await openDetailById(id, title);
+  openUniDownload({ id: String(id), title: String(title || ''), tab });
+}
 const QUICK_WORDS = ['艾尔登法环', '赛博朋克2077', '只狼', '巫师3', '剑星', '荒野大镖客', 'GTA5', '生化危机4', '死亡搁浅'];
 function lockBody() { document.body.style.overflow = 'hidden'; }
 function unlockBody() { if (!$('#drawer').classList.contains('show') && !smOpen) document.body.style.overflow = ''; }
@@ -3104,6 +3134,33 @@ function paintSearchHome() {
 }
 function quickSearch(k) { const inp = $('#searchInput'); inp.value = k; $('#smClear').classList.remove('hidden'); doSearch(); }
 /* 弹窗内统一结果行（联想 / 本地命中 / 源站实时共用同一渲染） */
+/* ★ v10.52：搜索结果行里的「资源计数」chip
+ *   为什么加：搜索的 4 个桶（端游库 / 手游中心 / 修改器 / 云存档）**没有任何一个**
+ *   回答「这款游戏有多少 MOD / 存档」。实测搜「赛博朋克2077」返回 pc 2 / 手游 1 /
+ *   修改器 3 / 云存档 1 —— 而这款实际有 **717 个 MOD**，结果里一个字都没出现。
+ *   `it.res` 由服务端 `/api/search/all` 挂上（带孪生兜底，所以机地那条也拿得到 XD 的数字）。
+ *   ⚠️ 缺字段 / 全 0 一律不渲染 —— 「没有 chip」与「这一区空白」对用户是同一个意思，
+ *     留个空 div 只是噪声。
+ *   ⚠️ chip 带 data-res-tab，点击由 bindSmRows 单独接管（**不**复用整行的「查看详情」）——
+ *     两者行为不同：整行是「看这款游戏」，chip 是「直接去它的 Mod / 存档」。 */
+const SM_RES = [
+  ['mod', 'mod', '🧩', 'MOD'],
+  ['trainers', 'modifier', '🛠', '修改器'],
+  ['saves', 'save', '💾', '存档'],
+];
+function smResChips(it) {
+  const r = it && it.res;
+  if (!r) return '';
+  /* ★ `resId` 优先：计数**归属**的那条库内 id（服务端带出），与显示条目的 id 可能不同 ——
+   *   赛博朋克2077 的 717 个 MOD 挂在 `xd-191`，而这一行可能是机地那条 `jidi-3277800`。
+   *   拿显示条目的 id 去开弹窗，`/api/mods/match?id=jidi-3277800` 会查空
+   *   （只能靠名称模糊兜底撞回来，那是运气不是设计）。 */
+  const rid = it.resId || it.id || '';
+  const bits = SM_RES.filter(([k]) => Number(r[k]) > 0).map(([k, tab, ic, nm]) =>
+    `<button type="button" class="sm-res-b ${tab}" data-res-tab="${tab}"` +
+    ` data-res-id="${esc(rid)}" data-res-title="${esc(it.title || '')}">${ic} ${Number(r[k])} ${nm}</button>`);
+  return bits.length ? `<div class="sm-res">${bits.join('')}</div>` : '';
+}
 function smRow(it) {
   const n = splitName(it.title);
   const meta = [];
@@ -3114,7 +3171,7 @@ function smRow(it) {
   const s = SRC[it.source] || { nm: 'XDGAME', cls: 'xd' };
   return `<div class="sm-row" data-url="${esc(it.url)}" data-fb="${rankFb(it)}">
     ${it.cover ? `<img src="${esc(it.cover)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<span class="ph2">${esc(n.zh.charAt(0))}</span>`}
-    <div class="bd"><div class="t">${esc(n.zh)}</div>${n.en ? `<div class="en">${esc(n.en)}</div>` : ''}<div class="m">${meta.join('')}</div></div>
+    <div class="bd"><div class="t">${esc(n.zh)}</div>${n.en ? `<div class="en">${esc(n.en)}</div>` : ''}<div class="m">${meta.join('')}</div>${smResChips(it)}</div>
     <span class="src-badge ${s.cls}">${s.nm}</span>
     <span class="go2">查看详情 →</span>
   </div>`;
@@ -3193,6 +3250,14 @@ function smMobileRow(it) {
   </div>`;
 }
 function bindSmRows() {
+  /* ★ v10.52：资源计数 chip 必须**最先**挂、并且 stopPropagation ——
+     它长在 `.sm-row` 里面，不拦住的话行那层的「查看详情」会一起触发：
+     结果是抽屉和下载弹窗同时开，而弹窗还落不到指定页签。 */
+  $$('#smBody .sm-res-b').forEach((b) => b.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openResTab(b.dataset.resId, b.dataset.resTitle, b.dataset.resTab);
+  }));
   $$('#smBody .sm-row').forEach(r => r.addEventListener('click', () => openDetailFromSearch(r)));
   /* ★ v10.25：同款聚拢后主行下方的「另 N 个条目」chip —— 与主行**同一条路**进详情
    *   （同样带 data-url/data-fb，所以直接复用 openDetailFromSearch，不另写一套跳转）。 */

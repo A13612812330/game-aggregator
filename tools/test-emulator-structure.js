@@ -753,6 +753,100 @@ const GN = require(path.join(root, 'data', 'game-name'));
       return a > 0 && b > a && c > a;
     })());
 }
+
+/* ============ ★ v10.52 增量：搜索结果行显示「这款有多少 MOD / 修改器 / 存档」 ============
+ * 用户原话：「搜索功能以及搜索后的内容」。
+ * 根因**不是没有数据**，而是搜索链路没收：`/api/search/all` 只查 4 个桶，
+ * 而 v10.47 建的 `data/res-groups.js` 早就把 5 路来源（机地社区帖 MOD / 游侠存档 /
+ * GTrainers / FearlessRevolution / GCM 元数据）按游戏聚好了。
+ * 实测搜「赛博朋克2077」→ pc 2 / 手游 1 / 修改器 3 / 云存档 1，
+ * 而这款实际有 **717 个 MOD** —— 结果里一个字都没出现。
+ *
+ * ⚠️ 本段大量用「读源码」而不是「读页面」：功能横跨 server.js（挂字段）、index.html
+ *    （渲染 + 直达）、check-card-rules.js（圆角登记）三处，光验页面看不见前两处的口径。
+ */
+{
+  const srvSrc = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
+  const chkSrc = fs.readFileSync(path.join(root, 'tools/check-card-rules.js'), 'utf8');
+  const P4 = [['主源', idx], ['emulator', emu], ['resources', res], ['unpack', upk]];
+  const miss = (re) => P4.filter(([, h]) => !re.test(h)).map(([n]) => n).join(',') || '四页齐';
+
+  /* ① 正向锚点：不配这两条，下面「chip 带 data-res-tab」之类可以在「压根没渲染」时平白变绿 */
+  t('★★ v10.52 正向锚点：`smRow` 真的调用了 `smResChips(it)`（不调用时下面几条会平白变绿）',
+    /<div class="m">\$\{meta\.join\(''\)\}<\/div>\$\{smResChips\(it\)\}/.test(idx));
+  t('★★ v10.52 正向锚点：四页都取到 `.sm-res-b` 规则体（改坏规则体时下面几条会被绕过）',
+    P4.every(([, h]) => /\.sm-row \.sm-res-b\{[^}]*border-radius:7px/.test(h)),
+    miss(/\.sm-row \.sm-res-b\{[^}]*border-radius:7px/));
+
+  /* ② 服务端：复用聚合层，不重做匹配 */
+  t('★★ v10.52：`/api/search/all` 的端游桶改挂 `withRes`（不再是 withBh）',
+    /pc = \{ count: r\.count, items: r\.items\.map\(withRes\) \};/.test(srvSrc));
+  t('★★ v10.52：`withRes` 复用 `resGroups.countsFor`（聚合口径只有一处 —— 铁律 17）',
+    /resGroups\.countsFor\(g\.id\)/.test(srvSrc));
+  /* ⚠️ 判据说明：这条断言**一开始写的是旧写法**（`if (r.mod || r.saves || r.trainers) o.res = r;`），
+     改实现时把「全 0 不挂」的判断移进了 `resFor()`（返回 null 表示「没有」）⇒ 判据失配。
+     意图没变（还是「全 0 不许挂字段」），所以改判据、不改实现：三处一起钉住。 */
+  t('★★ v10.52：计数全 0 时**不挂字段**（挂 {0,0,0} 只是白占回包体积，前端也分不出「空」与「无」）',
+    /if \(r\.mod \|\| r\.saves \|\| r\.trainers\) return \{ counts: r, id: g\.id \};/.test(srvSrc)
+    && /return \(r2\.mod \|\| r2\.saves \|\| r2\.trainers\) \? \{ counts: r2, id: alt \} : null;/.test(srvSrc)
+    && /if \(h\) \{ o\.res = h\.counts; o\.resId = h\.id; \}/.test(srvSrc));
+  /* ③ 孪生兜底：本轮实测踩到的坑 —— 同一款 jidi / xd 两条，资源只挂在一条上 */
+  t('★★ v10.52：资源计数有**孪生兜底**（实测赛博朋克2077：xd-191 有 717，jidi-3277800 是 0）',
+    /twin\.twinOf\(\{ id: g\.id, title: g\.title, src: g\.source \}\)/.test(srvSrc));
+  t('★ v10.52：孪生兜底兜回自己时提前返回（`alt === g.id`），不给搜索加白跑',
+    /if \(alt === g\.id\) return null;/.test(srvSrc));
+  /* ★ 这一条是设计缺口本身：chip 拿「显示条目」的 id 去开弹窗会查空 ——
+     计数归属的可能是**另一条**孪生条目（xd-191 vs jidi-3277800）。必须带出 resId。 */
+  t('★★ v10.52：回包同时带 `resId`（计数**归属**的那条库内 id），chip 拿它去开弹窗',
+    /o\.resId = h\.id;/.test(srvSrc) && /const rid = it\.resId \|\| it\.id \|\| '';/.test(idx)
+    && /data-res-id="\$\{esc\(rid\)\}"/.test(idx));
+
+  /* ④ 前端：三档映射 + 三个 data 属性 */
+  t('★★ v10.52：三档 chip 是「数据键 → 下载页签」映射（mod→mod / trainers→modifier / saves→save）',
+    /\['mod', 'mod', '🧩', 'MOD'\]/.test(idx) && /\['trainers', 'modifier', '🛠', '修改器'\]/.test(idx)
+    && /\['saves', 'save', '💾', '存档'\]/.test(idx));
+  t('★★ v10.52：chip 带 `data-res-tab` / `data-res-id` / `data-res-title` 三件套（缺一个就点不动或点错）',
+    /class="sm-res-b \$\{tab\}" data-res-tab="\$\{tab\}"/.test(idx)
+    && /data-res-id="\$\{esc\(rid\)\}"/.test(idx)
+    && /data-res-title="\$\{esc\(it\.title \|\| ''\)\}"/.test(idx));
+  t('★ v10.52：全 0 / 缺字段**不渲染** chip（返回空串，不留空 div）',
+    /return bits\.length \?/.test(idx) && /<div class="sm-res">\$\{bits\.join\(''\)\}<\/div>/.test(idx));
+  t('★ v10.52：`filter(([k]) => Number(r[k]) > 0)` —— 只列真有货的那几档，0 的不占位',
+    /SM_RES\.filter\(\(\[k\]\) => Number\(r\[k\]\) > 0\)/.test(idx));
+
+  /* ⑤ 直达链路 + 委托顺序 */
+  t('★★ v10.52：`openResTab` 先 `await openDetailById` **再**开弹窗（顺序反了会被随后一次重绘抢层级）',
+    (() => {
+      const f = idx.indexOf('async function openResTab(');
+      if (f < 0) return false;
+      const a = idx.indexOf('await openDetailById(id, title);', f);
+      const b = idx.indexOf("openUniDownload({ id: String(id), title: String(title || ''), tab });", f);
+      return a > f && b > a;
+    })());
+  t('★★ v10.52：chip 的点击必须 `stopPropagation` —— chip 长在 `.sm-row` 里，不拦住会同时开抽屉 + 弹窗',
+    (() => {
+      const f = idx.indexOf("$$('#smBody .sm-res-b')");
+      if (f < 0) return false;
+      const seg = idx.slice(f, f + 400);
+      return seg.includes('e.stopPropagation();') && seg.includes('openResTab(b.dataset.resId');
+    })());
+  t('★ v10.52：chip 悬挂点排在行点击**之前**（先判特例再判通用，读代码时顺序即语义）',
+    idx.indexOf("$$('#smBody .sm-res-b')") <
+    idx.indexOf("$$('#smBody .sm-row').forEach(r => r.addEventListener('click', () => openDetailFromSearch(r)));"));
+
+  /* ⑥ 闸门登记：chip 的 7px 圆角属「卡片内部小按钮」，与 .sm-row .go2 同类 */
+  t('★ v10.52：`.sm-row .sm-res-b` 已登记进 check-card-rules 的 RAD_EXCEPT（不登记会被判成新增卡片容器）',
+    /'\.sm-row \.sm-res-b',/.test(chkSrc));
+
+  /* ⑦ 派生页同步（铁律 1：只改主源不重建 ⇒ 派生页静默漂移） */
+  t('[派生页] 四页都同步了 `.sm-res` 容器与三档配色',
+    P4.every(([, h]) => /\.sm-row \.sm-res\{/.test(h) && /\.sm-row \.sm-res-b\.mod\{/.test(h)
+      && /\.sm-row \.sm-res-b\.modifier\{/.test(h) && /\.sm-row \.sm-res-b\.save\{/.test(h)),
+    miss(/\.sm-row \.sm-res-b\.save\{/));
+  t('[派生页] 四页都同步了 `smResChips` 与 `openResTab`',
+    P4.every(([, h]) => /function smResChips\(it\)/.test(h) && /async function openResTab\(/.test(h)),
+    miss(/async function openResTab\(/));
+}
 /* 专属 CSS 泄漏闸：追加的 CSS 必须整段待在 <style> 内 */
 t('端游资源页 <style> 唯一', count(res, /<style>/g) === 1, `实际 ${count(res, /<style>/g)}`);
 t('端游资源页 <script> 数正常（≤3）', count(res, /<script/g) <= 3, `实际 ${count(res, /<script/g)}`);

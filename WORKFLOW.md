@@ -85,7 +85,7 @@ curl http://localhost:8123/api/health    # 期望 ok
 ### 步骤 5 · 跑三层防线
 
 ```bash
-# 第一层：静态（前置闸 3 个 + 41 套；本环境实测全绿 · 通过 3176 / 失败 0）
+# 第一层：静态（前置闸 3 个 + 41 套；本环境实测全绿 · 通过 3200 / 失败 0）
 node tools/run-all.js
 
 # 第二层：浏览器实拍（7 套；★ 一条命令跑完，需 8123 在跑）
@@ -262,25 +262,38 @@ node tools/audit-apps.js          # ★ 发布过就再跑一次：应用登记 
 | 层 | 工具 | 规模 | 特点 | 何时跑 |
 |---|---|---|---|---|
 | ⓪ 前置闸 | `check-inline-syntax.js` + **`check-card-rules.js`**（由 `run-all` 拉起） | 语法 4 页 + 卡片族 3 页 | 语法**精确到行列**；卡片族**枚举实际规则体**（抓「测试还不知道的新断点」） | 每次改页面 |
-| ① 静态 | `tools/run-all.js` | **41 套 + 前置闸 3 个**（本环境实测**全绿**：通过 3176 / 失败 0；详见下方口径注）（2026-10-10 现测） | 秒级出结果、无需人盯（整套实测约 2.5 分钟） |
-| ② 行为 | `test-emulator-page.js` + `test-resource-page.js`（jsdom，含在 41 套内） | **99** + **136** 条（2026-10-10 v10.51 实跑现测）★ 旧记的「119 + 82」里 **119 是错的**：v10.44 把 tr/sv 用例**迁到资源页**后 `test-emulator-page.js` 已缩到 99，那行一直没同步（82 → 94 → 100 → 134 → 136） | 需服务在 8123 | 每次改完 |
+| ① 静态 | `tools/run-all.js` | **41 套 + 前置闸 3 个**（本环境实测**全绿**：通过 3200 / 失败 0；详见下方口径注）（2026-10-10 现测） | 秒级出结果、无需人盯（整套实测约 2.5 分钟） |
+| ② 行为 | `test-emulator-page.js` + `test-resource-page.js`（jsdom，含在 41 套内） | **99** + **136** 条（2026-10-10 v10.52 实跑现测）★ 旧记的「119 + 82」里 **119 是错的**：v10.44 把 tr/sv 用例**迁到资源页**后 `test-emulator-page.js` 已缩到 99，那行一直没同步（82 → 94 → 100 → 134 → 136） | 需服务在 8123 | 每次改完 |
 | ③ 实拍 | `tools/preview-v*.js`（**24** 个；若算上非版本号的 `preview-covers.js` / `preview-mods.js` 则 `tools/*preview*.js` 共 **26** 个 —— **两个数都对，口径不同**） | 各 30~70 条 | puppeteer，**慢且脆** | 改页面时 |
 | ③' 回归（**已登记**） | `SUITES` 之外的 **7 套**：`test-v1025-{dlstrip,gallery,merge,more,rail,search}.js` + `test-search-ui.js` | 各 12~44 条（**跑完看末行**，随版增长、不写死） | puppeteer + CDP；**一条命令跑完**：`node tools/run-all.js --browser`（实测 9~35s/套） | 改交互后 |
 | ④ 线上 | `tools/verify-online.js` | — | 对**线上**验收 | 仅发布后 |
 
-★ **防线规模与「本环境是否全绿」（v10.51 现测，2026-10-10）**：
+★ **防线规模与「本环境是否全绿」（v10.52 现测，2026-10-10）**：
 `run-all.js` 的 `SUITES` 登记 **41 套**（**逐条数出来的**）；`PREFLIGHT` 前置闸 **3 个**（**不计入 41**）；
 另有 `BROWSER` **7 套** / `COUNTERPROOF` **2 个** / `SHIM` **1 个**（`51 = 41 + 7 + 2 + 1`，覆盖性守卫现测）。
-本环境实测：**前置闸 3 / 3 通过 · 通过 3176 / 失败 0 · 异常退出：无**。
+本环境实测：**前置闸 3 / 3 通过 · 通过 3200 / 失败 0 · 异常退出：无**（v10.52 `run-all` 实跑 2m45s）。
 ⚠️ **上面这行只说静态层**。「第三层」浏览器实拍**不是全绿** —— v10.51 全跑一遍：
-`dlstrip 41/41` · `gallery 21/21` · `search 21/21` · `merge 12/12`（4 套绿）
+`dlstrip 41/41` · `gallery 21/21` · `search 33/33`（v10.52 起，原 21） · `merge 12/12`（4 套绿）
 ／ `rail 15/17` · `more 9/11` · `search-ui 40/44`（**3 套红**）。
 换回 `git show HEAD:public/index.html` 复跑**条数逐套一致** ⇒ 这 3 套是**长期没人跑**，不是某一轮改坏的；
-具体根因（定位条把空壳区块当有效分区 等）见 [v10.51](docs/versions/v10.51.md) 5.4，**待 v10.52 处置**。
+具体根因（定位条把空壳区块当有效分区 等）见 [v10.51](docs/versions/v10.51.md) 5.4，**待 v10.53+ 处置**。
 ⇒ 判「防线是否真绿」**必须把层说清楚**，否则「全绿」会被读成覆盖了实拍层。
 ⚠️ **跑 `run-all` 的期间不许并发跑别的套件**（v10.49 实测踩到）：我在它跑的过程中又起了一个 jsdom 套件，
 两个 jsdom 抢 8123 ⇒ `run-all` 报 `3080 / 失败 5`、`test-emulator-page.js (exit 1)`；
 **单跑立刻 99/99** ⇒ 纯属并发干扰。判「是否真红」永远**单跑复现**（同铁律 31）。
+★ **v10.52 新增 28 条 + 反证 15/15**：
+`test-emulator-structure.js`（**223 → 241 条**，**+16**：端游桶改挂 `withRes` · 复用 `countsFor` ·
+**全 0 不挂字段** · 孪生兜底 · `alt === g.id` 提前返回 · **回包同时带 `resId`** ·
+chip 三件套 data 属性 · `openResTab` 顺序（`await openDetailById` 先于 `openUniDownload`）·
+chip `stopPropagation` · chip 悬挂点排在行点击之前 · `RAD_EXCEPT` 登记 · 四页同步）+
+`test-v1025-search.js`（**21 → 33 条**，**+12**，**浏览器实拍层**：接口 `res` 正向锚点 ·
+chip 数字**与接口逐档对齐**（不写死条数）· **chip 带的是 `resId` 而非 `it.id`** ·
+chip 真占版面 / 无横向溢出 · 点 chip 后 `searchClosed / drawerShown / popShown / tab='mod' / modRows=60`）。
+★★ 同轮反证做法**与 v10.51 不同**：被测套件按**绝对路径**读文件 ⇒ 必须改**真实文件**，
+故 `fs.mkdtempSync(os.tmpdir()+'/cp1052-')` 备份 + `finally restoreAll()` **无条件还原**；
+`patch()` 匹配不上**直接抛**（防止「打坏失败」被读成「断言守不住」）。四段：A 换回 `withBh` ·
+B 换回 `it.id` · C 撤 `RAD_EXCEPT`（红在圆角闸「卡片族容器圆角未走变量」）· D 拿掉 `openUniDownload`
+（红在搜索套件「点 chip 同时打开下载弹窗」），**每段都红在指定那一条**，还原后复跑三项必须恢复全绿。
 ★ **v10.51 新增 25 条 + 改写 1 条，并修好防线自己的一处结构缺陷**：
 `test-emulator-structure.js`（**223 条**，**+14**：`.po-btn` 四页锚点 · 委托顺序 · `savesYx.hasPost()` 唯一真源）+
 `test-resource-page.js`（**136 条**，**+2**）+ `test-v1025-dlstrip.js`（**41 条**，**+9 / 改写 1**）；

@@ -109,6 +109,13 @@ const RAD_EXCEPT = new Set([
   '.grp-pop .emu-card.grp',
   '.row-card .go',            // 行卡尾部箭头钮
   '.sm-row .go2',             // ★ 闸门新增：小行卡尾部箭头钮
+  /* ★ v10.52 闸门新增：`.sm-row .sm-res-b` —— 搜索结果行里的**资源计数 chip**
+   *   （🧩 717 MOD / 🛠 22 修改器 / 💾 104 存档）。
+   *   与 .cov-btn / .cfg-btn / .gl-lk a 同类：它是**行内的小按钮**，
+   *   比所在行小一号才是对的；走 --cd-r 会跟行卡同圆角、看起来像行里嵌了张小卡片。
+   *   ⚠️ 只有基础那条（`.sm-row .sm-res-b`）带 border-radius ——
+   *      `.mod` / `.modifier` / `.save` 三个配色变体只改颜色，不重复写圆角。 */
+  '.sm-row .sm-res-b',
   '.rel-row .rel-it .why',    // ★ 闸门新增：「为什么推荐」角标
   '.skeleton .sk-l1',         // 骨架条（假文字，比卡片小一号）
 ]);

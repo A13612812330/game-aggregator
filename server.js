@@ -440,6 +440,66 @@ function withBh(g) {
   return phonecfg.attach(a);
 }
 
+/** ★ v10.52：给**搜索命中**的端游条目挂「按游戏聚合的资源计数」（MOD / 存档 / 修改器）。
+ *
+ *  为什么要挂：搜索的 4 个桶（端游库 / 手游中心 / 修改器 / 云存档）各自回答一个问题，
+ *  但**没有任何一个回答「这款游戏有多少 MOD 和存档」**。实测搜「赛博朋克2077」：
+ *  搜索返回 pc=2 / mob=1 / tr=3 / sv=1，而同一条游戏在 `/api/res/game` 上是
+ *  `{mod:717, saves:48, trainers:7}` —— 717 个 MOD 一个字都没出现。
+ *
+ *  数据**早就有**：v10.47 建的 `data/res-groups.js` 已经把 5 路来源按游戏收成一组
+ *  （机地社区帖 MOD / 游侠存档文件 / GTrainers / FearlessRevolution / GCM 元数据），
+ *  还导出了 `countsFor(libId)`，注释里写的就是「详情页挂『本游戏有 N 条 MOD / 存档 / 修改器』」。
+ *  ⇒ 这里**只是把已有数字带出来**，不重做任何匹配（铁律 17：匹配口径只有一处）。
+ *
+ *  ⚠️ 计数全 0 时不挂字段 —— 绝大多数条目一条资源都没有，挂 `{0,0,0}` 只是白占回包体积；
+ *     前端据此判断「要不要渲染 chip」，空对象与缺字段必须是同一个意思。
+ *  ⚠️ 聚合层要 `build()` 一次（有缓存），失败不能拖垮搜索：catch 住，照旧返回。 */
+function withRes(g) {
+  const o = withBh(g);
+  try {
+    const h = resFor(g);
+    /* ★ 同时带出 `resId`（计数**归属**的那条库内 id）——
+     *   它和 `g.id` 可能不同：赛博朋克2077 的 717 个 MOD 挂在 `xd-191`，
+     *   而搜索结果首行是机地那条 `jidi-3277800`。前端 chip 必须拿 `resId` 去开弹窗，
+     *   否则 `/api/mods/match?id=jidi-3277800` 查不到，只能靠「名称模糊兜底」撞回来
+     *   （能撞对，但那是运气不是设计）。 */
+    if (h) { o.res = h.counts; o.resId = h.id; }
+  } catch (e) { /* 聚合层没起来就照旧返回 —— 少一行 chip，不能让整个搜索失败 */ }
+  return o;
+}
+
+/** ★ v10.52：资源计数 + 它的**归属条目 id**。查不到返回 null（而不是 `{0,0,0}`）。
+ *
+ *  为什么必须有孪生兜底（实测踩到）：端游库里同一款游戏常有 jidi / xd 两条
+ *  （双料 13,448），而资源条目只挂在**其中一条**上。实测「赛博朋克2077」：
+ *      · xd-191        → {mod:717, saves:104, trainers:22}
+ *      · jidi-3277800  → {mod:0,   saves:0,   trainers:0}
+ *  只查自己那条的话，搜索结果**第一行**（机地那条，也是主行）会显示「没有资源」——
+ *  而它下面那条 chips 里反而挂着 717，读起来像 bug。
+ *
+ *  兜底路径复用 `data/twin.js`（双源对齐的**唯一真源**，铁律 17）：
+ *  机地条目走 `jidiIdIndex` 精确键（记忆化 Map，O(1)），XD 条目走 `jidiUrl+tid`。
+ *  两条都是精确键，不走名称模糊匹配 —— 这里不需要「尽力而为」，只需要「准」。
+ *
+ *  ⚠️ 只在**自己那条为 0** 时才去找孪生：绝大多数条目本来就没资源，
+ *     每次都查孪生等于给搜索加一趟白跑。
+ *  @returns {{counts: {mod:number,saves:number,trainers:number}, id: string}|null} */
+function resFor(g) {
+  let r;
+  try { r = resGroups.countsFor(g.id); } catch (e) { return null; }
+  if (r.mod || r.saves || r.trainers) return { counts: r, id: g.id };
+  try {
+    const tw = twin.twinOf({ id: g.id, title: g.title, src: g.source });
+    const t = tw && tw.url ? parseDetailUrl(tw.url) : null;
+    if (!t) return null;
+    const alt = (t.source === 'jidi' ? 'jidi-' : 'xd-') + t.id;
+    if (alt === g.id) return null;                 // 兜回自己 ⇒ 没有另一条，别白算
+    const r2 = resGroups.countsFor(alt);
+    return (r2.mod || r2.saves || r2.trainers) ? { counts: r2, id: alt } : null;
+  } catch (e) { return null; }
+}
+
 // 手机两库的条目 → 前端卡片字段。两条链路：
 //   ① 已有 bannerhub 反查结果的（社区库）→ 平铺 libId/libTitle/libUrl/libCover
 //   ② 没有的（实测库，bannerhub 匹配不到）→ 回退用本模块 libMatch 的结果
@@ -1527,11 +1587,12 @@ app.get('/api/search/all', (req, res) => {
   const exp = expandAlias(raw);
   const aliasNote = exp.alias ? { alias: exp.alias, to: exp.q } : null;
 
-  /* ① 端游库 */
+  /* ① 端游库（★ v10.52：改用 withRes —— 比 withBh 多挂一个 `res` 计数，
+   *   让搜索结果行能直接显示「这款有多少 MOD / 修改器 / 存档」） */
   let pc = { count: 0, items: [] };
   try {
     const r = gamesDb.search(exp.q, limit, libOpts(req));
-    pc = { count: r.count, items: r.items.map(withBh) };
+    pc = { count: r.count, items: r.items.map(withRes) };
   } catch (e) { pc = { count: 0, items: [], error: e.message }; }
 
   /* ② 手游中心（合并索引，含社区库英文名与实测库中文名的别名展开） */

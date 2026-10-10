@@ -176,6 +176,101 @@ const j = (o) => JSON.stringify(o);
   chk('C 四库分组仍在（4 个头）', cst.secs.length === 4, 'secs=' + cst.secs.length);
   chk('E 全站搜无横向溢出', cst.overflowX <= 0, 'overflowX=' + cst.overflowX);
 
+  /* ---------------- Phase D：资源计数 chip（★ v10.52） ----------------
+   * 守护：
+   *   ① 搜「赛博朋克2077」时，端游行上出现「717 MOD / 104 存档 / 22 修改器」这类 chip
+   *      —— 数字**与接口逐档对齐**（不写死条数，随库变化仍然对）
+   *   ② 点 chip → 关搜索 + 开抽屉 + **同时**开下载弹窗，且落在对应页签
+   *      （只开抽屉 = 没落到页签，这条会红）
+   *   ③ 页签对了还必须**真渲染出条目** —— 「页签切换成功但列表空」是另一种坏法
+   *
+   * 反证锚点（打坏必变红）：
+   *   · 把 `withRes` 换回 `withBh` ⇒ ① 全红（页面一个 chip 都没有）
+   *   · 把 `openResTab` 里的 `openUniDownload(...)` 删掉 ⇒ ② 红（只开抽屉）
+   *   · 把 `data-res-id` 换回 `it.id`（显示条目而非归属条目）⇒ ③ 红（mod 列表查空） */
+  const resApi = await p.evaluate(async () => {
+    const r = await fetch('/api/search/all?q=' + encodeURIComponent('赛博朋克2077') + '&limit=5');
+    const j = await r.json();
+    const it = (j.pc.items || []).find((x) => x.res) || {};
+    return { id: it.id || '', resId: it.resId || '', res: it.res || null };
+  });
+  await p.evaluate(() => {
+    const i = document.getElementById('searchInput');
+    i.value = '赛博朋克2077';
+    i.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await sleep(2600);
+  const d1 = await p.evaluate(() => {
+    const rows = [...document.querySelectorAll('#smBody .sm-row')];
+    const withChips = rows.filter((r) => r.querySelector('.sm-res-b'));
+    const chips = withChips.length ? [...withChips[0].querySelectorAll('.sm-res-b')] : [];
+    const rr = chips[0] ? chips[0].getBoundingClientRect() : null;
+    return {
+      rows: rows.length,
+      rowsWithChips: withChips.length,
+      texts: chips.map((c) => c.textContent.replace(/\s+/g, ' ').trim()),
+      tabs: chips.map((c) => c.dataset.resTab),
+      ids: chips.map((c) => c.dataset.resId),
+      rect: rr ? { w: Math.round(rr.width), h: Math.round(rr.height) } : null,
+      overflowX: document.getElementById('smBody').scrollWidth - document.getElementById('smBody').clientWidth,
+    };
+  });
+  await p.screenshot({ path: path.join(OUT, 'check-search-res-chips.png') });
+  console.log('\n=== Phase D · 资源计数 chip（搜「赛博朋克2077」）===');
+  console.log('  接口: res=' + j(resApi.res) + '  resId=' + resApi.resId);
+  console.log('  rows=' + d1.rows + '  带 chip 行=' + d1.rowsWithChips + '  chip=' + j(d1.texts) + '  tabs=' + j(d1.tabs));
+
+  chk('D ★ v10.52 正向锚点：接口真有 res 计数（拿不到时下面的对齐断言会平白变绿）',
+    !!resApi.res && Number(resApi.res.mod) > 0, j(resApi.res));
+  chk('D ★★ v10.52 搜索行上出现了资源 chip', d1.rowsWithChips > 0 && d1.texts.length > 0,
+    'rows=' + d1.rows + ' 带chip=' + d1.rowsWithChips);
+  chk('D ★★ v10.52 chip 数字与接口**逐档对齐**（不写死条数，随库变化仍然对）',
+    d1.texts.some((t) => t.indexOf(String(resApi.res.mod) + ' MOD') >= 0)
+    && d1.texts.some((t) => t.indexOf(String(resApi.res.saves) + ' 存档') >= 0)
+    && d1.texts.some((t) => t.indexOf(String(resApi.res.trainers) + ' 修改器') >= 0),
+    '接口=' + j(resApi.res) + ' 页面=' + j(d1.texts));
+  chk('D ★ v10.52 chip 到的页签只在 `mod` / `modifier` / `save` 三档内（没有第四个）',
+    d1.tabs.length > 0 && d1.tabs.every((t) => ['mod', 'modifier', 'save'].indexOf(t) >= 0), j(d1.tabs));
+  chk('D ★★ v10.52 chip 带的是**归属条目** id（`resId`，不是显示条目 id）—— 否则弹窗按 id 查空',
+    d1.ids.length > 0 && d1.ids.every((x) => x === resApi.resId) && resApi.resId !== resApi.id,
+    'chip.id=' + j(d1.ids) + ' 归属=' + resApi.resId + ' 显示=' + resApi.id);
+  chk('D chip 真占版面（宽>50 且 高>0）', !!d1.rect && d1.rect.w > 50 && d1.rect.h > 0, j(d1.rect));
+  chk('E 资源 chip 不引起横向溢出', d1.overflowX <= 0, 'overflowX=' + d1.overflowX);
+
+  /* 点「N MOD」chip → 关搜索 + 开抽屉 + 开下载弹窗 + 落在 mod 页签 + 真拉到列表 */
+  await p.evaluate(() => {
+    const c = document.querySelector('#smBody .sm-res-b.mod');
+    if (c) c.click();
+  });
+  await sleep(3200);
+  const d2 = await p.evaluate(() => {
+    const dr = document.getElementById('drawer');
+    const pop = document.getElementById('dlPop');
+    /* ⚠️ `dlUni` 是主源顶层的 `let`（**全局词法绑定，不挂 window**）——
+     *   写 `window.dlUni` 恒 undefined ⇒ tab 读成 null ⇒ 断言假红（铁律 51）。
+     *   裸写可达，但要包 try/catch 兜 TDZ。 */
+    let tab = null;
+    try { tab = dlUni ? dlUni.tab : null; } catch (e) { tab = null; }
+    return {
+      drawerShown: !!dr && dr.classList.contains('show'),
+      popShown: !!pop && !pop.hidden,
+      tab,
+      modRows: document.querySelectorAll('#dlBody .d-dl-it').length,
+      searchClosed: !document.getElementById('smodal').classList.contains('show'),
+    };
+  });
+  await p.screenshot({ path: path.join(OUT, 'check-search-res-goto.png') });
+  console.log('\n=== Phase D2 · 点「N MOD」chip ===');
+  console.log('  ' + j(d2));
+
+  chk('D ★ v10.52 点 chip 先关掉搜索弹窗（不关会叠三层）', d2.searchClosed === true, j(d2));
+  chk('D ★ v10.52 点 chip 打开详情抽屉', d2.drawerShown === true, j(d2));
+  chk('D ★★ v10.52 点 chip **同时**打开下载弹窗（只开抽屉 = 没落到页签 ⇒ 这条红）',
+    d2.popShown === true, j(d2));
+  chk('D ★★ v10.52 弹窗落在 `mod` 页签（不是默认的 body）', d2.tab === 'mod', 'tab=' + d2.tab);
+  chk('D ★★ v10.52 mod 页签**真渲染出条目**（页签对了但列表空 = resId 没传对）',
+    d2.modRows > 0, 'modRows=' + d2.modRows);
+
   console.log('\n\u2500\u2500 ① 搜索弹窗：' + pass + ' 通过 / ' + fail + ' 失败 \u2500\u2500');
   await h.browser.close();
   process.exit(fail ? 1 : 0);
