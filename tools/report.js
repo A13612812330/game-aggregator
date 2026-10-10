@@ -52,7 +52,12 @@ const GITHUB = {
   owner: 'A13612812330',
   name: 'game-aggregator',
   branch: 'main',
-  visibility: 'PRIVATE',
+  /* ★ v10.50：可见性**只作静态兜底**，正常路径一律现测（见 visibilityViaApi）。
+     原先这里是写死的 `'PRIVATE'` —— 2026-10-10 实测 REST 返回
+     `visibility=public / private=false`，常量早已过期，而汇报里那行
+     「仓库（PRIVATE）」看上去完全正常 ⇒ **静默报假**。
+     与用户「全部字段实测、不接受『我记得』」的口径直接冲突，因此改为现测。 */
+  visibilityFallback: 'PUBLIC',
 };
 const GH_CONFIG_DIR = path.join(ROOT, '..', '.ghconfig');
 
@@ -322,6 +327,37 @@ async function remoteViaApi(env) {
   }
 }
 
+/**
+ * 路径 3：走 api.github.com 读**仓库可见性**（public / private / internal）。
+ *
+ * 为什么需要它：可见性曾是**手写常量**（`'PRIVATE'`），而仓库实际已转 public。
+ *   汇报里那行「仓库 …（PRIVATE，分支 main）」看不出任何异常，属于**静默报假**，
+ *   比报错更危险 ⇒ 改成现测，只有 REST 不可用时才退回常量，并在输出里显式标「静态兜底」。
+ * 与 remoteViaApi 同一套取 token + 直连方式（Node 的 fetch 不读 HTTPS_PROXY）。
+ */
+async function visibilityViaApi(env) {
+  const tk = sh('gh auth token', env);
+  if (!tk.ok || !tk.out) return { ok: false, err: '取 token 失败' };
+  const c = new AbortController();
+  const t = setTimeout(() => c.abort(), 20000);
+  try {
+    const r = await fetch(`https://api.github.com/repos/${GITHUB.owner}/${GITHUB.name}`, {
+      headers: { Authorization: 'Bearer ' + tk.out, Accept: 'application/vnd.github+json', 'User-Agent': 'gamehub-report' },
+      signal: c.signal,
+    });
+    clearTimeout(t);
+    const j = await r.json();
+    if (r.status !== 200) return { ok: false, err: `api ${r.status}` };
+    /* `visibility` 字段（public/private/internal）是权威值；
+       `private` 布尔兜一道，两者不一致时以 visibility 为准。 */
+    const v = (j.visibility || (j.private ? 'private' : 'public')).toUpperCase();
+    return { ok: true, visibility: v };
+  } catch (e) {
+    clearTimeout(t);
+    return { ok: false, err: e.message.slice(0, 60) };
+  }
+}
+
 async function github(localHead) {
   const env = Object.assign({}, process.env, { GH_CONFIG_DIR });
   /* ⚠️ 实测坑（2026-09-18）：
@@ -343,12 +379,17 @@ async function github(localHead) {
     const a = await remoteViaApi(env);
     if (a.ok) { remote = a.sha; via = 'api'; } else apiErr = a.err;
   }
+  /* 可见性：现测优先，失败才退回常量（并让 ④ 标明「静态兜底」） */
+  const vis = await visibilityViaApi(env).catch((e) => ({ ok: false, err: String(e.message).slice(0, 60) }));
   return {
     remote,
     remoteShort: remote ? remote.slice(0, 7) : null,
     head: localHead,
     synced: !!remote && remote.slice(0, 12) === localHead.slice(0, 12),
     via,
+    visibility: vis.ok ? vis.visibility : GITHUB.visibilityFallback,
+    visLive: !!vis.ok,
+    visErr: vis.ok ? null : vis.err,
     err: remote ? null : (err || apiErr),
     /* 两条路径都失败时才叫「网络问题」；只要有一条通，就必须给出确定结论 */
     bothFailed: !remote,
@@ -495,7 +536,9 @@ async function main() {
   else {
     p('| 项 | 值 |');
     p('|---|---|');
-    p('| 仓库 | ' + GITHUB.repo + '（' + GITHUB.visibility + '，分支 ' + GITHUB.branch + '） |');
+    p('| 仓库 | ' + GITHUB.repo + '（' + gh.visibility +
+      (gh.visLive ? '，**现测**' : '，⚠️ 静态兜底（REST 不可用：' + (gh.visErr || '?') + '）') +
+      '，分支 ' + GITHUB.branch + '） |');
     p('| 本地 HEAD | `' + head.slice(0, 7) + '` |');
     p('| 远端 ' + GITHUB.branch + ' | ' + (gh.remoteShort ? '`' + gh.remoteShort + '`' : '❌ 探测失败：' + gh.err) + ' |');
     p('| 探测路径 | ' + (gh.via === 'api' ? '🔄 REST API（ls-remote 失败，改走 api.github.com）' : gh.via === 'ls-remote' ? '`git ls-remote`' : '❌ 两条路径均失败') + ' |');

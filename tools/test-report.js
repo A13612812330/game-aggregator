@@ -73,7 +73,15 @@ for (const [k, re] of [
 console.log('\n=== ③ 关键判据（防止退化成「只看 HTTP 200」）===');
 ok(/createHash\('md5'\)/.test(SRC), '★ 用 md5 比对判定线上版本，不只看状态码');
 ok(/前端 md5 与服务端口径指纹均与本地一致/.test(SRC), '判定文案明确写「前端 md5 与服务端口径指纹均与本地一致」');
-ok(/ls-remote/.test(SRC), 'GitHub 用 ls-remote 比对远端分支');
+/* ★ v10.50 加强：这条原先只守 `ls-remote`。仓库可见性曾是**写死常量** `'PRIVATE'`，
+   而仓库实际已是 public ⇒ 汇报里那行「仓库（PRIVATE，分支 main）」**看不出任何异常**，
+   属于静默报假（输出正常、内容是错的），与「全部字段实测」的口径直接冲突。
+   ⇒ 在同一个「远端探测」断言里连带守住两条实现细节：
+     · `visibilityViaApi` 存在（走 REST 现测）
+     · 不再有 `visibility: '字面量'` 这种写死的可见性（只允许 `visibilityFallback` 兜底） */
+ok(/ls-remote/.test(SRC) && /visibilityViaApi/.test(SRC) &&
+   !/visibility:\s*'/.test(CODE) && /visibilityFallback/.test(CODE),
+  '★ GitHub 用 ls-remote 比对远端分支 + 可见性**现测**（不再写死常量）');
 ok(/synced/.test(SRC), '给出「远端 = 本地」的同步结论字段');
 ok(/docs\/versions\/README\.md/.test(SRC) && /README\.md/.test(SRC), '更新日志检查 README 与 docs/versions/ 索引');
 /* ★ v10.40：版本日志从根目录迁到 docs/versions/，并去掉 `CODEX-DONE-` 前缀。
@@ -299,8 +307,8 @@ ok(/PITFALLS\.md/.test(mem), '★ 记忆文件指向 PITFALLS.md（细节的唯�
      （写宽过一次：证据串报「47 条」，多出来的 5 条来自「环境怪癖」节）。 */
   const sec = (pf.split('## ★ 铁律速查')[1] || '').split('\n## ')[0];
   const n = (sec.match(/^\d+\. /gm) || []).length;
-  ok(/## ★ 铁律速查/.test(pf) && n >= 49,
-    '★ PITFALLS 的「铁律速查」节收全了 1–49 条（编号错位会让 14 处引用静默指错）', n + ' 条');
+  ok(/## ★ 铁律速查/.test(pf) && n >= 50,
+    '★ PITFALLS 的「铁律速查」节收全了 1–50 条（编号错位会让 14 处引用静默指错）', n + ' 条');
   ok(/PITFALLS\.md/.test(mem) && /铁律速查/.test(mem),
     '★ 记忆文件留了指向「铁律速查」节的指针（不然那 14 处引用全成悬空引用）');
 }
