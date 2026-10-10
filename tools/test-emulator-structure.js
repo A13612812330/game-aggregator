@@ -19,6 +19,10 @@ const emu = fs.readFileSync(path.join(root, 'public/emulator.html'), 'utf8');
  *   —— 守卫由 IS_EMU_PAGE 放宽为 IS_SUB_PAGE
  *   —— tr/sv 的分区骨架与卡片断言整体搬到「端游资源页」小节 */
 const res = fs.readFileSync(path.join(root, 'public/resources.html'), 'utf8');
+/* ★ v10.50：原贴弹窗落在 OVERLAY 段（共享资产）⇒ 三张派生页都会带上。
+ *   这里把第 4 张产物也读进来，四页一起验「共享资产真的同步了」。 */
+const upk = fs.readFileSync(path.join(root, 'public/unpack.html'), 'utf8');
+const rgSrc = fs.readFileSync(path.join(root, 'data/res-groups.js'), 'utf8');
 
 const R = [];
 const t = (n, c, e) => R.push([c, n, e || '']);
@@ -537,6 +541,152 @@ t('★ v10.49：`min-width:0` 保留（没有它 flex 子项不收缩 ⇒ 省略
   [gltIdx, gltRes].every((r) => /min-width:0/.test(r)));
 t('★★ v10.49 反向：弹窗不再单独覆盖 .grp-pop .gl-i .t（与卡内同一条规则，一处真源）',
   !/\.grp-pop \.gl-i \.t\{/.test(idx) && !/\.grp-pop \.gl-i \.t\{/.test(res));
+
+/* ================= ★ v10.50 增量：游戏名拆分（展示名/英文名）+ 原贴内容弹窗 =================
+ * 用户两句原话：
+ *   ① 「应该是游戏名称导致 —— XD 的游戏名称有点小问题，它会用 / 进行分隔中英文游戏名称以及标签等」
+ *   ② 「有部分帖子我想获取对应的内容（可以点击弹窗展示标题 + 原贴内容 + 图片等），
+ *        且还需要按照原贴的布局放置（大部分都有介绍和使用方式）」
+ *
+ * ① 的根因与量化：端游库 title 是 `中文名/英文名/标签` 直接拼串，实测 19,430 款里
+ *    **16,248 款含 `/`（83.6%）** ⇒ 卡面标题折 2~3 行、卡片参差被撑高。
+ *    修法：拆分规则收成唯一真源 `data/game-name.js`（铁律 17 —— 别在两处各写一份剥标签正则）。
+ * ② 的前提是**数据早就在本地**：mods.json 的 content 覆盖 8,942/8,943 = 100%、
+ *    saves-youxia.json 的 desc 100% —— 只是列表投影按设计只留了摘要字段。
+ *    属于「界面缺字段 ≠ 数据源没有」的第二次现场（第一次是 v10.48 的 official_url）。
+ *    ⇒ 改的是投影与界面，**不是采集**；正文按需单取（最大一组 717 条 × ~1KB ≈ 700KB，不能随列表下发）。
+ */
+const GN = require(path.join(root, 'data', 'game-name'));
+{
+  /* —— ① 拆分规则：标签**从库里推导**，不写死名单 —— */
+  const gdRaw = JSON.parse(fs.readFileSync(path.join(root, 'data/games.json'), 'utf8'));
+  const gdList = Array.isArray(gdRaw) ? gdRaw : (gdRaw.items || []);
+  const derived = GN.deriveTags(gdList.map((g) => g.title)).slice().sort();
+  t('★★ v10.50：标签段由全库**推导**（末位 ≥8 次 且 从未出现在首位）—— 实测恰好 3 个，不是写死名单',
+    derived.join(',') === '支持VR,支持网络联机,附历代合集', derived.join(','));
+  const withSlash = gdList.filter((g) => String(g.title || '').includes('/'));
+  const badDisp = withSlash.filter((g) => {
+    const d = GN.displayName(g.title);
+    return !d || d.includes('/');
+  });
+  t('★★ v10.50：全库含 `/` 的款 —— 展示名全部非空且**不再含 `/`**（不留「剥一半」的中间态）',
+    withSlash.length > 15000 && badDisp.length === 0,
+    `${withSlash.length} 款含 / ｜ 异常 ${badDisp.length}`);
+  const tagsNow = GN.tagSet();
+  const stillTag = gdList.filter((g) => tagsNow.has(GN.displayName(g.title)));
+  t('★★ v10.50：剥完仍等于标签的 = 0（「星露谷物语/…/支持网络联机」不能变成名字叫「支持网络联机」）',
+    stillTag.length === 0, `剩 ${stillTag.length} 条${stillTag[0] ? '：' + stillTag[0].title : ''}`);
+  t('★ v10.50：中英分离 / 多中文别名取末段英文 / 空格尾巴 voices38 摘除 —— 样例逐条正确',
+    GN.displayName('星露谷物语/Stardew Valley/支持网络联机') === '星露谷物语'
+    && GN.enName('星露谷物语/Stardew Valley/支持网络联机') === 'Stardew Valley'
+    && GN.displayName('料理模拟器/烹饪模拟器/Cooking Simulator') === '料理模拟器'
+    && GN.enName('料理模拟器/烹饪模拟器/Cooking Simulator') === 'Cooking Simulator'
+    && GN.displayName('赛博朋克2077/Cyberpunk 2077') === '赛博朋克2077'
+    && GN.enName('赛博朋克2077/Cyberpunk 2077') === 'Cyberpunk 2077'
+    && GN.displayName('红色沙漠/Crimson Desert voices38') === '红色沙漠'
+    && GN.enName('红色沙漠/Crimson Desert voices38') === 'Crimson Desert',
+    [GN.displayName('星露谷物语/Stardew Valley/支持网络联机'),
+      GN.enName('料理模拟器/烹饪模拟器/Cooking Simulator')].join(' ｜ '));
+  t('★ v10.50：单段名（无 `/`）不产生英文副标题，且展示名原样（去首尾空白）',
+    GN.displayName('  Hades  ') === 'Hades' && GN.enName('Hades') === '',
+    `displayName=${JSON.stringify(GN.displayName('  Hades  '))} enName=${JSON.stringify(GN.enName('Hades'))}`);
+  t('★ v10.50：拆分规则是唯一真源（res-groups 引 game-name 取值，不自己写剥标签正则）',
+    /require\('\.\/game-name'\)/.test(rgSrc)
+    && /name:\s*displayName\(/.test(rgSrc) && /nameEn:\s*enName\(/.test(rgSrc),
+    /require\('\.\/game-name'\)/.test(rgSrc) ? '已引用' : '未引用');
+
+  /* —— ② 卡面：展示名 + 灰字英文名（用户拍板的两行形态） —— */
+  t('★ v10.50：组卡卡面标题用展示名（原串 `game` 只留在 hover 提示里，信息一点没丢）',
+    /const game = g\.name \|\| g\.game/.test(rsec)
+    && /<h4 title="' \+ esc\(gameFull\)/.test(rsec) && /class="alt"/.test(rsec));
+  t('★ v10.50：灰字副标题 = 英文名，且超 46 字才截断（没有英文名就不占那一行，卡更矮）',
+    /const sub = g\.nameEn/.test(rsec) && /slice\(0, 46\)/.test(rsec));
+
+  /* —— ③ 原贴入口：按数据层的 hasPost 决定，纯链接源一点都不变 —— */
+  t('★★ v10.50：hasPost 来自数据层（mods.content / yx 的 desc|steps|shots），不是前端猜的',
+    /hasPost: String\(x\.content/.test(rgSrc) && /hasPost: \(String\(x\.desc/.test(rgSrc));
+  t('★★ v10.50：条目按 `canPost = !!it.hasPost` 决定入口（无正文的行不加 class、不加按钮）',
+    /const canPost = !!it\.hasPost/.test(rsec) && /data-post-open/.test(rsec)
+    && /' has-post' : ''/.test(rsec));
+  t('★ v10.50：卡内点击放行原贴入口（否则整卡分流会先把点击吃掉、弹窗永远打不开）',
+    /closest\('\[data-post-open\]'\)/.test(rsec) && /closest\('\.gl-i\.has-post'\)/.test(rsec));
+  t('★ v10.50：详情页资源行也有同一个入口（.d-res-po + data-post-open，共用一套委托）',
+    /class="d-res-po"[\s\S]{0,160}data-post-open/.test(idx) && /\.d-res-it \.d-res-po\{/.test(idx));
+
+  /* —— ④ 服务端：单条取正文（列表侧只带布尔，避免 ~700KB 膨胀） —— */
+  t('★ v10.50：服务端新增 GET /api/res/post（一次一条取原贴正文）',
+    /app\.get\('\/api\/res\/post'/.test(srv));
+  t('★★ v10.50：接口无正文时回 **200 + has:false**（不是 4xx、也不是空弹窗）—— 纯链接源是正常态，不是错误',
+    /has: false, source: srcLabel/.test(rgSrc));
+
+  /* —— ⑤ 弹窗骨架 / 样式 / 行为：四页（主源 + 三张派生页）必须同步 ——
+   * ⚠️ 这是 OVERLAY 段的共享资产：只改主源不重建 ⇒ 派生页静默漂移（铁律 1）。
+   *    所以**四页一起验**，而不是只验 resources（线上加载的正是派生页）。 */
+  const POP_PAGES = [['主源', idx], ['resources', res], ['emulator', emu], ['unpack', upk]];
+  for (const [nm, h] of POP_PAGES) {
+    t(`★ v10.50 [${nm}] 原贴弹窗骨架在（#postPop + 两处 data-post="close"）`,
+      /id="postPop"/.test(h) && count(h, /data-post="close"/g) >= 2,
+      `postPop ${count(h, /id="postPop"/g)} ｜ close ${count(h, /data-post="close"/g)}`);
+  }
+  for (const [nm, h] of POP_PAGES) {
+    t(`★ v10.50 [${nm}] 原贴弹窗四件套（postOpen / postPaint / closePostPop / bindPostDelegation + 调用）`,
+      /function postOpen\(/.test(h) && /function postPaint\(/.test(h)
+      && /function closePostPop\(/.test(h) && /function bindPostDelegation\(/.test(h)
+      && /^bindPostDelegation\(\);/m.test(h));
+  }
+  /* 「按原贴布局」的落地：pre-wrap 保留源站换行 / 全角缩进 / 空行。
+     ⚠️ 样式断言取 `{…}` **内部**（整页含某字符串会被注释里的反例假绿）。 */
+  const POBODY = /\.postpop-b \.po-body\{([^}]*)\}/;
+  {
+    const bad = POP_PAGES.filter(([, h]) => !POBODY.test(h));
+    t('★★ v10.50 正向锚点：四页都取到 `.po-body` 规则（选择器打错时下面几条会平白变绿）',
+      bad.length === 0, bad.map(([n]) => n).join(', ') || '全部命中');
+    const missWrap = POP_PAGES.filter(([, h]) => !/white-space:pre-wrap/.test((h.match(POBODY) || [])[1] || ''));
+    t('★★ v10.50：正文容器 `white-space:pre-wrap`（换行/缩进原样保留）+ overflow-wrap 兜超长网盘串',
+      missWrap.length === 0
+      && POP_PAGES.every(([, h]) => /overflow-wrap:anywhere/.test((h.match(POBODY) || [])[1] || '')),
+      missWrap.map(([n]) => n).join(', ') || '四页齐全');
+    t('★★ v10.50 反向：正文容器**不是** pre-line / normal（pre-line 会把源站缩进的空格吃掉）',
+      POP_PAGES.every(([, h]) => {
+        const body = (h.match(POBODY) || [])[1] || '';
+        return /white-space:pre-wrap/.test(body) && !/white-space:(?!pre-wrap)[a-z-]/.test(body);
+      }));
+    t('★ v10.50：游侠的结构化字段（steps / shots）也走 pre-wrap 分区渲染',
+      POP_PAGES.every(([, h]) => /\.postpop-b \.po-sec \.po-tx\{[^}]*white-space:pre-wrap/.test(h)));
+    t('★ v10.50：截图缩略图 + 隐藏取图容器都在（复用主源既有灯箱，不另写一套）',
+      POP_PAGES.every(([, h]) => /\.postpop-b \.po-shot img\{[^}]*aspect-ratio:16\/9/.test(h)
+        && /\.postpop-b \.po-lb\{display:none\}/.test(h)));
+  }
+  /* 层级：原贴弹窗必须压在「查看全部」下载弹窗之上（那个弹窗里也能点开原贴）。
+     ⚠️ 同一个选择器可能有多条规则（窄屏媒体查询里就有 `.dlpop{padding:10px}`）——
+        `exec` 只取**首个匹配**会读到一条没有 z-index 的规则 ⇒ 读成 0 ⇒ 下面的比较
+        退化成 `130 > 0` **恒真**。所以：① 取所有匹配里最大的 z-index；② 配一条正向锚点钉住
+        「三个值都读到了具体数字」，不让它悄悄退化（v10.49 学到的：反向断言必须配正向锚点）。 */
+  const zOf = (h, sel) => {
+    const re = new RegExp(sel + '\\{([^}]*)\\}', 'g');
+    let m, best = 0;
+    while ((m = re.exec(h))) {
+      const z = /z-index:(\d+)/.exec(m[1]);
+      if (z) best = Math.max(best, Number(z[1]));
+    }
+    return best;
+  };
+  const zPop = zOf(idx, '\\.postpop'), zDl = zOf(idx, '\\.dlpop'), zSv = zOf(idx, '\\.svloc');
+  t('★ v10.50 正向锚点：三个弹窗的 z-index 都读到了具体值（读不到时会退化成 0 > 0 恒真）',
+    zPop > 0 && zDl > 0 && zSv > 0, `postpop ${zPop} ｜ dlpop ${zDl} ｜ svloc ${zSv}`);
+  t('★★ v10.50：原贴弹窗 z-index 高于下载弹窗与位置弹窗——「查看全部」里点原贴不会被压在下面',
+    zPop > zDl && zPop > zSv, `postpop ${zPop} ｜ dlpop ${zDl} ｜ svloc ${zSv}`);
+  /* Esc 分层：z-index 最高的一层先关。
+     ⚠️ 判据必须是 closePostPop() 的**返回值**（= postShown）而不是 pop.hidden ——
+        hidden 要等 180ms 过渡走完才置位，用它会把「已关」读成「还开着」，连按两次 Esc 就关不掉底下那层。 */
+  t('★★ v10.50：Esc 分层 —— 原贴弹窗排在搜索/详情之前（用返回值判「真关了」，不看 hidden）',
+    (() => {
+      const a = idx.indexOf("if (typeof closePostPop === 'function' && closePostPop()) return;");
+      const b = idx.indexOf('if (smOpen) { closeSearch(); return; }');
+      const c = idx.indexOf('closeDetail();', a);
+      return a > 0 && b > a && c > a;
+    })());
+}
 /* 专属 CSS 泄漏闸：追加的 CSS 必须整段待在 <style> 内 */
 t('端游资源页 <style> 唯一', count(res, /<style>/g) === 1, `实际 ${count(res, /<style>/g)}`);
 t('端游资源页 <script> 数正常（≤3）', count(res, /<script/g) <= 3, `实际 ${count(res, /<script/g)}`);

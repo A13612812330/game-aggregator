@@ -87,7 +87,14 @@ const grpSrcName = (k) => grpSrcLabel[k] || GRP_SRC_FALLBACK[k] || k;
  * 卡片渲染（三个分区共用）
  * ========================================================================== */
 
-/** 卡内一行条目：序号 + 标题 + 通道按钮（最多 2 个，超出显示 +N） */
+/** 卡内一行条目：序号 + 标题 + 通道按钮（最多 2 个，超出显示 +N）
+ *
+ * ★ v10.50：条目带原贴正文时（`it.hasPost`）多给两个入口 ——
+ *   ① 行内「原贴」小按钮（显式、好发现，与下载通道同一排）
+ *   ② **整行可点**（`.has-post` + `cursor:pointer` + hover 底色）
+ *   两个入口都走同一个全局委托（见 `bindPostDelegation`），行为只有一份。
+ *   ⚠️ 没有 `hasPost` 的行**一点都不变** —— 不加 class、不加按钮、光标的默认样子保留，
+ *      免得用户点了一条什么都没发生。 */
 function glRow(cat, it, n) {
   const links = it.links || [];
   const two = links.slice(0, 2)
@@ -101,11 +108,18 @@ function glRow(cat, it, n) {
     ? '<a class="bd-other" href="' + esc(it.page) + '" target="_blank" rel="noopener noreferrer" title="'
       + esc(it.note || '这条没有解析到下载链，去源站看') + '">源站</a>'
     : '';
-  const lkHtml = '<span class="gl-lk">' + two + more + fallback + '</span>';
+  const canPost = !!it.hasPost;
+  const postBtn = canPost
+    ? '<button class="po" type="button" data-post-open data-src="' + esc(it.src || '')
+      + '" data-id="' + esc(it.id || '') + '" title="查看原贴内容（标题 / 正文 / 截图）">原贴</button>'
+    : '';
+  const lkHtml = '<span class="gl-lk">' + postBtn + two + more + fallback + '</span>';
   const sizeTxt = it.size ? '<span class="sz">' + esc(String(it.size).slice(0, 12)) + '</span>' : '';
   const title = it.title || it.game || '?';
   const mute = links.length ? '' : ' mute';
-  return '<div class="gl-i" data-src="' + esc(it.src || '') + '">'
+  return '<div class="gl-i' + (canPost ? ' has-post' : '') + '" data-src="' + esc(it.src || '') + '"'
+    + (canPost ? ' data-id="' + esc(it.id || '') + '" data-post-row="1"' : '')
+    + '>'
     + '<span class="n">' + n + '</span>'
     + '<span class="t' + mute + '" title="' + esc(title) + '">' + esc(title) + '</span>'
     + sizeTxt
@@ -116,14 +130,23 @@ function glRow(cat, it, n) {
 /** 一张游戏组卡 */
 function grpCard(cat, g) {
   const meta = GRP_META[cat];
-  const game = g.game || '?';
+  /* ★ v10.50：卡面标题用**展示名**（`name`），不再是库名原串。
+   *   原串是 `中文名/英文名/标签`，实测 16,248/19,430 款含 `/` ⇒ 标题折 2~3 行、卡片被撑高。
+   *   `game`（原串）**留着**：它是搜索/匹配/审计的口径，挂进 hover 提示，信息一点没丢。 */
+  const game = g.name || g.game || '?';
+  const gameFull = g.game || game;
   const libTitle = g.libTitle || '';
-  const alt = (libTitle && libTitle !== game) ? '<div class="alt" title="' + esc(libTitle) + '">' + esc(String(libTitle).slice(0, 46)) + '</div>' : '';
+  /* 灰字副标题 = 英文名（用户拍板：中文名 + 下方灰字英文名）。
+   * 没有英文名（纯英文游戏名 / 单段名）就**不占那一行**，卡片更矮。 */
+  const sub = g.nameEn
+    ? '<div class="alt" title="' + esc(g.nameEn) + '">' + esc(String(g.nameEn).slice(0, 46))
+      + (String(g.nameEn).length > 46 ? '…' : '') + '</div>'
+    : '';
 
   /* 封面：有就用真图（组卡封面取自端游库/条目），没有就沿用既有 .cov.ph 占位块
      （同尺寸、只放缩写 —— 不这么写网格被拉齐后卡顶会空出一块）。 */
   const covBtn = g.libId
-    ? '<button class="cov-btn" data-lib="' + esc(g.libId) + '" data-title="' + esc(libTitle || game) + '" type="button">查看游戏详情</button>'
+    ? '<button class="cov-btn" data-lib="' + esc(g.libId) + '" data-title="' + esc(libTitle || gameFull) + '" type="button">查看游戏详情</button>'
     : '';
   const cov = g.cover
     ? '<div class="cov"><img src="' + esc(g.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' + covBtn + '</div>'
@@ -145,11 +168,12 @@ function grpCard(cat, g) {
     : '';
 
   return '<article class="emu-card grp' + (g.cover ? ' has-cov' : '') + '" data-cat="' + cat + '" data-key="' + esc(g.key) + '"'
-    + ' data-lib="' + esc(g.libId || '') + '" data-libt="' + esc(libTitle || game) + '" data-name="' + esc(game) + '">'
+    + ' data-lib="' + esc(g.libId || '') + '" data-libt="' + esc(libTitle || gameFull) + '" data-name="' + esc(game) + '">'
     + cov
     + '<div class="bd">'
-    + '<h4 title="' + esc(game) + '">' + esc(game) + '</h4>'
-    + alt
+    /* hover 提示给**完整库名**，卡面只显示展示名 */
+    + '<h4 title="' + esc(gameFull) + '">' + esc(game) + '</h4>'
+    + sub
     + '<div class="meta">'
     + '<span class="tg ' + meta.kindCls + '">' + esc(meta.label) + '</span>'
     + '<span class="pill">' + Number(g.count).toLocaleString() + ' 条</span>'
@@ -273,7 +297,14 @@ async function grpAllPop(btn) {
   }
 }
 
-/** 网格点击分流（三个分区同一套）：查看全部 / 卡内通道外链 / 封面按钮 / 整卡进详情 */
+/** 网格点击分流（三个分区同一套）：查看全部 / 原贴 / 卡内通道外链 / 封面按钮 / 整卡进详情
+ *
+ * ★ v10.50：「原贴」入口（行内按钮 + 整行可点）**故意不在这里处理**，只做一次
+ *   `return` 放行 —— 真正处理它的是主源里那个 document 级委托（见 index.html 的
+ *   `bindPostDelegation`）。理由：同一个入口还出现在「查看全部」弹窗与详情页资源行里，
+ *   那两处的 innerHTML 都是整体重建的；三处各绑一次必然分叉。
+ *   ⚠️ 这里**不能** `e.stopPropagation()` —— 那样会连 document 上的委托一起掐掉，
+ *      变成「点了原贴什么也不发生」。 */
 function bindGrpGrid(cat) {
   const meta = GRP_META[cat];
   const g = document.getElementById(meta.grid);
@@ -282,6 +313,8 @@ function bindGrpGrid(cat) {
   g.addEventListener('click', (e) => {
     const more = e.target.closest('[data-grp-more]');
     if (more) { e.stopPropagation(); grpAllPop(more); return; }
+    /* 原贴入口：放行给 document 级委托（`[data-post-open]` 在行内、`.has-post` 是整行） */
+    if (e.target.closest('[data-post-open]') || e.target.closest('.gl-i.has-post')) return;
     /* 卡内的下载通道是外链，别被整卡的点击吞掉 */
     if (e.target.closest('.gl-lk a')) return;
     const btn = e.target.closest('.cov-btn');

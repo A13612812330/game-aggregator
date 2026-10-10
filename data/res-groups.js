@@ -37,6 +37,8 @@ const fr = require('./fr');
 const gcm = require('./trainers');
 const gamesDb = require('./gamesDb');
 const { normKey } = require('./name-normalize');
+const { displayName, enName } = require('./game-name');
+const { cleanPostText } = require('../shared');
 
 /* 与资源页既有配色语义共用一份表（tools/resource-sections.js 的 RES_PAN_CLS 同源） */
 const PAN_CLS = {
@@ -72,6 +74,10 @@ function fromMods() {
       page: x.url || ('https://52jidi.com/post/detail/' + x.id),
       note: x.author ? ('作者 ' + x.author) : '',
       ts: (x.ut || x.ct || 0) * 1000,
+      /* ★ v10.50：这一条**有没有原贴正文可看** —— 前端据此决定是否给「原贴」入口。
+       *   机地帖正文覆盖率实测 8,942/8,943 = 100%（抓取层已截断至 6000 字）。
+       *   只在有时给 1（JSON 会丢掉 undefined）⇒ 不给每条都多背一个 false。 */
+      hasPost: String(x.content || '').trim() ? 1 : undefined,
     });
   }
   return out;
@@ -99,6 +105,9 @@ function fromYx() {
       /* 没有解析出文件时**不静默丢条**：留一条附注，前端显示「去源站下载」 */
       note: links.length ? (f.fileName || '') : ('未解析到直链' + (x.fileFailWhy ? '：' + x.fileFailWhy : '')),
       ts: x.date ? Date.parse(x.date) || 0 : 0,
+      /* ★ v10.50：游侠补丁页的「简介 / 安装步骤 / 游戏截图」也能开原贴弹窗。
+       *   实测 desc 2,043/2,043 = 100%，shots 1,172 条有图（57.4%）。 */
+      hasPost: (String(x.desc || '').trim() || (x.steps || []).length || (x.shots || []).length) ? 1 : undefined,
     });
   }
   return out;
@@ -225,10 +234,17 @@ function build() {
     if (!key) continue;   /* 连游戏名都没有的条目无法归组，跳过（进不来就不会静默消失：有 byCat 计数兜底） */
     let gr = groups.get(key);
     if (!gr) {
+      /* ★ v10.50：库名的 `中文名/英文名/标签` 拆成**展示名 + 英文名**。
+       *   原串（`game`）**照旧保留** —— 它是搜索/匹配/审计的原始口径，
+       *   只是不再直接铺到卡面上（实测库内 16,248/19,430 款含 `/`，会把标题撑成 2~3 行）。
+       *   拆分规则是唯一真源 `data/game-name.js`，本处不重复实现（铁律 17）。 */
+      const rawName = (g && g.title) || it.game || it.libTitle || it.title || '?';
       gr = {
         key,
         libId: it.libId || '',
-        game: (g && g.title) || it.game || it.libTitle || it.title || '?',
+        game: rawName,
+        name: displayName(rawName),
+        nameEn: enName(rawName),
         libTitle: it.libTitle || (g && g.title) || '',
         cover: it.cover || '',
         n: 0, bySrc: {}, cats: {},
@@ -309,7 +325,7 @@ function groups(cat, opts = {}) {
     for (const g of pool) {
       const gr = b.groups.get(g.key);
       if (!gr) continue;
-      const names = [gr.game, gr.libTitle].filter(Boolean);
+      const names = [gr.name, gr.nameEn, gr.game, gr.libTitle].filter(Boolean);
       if (names.some((n) => String(n).toLowerCase().includes(ql) || (qk && normKey(n).includes(qk)))) hitKeys.add(g.key);
     }
     /* ② 组内条目标题命中（用户搜「整合包」也该搜得到） */
@@ -323,7 +339,11 @@ function groups(cat, opts = {}) {
 
   const arr = pool.slice();
   const grp = (k) => b.groups.get(k);
-  if (sort === 'game') arr.sort((x, y) => String(grp(x.key).game).localeCompare(String(grp(y.key).game), 'zh'));
+  /* ★ v10.50：按「游戏名」排序改用**展示名**（中文名）。
+   *   用原串会先比到一个 CJK/Latin 混排的怪序列（`abc…` 落在中文前后不定）；
+   *   展示名基本是中文名，localeCompare 'zh' 才真的按拼音排。 */
+  const sortName = (k) => String(grp(k).name || grp(k).game || '');
+  if (sort === 'game') arr.sort((x, y) => sortName(x.key).localeCompare(sortName(y.key), 'zh'));
   else if (sort === 'new') {
     /* 组内最新时间戳 —— 用预计算表，别在比较函数里全表扫 */
     const newestOf = new Map();
@@ -335,7 +355,7 @@ function groups(cat, opts = {}) {
     }
     arr.sort((x, y) => (newestOf.get(y.key) || 0) - (newestOf.get(x.key) || 0)
       || y.n - x.n);
-  } else arr.sort((x, y) => y.n - x.n || String(grp(x.key).game).localeCompare(String(grp(y.key).game), 'zh'));
+  } else arr.sort((x, y) => y.n - x.n || sortName(x.key).localeCompare(sortName(y.key), 'zh'));
 
   const limit = Math.min(parseInt(opts.limit, 10) || 24, 200);
   const offset = parseInt(opts.offset, 10) || 0;
@@ -358,7 +378,8 @@ function groups(cat, opts = {}) {
       const bySrc = {};
       for (const x of all) bySrc[x.src] = (bySrc[x.src] || 0) + 1;
       return {
-        key: g.key, game: gr.game, libId: gr.libId, libTitle: gr.libTitle, cover: gr.cover,
+        key: g.key, game: gr.game, name: gr.name, nameEn: gr.nameEn,
+        libId: gr.libId, libTitle: gr.libTitle, cover: gr.cover,
         count: g.n, bySrc, cats: gr.cats,
         items: all.slice(0, PREVIEW),
         more: Math.max(0, all.length - PREVIEW),
@@ -417,8 +438,83 @@ function slimItem(x) {
     src: x.src, cat: x.cat, id: x.id, title: x.title, game: x.game,
     size: x.size, date: x.date, downloads: x.downloads,
     links: x.links, page: x.page, note: x.note,
+    /* 有没有原贴正文（详情页据此决定是否给「原贴」入口）—— v10.50 */
+    hasPost: x.hasPost || 0,
     /* 来源展示名一并给出：前端不必自带一份映射表（铁律 17：口径只留一处） */
     srcLabel: SRC_LABEL[x.src] || x.src,
+  };
+}
+
+/* ============================================================================
+ * 原贴正文（v10.50 新增）
+ *
+ * 用户口径：「有部分帖子的我想你能够获取对应的内容（可以点击弹窗展示标题 + 原贴内容
+ *           + 图片等）且还需要按照原贴的布局放置（大部分都有介绍和使用方式）」。
+ *
+ * ★ 这些正文**本来就在本地文件里**，不是新抓的：
+ *     · 机地 MOD/修改器帖（src=mod）→ mods.json 的 `content`（实测 8,942/8,943 = 100%）
+ *     · 游侠存档（src=yx）        → saves-youxia.json 的 `desc` / `steps` / `shots`
+ *                                   （desc 100% · shots 57.4%）
+ *   只是 `fromMods()` / `fromYx()` 在**归一成列表形状**时按设计只留了摘要字段
+ *   （列表一条都没必要背 1KB 正文 —— 717 条一组就是 700KB）。
+ *   ⇒ 列表侧只给 `hasPost` 一个布尔标记，正文走**按需单取**，一次一条。
+ *
+ * ★ 这是「界面缺字段 ≠ 数据源没有」的第二次现场（第一次是 v10.48 的 `official_url`）：
+ *   两回都不是采集丢了数据，是**中间层投影**把字段筛掉了。改的是投影，不是采集。
+ *
+ * 返回形状（前端只认这一种）：
+ *   { ok, src, id, has, source, title, game, name, author, ct, ut, pv, date,
+ *     url, content, steps:[{head,text}], shots:[url] }
+ *   has=false 表示该来源本来就没有正文（GT / FR / GCM 是纯链接源）—— 不是错误。
+ * ========================================================================== */
+function post(src, id) {
+  const s = String(src || '').trim();
+  const k = String(id || '').trim();
+  const srcLabel = SRC_LABEL[s] || s;
+  if (!s || !k) return { ok: false, error: '缺少 src / id' };
+
+  if (s === 'mod') {
+    const x = (mods.ensure().items || []).find((v) => String(v.id) === k);
+    if (!x) return { ok: false, error: '没找到这条帖子' };
+    const libRaw = x.libTitle || x.game || '';
+    return {
+      ok: true, src: 'mod', id: k, has: true, source: srcLabel,
+      title: x.title || '', game: libRaw, name: displayName(libRaw),
+      author: x.author || '', ct: x.ct || 0, ut: x.ut || 0, pv: x.pv || 0,
+      url: x.url || ('https://jidiyouxi.com/post/detail/' + k),
+      /* ★ v10.50：这里是**真正把正文交出去**的地方 —— 必须再过一道广告行清洗。
+         三重保险：① 抽取层（jidiModify.shape）入库前已清 ② 存量已用
+         `tools/_clean-post-junk.js` 洗过 ③ 这一层兜住「库里还有漏网」的情况。
+         ⚠️ 列表侧的 `hasPost` **故意不跟着清洗**：它只是「这条有没有正文」的粗判，
+            反复对 8,942 条正文跑正则只为判空并不划算；清洗只在这一层做（铁律 17：实现只一处）。 */
+      content: cleanPostText(x.content),
+      steps: [], shots: [],
+      /* 机地帖没有独立图集字段（正文是纯文本），配图就是该游戏话题的封面 —— 由前端用 group 封面兜底 */
+      cover: x.cover || '',
+    };
+  }
+
+  if (s === 'yx') {
+    const x = (savesYx.ensure().items || []).find((v) => String(v.id) === k);
+    if (!x) return { ok: false, error: '没找到这条帖子' };
+    return {
+      ok: true, src: 'yx', id: k, has: true, source: srcLabel,
+      title: x.title || '', game: x.game || x.libTitle || '',
+      name: displayName(x.libTitle || x.game || x.title || ''),
+      author: '', ct: 0, ut: 0, pv: 0, date: x.date || '',
+      url: x.sourceUrl || '',
+      content: cleanPostText(x.desc),
+      steps: (x.steps || []).map((t) => ({ head: t.head || '', text: t.text || '' })),
+      shots: (x.shots || []).slice(0, 24),
+      cover: x.libCover || x.cover || '',
+    };
+  }
+
+  /* GT / FR / GCM：只有链接与元数据，没有正文 —— 明确回 has:false，前端不显示入口 */
+  return {
+    ok: true, src: s, id: k, has: false, source: srcLabel,
+    title: '', game: '', name: '', author: '', ct: 0, ut: 0, pv: 0, date: '',
+    url: '', content: '', steps: [], shots: [], cover: '',
   };
 }
 
@@ -441,6 +537,6 @@ function countsFor(libId) {
 }
 
 module.exports = {
-  build, groups, items, stats, byLib, countsFor, slimItem,
+  build, groups, items, stats, byLib, countsFor, slimItem, post,
   SRC_LABEL, SRC_KEY, MOUNT, PREVIEW,
 };

@@ -451,9 +451,41 @@ eq(dl.serverOf('https://store.steampowered.com/app/1/'), '其他链接',
   }
   ok(!contentRendered,
     '★★ 广告站串不许出现在任何**渲染层**（mods 读取层 / 服务端 / 四张页面）');
-  ok(!/\.content\b/.test(srvSrc) && !/\.content\b/.test(read('public/index.html')),
-    '★ 帖子的 `content`（含广告原文）目前无人渲染 —— 这是上面「用户看不到」的前提，'
-    + '前提变了就必须连带把 content 一起清（否则这条会红）');
+  /* ★★ v10.50：**前提已经变了** —— 原贴弹窗（`#postPop`）开始整段渲染 `content`。
+     下面这条原先钉的是「content 无人渲染」这个**前提**（拿 `.content` 字面量当代理判据），
+     它自己把条件写在了括号里：「前提变了就必须连带把 content 一起清」。
+     ⇒ 现在按新前提改写（既不是删掉，也不是想办法让它变绿）：
+        ① 渲染链路**确实在**（正向锚点 —— 防「把渲染删掉」也被判通过）；
+        ② 正文里的广告行在**数据层已清零**（这才是那条断言真正要保的东西）；
+        ③ 清洗**只有一份实现**，抽取层（入库前）与读取层（交出正文前）都调它。
+     ★ 变红的那个瞬间是**设计如此**：它逼着先清数据、再更新断言，两步都不能省。 */
+  const cleanPostText = shared.cleanPostText;
+  ok(typeof cleanPostText === 'function', '★ v10.50：shared 导出 cleanPostText（正文广告行清洗的唯一真源）');
+  {
+    const dirty = '介绍：这是一个 MOD\n\n使用方式：解压到游戏根目录\nd.如仍有问题，请看：https://52leiqu.com/problemTutorial。';
+    const out = cleanPostText(dirty);
+    ok(!/52leiqu/i.test(out) && /使用方式/.test(out) && /介绍/.test(out),
+      '★★ v10.50：cleanPostText 删掉含广告站的**整行**，其余正文一字不动', JSON.stringify(out));
+    const cleanTxt = '正文\n网盘 https://pan.xunlei.com/s/abc 提取码 1234';
+    ok(cleanPostText(cleanTxt) === cleanTxt, '★★ v10.50：无广告的正文**原样返回**（零改动、可反复调用）');
+    ok(cleanPostText('来自 https://leiqupan.com/s/x') === '来自 https://leiqupan.com/s/x',
+      '★★ v10.50 护栏：`leiqupan.com` 是**真网盘**，不许被误伤（判据走 host，不走「含 leiqu 字样」）');
+    ok(cleanPostText(cleanPostText(dirty)) === cleanPostText(dirty), '★ v10.50：清洗是幂等的');
+
+    let badContent = 0;
+    for (const it of (modsJson.items || [])) if (/52leiqu/i.test(String(it.content || ''))) badContent++;
+    ok(badContent === 0,
+      '★★ v10.50：data/mods.json 的**正文**广告串已清零（v10.45 只清了 links / url / title，正文是这次补的）',
+      '残留 ' + badContent + ' 条');
+
+    const jm = read('fetchers/jidiModify.js');
+    ok(/cleanPostText/.test(jm) && /cleanPostText/.test(read('data/res-groups.js')),
+      '★ v10.50：抽取层（入库前）与读取层（交出正文前）都过清洗 —— 双保险');
+    ok(!/content:\s*raw\.length/.test(jm),
+      '★★ v10.50 反向：抽取层不再把**未清洗的 raw** 直接写进 content（回到旧写法这条就红）');
+    ok(/\.content\b/.test(read('public/index.html')),
+      '★ v10.50 正向锚点：`content` 确实在渲染层 —— 本组断言由「无人渲染」正式改为「已渲染且已清洗」');
+  }
 
   /* ============================================================
    *  ⑧ 服务端路由存在性

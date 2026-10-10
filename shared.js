@@ -166,7 +166,46 @@ function extractLinks(text, { max = 20, dropInternal = true } = {}) {
   return out;
 }
 
+/**
+ * 清掉一段正文里的**广告 / 帮助站内容**（按行删）。
+ *
+ * 为什么要有这一步（v10.50）：机地资源帖的正文结尾常带一句固定引导，例如
+ *   `更多问题请访问 https://52leiqu.com/problemTutorial`
+ * （`52leiqu.com` = 迅雷「雷区」问题教程页，姐妹站的推广位）。
+ * `extractLinks` 早就把它从**链接表**里滤掉了（⇒ 下载清单不会再出现名叫「其他」的按钮），
+ * 但**正文原文**里还留着 —— v10.45 时正文无人渲染，所以用户看不见；
+ * **v10.50 起原贴弹窗会整段渲染 `content`**，再不处理就等于把广告摆到用户眼前。
+ * ★ 这就是 `tools/test-download.js` 那条「content 目前无人渲染」断言**事先写下的条件**：
+ *   前提变了就必须连带把 content 一起清 —— 那条断言变红是**设计如此**，不是误报。
+ *
+ * 判据：行内出现的**域名**命中 `JUNK_HOST_RE` ⇒ **整行删**（只删 URL 会留下一句断句）。
+ *   · 用 host 判、**不用**「含 leiqu 字样」判 —— `leiqupan.com` 是**真网盘**，会被误伤；
+ *   · **不含广告时原样返回**（逐字不动）⇒ 对全库 99.8% 的正文零改动，且可反复调用（幂等）。
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function cleanPostText(text) {
+  const s = String(text == null ? '' : text);
+  if (!s) return '';
+  /* 每次新建正则：模块级带 `g` 的正则会在多次调用间共享 lastIndex（一个经典静默坑） */
+  const re = /(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}/gi;
+  let changed = false;
+  const kept = s.split('\n').filter((ln) => {
+    let m;
+    re.lastIndex = 0;
+    while ((m = re.exec(ln))) {
+      const host = m[0].replace(/^https?:\/\//i, '').split('/')[0].toLowerCase();
+      if (JUNK_HOST_RE.test(host)) { changed = true; return false; }
+    }
+    return true;
+  });
+  if (!changed) return s;
+  /* 只在**真删了行**时才收拾首尾/连续空行 —— 无广告的正文一个字都不许动 */
+  return kept.join('\n').replace(/\n{3,}/g, '\n\n').replace(/^\n+|\n+$/g, '');
+}
+
 module.exports = {
   UA, HOST_JIDI, HOST_XD, abs, getHtml, ts2label, fmtDateTime, normDate, dateTs,
-  NETDISK, INTERNAL_HOST_RE, JUNK_HOST_RE, extractLinks,
+  NETDISK, INTERNAL_HOST_RE, JUNK_HOST_RE, extractLinks, cleanPostText,
 };

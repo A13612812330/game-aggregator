@@ -560,6 +560,15 @@
     border-radius:6px;padding:3px 7px;text-decoration:none;white-space:nowrap;transition:.14s}
   .emu-card.grp .gl-lk a:hover{filter:brightness(1.12)}
   .emu-card.grp .gl-lk span.more{font:750 9.5px/1 var(--font-num);color:var(--c-t3);padding:3px 2px}
+  /* ★ v10.50：条目**带原贴正文**时多两个入口 —— 行内「原贴」小按钮 + 整行可点。
+     两个入口都走同一个 document 级委托（postOpen），行为只有一份。
+     ⚠️ 内边距与负外边距成对出现（+4/-4、+6/-6）：行本身没有内边距，
+        直接加 hover 底色会贴着字边；加 padding 又不抵消的话整列会往下错 8px。 */
+  .emu-card.grp .gl-i.has-post{padding:4px 6px;margin:-4px -6px;border-radius:7px;cursor:pointer}
+  .emu-card.grp .gl-i.has-post:hover{background:#F5F7FC}
+  .emu-card.grp .gl-lk button.po{font-family:var(--font);font-size:9.5px;font-weight:750;color:#475569;
+    background:#EEF1F6;border:1px solid #DDE3EC;border-radius:6px;padding:3px 7px;cursor:pointer;transition:.14s}
+  .emu-card.grp .gl-lk button.po:hover{background:#E3E8F1;border-color:#C9D4E8;color:var(--c-t1)}
   .emu-card.grp .gl-lk a.bd-direct{background:var(--ch-139)}
   .emu-card.grp .gl-lk a.bd-baidu{background:var(--ch-baidu)}
   .emu-card.grp .gl-lk a.bd-xunlei{background:var(--ch-xunlei)}
@@ -1819,6 +1828,52 @@
     background:var(--c-surface);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);overflow:hidden;
     transform:translateY(10px) scale(.985);opacity:0;transition:.2s cubic-bezier(.2,.8,.3,1)}
   .svloc.on .svloc-box{transform:none;opacity:1}
+  /* ============ 📄 「原贴内容」弹窗（v10.50 新增） ============
+     用户口径：「有部分帖子的我想你能够获取对应的内容（可以点击弹窗展示标题 + 原贴内容
+               + 图片等）且还需要按照原贴的布局放置（大部分都有介绍和使用方式）」。
+     ★ 外壳双写（`dlpop-h` + `postpop-h`）：头部 / 正文滚动区 / 关闭按钮直接复用下载弹窗的样式，
+       零重复 CSS。整层独有的是**正文排版**与**截图网格**。
+     ★ z-index 130：下载弹窗 110、存档位置弹窗 120 —— 这**两层里都能点开原贴**
+       （「查看全部」弹窗里的条目也带原贴入口），所以必须压在它们之上。
+     ★ 正文用 `white-space:pre-wrap`（见 .po-body）—— 这就是「按照原贴的布局放置」的落地：
+       源站正文里的换行 / 全角缩进 / 空行原样保留，不做任何 reflow。 */
+  .postpop{position:fixed;inset:0;z-index:130;display:flex;align-items:center;justify-content:center;padding:22px}
+  .postpop-bg{position:absolute;inset:0;background:rgba(12,18,38,.5);
+    -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);opacity:0;transition:.18s}
+  .postpop.on .postpop-bg{opacity:1}
+  .postpop-box{position:relative;width:min(720px,100%);max-height:min(86vh,820px);display:flex;flex-direction:column;
+    background:var(--c-surface);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);overflow:hidden;
+    transform:translateY(12px) scale(.985);opacity:0;transition:.2s cubic-bezier(.2,.8,.3,1)}
+  .postpop.on .postpop-box{transform:none;opacity:1}
+  .postpop-b .po-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 9px;margin:0 0 11px;
+    font-size:11px;font-weight:650;color:var(--c-t3)}
+  .postpop-b .po-meta .po-src{font-weight:800;color:#fff;background:var(--c-primary);border-radius:5px;padding:2px 7px}
+  .postpop-b .po-meta .po-n{font-family:var(--font-num);font-weight:750}
+  .postpop-b .po-hero{margin:0 0 12px;border-radius:9px;overflow:hidden;background:#0F172A}
+  .postpop-b .po-hero img{display:block;width:100%;max-height:210px;object-fit:cover}
+  /* ★ 「按原贴布局」的核心一条：pre-wrap 保留源站正文的所有换行与缩进。
+     `overflow-wrap:anywhere` 兜住超长的网盘串 —— 不兜的话 720px 弹窗会被一条 URL 撑出横向滚动。 */
+  .postpop-b .po-body{margin:0;font-size:12.5px;line-height:1.78;color:var(--c-t1);
+    white-space:pre-wrap;overflow-wrap:anywhere}
+  .postpop-b .po-body a{color:var(--c-primary);text-decoration:underline;overflow-wrap:anywhere}
+  .postpop-b .po-sec{margin:13px 0 0;padding:10px 11px;background:#F7F9FD;
+    border:1px solid var(--c-border);border-radius:9px}
+  .postpop-b .po-sec h5{margin:0 0 5px;font-size:11.5px;font-weight:800;color:var(--c-t2)}
+  .postpop-b .po-sec .po-tx{margin:0;font-size:12px;line-height:1.72;color:var(--c-t2);
+    white-space:pre-wrap;overflow-wrap:anywhere}
+  .postpop-b .po-cap{margin:14px 0 0;font-size:11px;font-weight:800;color:var(--c-t3)}
+  .postpop-b .po-shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:8px;margin:8px 0 0}
+  .postpop-b .po-shot{padding:0;border:1px solid var(--c-border);border-radius:8px;overflow:hidden;
+    background:#fff;cursor:zoom-in;transition:.14s}
+  .postpop-b .po-shot:hover{border-color:#C9D4E8;box-shadow:0 2px 10px rgba(15,23,42,.1)}
+  .postpop-b .po-shot img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}
+  /* 灯箱取图源（隐藏）：主源既有的 gal-lb 只认 `.gal-sld img`，这里给它一个只读容器，
+     点缩略图时直接转调 galLbOpen —— 不另写一套灯箱。 */
+  .postpop-b .po-lb{display:none}
+  /* 详情页行内的「原贴」入口（与资源页同源，同一个委托） */
+  .d-res-it .d-res-po{flex:none;font-size:10px;font-weight:750;color:#475569;background:#EEF1F6;
+    border:1px solid #DDE3EC;border-radius:5px;padding:2px 6px;cursor:pointer;transition:.14s}
+  .d-res-it .d-res-po:hover{background:#E3E8F1;border-color:#C9D4E8;color:var(--c-t1)}
   .dl-grp{margin-bottom:14px}
   .dl-grp:last-child{margin-bottom:2px}
   .dl-grp>.h{display:flex;align-items:center;gap:7px;margin-bottom:8px}
@@ -2110,6 +2165,29 @@
       <button class="dlpop-x svloc-x" type="button" data-svloc="close" aria-label="关闭">✕</button>
     </div>
     <div class="dlpop-b svloc-b" id="svLocBody"></div>
+  </div>
+</div>
+
+<!-- ===== 📄 原贴「内容」弹窗（v10.50 新增 · 三页共享资产，勿在派生页单独改） =====
+     用户口径：「有部分帖子的我想你能够获取对应的内容（可以点击弹窗展示标题 + 原贴内容
+               + 图片等）且还需要按照原贴的布局放置（大部分都有介绍和使用方式）」。
+     数据来自 GET /api/res/post?src=&id=（按需单取一条，正文不随列表下发）。
+     ★ 为什么单开一层而不是复用 #dlPop：本弹窗要能**从 #dlPop 里面**再打开
+       （「查看全部 N 条」弹窗里的条目也带原贴入口），复用同一层会互相顶掉内容。
+     ★ 位置在**弹窗骨架段**（#svLoc 之后、.tabbar 之前）—— 这一段正是 tools/page-assets.js
+       抽取的 OVERLAY，所以 /emulator.html / /resources.html / /unpack.html 会自动带上同一个。
+     ★ 外壳类名双写（dlpop-h / dlpop-b + postpop-h / postpop-b）：直接复用下载弹窗的
+       头部 / 滚动区 / 关闭按钮样式，零重复 CSS。 -->
+<div class="postpop" id="postPop" hidden>
+  <div class="postpop-bg" data-post="close"></div>
+  <div class="postpop-box" role="dialog" aria-modal="true" aria-label="原贴内容">
+    <div class="dlpop-h postpop-h">
+      <span class="ic">📄</span>
+      <div class="tx"><b id="postTitle">原贴内容</b><span id="postSub"></span></div>
+      <button class="dlpop-x postpop-x" type="button" data-post="close" aria-label="关闭">✕</button>
+    </div>
+    <div class="dlpop-b postpop-b" id="postBody"></div>
+    <div class="dlpop-f postpop-f" id="postFoot"></div>
   </div>
 </div>
 
@@ -3091,6 +3169,10 @@ function switchDetail(dir) {
 }
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    /* ★ v10.50：原贴弹窗优先关闭 —— 它可能是**压在下载弹窗之上**打开的（弹窗内点条目）。
+       不先关它的话，Esc 会直接把底下的详情抽屉/下载弹窗收掉，原贴弹窗却留在最上层
+       （z-index 130），变成一张关不掉的浮层。`closePostPop()` 只在真的关掉了才返回 true。 */
+    if (typeof closePostPop === 'function' && closePostPop()) return;
     if (smOpen) { closeSearch(); return; }   // 搜索弹窗优先关闭
     closeDetail();
     return;
@@ -4267,10 +4349,17 @@ function dResRow(it) {
   const moreLk = links.length > 1 ? '<span class="d-res-more">+' + (links.length - 1) + '</span>' : '';
   const meta = it.size || (it.note && !links.length ? '' : (it.note || ''));
   const title = it.title || it.game || '?';
+  /* ★ v10.50：来源有正文时给「原贴」入口（存档块的游侠条目、以及「全部 N 条」里都有）。
+     ★ 这里故意**不做整行可点** —— 详情页的行很挤，整行吞点击会让「点空处想关抽屉」落空。
+       资源页的整行可点另说（那边一行就是一条帖子的主要入口）。 */
+  const postLk = it.hasPost
+    ? '<button class="d-res-po" type="button" data-post-open data-src="' + esc(it.src || '')
+      + '" data-id="' + esc(it.id || '') + '" title="查看原贴内容（标题 / 正文 / 截图）">原贴</button>'
+    : '';
   return '<div class="d-res-it"><span class="d-tg ' + esc(it.src || '') + '">' + esc(it.srcLabel || it.src || '') + '</span>'
     + '<span class="nm" title="' + esc(title) + '">' + esc(title) + '</span>'
     + (meta ? '<span class="ver">' + esc(String(meta).slice(0, 14)) + '</span>' : '')
-    + btn + moreLk + '</div>';
+    + postLk + btn + moreLk + '</div>';
 }
 
 /** 全量弹窗用：把一批条目铺成同一套行（让「全部 N」里看到的和卡内长得一样） */
@@ -5613,6 +5702,195 @@ function closeDownload() {
   closeSvLoc();
   setTimeout(() => { pop.hidden = true; const b = $('#dlBody'); if (b) b.innerHTML = ''; }, 180);
 }
+
+/* ============ 📄 原贴「内容」弹窗（v10.50 新增） ============
+ * 用户口径：「有部分帖子的我想你能够获取对应的内容（可以点击弹窗展示标题 + 原贴内容
+ *           + 图片等）且还需要按照原贴的布局放置（大部分都有介绍和使用方式）」。
+ *
+ * ★ 数据**不是新抓的**，是取回被列表投影筛掉的字段（`界面缺字段 ≠ 数据源没有` 的第二次现场）：
+ *     机地 MOD 帖 → mods.json 的 `content`（实测 8,942/8,943 = 100%，含介绍 / 安装步骤 / 使用说明）
+ *     游侠存档帖  → saves-youxia.json 的 `desc` + `steps` + `shots`（desc 100% / 有图 57.4%）
+ *   GTrainers / FearlessRevolution / GCM 是纯链接源，本来就没有正文 ⇒ `/api/res/post` 回
+ *   `has:false`，前端**不给入口**（宁可少一个按钮，也不给一个点开是空的按钮）。
+ *
+ * ★ 「按照原贴的布局放置」= 正文容器 `white-space:pre-wrap`（见 .po-body 的注释）：
+ *   源站正文里的换行、全角缩进、空行**原样保留**。额外只做两件不改变版面的事：
+ *     ① 裸链接变可点（原贴正文里就是网盘地址，用户要的正是点它）
+ *     ② 游侠的 `steps` / `shots` 单独分区渲染（它们本就是结构化字段，不属于正文）
+ * ★ 单取一条：正文 p50 ≈ 1KB、最长 6000 字，最大一组 717 条 ⇒ 随列表下发会是 ~700KB。
+ */
+let postBusy = false;
+let postShown = false;      // 逻辑上的开/关（`hidden` 要等过渡走完才置位，不能用它判）
+let postLbBound = false;
+
+/** 秒 / 毫秒都能吃的时间格式化（机地给秒时间戳，游侠给日期串） */
+function postTime(ct, ut) {
+  const t = ut || ct || 0;
+  if (!t) return '';
+  const ms = t > 1e11 ? t : t * 1000;
+  const d = new Date(ms);
+  return isNaN(d.getTime()) ? '' : d.toLocaleDateString('zh-CN');
+}
+
+/** 正文里的裸链接变可点。
+ *  ⚠️ 顺序：先按链接**切分原文**，再对非链接段做 esc —— 反过来（先整段 esc 再正则替换）
+ *     会把 `&` 先变成 `&amp;`，而「剥掉结尾标点」的规则会连 `&amp;` 尾巴上的 `;` 一起剥掉。 */
+function postLinkify(s) {
+  const RE = /(https?:\/\/[^\s<>"'）】」』]+)/g;
+  const raw = String(s == null ? '' : s);
+  let out = '', last = 0, m;
+  while ((m = RE.exec(raw))) {
+    out += esc(raw.slice(last, m.index));
+    const u = m[0].replace(/[.,;:!?）】」』]+$/, '');
+    out += '<a href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + esc(u) + '</a>';
+    last = m.index + u.length;
+    RE.lastIndex = last;
+  }
+  return out + esc(raw.slice(last));
+}
+
+/** 画一条原贴：封面 + 元信息 + 正文 + 步骤 + 截图（+ 灯箱取图源） */
+function postPaint(j) {
+  const tEl = $('#postTitle'), sEl = $('#postSub'), bEl = $('#postBody'), fEl = $('#postFoot');
+  if (!j || j.ok === false) {
+    if (tEl) tEl.textContent = '原贴内容';
+    if (sEl) sEl.textContent = '';
+    if (fEl) fEl.innerHTML = '';
+    if (bEl) bEl.innerHTML = '<div class="dlpop-empty">读取失败：' + esc((j && j.error) || '未知错误')
+      + '<br><span style="font-size:11.5px">关闭后重试</span></div>';
+    return;
+  }
+  /* 纯链接源（GT / FR / GCM）：明确说清「这里没有正文」，而不是给一张空白弹窗 */
+  if (!j.has) {
+    if (tEl) tEl.textContent = '原贴内容';
+    if (sEl) sEl.textContent = j.source ? (j.source + ' · 纯链接来源') : '';
+    if (fEl) fEl.innerHTML = '';
+    if (bEl) bEl.innerHTML = '<div class="dlpop-empty">这个来源只提供<b>链接与元数据</b>，没有正文。<br>'
+      + '<span style="font-size:11.5px">点条目上的下载通道直接取用即可。</span></div>';
+    return;
+  }
+
+  if (tEl) tEl.textContent = j.title || '原贴内容';
+  if (sEl) sEl.textContent = [j.name || j.game, j.author ? ('作者 ' + j.author) : ''].filter(Boolean).join(' · ');
+
+  const meta = [];
+  if (j.source) meta.push('<span class="po-src">' + esc(j.source) + '</span>');
+  if (j.author) meta.push('<span class="po-n">✍ ' + esc(j.author) + '</span>');
+  const dt = postTime(j.ct, j.ut) || j.date || '';
+  if (dt) meta.push('<span class="po-n">🗓 ' + esc(dt) + '</span>');
+  if (j.pv) meta.push('<span class="po-n">👁 ' + Number(j.pv).toLocaleString() + '</span>');
+  const metaHtml = meta.length ? '<div class="po-meta">' + meta.join('') + '</div>' : '';
+
+  const cover = j.cover
+    ? '<div class="po-hero"><img src="' + esc(j.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer"></div>'
+    : '';
+  const body = String(j.content || '').trim()
+    ? '<div class="po-body">' + postLinkify(j.content) + '</div>'
+    : '';
+  const steps = (j.steps || []).length
+    ? '<div class="po-cap">📋 安装 / 使用步骤</div>' + j.steps.map((s, i) =>
+      '<div class="po-sec"><h5>' + esc(s.head || ('步骤 ' + (i + 1))) + '</h5>'
+      + (s.text ? '<div class="po-tx">' + postLinkify(s.text) + '</div>' : '') + '</div>').join('')
+    : '';
+  const shots = j.shots || [];
+  const shotsHtml = shots.length
+    ? '<div class="po-cap">🖼 游戏截图（' + shots.length + ' 张 · 点开看大图）</div>'
+      + '<div class="po-shots">' + shots.map((u, i) =>
+        '<button class="po-shot" type="button" data-po-shot="' + i + '" aria-label="查看第 ' + (i + 1) + ' 张截图">'
+        + '<img src="' + esc(u) + '" alt="截图 ' + (i + 1) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
+        + '</button>').join('') + '</div>'
+    : '';
+  /* 灯箱取图源：主源既有的 gal-lb 只认 `.gal-sld img`（见 .po-lb 的注释）——
+     给它一个隐藏容器即可复用整套大图 / 左右翻页，不必另写一套灯箱。 */
+  const lb = shots.length
+    ? '<div class="po-lb">' + shots.map((u) => '<div class="gal-sld"><img src="' + esc(u) + '" alt=""></div>').join('') + '</div>'
+    : '';
+
+  if (bEl) {
+    bEl.innerHTML = (cover + metaHtml + body + steps + shotsHtml + lb)
+      || '<div class="dlpop-empty">这条帖子没有正文。</div>';
+    bEl.scrollTop = 0;
+  }
+  if (fEl) {
+    const u = j.url || '';
+    /* 正文被采集层截断过（上限 6000 字，全库 2 条）就**明说** —— 不能让用户以为原文就这么短 */
+    const cut = /正文过长已截断/.test(String(j.content || '')) ? ' · <b>正文过长，源站侧已截断</b>' : '';
+    fEl.innerHTML = (u
+      ? '<a href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">在原站打开这条帖子 ↗</a>'
+      : '')
+      + cut + ' · 点右上角 ✕ 或按 Esc 关闭';
+  }
+}
+
+/** 打开原贴弹窗（拉一条 → 画） */
+async function postOpen(src, id) {
+  const pop = $('#postPop');
+  const s = String(src || ''), k = String(id || '');
+  if (!pop || postBusy || !s || !k) return;
+  postBusy = true;
+  const tEl = $('#postTitle'), sEl = $('#postSub'), bEl = $('#postBody'), fEl = $('#postFoot');
+  if (tEl) tEl.textContent = '原贴内容';
+  if (sEl) sEl.textContent = '读取中…';
+  if (fEl) fEl.innerHTML = '';
+  if (bEl) bEl.innerHTML = '<div class="dlpop-load"><i></i><span>正在读取原贴…</span></div>';
+  postShown = true;
+  pop.hidden = false;
+  requestAnimationFrame(() => pop.classList.add('on'));
+  try {
+    const j = await fetch(api('/api/res/post?src=' + encodeURIComponent(s) + '&id=' + encodeURIComponent(k)))
+      .then((r) => r.json());
+    postPaint(j);
+  } catch (e) {
+    if (sEl) sEl.textContent = '';
+    if (bEl) bEl.innerHTML = '<div class="dlpop-empty">读取失败：' + esc(e.message)
+      + '<br><span style="font-size:11.5px">关闭后重试</span></div>';
+  } finally { postBusy = false; }
+}
+
+/** 关掉原贴弹窗，**返回「这次是否真的关掉了」** —— Esc 分支靠它决定要不要继续关下一层。
+ *  ⚠️ 判据用 `postShown` 而不是 `pop.hidden`：`hidden` 要等 180ms 过渡走完才置位，
+ *     用它会在这 180ms 内把「已经关了」读成「还开着」，连按两次 Esc 就关不掉底下的详情抽屉。 */
+function closePostPop() {
+  const pop = $('#postPop');
+  if (!pop || !postShown) return false;
+  postShown = false;
+  pop.classList.remove('on');
+  setTimeout(() => {
+    if (postShown) return;            // 这 180ms 内又被打开了，别把它关掉
+    pop.hidden = true;
+    const b = $('#postBody');
+    if (b) b.innerHTML = '';
+  }, 180);
+  return true;
+}
+
+/** document 级委托：资源页卡内行 / 「查看全部」弹窗 / 详情页资源行 三处共用一套。
+ *  ★ 为什么必须委托：这三处的 innerHTML 都是**整体重建**的（搜一次就换一屏），
+ *    逐个 addEventListener 会在第二次重绘后全部失效，而且不报错。 */
+function bindPostDelegation() {
+  if (postLbBound) return;
+  postLbBound = true;
+  document.addEventListener('click', (e) => {
+    const t = e.target;
+    if (!t || !t.closest) return;
+    if (t.closest('[data-post="close"]')) { closePostPop(); return; }
+    /* 截图 → 复用主源既有灯箱（大图 + 左右翻页） */
+    const shot = t.closest('[data-po-shot]');
+    if (shot) {
+      const bb = $('#postBody');
+      const root = bb && bb.querySelector('.po-lb');
+      if (root && typeof galLbOpen === 'function') galLbOpen(root, +shot.dataset.poShot || 0);
+      return;
+    }
+    const po = t.closest('[data-post-open]');
+    if (po) { postOpen(po.dataset.src, po.dataset.id); return; }
+    /* 卡内整行可点 —— 但下载通道是外链，必须让开（否则点「迅雷」会同时开原贴弹窗） */
+    if (t.closest('.gl-lk a')) return;
+    const row = t.closest('.gl-i.has-post');
+    if (row) postOpen(row.dataset.src, row.dataset.id);
+  });
+}
+bindPostDelegation();
 /* ★ v10.45：原 openDownload()（异步解析 + 一次性铺全部专区的网盘弹窗）**已删除**。
    它被 openUniDownload() 取代 —— 后者把「本体 / Mod / 修改器 / 存档」拆成四个模块页签，
    并且不再把「入口是否可见」绑在 /api/download 的成败上

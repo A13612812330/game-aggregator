@@ -40,7 +40,7 @@
  *   const { poll } = require('./jidiModify');
  *   const items = await poll('mod', { max: 0 });      // 0 = 全量
  */
-const { UA, HOST_JIDI } = require('../shared');
+const { UA, HOST_JIDI, cleanPostText } = require('../shared');
 /* ★ v10.22：签名与 env 缓存抽到 jidiSigned.js —— **算法只留一份**。
    本文件只保留「MOD / 修改器」这一条业务线自己的分页与字段归一化。
    `getEnv` 的签名与旧版一致（旧调用 `getEnv()` / `getEnv({force:true})` 仍可用）。 */
@@ -165,6 +165,10 @@ function shape(it) {
   const coverId = topic.cover;
   const member = it.member || {};
   const raw = String(it.content || '');
+  /* ★ v10.50：入库前先清掉正文里的**广告 / 帮助站行**（`52leiqu.com` 那句固定引导）。
+     为什么必须在这里清：v10.50 起原贴弹窗会整段渲染 `content`，不清就是把广告摆到用户眼前。
+     顺序 = **先清再截断** —— 反过来会让「6000 字」的边界算在被删掉的广告行上。 */
+  const text = cleanPostText(raw);
   return {
     id: String(it.id),
     kind: it.resource_type === 2 ? 'mod' : 'modifier',
@@ -177,9 +181,9 @@ function shape(it) {
     ut: it.ut || 0,                       // 更新（秒）
     pv: it.pv || 0,
     favors: it.favors || 0,
-    content: raw.length > CONTENT_MAX
-      ? raw.slice(0, CONTENT_MAX - CONTENT_NOTE.length) + CONTENT_NOTE
-      : raw,
+    content: text.length > CONTENT_MAX
+      ? text.slice(0, CONTENT_MAX - CONTENT_NOTE.length) + CONTENT_NOTE
+      : text,
     links: extractLinks(raw),
     url: HOST_JIDI + '/post/detail/' + it.id,
   };

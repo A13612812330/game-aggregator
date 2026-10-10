@@ -92,6 +92,13 @@ const RAD_EXCEPT = new Set([
    *      不像 .md-lk 那条只在派生页 —— 但例外表按选择器登记、不按页面，写法一致。 */
   '.emu-card.grp .gl-lk a',
   '.emu-card.grp .grp-more',
+  /* ★ v10.50 闸门新增：组卡里的**原贴入口**两件小元素（与 .gl-lk a 同类）。
+   *   · .gl-i.has-post  带正文的条目行 —— 圆角 7px 只服务于 hover 底色，
+   *     它既不是卡片也不是缩略图；走 --cd-r 会让 hover 时那一行看起来像张独立的小卡。
+   *   · .gl-lk button.po 行内「原贴」按钮 —— 与同排的通道按钮（.gl-lk a）**必须同圆角**，
+   *     否则一排按钮里混两个圆角值，视觉上直接能看出来。 */
+  '.emu-card.grp .gl-i.has-post',
+  '.emu-card.grp .gl-lk button.po',
   /* ★ v10.48 闸门新增：`.grp-pop .emu-card.grp` —— 「查看全部」弹窗里的**全量列表容器**。
    *   它挂 `emu-card grp` 两个类是为了**复用卡内行样式**（.gl-i / .gl-lk a.bd-* 那 20 多条），
    *   但它的语义是**列表**不是卡 ⇒ 必须用一条重置把卡片语义抵消掉：

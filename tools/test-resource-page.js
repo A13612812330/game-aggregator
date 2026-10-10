@@ -334,6 +334,162 @@ async function main() {
   }
 
   /* ============================================================
+   * 二·B、v10.50 卡面游戏名 —— 「中文名 + 下方灰字英文名」（用户拍板）
+   * ============================================================
+   * 用户原话：「应该是游戏名称导致 —— XD 的游戏名称有点小问题，它会用 / 进行分隔
+   *           中英文游戏名称以及标签等」。
+   * 库名是 `中文名/英文名/标签` 直接拼串，实测 19,430 款里 **16,248 款含 `/`（83.6%）**，
+   * 铺到卡面就是标题折 2~3 行、卡片参差被撑高 —— 这正是用户看到的现象。
+   */
+  {
+    const h4s = qa('#mdGrid .emu-card > .bd > h4');
+    ok('★ v10.50 正向锚点：MOD 组卡卡面标题取到', h4s.length > 0, `${h4s.length} 个`);
+    const badSlash = h4s.filter((h) => h.textContent.includes('/'));
+    ok('★★ v10.50：卡面文本一律不出现 `/`（库名原串只留在 hover 提示里，信息一点没丢）',
+      h4s.length > 0 && badSlash.length === 0,
+      badSlash.slice(0, 2).map((h) => h.textContent).join(' | ') || '无');
+    /* ⚠️ 反向断言必须配正向锚点：样本里若一张「原名含 /」的卡都没有，上一条会平白变绿。 */
+    const cutNames = h4s.filter((h) => (h.getAttribute('title') || '').includes('/'));
+    ok('★ v10.50 正向锚点：确实存在「原名含 `/` 而卡面已切成展示名」的卡',
+      cutNames.length > 0,
+      `切过名的卡 ${cutNames.length} 张 ｜ 例：${cutNames[0] ? cutNames[0].getAttribute('title') : '(无)'}`);
+    ok('★ v10.50：卡面文本 == 卡片 data-name（展示名只有一份，渲染时不会又拼回原串）',
+      qa('#mdGrid .emu-card').every((c) => {
+        const h = c.querySelector('h4');
+        return !!h && h.textContent === (c.dataset.name || '');
+      }));
+    /* 灰字副标题 = 英文名（不是第二个中文别名） */
+    const alts = qa('#mdGrid .emu-card > .bd > .alt');
+    ok('★ v10.50：存在灰字英文名副标题 .alt', alts.length > 0, `${alts.length} 个`);
+    const cjk = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
+    const badAlt = alts.filter((a) => cjk.test(a.textContent));
+    ok('★★ v10.50：英文名副标题里**不含 CJK**（灰字那行必须是英文名，不能是第二个中文别名）',
+      alts.length > 0 && badAlt.length === 0,
+      badAlt.slice(0, 2).map((a) => a.textContent).join(' | ') || '无');
+    ok('★ v10.50：副标题带 title（超 46 字被截断后仍可悬停读全 —— 折叠，不是删除）',
+      alts.length > 0 && alts.every((a) => !!a.getAttribute('title')));
+  }
+
+  /* ============================================================
+   * 二·C、v10.50 原贴内容弹窗 —— 标题 + 正文 + 截图，且**按原贴布局**
+   * ============================================================
+   * 用户原话：「有部分帖子我想获取对应的内容（可以点击弹窗展示标题 + 原贴内容 + 图片等），
+   *           且还需要按照原贴的布局放置（大部分都有介绍和使用方式）」。
+   * ★ 前提是数据**早就在本地**（mods.json.content 8,942/8,943 = 100%）——
+   *   只是列表投影按设计只留了摘要字段 ⇒ 改的是投影与界面，不是采集。
+   */
+  {
+    const btns = qa('#mdGrid .gl-i [data-post-open]');
+    const rowsHas = qa('#mdGrid .gl-i.has-post');
+    ok('★ v10.50 正向锚点：MOD 卡内出现「原贴」入口（机地帖 content 覆盖 100%）',
+      btns.length > 0, `${btns.length} 个`);
+    ok('★ v10.50：入口按钮与「整行可点」一一对应（按钮数 == .has-post 行数）',
+      btns.length > 0 && btns.length === rowsHas.length, `${btns.length} vs ${rowsHas.length}`);
+    ok('★ v10.50：入口按钮带 data-src / data-id（缺一个就打不开对应那条）',
+      btns.length > 0 && btns.every((b) => b.dataset.src && b.dataset.id));
+
+    /* 接口一致性：入口对应的那条**真的**有正文（入口不是摆设） */
+    const b0 = btns[0] || null;
+    if (b0) {
+      const j = await fetch(BASE + '/api/res/post?src=' + encodeURIComponent(b0.dataset.src)
+        + '&id=' + encodeURIComponent(b0.dataset.id)).then((r) => r.json());
+      ok('★ v10.50：入口对应的接口回 has:true + 正文非空（入口不是摆设）',
+        !!j && j.ok === true && j.has === true && String(j.content || '').trim().length > 0,
+        `ok=${j && j.ok} ｜ has=${j && j.has} ｜ content ${String((j || {}).content || '').length} 字`);
+    } else ok('原贴入口 ↔ 接口一致性（本轮无入口样本，跳过）', true, '无 [data-post-open]');
+
+    /* 纯链接源：200 + has:false（正常态，不是错误）；缺参数：400（不是 200 + 空正文） */
+    const jgt = await fetch(BASE + '/api/res/post?src=gt&id=1').then((r) => r.json());
+    ok('★★ v10.50：纯链接源（GT）回 200 + has:false + 来源名 —— 正常态，不是错误',
+      !!jgt && jgt.ok === true && jgt.has === false && !!jgt.source,
+      JSON.stringify({ ok: jgt && jgt.ok, has: jgt && jgt.has, source: jgt && jgt.source }));
+    const r400 = await fetch(BASE + '/api/res/post?src=mod');
+    ok('★ v10.50：缺 id 回 400（不是 200 + 空正文 —— 那会画出一个空白弹窗）',
+      r400.status === 400, `HTTP ${r400.status}`);
+
+    /* 点入口 → 弹窗打开 → 画出正文 */
+    const errN = e1.length;
+    if (b0) {
+      click(b0);
+      await sleep(1600);
+      const pop = q('#postPop');
+      ok('★★ v10.50：点「原贴」→ 弹窗真的打开（.on）',
+        !!pop && pop.classList.contains('on') && !pop.hidden, pop ? pop.className : '(缺失)');
+      const body = q('#postBody');
+      const poBody = body && body.querySelector('.po-body');
+      ok('★★ v10.50：弹窗里画出正文容器 .po-body', !!poBody);
+      ok('★ v10.50：正文非空（用户要的就是「能看到原贴内容」）',
+        !!poBody && (poBody.textContent || '').trim().length > 20,
+        `${poBody ? (poBody.textContent || '').trim().length : 0} 字`);
+      ok('★ v10.50：标题回填到 #postTitle',
+        !!q('#postTitle') && (q('#postTitle').textContent || '').trim().length > 0,
+        (q('#postTitle') || {}).textContent || '(空)');
+      ok('★ v10.50：正文里的裸链接已成可点 <a>（这条若无链接则跳过）',
+        !poBody || !/https?:\/\//.test(poBody.textContent || '') || !!poBody.querySelector('a'),
+        poBody && poBody.querySelector('a')
+          ? poBody.querySelector('a').getAttribute('href').slice(0, 60) : '(这条正文无链接)');
+      ok('打开原贴弹窗不抛异常', e1.length === errN, e1.slice(errN).join(' | '));
+
+      /* 「按原贴布局」的落地：正文容器 pre-wrap。
+         ⚠️ jsdom 不做布局，样式只能读 CSS **规则体**（整页含某字符串会被注释里的反例假绿）。 */
+      const H2 = await fetch(BASE + PAGE).then((r) => r.text());
+      const mr = /\.postpop-b \.po-body\{([^}]*)\}/.exec(H2);
+      const rb = mr ? mr[1] : '';
+      ok('★★ v10.50：正文容器 white-space:pre-wrap（换行/全角缩进原样保留）+ overflow-wrap 兜超长网盘串',
+        /white-space:pre-wrap/.test(rb) && /overflow-wrap:anywhere/.test(rb),
+        rb.replace(/\s+/g, ' ').slice(-76));
+      ok('★★ v10.50 反向：不能是 pre-line / normal（pre-line 会把源站缩进的空格吃掉）',
+        /white-space:pre-wrap/.test(rb) && !/white-space:(?!pre-wrap)[a-z-]/.test(rb));
+      /* ⚠️ linkify 的顺序坑：**先切链接再 esc**。反过来会把 `&` 变成 `&amp;` 后，
+         连尾巴上的分号一起被「剥掉结尾标点」的规则吃掉。 */
+      const lk = W.postLinkify('看这个 https://pan.xunlei.com/s/abc 提取码 1234');
+      ok('★ v10.50：postLinkify 把裸链接变可点、且不吞掉后面的中文',
+        /<a href="https:\/\/pan\.xunlei\.com\/s\/abc"[^>]*>/.test(lk) && /提取码 1234/.test(lk),
+        lk.slice(0, 80));
+      const lk2 = W.postLinkify('a&b https://x.com/y?q=1&z=2 end');
+      ok('★ v10.50：postLinkify 不把链接里 `&` 转义后的分号当成「尾巴标点」剥掉',
+        /href="https:\/\/x\.com\/y\?q=1&amp;z=2"/.test(lk2), lk2.slice(0, 90));
+
+      /* 关闭：用**返回值**判「这次真关了」——hidden 要等 180ms 过渡走完才置位，不能用它判 */
+      ok('★ v10.50：closePostPop() 返回 true = 这次真关了', W.closePostPop() === true);
+      ok('★ v10.50：再调一次返回 false（幂等 —— Esc 连按不会误关下一层）', W.closePostPop() === false);
+      await sleep(280);
+      ok('★ v10.50：关闭后弹窗隐藏且正文已清空（不留上一条的内容）',
+        q('#postPop').hidden === true && (q('#postBody').innerHTML || '').trim() === '');
+    }
+
+    /* 第二个入口：点**整行**也要能开（`.has-post` + document 委托，两个入口一套行为） */
+    const row = rowsHas[0] || null;
+    if (row) {
+      const errN2 = e1.length;
+      click(row.querySelector('.t') || row);
+      await sleep(1600);
+      ok('★★ v10.50：点「整行」同样打开原贴弹窗（不是只有那个小按钮能点）',
+        q('#postPop').classList.contains('on'), q('#postPop').className);
+      ok('点整行打开不抛异常', e1.length === errN2, e1.slice(errN2).join(' | '));
+      /* ★★ 反向：下载通道是外链，必须让开 —— 否则点「迅雷」会同时弹原贴（一次点击两个动作） */
+      const link = row.querySelector('.gl-lk a');
+      if (link) {
+        W.closePostPop();
+        await sleep(280);
+        /* jsdom 点 <a> 会走 navigation（未实现 ⇒ 抛 jsdomError）。这里只 preventDefault 拦住导航，
+           **不 stopPropagation** —— 让 document 委托照样跑到，那才是被测行为。 */
+        link.addEventListener('click', (ev) => ev.preventDefault());
+        click(link);
+        await sleep(900);
+        ok('★★ v10.50 反向：点下载通道**不**打开原贴弹窗（外链让开，一次点击只做一个动作）',
+          !q('#postPop').classList.contains('on'), q('#postPop').className);
+        ok('点下载通道不抛异常', e1.length === errN2, e1.slice(errN2).join(' | '));
+      } else {
+        ok('点下载通道不打开原贴（该行无下载链，跳过）', true, '无 .gl-lk a');
+      }
+      if (W.closePostPop()) await sleep(280);
+    } else {
+      ok('整行点击打开原贴（本轮无 .has-post 行，跳过）', true, '无 .gl-i.has-post');
+    }
+  }
+
+  /* ============================================================
    * 三、存档分区 —— v10.47 口径：只出**真有存档文件**的游戏
    * ============================================================ */
   click(q('#resTabs .res-tab[data-et="sv"]'));
@@ -364,6 +520,19 @@ async function main() {
     ok('存档统计条已回填 4 格', qa('#svStats .st').length === 4, `实际 ${qa('#svStats .st').length}`);
     ok('存档来源下拉已填充（「全部来源」+ 至少 1 个源）', qa('#svSrc option').length >= 2,
       qa('#svSrc option').map((o) => o.textContent).join(' ｜ '));
+    /* ★ v10.50：存档原贴（游侠帖）—— desc / steps / shots 三个字段的取数入口。
+       实证口径：desc 100% · 有截图 1,172 条（57.4%）。 */
+    const svBtn = q('#svGrid .gl-i [data-post-open]');
+    ok('★ v10.50 正向锚点：存档卡内出现「原贴」入口（游侠帖 desc 覆盖 100%）', !!svBtn);
+    if (svBtn) {
+      const j = await fetch(BASE + '/api/res/post?src=' + encodeURIComponent(svBtn.dataset.src)
+        + '&id=' + encodeURIComponent(svBtn.dataset.id)).then((r) => r.json());
+      const anyBody = !!j && (String(j.content || '').trim().length > 0
+        || (j.steps || []).length > 0 || (j.shots || []).length > 0);
+      ok('★★ v10.50：存档原贴接口回 has:true，且 desc / steps / shots 至少一项有内容',
+        !!j && j.ok === true && j.has === true && anyBody,
+        `content ${String((j || {}).content || '').length} 字 ｜ steps ${((j || {}).steps || []).length} ｜ shots ${((j || {}).shots || []).length}`);
+    }
   }
   /* 点整卡 → 进详情（组卡的统一分流） */
   {
@@ -400,6 +569,16 @@ async function main() {
       qa('#trGrid .emu-card .tg.src').length > 0, `实际 ${qa('#trGrid .emu-card .tg.src').length} 个`);
     ok('修改器卡内每行都有可点出口（有链给链，GCM 走来源站兜底）',
       tr.n > 0 && tr.noOut === 0, `行内无出口的卡 ${tr.noOut} 张`);
+    /* ★★ v10.50 反向：修改器三源（GTrainers / FearlessRevolution / GCM）都是**纯链接源**，
+       没有原贴正文 ⇒ 不给「点开是空的」入口（宁可少一个按钮，也不给一个空弹窗）。
+       ⚠️ 配正向锚点：本区确实渲染出了条目行 —— 否则「零入口」会因整区空白而假绿。
+       ⚠️ 若哪天修改器源开始带正文，这条会红：那时应改成「入口数 == 接口 has:true 的条数」，
+          而不是把断言删掉。 */
+    ok('★ v10.50 正向锚点：修改器卡内确实渲染了条目行（防下一条因整区空白而假绿）',
+      qa('#trGrid .emu-card .gl .gl-i').length > 0, `实际 ${qa('#trGrid .emu-card .gl .gl-i').length} 行`);
+    ok('★★ v10.50 反向：修改器分区**没有**原贴入口（纯链接源无正文）',
+      qa('#trGrid [data-post-open]').length === 0 && qa('#trGrid .gl-i.has-post').length === 0,
+      `入口 ${qa('#trGrid [data-post-open]').length} ｜ 整行 ${qa('#trGrid .gl-i.has-post').length}`);
     /* ★★ v10.48：修改器「第三方来源」跳转链（用户口径：
        「修改器中的第三方修改器来源我也需要你提供跳转链接」）。
        根因回顾：上游 official_url 一直有（93.7%），是抓取器把它丢了，

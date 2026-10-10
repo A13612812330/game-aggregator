@@ -884,6 +884,20 @@ app.get('/api/res/items', (req, res) => {
   res.json(resGroups.items(cat, key, req.query.limit));
 });
 
+// GET /api/res/post?src=&id= — 取**单条**原贴正文（v10.50）
+//   用户口径：「有部分帖子的我想你能够获取对应的内容（可以点击弹窗展示标题 + 原贴内容
+//             + 图片等）且还需要按照原贴的布局放置」。
+//   ★ 为什么是「按需单取」而不是把正文塞进 /api/res/items：
+//     正文 p50 约 1KB、最长 6000 字。最大一组 717 条 ⇒ 一次性带上就是 ~700KB，
+//     而用户点开的是**其中一条**。列表侧只给 `hasPost` 布尔标记，正文一次取一条。
+//   ★ src 没有正文时（gt / fr / gcm）回 `has:false` + HTTP 200 ——
+//     那是「这个来源本来就没有正文」，不是错误，别用 4xx 让前端当异常处理。
+app.get('/api/res/post', (req, res) => {
+  const out = resGroups.post(req.query.src, req.query.id);
+  if (!out.ok) return res.status(400).json(out);
+  res.json(out);
+});
+
 // GET /api/res/game?id=<端游库id>&t=<游戏名>&limit= — 详情页一次拿三个分区
 //   ★ 详情页「修改器」「存档」两块卡片的**唯一数据源**（v10.47）：只给能下载的条目，
 //     「存档位置」不再从这里出（它在 /api/saves/match，只进弹窗的二级位置视图）。
