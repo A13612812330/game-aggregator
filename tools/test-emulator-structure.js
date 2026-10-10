@@ -420,15 +420,29 @@ t('行缩略图 76px 宽 · 比例走 --th-ar（.ph2 同步）',
   && /\.sm-row \.ph2\{width:76px;height:auto;aspect-ratio:var\(--th-ar\)/.test(idx));
 
 /* ④ 分组按相关性排序（含端游库本体提权 + 别名词兜底） */
-t('paintSearchResult 里有归一化 + 贴合度打分 + 稳定排序',
-  /const rn = \(s\) =>/.test(idx) && /const fit = \(\.\.\.nameLists\)/.test(idx)
-  && /groups\.sort\(\(a, b\) => b\.score - a\.score \|\| a\.i - b\.i\)/.test(idx));
-t('端游库有「本体提权」：pcFit ≥ 2 时 +1 分',
-  /const pcFit = fit\(pcHit\.map\(\(x\) => x\.title\)\)/.test(idx) && /pcFit \+ \(pcFit >= 2 \? 1 : 0\)/.test(idx));
-t('打分用别名解析后的词（qEff），避免别名搜索四组全 0 分',
-  /const qEff = \(j\.aliasNote && j\.aliasNote\.to\) \|\| q/.test(idx) && /const qn = rn\(qEff\)/.test(idx));
-t('分组的「首组不加顶部间距」改为排序后按位次决定',
-  /groups\.forEach\(\(g, k\) => \{[\s\S]{0,200}k === 0 \? '' : ' style="padding-top:12px"'/.test(idx));
+/* ★ v10.54：原先这一层自己写「归一化 + 贴合度打分 + 稳定排序」（`rn` / `fit` / `b.score-a.score`）。
+ *   本版把匹配与打分**整体搬到服务端** `data/search-rank.js`（四个库共用一份）——
+ *   起因是四个库各写一份已经漂移出「同一个查询，端游 0 命中而另三库有命中」。
+ *   断言随之迁移，但**语义不变**：组间仍按贴合度排、仍稳定（同分按原次序）。
+ *   前端这层的责任变成「消费服务端下发的 fit」；「服务端确有统一打分」由
+ *   `test-v1054-fuzzy.js` 的 A 段钉住（两条断言分工，不重叠也不留空）。 */
+t('paintSearchResult 的组间排序消费**服务端 fit**（归一化与打分已迁至 search-rank，本层不再自算）',
+  /groups\.sort\(\(a, b\) => b\.fit - a\.fit \|\| a\.i - b\.i\)/.test(idx)
+  && !/const rn = \(s\) =>/.test(idx) && !/const fit = \(\.\.\.nameLists\)/.test(idx));
+t('端游库有「本体提权」：pcFit ≥ 2 时 +1 分（pcFit 改读服务端 fit，规则未变）',
+  /const pcFit = pc\.fit \|\| 0;/.test(idx) && /pcFit \+ \(pcFit >= 2 \? 1 : 0\)/.test(idx));
+/* ★ v10.54：别名解析后的「词」现在由**服务端**用于打分（`gamesDb.search(exp.q, …)` 的 exp.q）。
+ *   前端不再自算 qEff，`aliasNote` 只用来显示「别名 A → B」提示 —— 职责更窄也更清楚。 */
+t('★ v10.54：别名解析的词改由服务端打分（前端只用 aliasNote 出提示，不再自算 qEff）',
+  !/const qEff = \(j\.aliasNote && j\.aliasNote\.to\) \|\| q/.test(idx)
+  && /j\.aliasNote \? `<span class="cnt"/.test(idx));
+/* ★ v10.54：分模块视觉加强 —— 原来「后续组加 padding-top:12px」在视觉上几乎看不出分组；
+ *   现在每组包一层 `.sm-grp`，组间由 CSS 出留白 + 分隔线 + 标题条底色（用户口径：
+ *   「分模块的话最好是明显一点的有间隔」）。首组标 `first`，CSS 用 `.sm-grp + .sm-grp`
+ *   只给**非首组**加线 ⇒「首组不加间距」这个意图仍然在，只是落点从行内 style 挪到 CSS。 */
+t('★ v10.54：每组包 `.sm-grp`、首组标 first，组间留白与分隔线由 CSS 决定',
+  /class="sm-grp\$\{k === 0 \? ' first' : ''\}"/.test(idx)
+  && /\.sm-grp \+ \.sm-grp\{[^}]*border-top/.test(idx));
 t('旧的写死顺序（sec(...true) 四连）已移除', !/html \+= sec\('📱'/.test(idx) && !/const sec = \(icon, name, tag/.test(idx));
 
 /* ================= ★ v10.44 增量：端游资源独立页 /resources.html =================
@@ -779,8 +793,12 @@ const GN = require(path.join(root, 'data', 'game-name'));
     miss(/\.res-chip\{[^}]*border-radius:7px/));
 
   /* ② 服务端：复用聚合层，不重做匹配 */
+  /* ★ v10.54：判据从「整行字面量」放宽到「挂的是 withRes」——
+   *   v10.54 在同一个对象里多带了一个 `fit`（组间排序用），整行字面量就失配了。
+   *   这条断言的**意图**是「端游桶挂 withRes（不是 withBh）」，钉 `map(withRes)` 即可，
+   *   不该因为后面多一个字段就变红（否则每加一个字段都要来改断言的尾巴）。 */
   t('★★ v10.52：`/api/search/all` 的端游桶改挂 `withRes`（不再是 withBh）',
-    /pc = \{ count: r\.count, items: r\.items\.map\(withRes\) \};/.test(srvSrc));
+    /pc = \{ count: r\.count, items: r\.items\.map\(withRes\)/.test(srvSrc));
   t('★★ v10.52：`withRes` 复用 `resGroups.countsFor`（聚合口径只有一处 —— 铁律 17）',
     /resGroups\.countsFor\(g\.id\)/.test(srvSrc));
   /* ⚠️ 判据说明：这条断言**一开始写的是旧写法**（`if (r.mod || r.saves || r.trainers) o.res = r;`），

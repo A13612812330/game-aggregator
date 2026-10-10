@@ -402,6 +402,7 @@ const savesYx = require('./data/savesYx');
 const gt = require('./data/gtrainers');
 const fr = require('./data/fr');
 const resGroups = require('./data/res-groups');
+const searchRank = require('./data/search-rank');
 const pcreq = require('./data/pcreq');
 const bhparams = require('./data/bhparams');
 const emuguide = require('./data/emuguide');
@@ -1606,7 +1607,7 @@ app.get('/api/library/browse', (req, res) => {
 app.get('/api/search/all', (req, res) => {
   const raw = String(req.query.q || '').trim().slice(0, 40);
   const limit = Math.min(parseInt(req.query.limit || '12', 10) || 12, 30);
-  const empty = { ok: true, q: '', pc: { count: 0, items: [] }, mobile: { count: 0, items: [] }, trainer: { count: 0, items: [] }, save: { count: 0, items: [] } };
+  const empty = { ok: true, q: '', pc: { count: 0, items: [], fit: 0 }, mobile: { count: 0, items: [], fit: 0 }, trainer: { count: 0, items: [], fit: 0 }, save: { count: 0, items: [], fit: 0 } };
   if (!raw) return res.json(empty);
 
   const exp = expandAlias(raw);
@@ -1617,7 +1618,7 @@ app.get('/api/search/all', (req, res) => {
   let pc = { count: 0, items: [] };
   try {
     const r = gamesDb.search(exp.q, limit, libOpts(req));
-    pc = { count: r.count, items: r.items.map(withRes) };
+    pc = { count: r.count, items: r.items.map(withRes), fit: searchRank.fitOf(r.topScore) };
   } catch (e) { pc = { count: 0, items: [], error: e.message }; }
 
   /* ② 手游中心（合并索引，含社区库英文名与实测库中文名的别名展开） */
@@ -1626,6 +1627,7 @@ app.get('/api/search/all', (req, res) => {
     const m = mobilehub.list({ q: exp.q, stats: 'all', sort: 'configs', limit });
     mobile = {
       count: m.total,
+      fit: searchRank.fitOf(m.topScore),
       items: (m.items || []).map((x) => ({
         name: x.name, alt: (x.alt || []).slice(0, 2),
         configs: x.configs, records: x.records, tier: x.tier, bestLabel: x.bestLabel,
@@ -1642,6 +1644,7 @@ app.get('/api/search/all', (req, res) => {
     const r = trainers.list({ q: exp.q, stats: 'all', sort: 'lib', limit });
     trainer = {
       count: r.total,
+      fit: searchRank.fitOf(r.topScore),
       items: (r.items || []).map((x) => ({
         name: x.name, zh: x.zh, version: x.version, source: x.source,
         libId: x.libId, libTitle: x.libTitle, libCover: x.libCover,
@@ -1655,6 +1658,7 @@ app.get('/api/search/all', (req, res) => {
     const r = saves.list({ q: exp.q, stats: 'all', sort: 'paths', limit });
     save = {
       count: r.total,
+      fit: searchRank.fitOf(r.topScore),
       items: (r.items || []).map((x) => ({
         name: x.name, title: x.title, phone: x.phone,
         paths: (x.paths || []).slice(0, 1).map((p) => p.shown),

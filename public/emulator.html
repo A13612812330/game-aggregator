@@ -313,6 +313,12 @@
   .sm-row .pill.score.s-hi{color:#15803D;background:#DCFCE7}
   .sm-row .pill.score.s-mid{color:#0369A1;background:#E0F2FE}
   .sm-row .pill.score.s-lo{color:var(--c-t3);background:#F1F5F9}
+  /* ★ v10.54：搜索结果的「分模块」层 —— 每组独立成块，组间留白 + 分隔线 + 标题条带底色，
+     让四个库的结果一眼分得开（用户口径：「分模块的话最好是明显一点的有间隔」）。
+     ⚠️ 只作用在 `.sm-grp` 内：`searchLive()` 用的裸 `.sm-sec`（源站实时结果）不受影响。 */
+  .sm-grp{position:relative}
+  .sm-grp + .sm-grp{margin-top:13px;border-top:1px solid var(--c-border);padding-top:9px}
+  .sm-grp > .sm-sec{background:var(--c-bg);border-radius:8px;margin:0 7px 5px;padding:7px 9px;font-size:12px;font-weight:800;color:var(--c-t1)}
   .sm-sec{display:flex;align-items:center;gap:8px;padding:9px 11px 7px;font-size:11.5px;font-weight:750;color:var(--c-t2)}
   .sm-sec .tag{font-size:10px;font-weight:700;padding:1.5px 7px;border-radius:6px}
   .sm-sec .tag.local{color:var(--c-primary);background:var(--c-primary-soft)}
@@ -3432,9 +3438,10 @@ async function doSearch() {
 function paintSearchResult(q, j) {
   const body = $('#smBody');
   const aliasHtml = j.aliasNote ? `<span class="cnt" style="color:var(--c-score)">别名 ${esc(j.aliasNote.alias)} → ${esc(j.aliasNote.to)}</span>` : '';
-  /* ★ v10.7：打分用「实际生效的关键词」—— 别名命中时标题里出现的是别名目标名，
-   *   拿原词去打分会四组全 0，排序退化成旧顺序。 */
-  const qEff = (j.aliasNote && j.aliasNote.to) || q;
+  /* ★ v10.54：打分用「实际生效的关键词」—— 别名命中时标题里出现的是别名目标名，
+   *   拿原词去打分会四组全 0，排序退化成旧顺序。
+   *   ⚠️ v10.54 起本函数**不再自己算分**：拼词与打分都在服务端
+   *   （`data/search-rank.js`），前端只消费接口下发的 `fit` 字段。 */
   const pc = (j.pc || { items: [], count: 0 });
   const mob = (j.mobile || { items: [], count: 0 });
   const tr = (j.trainer || { items: [], count: 0 });
@@ -3474,44 +3481,45 @@ function paintSearchResult(q, j) {
    *  （即本名精确或近似命中）时 +1 分 —— 它代表的是「游戏本体」这一实体，
    *  也是四组里唯一能点进完整详情页的；其余三组都是「关于这款游戏」的附加信息。
    *  提权只在端游库确有本名命中时生效，其余情况一律不动默认顺序。 */
-  const rn = (s) => String(s == null ? '' : s).toLowerCase().replace(/[\s\-_:：·・/\\|'"“”‘’()（）\[\]]/g, '');
-  const qn = rn(qEff);
-  const fit = (...nameLists) => {
-    let best = 0;
-    for (const list of nameLists) {
-      for (const nm of list || []) {
-        for (const one of String(nm || '').split('/')) {
-          const s = rn(one);
-          if (!s || !qn) continue;
-          const v = s === qn ? 3 : (s.startsWith(qn) ? 2 : (s.includes(qn) ? 1 : 0));
-          if (v > best) best = v;
-        }
-      }
-    }
-    return best;
-  };
-  const pcFit = fit(pcHit.map((x) => x.title));
+  /* ★ v10.54（承接上面 v10.7 的历史）：
+   *
+   *   v10.7 起前端自己写了一份 `fit()` 来给四组打贴合度；与此同时四个数据模块
+   *   （gamesDb / mobilehub / trainers / saves）又**各写了一份匹配**。同一件事
+   *   在五个地方实现 ⇒ 必然漂移，实测已经漂了：`gamesDb` 那份是唯一没做归一化的，
+   *   于是「巫师3 狂猎」「艾尔登 法环」在端游库 0 命中、在另外三个库却有命中。
+   *
+   *   v10.54 把「匹配 + 打分」整体收敛到 `data/search-rank.js` 一处：
+   *     · 组**内**排序 → 各库自己用 `sortByRank` 排好（相关度优先，同分保持业务序）
+   *     · 组**间**排序 → 服务端下发 `fit`（0..3，越大越贴合），前端只负责比较
+   *   下面这段代码就是从「自算」改成「消费服务端 fit」的落点。
+   *   端游库的「本体提权」保留 v10.7 原语义：本名命中（fit >= 2）再 +1。 */
+  const pcFit = pc.fit || 0;
   const groups = [
     { i: 0, icon: '📱', name: '手游中心 · 手机能玩吗', tag: 'MOBILE', tagCls: 'match', cnt: mob.count, unit: '款',
-      score: fit(mobHit.map((x) => x.name), mobHit.map((x) => x.libTitle)),
+      fit: mob.fit || 0,
       rows: mobHit.length ? mobHit.map(smMobileRow).join('') : `<div class="sm-empty" style="padding:14px">手游中心无命中</div>` },
     { i: 1, icon: '🛠', name: '修改器 · 有没有修改器', tag: 'TRAINER', tagCls: 'match', cnt: tr.count, unit: '条',
-      score: fit(trHit.map((x) => x.zh), trHit.map((x) => x.name), trHit.map((x) => x.libTitle)),
+      fit: tr.fit || 0,
       rows: trHit.length ? trHit.map(smTrainerRow).join('') : `<div class="sm-empty" style="padding:14px">修改器库无命中</div>` },
     { i: 2, icon: '💾', name: '云存档 · 存档放在哪', tag: 'SAVE', tagCls: 'match', cnt: sv.count, unit: '款',
-      score: fit(svHit.map((x) => x.title), svHit.map((x) => x.name)),
+      fit: sv.fit || 0,
       rows: svHit.length ? svHit.map(smSaveRow).join('') : `<div class="sm-empty" style="padding:14px">云存档库无命中</div>` },
     { i: 3, icon: '🖥️', name: '端游库 · 全站收录', tag: 'LOCAL', tagCls: 'local', cnt: pc.count, unit: '款',
-      score: pcFit + (pcFit >= 2 ? 1 : 0),
+      fit: pcFit + (pcFit >= 2 ? 1 : 0),
       rows: pcHit.length ? smRows(pcHit) : `<div class="sm-empty" style="padding:14px">端游库无命中</div>` },
   ];
-  groups.sort((a, b) => b.score - a.score || a.i - b.i);
+  groups.sort((a, b) => b.fit - a.fit || a.i - b.i);
 
-  /* 分组小标题：首组不加顶部间距，后续组加 padding-top 拉开层次 */
+  /* ★ v10.54：分模块视觉加强 —— 每组包一层 `.sm-grp`，组间加留白与分隔线、
+     组标题条改为带底色的小条，让「这是另一个模块」一眼可见。用户原话：
+     「分模块的话最好是明显一点的有间隔」。
+     别名提示只在首组出现（原来每组都拼一遍 ⇒ 四条标题条挂着同一句别名）。 */
   let html = '';
   groups.forEach((g, k) => {
-    html += `<div class="sm-sec"${k === 0 ? '' : ' style="padding-top:12px"'}>${g.icon} ${g.name}<span class="tag ${g.tagCls}">${g.tag}</span><span class="cnt">${g.cnt || 0} ${g.unit}</span>${aliasHtml}</div>`;
+    html += `<div class="sm-grp${k === 0 ? ' first' : ''}">`;
+    html += `<div class="sm-sec">${g.icon} ${g.name}<span class="tag ${g.tagCls}">${g.tag}</span><span class="cnt">${g.cnt || 0} ${g.unit}</span>${k === 0 ? aliasHtml : ''}</div>`;
     html += g.rows;
+    html += '</div>';
   });
   body.innerHTML = html;
   bindSmRows();

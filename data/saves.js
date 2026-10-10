@@ -17,6 +17,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { sortByRank } = require('./search-rank');
 
 const FILE = path.join(__dirname, 'saves.json');
 let cache = null;
@@ -64,20 +65,23 @@ function list(opts = {}) {
   /* 默认口径：手机专区语境下先看「手机能玩」的；stats=all 放开到全量 */
   if (pcOnly || phoneOnly) pool = pool.filter((x) => x.phone);
   if (cloudOnly) pool = pool.filter((x) => (x.cloud || []).length);
-  if (q) {
-    const ql = q.toLowerCase();
-    const qk = normKey(q);
-    pool = pool.filter((x) => [x.name, x.title, x.mobName].filter(Boolean)
-      .some((n) => String(n).toLowerCase().includes(ql) || (qk && normKey(n).includes(qk))));
-  }
+  /* ★ v10.54：查询词改到「业务排序之后」用 sortByRank 统一处理（相关度优先，同分保持业务序） */
 
-  const arr = pool.slice();
+  let arr = pool.slice();
   if (sort === 'name') arr.sort((a, b) => String(a.title || a.name).localeCompare(String(b.title || b.name), 'zh'));
   else if (sort === 'cloud') arr.sort((a, b) => (b.cloud || []).length - (a.cloud || []).length || b.paths.length - a.paths.length);
   else arr.sort((a, b) => (b.paths.length + b.regs.length) - (a.paths.length + a.regs.length) || String(a.name).localeCompare(String(b.name), 'en'));
 
+  /* ★ v10.54：有查询词 → 相关度优先（稳定排序 ⇒ 同分保持上面那套业务序） */
+  let topScore = null;
+  if (q) {
+    const r = sortByRank(q, arr, (x) => [x.name, x.title, x.mobName].filter(Boolean));
+    arr = r.items;
+    if (arr.length) topScore = r.topScore;
+  }
+
   const total = arr.length;
-  return { ok: true, total, offset, limit, sort, q, phoneOnly: pcOnly || phoneOnly, cloudOnly, items: arr.slice(offset, offset + limit) };
+  return { ok: true, total, offset, limit, sort, q, phoneOnly: pcOnly || phoneOnly, cloudOnly, topScore, items: arr.slice(offset, offset + limit) };
 }
 
 function stats() {

@@ -7,6 +7,7 @@ const path = require('path');
 const { normalizeCover, normalizeList } = require('./cover-url');
 const { dateTs } = require('../shared');
 const { normalizeDates, normalizeOne } = require('./date-norm');
+const { rank, NONE } = require('./search-rank');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'games.json');
@@ -122,28 +123,33 @@ function applyOpts(pool, opts) {
   return out;
 }
 
+/**
+ * 关键词搜索（★ v10.54：匹配与打分统一走 `data/search-rank.js`）
+ *
+ * ★ 改前（v10.53 及以前）本函数是四个库里**唯一没做归一化**的那个：
+ *   只 `String(t).toLowerCase()` 后直接 `includes`。中文标题里是 `：`/`—`，
+ *   用户键盘敲的是空格 ⇒ 实测「巫师3 狂猎」「艾尔登 法环」在端游库 **0 命中**，
+ *   而手游/修改器/存档三个库都有命中（它们走了 normKey）——
+ *   同一个查询四个库给出互相矛盾的答案。见 `tools/_probe-fuzzy-base.js` 基线。
+ *
+ * 现在四库共用同一套「归一化 + 模糊（乱序 token）+ 分级相关度」；
+ * 同分仍按「更新日期倒序」打平（保持 v10.8 起的观感，不改次键）。
+ *
+ * @returns {q,count,items,topScore} topScore = 命中集的**最优相关度**（越小越准；
+ *           `null` = 无命中）—— 供 `/api/search/all` 做**组间**排序用。
+ */
 function search(q, limit = 20, opts) {
-  const k = String(q || '').trim().toLowerCase();
-  if (!k) return { q, count: 0, items: [] };
-  const score = (t) => {
-    const s = String(t || '').toLowerCase();
-    if (s === k) return 0;
-    if (s.startsWith(k)) return 1;
-    if (s.includes(k)) return 2;
-    const toks = s.split(/[/\s_：:·-]+/);
-    if (toks.some((x) => x === k)) return 3;
-    if (toks.some((x) => x.startsWith(k))) return 4;
-    return 9;
-  };
+  const k = String(q || '').trim();
+  if (!k) return { q, count: 0, items: [], topScore: null };
+  const pool = applyOpts(games, opts);
   const scored = [];
-  for (const g of games) {
-    const sc = Math.min(score(g.title), g.aliases && g.aliases.some((a) => String(a).toLowerCase().includes(k)) ? 3 : 9);
-    if (sc < 9) scored.push([sc, g]);
+  for (const g of pool) {
+    const s = rank(k, [g.title].concat(g.aliases || []));
+    if (s < NONE) scored.push([s, g]);
   }
   scored.sort((a, b) => a[0] - b[0] || (b[1].updatedTs || 0) - (a[1].updatedTs || 0));
-  const pool = applyOpts(scored.map(([, g]) => g), opts);
-  const items = pool.slice(0, limit);
-  return { q, count: pool.length, items };
+  const items = scored.slice(0, limit).map(([, g]) => g);
+  return { q, count: scored.length, items, topScore: items.length ? scored[0][0] : null };
 }
 
 /**

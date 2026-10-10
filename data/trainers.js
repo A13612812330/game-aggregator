@@ -10,6 +10,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { sortByRank } = require('./search-rank');
 
 const FILE = path.join(__dirname, 'trainers.json');
 let cache = null;
@@ -54,21 +55,24 @@ function list(opts = {}) {
   let pool = items;
   if (matchedOnly) pool = pool.filter((x) => x.libId);
   if (source) pool = pool.filter((x) => x.source === source);
-  if (q) {
-    const ql = q.toLowerCase();
-    const qk = normKey(q);
-    pool = pool.filter((x) => [x.name, x.zh, x.libTitle].filter(Boolean)
-      .some((n) => String(n).toLowerCase().includes(ql) || (qk && normKey(n).includes(qk))));
-  }
+  /* ★ v10.54：查询词改到「业务排序之后」用 sortByRank 统一处理（相关度优先，同分保持业务序） */
 
-  const arr = pool.slice();
+  let arr = pool.slice();
   if (sort === 'name') arr.sort((a, b) => String(a.name).localeCompare(String(b.name), 'en'));
   else if (sort === 'zh') arr.sort((a, b) => String(a.zh || a.name).localeCompare(String(b.zh || b.name), 'zh'));
   else if (sort === 'source') arr.sort((a, b) => String(a.source).localeCompare(String(b.source)) || String(a.name).localeCompare(String(b.name), 'en'));
   else arr.sort((a, b) => (b.libId ? 1 : 0) - (a.libId ? 1 : 0) || String(a.zh || a.name).localeCompare(String(b.zh || b.name), 'zh'));
 
+  /* ★ v10.54：有查询词 → 相关度优先（稳定排序 ⇒ 同分保持上面那套业务序） */
+  let topScore = null;
+  if (q) {
+    const r = sortByRank(q, arr, (x) => [x.name, x.zh, x.libTitle].filter(Boolean));
+    arr = r.items;
+    if (arr.length) topScore = r.topScore;
+  }
+
   const total = arr.length;
-  return { ok: true, total, offset, limit, sort, q, source, matchedOnly, items: arr.slice(offset, offset + limit) };
+  return { ok: true, total, offset, limit, sort, q, source, matchedOnly, topScore, items: arr.slice(offset, offset + limit) };
 }
 
 function stats() {

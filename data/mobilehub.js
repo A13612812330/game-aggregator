@@ -12,6 +12,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { sortByRank } = require('./search-rank');
 
 const FILE = path.join(__dirname, 'mobilehub.json');
 let cache = null;
@@ -153,14 +154,8 @@ function list(opts = {}) {
     pool = pool.filter((x) => x.libId
       && (!tr || tr.has(x.libId)) && (!sv || sv.has(x.libId)));
   }
-  if (q) {
-    const qk = normKey(q);
-    const ql = q.toLowerCase();
-    pool = pool.filter((x) => {
-      const names = [x.name, ...(x.alt || []), x.libTitle].filter(Boolean);
-      return names.some((n) => String(n).toLowerCase().includes(ql) || (qk && normKey(n).includes(qk)));
-    });
-  }
+  /* ★ v10.54：查询词不再在这里过滤 —— 统一挪到「业务排序之后」用 sortByRank 处理，
+     这样「相关度优先 / 同分保持业务序」两件事一次做完（原先只有 normKey 包含匹配、无排序）。 */
   if (gpu) {
     const gk = normKey(gpu);
     pool = pool.filter((x) => (x.gpus || []).some((g) => normKey(g).includes(gk))
@@ -189,15 +184,24 @@ function list(opts = {}) {
     return s + cfg;
   };
 
-  const arr = pool.slice();
+  let arr = pool.slice();
   if (sort === 'name') arr.sort((a, b) => String(a.name).localeCompare(String(b.name), 'zh'));
   else if (sort === 'recent') arr.sort((a, b) => (b.recent || 0) - (a.recent || 0) || (b.configs || 0) - (a.configs || 0));
   else if (sort === 'fps') arr.sort((a, b) => (b.bestMid || 0) - (a.bestMid || 0) || (b.configs || 0) - (a.configs || 0));
   else if (sort === 'configs') arr.sort((a, b) => (b.configs || 0) - (a.configs || 0) || (b.records || 0) - (a.records || 0));
   else arr.sort((a, b) => score(b) - score(a) || (b.configs || 0) - (a.configs || 0));
 
+  /* ★ v10.54：有查询词 → 叠一层「相关度优先」。sortByRank 是稳定排序 ⇒
+     同相关度时保持上面那套业务序，等于「越准的越靠前，一样准的按原口径」。 */
+  let topScore = null;
+  if (q) {
+    const r = sortByRank(q, arr, (x) => [x.name, ...(x.alt || []), x.libTitle].filter(Boolean));
+    arr = r.items;
+    if (arr.length) topScore = r.topScore;
+  }
+
   const total = arr.length;
-  return { ok: true, total, offset, limit, sort, q, gpu, tier, matchedOnly, bothOnly, trOnly, svOnly, items: arr.slice(offset, offset + limit) };
+  return { ok: true, total, offset, limit, sort, q, gpu, tier, matchedOnly, bothOnly, trOnly, svOnly, topScore, items: arr.slice(offset, offset + limit) };
 }
 
 /** 概览统计（含筛选后口径：全量 / 仅匹配端游库） */
