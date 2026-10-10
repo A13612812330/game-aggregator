@@ -20,6 +20,14 @@
  *      ⚠️ 反向断言钉住「**不是**端游库链接」——旧实现的 page 指向 `libUrl`（xdgame），
  *         这正是用户报的问题；只断「有链接」是拦不住它的。
  *
+ * ★★ v10.49 改的是**样式**（用户口径「卡片中的内容每条显示一行即可多余字显示省略号即可」）：
+ *   条目标题 `.gl-i .t` 由「折 2 行」改「单行省略」，弹窗里那条「放开折行」的覆盖删掉，
+ *   卡内与弹窗共用同一条规则。
+ *   ⚠️ 样式断言的写法有坑（本轮踩到）：jsdom 不做布局，只能读 CSS **规则体**文本 ——
+ *      所以① 断言要取 `{…}` **内部**，不能查「整页含某字符串」（注释里写一个反例就假绿了）；
+ *      ② 必须配 DOM 断言钉住 `title`：单行省略若把 `title` 也删了，那是**删除**而不是折叠。
+ *   ⚠️ 反向断言钉住 `line-clamp`：它和 `nowrap` 并存时 clamp 会赢 ⇒ 单行省略**静默失效**。
+ *
  *   ⚠️ 已删的旧卡面元素（本文件全部改成**反向断言**守住，防止有人捡回来）：
  *      `.md-lk` / `.md-go`（MOD 一卡一条）· `.sv-open` / `.paths` / `.cp`（存档位置卡面）
  *      · `.tr-go` / `.tr-note`（修改器导流卡）· `#mdToggleLib` / `#svPhone` / `#trToggleLib`
@@ -274,6 +282,35 @@ async function main() {
     } else {
       ok('查看全部（本轮无 overflow 组，跳过）', true, '无 .grp-more');
     }
+  }
+  /* ★★ v10.49：条目标题**单行省略**（用户口径「卡片中的内容每条显示一行即可多余字显示省略号即可」）。
+     ⚠️ 这是**样式**断言 —— jsdom 不做布局（拿不到真实 text-overflow 效果），只能读 CSS 规则文本。
+        所以必须再配一条 **DOM** 断言钉住「省略不丢信息」：
+        每行 `.t` 都得带 `title`，否则「单行省略」就是把标题**永久删掉**，而不是折叠。
+     ⚠️ 反向断言不可省：`-webkit-line-clamp` 若被写回来，浏览器里 nowrap 与 clamp 同时存在时
+        clamp 会赢（它自带 overflow:hidden 的换行语义），单行省略会**静默失效**。 */
+  {
+    const H = await fetch(BASE + PAGE).then((r) => r.text());
+    const m = /\.emu-card\.grp \.gl-i \.t\{([^}]*)\}/.exec(H);
+    const rule = m ? m[1] : '';
+    ok('★ 卡内条目标题规则取到（正向锚点：选择器打错时下面几条会平白变绿）',
+      rule.length > 0, rule.slice(0, 90));
+    ok('★★ 条目标题单行省略（white-space:nowrap + text-overflow:ellipsis）',
+      /white-space:nowrap/.test(rule) && /text-overflow:ellipsis/.test(rule), rule);
+    ok('★★ 反向：该规则里不再有 line-clamp（折 2 行会让单行省略静默失效）',
+      !/line-clamp/.test(rule), (rule.match(/[^;]*line-clamp[^;]*/) || ['(无)'])[0]);
+    ok('★ `min-width:0` 还在 —— 没有它 flex 子项不收缩，省略号根本不出现（只把兄弟挤走）',
+      /min-width:0/.test(rule));
+    ok('★★ 弹窗里不再有单独覆盖 `.grp-pop .gl-i .t`（与卡内同一条规则，一处真源）',
+      !/\.grp-pop \.gl-i \.t\{/.test(H),
+      (H.match(/\.grp-pop \.gl-i \.t\{[^}]*\}/) || ['(无)'])[0]);
+    const rows = qa('.emu-card.grp .gl .gl-i');
+    const withT = rows.filter((r) => {
+      const t = r.querySelector('.t');
+      return !!t && !!t.getAttribute('title');
+    });
+    ok('★★ 每行标题都带 title（单行省略后悬停仍能读全文 —— 折叠，不是删除）',
+      rows.length > 0 && withT.length === rows.length, `${withT.length} / ${rows.length} 行`);
   }
   /* ★ 搜索真的接了后端（来源下拉在本轮数据下多为单源，用搜索验接口更稳） */
   {

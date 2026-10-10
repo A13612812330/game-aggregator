@@ -517,6 +517,26 @@ t('★★ v10.48 反向：旧的「原地展开」实现（grpExpand）已从资
   /function grpExpand\s*\(/.test(res) ? '仍存在 ⇒ 行为没真正改' : '已删');
 t('★ v10.48：卡内按钮文案改成「查看全部 N 条 ▸」（行为已不是原地展开，文案不能留在旧说法）',
   /查看全部 ' \+ Number/.test(res) && !/展开全部 ' \+ Number/.test(res));
+/* ★★ v10.49：卡内条目标题改**单行省略**（用户口径「卡片中的内容每条显示一行即可多余字显示省略号即可」）。
+   ★ 必须**主源 + 派生页都查**：主源是唯一真源，但线上加载的是派生页 ——
+     只查派生页 ⇒ 有人只改主源不重建照样绿；只查主源 ⇒ 改完不重建也绿。
+   ★ 反向断言不可省：`line-clamp` 若被写回来，浏览器里它与 `nowrap` 并存会让单行省略**静默失效**
+     （clamp 自带换行语义且优先级压过 nowrap），绿着坏掉是最难发现的一种。 */
+const GLT = /\.emu-card\.grp \.gl-i \.t\{([^}]*)\}/;
+const gltIdx = (idx.match(GLT) || [])[1] || '';
+const gltRes = (res.match(GLT) || [])[1] || '';
+t('★ v10.49 正向锚点：条目标题规则 .emu-card.grp .gl-i .t 在主源与派生页都取到',
+  gltIdx.length > 0 && gltRes.length > 0, gltIdx.slice(0, 70));
+t('★★ v10.49：条目标题单行省略（nowrap + ellipsis），主源与派生页一致',
+  [gltIdx, gltRes].every((r) => /white-space:nowrap/.test(r) && /text-overflow:ellipsis/.test(r)),
+  gltRes.slice(0, 90));
+t('★★ v10.49 反向：该规则里没有 line-clamp（写回来会让单行省略静默失效）',
+  ![gltIdx, gltRes].some((r) => /line-clamp/.test(r)),
+  (gltRes.match(/[^;]*line-clamp[^;]*/) || ['(无)'])[0]);
+t('★ v10.49：`min-width:0` 保留（没有它 flex 子项不收缩 ⇒ 省略号根本不出现）',
+  [gltIdx, gltRes].every((r) => /min-width:0/.test(r)));
+t('★★ v10.49 反向：弹窗不再单独覆盖 .grp-pop .gl-i .t（与卡内同一条规则，一处真源）',
+  !/\.grp-pop \.gl-i \.t\{/.test(idx) && !/\.grp-pop \.gl-i \.t\{/.test(res));
 /* 专属 CSS 泄漏闸：追加的 CSS 必须整段待在 <style> 内 */
 t('端游资源页 <style> 唯一', count(res, /<style>/g) === 1, `实际 ${count(res, /<style>/g)}`);
 t('端游资源页 <script> 数正常（≤3）', count(res, /<script/g) <= 3, `实际 ${count(res, /<script/g)}`);
