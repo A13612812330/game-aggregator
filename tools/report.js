@@ -106,6 +106,13 @@ function dirty() {
  *    新增版本时往 FEATURES 顶部加一条即可（`since` 只用于文案，不参与判定）。
  */
 const FEATURES = [
+  /* ★ v10.50：原先最新一条停在 v10.20，中间 30 个版本没补 ⇒ 面对「线上停在哪一版」
+     只能落到兜底话术「同代但内容有差异（需人工核对）」—— 实测线上其实落后 9 版，
+     说「同代」是 over-claim。补两条例数不同代的锚点（**新→旧**排列，顺序参与判定）。
+     ⚠️ 不是每版都要补：v10.33~v10.38 那六轮**只动 data/ 与 tools/**、index.html 一个字节没改，
+        给它们硬塞锚点会造出假指纹。补的是「index.html 真有可见改动」的版本。 */
+  { re: /\/api\/res\/post/, name: '原贴内容弹窗（调用 /api/res/post）', since: 'v10.50' },
+  { re: /id="navRes"/, name: '顶栏「端游资源」入口', since: 'v10.44' },
   { re: /id="navUnpack"/, name: '顶栏「📦 解包匹配」入口', since: 'v10.20' },
   { re: /eg-nav/, name: '指南模块导航', since: 'v10.19' },
   { re: /id="navEmu"/, name: '顶栏「手机专区」入口', since: 'v10.18' },
@@ -115,12 +122,22 @@ function versionLabel(remoteTxt, localTxt, same) {
   if (same) return { ver: '与本地同版', detail: '' };
   const missing = FEATURES.filter((f) => f.re.test(localTxt) && !f.re.test(remoteTxt));
   if (missing.length) {
-    const f = missing[missing.length - 1];   // 取最早缺的那个 = 线上实际停在哪一版
-    return { ver: '旧于本地（线上尚未发布 ' + f.since + '）', detail: '缺：' + f.name };
+    /* 数组是**新→旧**，最后一条 = 线上**最早缺**的那项 ⇒ 它才是「线上实际停在哪一版」的分界线 */
+    const first = missing[missing.length - 1];
+    return {
+      ver: '旧于本地（线上尚未发布 ' + first.since + ' 起的改动）',
+      detail: '缺 ' + missing.length + ' 项：' + missing.map((f) => f.name + '（' + f.since + '）').join('、'),
+    };
   }
   const extra = FEATURES.filter((f) => !f.re.test(localTxt) && f.re.test(remoteTxt));
   if (extra.length) return { ver: '新于本地（本地落后于线上）', detail: '线上多出：' + extra[0].name };
-  return { ver: '同代但内容有差异（需人工核对）', detail: '特征指纹全中，但字节不同' };
+  /* ★ v10.50 改写兜底话术：原文案是「同代但内容有差异」——「同代」是**没有依据的断言**
+     （锚点全中只说明「两者都晚于最老那个锚点」，推不出同代）。
+     ⇒ 如实说「无法定序 + 需人工核对」，不硬下结论、也不含糊。 */
+  return {
+    ver: '⚠️ 特征指纹无法定序（需人工核对）',
+    detail: '已知锚点全中但字节不同 ⇒ 线上可能停在两个锚点之间；先补一条更新的锚点再判',
+  };
 }
 
 /* ===== ②-b 服务端 + data 层的口径指纹（v10.38 补）=====
