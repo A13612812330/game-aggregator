@@ -140,6 +140,10 @@ const DL_UNI_NM = ['本体', 'Mod', '修改器', '存档'];
       hasLinksFoot: !!body.querySelector('.d-dl-links'),
       svRows: body.querySelectorAll('.dl-sv-row').length,
       modRows: body.querySelectorAll('.d-dl-it').length,
+      /* ★ v10.51：存档模块的**文件**卡数（v10.46 起存档主区铺的就是它）+
+         三处「原贴」入口计数（Mod / 修改器行内 + 存档卡内，统一 button.po-btn） */
+      svfRows: body.querySelectorAll('.svf').length,
+      poBtns: body.querySelectorAll('button.po-btn[data-post-open]').length,
       empty: !!body.querySelector('.dlpop-empty'),
       txt: (body.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 90),
       overflow: body.scrollWidth - body.clientWidth,
@@ -196,22 +200,170 @@ const DL_UNI_NM = ['本体', 'Mod', '修改器', '存档'];
     !sMod.hasBar, `hasBar=${sMod.hasBar} txt=${sMod.txt}`);
   chk('⑧d Mod 模块给出的是帖子行或明确的空态说明（不许是空白）',
     sMod.modRows > 0 || sMod.empty, `rows=${sMod.modRows} empty=${sMod.empty} txt=${sMod.txt}`);
+  /* ★★ v10.51：Mod 行改成「整行可点开原贴」+ 行内「原贴」按钮 ——
+     用户口径「Mod 和修改器也同样，变成下载链弹窗能看到获取贴内容」。
+     ★ 判据**数据驱动**：拿 `/api/mods/match` 同序前 N 条判「哪几条有 content」，
+       再和页面实际渲染的入口数对 —— 不写死「全都有」（写死会在数据覆盖变化时假红）。
+       ⚠️ 正向锚点 `shown > 0` 必须有：`wired === expWith === 0` 与「这一区空白」长得一样。 */
+  const modPo = await p.evaluate(async () => {
+    const ctx = (() => { try { return (dlUni && dlUni.ctx) || {}; } catch (e) { return {}; } })();
+    const j = await fetch('/api/mods/match?id=' + encodeURIComponent(ctx.id || '')
+      + '&t=' + encodeURIComponent(ctx.title || '') + '&kind=mod&limit=60').then((r) => r.json());
+    const rows = [...document.querySelectorAll('#dlBody .d-dl-it')];
+    const shown = rows.length;
+    return {
+      shown,
+      expWith: (j.items || []).slice(0, shown).filter((x) => String(x.content || '').trim()).length,
+      wired: rows.filter((r) => r.hasAttribute('data-post-open')).length,
+      btns: rows.filter((r) => r.querySelector('button.po-btn[data-post-open]')).length,
+      goLinks: rows.filter((r) => r.querySelector('a.go[href]')).length,
+      srcs: [...new Set(rows.map((r) => r.getAttribute('data-src')))],
+    };
+  });
+  chk('⑧e ★ v10.51 Mod 行**整行可点开原贴**，且逐条对齐接口的 content 有无；src 恒为 mod',
+    modPo.shown > 0 && modPo.wired === modPo.expWith
+      && modPo.srcs.length === 1 && modPo.srcs[0] === 'mod',
+    JSON.stringify(modPo));
+  chk('⑧f ★ v10.51 Mod 行内「原贴」按钮同数；且**每行都保住「源站 ↗」出口**（原出口一个没少）',
+    modPo.btns === modPo.expWith && modPo.goLinks === modPo.shown,
+    JSON.stringify({ btns: modPo.btns, expWith: modPo.expWith, go: modPo.goLinks, shown: modPo.shown }));
+
+  /* 点击 → 原贴弹窗（#postPop）真的打开，且**有正文**（不是「这个来源没有正文」的空壳） */
+  const modClick = await p.evaluate(async () => {
+    const r = document.querySelector('#dlBody .d-dl-it[data-post-open]');
+    if (!r) return { err: 'no row' };
+    r.click();
+    return { src: r.getAttribute('data-src'), id: r.getAttribute('data-id') };
+  });
+  await until(p, () => {
+    const pop = document.getElementById('postPop');
+    return !!(pop && !pop.hidden && pop.classList.contains('on')
+      && !document.querySelector('#postBody .emu-loading'));
+  }, 8000);
+  const modPost = await p.evaluate(() => {
+    const pop = document.getElementById('postPop');
+    const body = document.getElementById('postBody');
+    const el = body && body.querySelector('.po-body');
+    return {
+      open: !!(pop && !pop.hidden && pop.classList.contains('on')),
+      title: (document.getElementById('postTitle') || {}).textContent || '',
+      len: el ? el.textContent.length : 0,
+      /* 层级：原贴弹窗必须**盖住**下载弹窗，否则点开看不见（v10.50 同类坑） */
+      z: Number(getComputedStyle(pop).zIndex) || 0,
+      dlZ: Number(getComputedStyle(document.getElementById('dlPop')).zIndex) || 0,
+    };
+  });
+  chk('⑧g ★ v10.51 点 Mod 行 → 原贴弹窗打开且有标题', modPost.open && modPost.title.length > 1,
+    JSON.stringify({ ...modClick, ...modPost }));
+  chk('⑧h ★ v10.51 原贴弹窗里**真的有正文**（不是「这个来源只提供链接与元数据」的空壳）',
+    modPost.len > 20, `正文 ${modPost.len} 字`);
+  chk('⑧i ★ v10.51 原贴弹窗 z-index 必须**高于**下载弹窗（否则点开看不见）',
+    modPost.z > modPost.dlZ && modPost.z > 0, `post=${modPost.z} dl=${modPost.dlZ}`);
+  /* 关掉，免得影响后面的页签断言 */
+  await p.evaluate(() => document.querySelector('#postPop [data-post="close"]').click());
+  await sleep(400);
 
   const sMf = await switchTo('modifier');
   chk('⑨ 点「修改器」→ 高亮移到修改器签', sMf.onKey === 'modifier', sMf.onTxt);
   chk('⑨b 修改器模块给出「风险提示」或帖子行（模块说明是用户决策要用的信息）',
     /修改器|训练器|风险|社区共|没有收录/.test(sMf.txt) || sMf.modRows > 0,
     `txt=${sMf.txt}`);
+  /* ★ v10.51：修改器区同样是「整行可点 + 原贴按钮」—— 与 Mod 区共用同一个渲染器（dlModRowsHtml），
+     但仍**各验一遍**：共用渲染器不等于两处都渲染得出（数据可能一边有一边空）。 */
+  const mfPo = await p.evaluate(async () => {
+    const ctx = (() => { try { return (dlUni && dlUni.ctx) || {}; } catch (e) { return {}; } })();
+    const j = await fetch('/api/mods/match?id=' + encodeURIComponent(ctx.id || '')
+      + '&t=' + encodeURIComponent(ctx.title || '') + '&kind=modifier&limit=60').then((r) => r.json());
+    const rows = [...document.querySelectorAll('#dlBody .d-dl-it')];
+    const shown = rows.length;
+    return {
+      shown,
+      expWith: (j.items || []).slice(0, shown).filter((x) => String(x.content || '').trim()).length,
+      wired: rows.filter((r) => r.hasAttribute('data-post-open')).length,
+      btns: rows.filter((r) => r.querySelector('button.po-btn[data-post-open]')).length,
+    };
+  });
+  chk('⑨c ★ v10.51 修改器区也一样：行可点 + 有「原贴」按钮（不能只有 Mod 区改到）',
+    mfPo.shown === 0 || (mfPo.wired === mfPo.expWith && mfPo.btns === mfPo.expWith),
+    JSON.stringify(mfPo));
 
   const sSv = await switchTo('save');
   chk('⑩ 点「存档」→ 高亮移到存档签', sSv.onKey === 'save', sSv.onTxt);
-  chk('⑩b ★ 存档模块给的是「放哪」而不是「下什么」（路径行或明确的「清单里没记录」）',
-    sSv.svRows > 0 || sSv.empty, `svRows=${sSv.svRows} empty=${sSv.empty} txt=${sSv.txt}`);
-  chk('⑩c 若有路径行，则每条都配「复制」键（复制是这里唯一的动作）',
-    sSv.svRows === 0 || (await p.evaluate(() =>
-      document.querySelectorAll('#dlBody .dl-sv-row').length
-      === document.querySelectorAll('#dlBody .dl-sv-row .dl-cp').length)),
-    `rows=${sSv.svRows}`);
+  /* ★★ v10.51 修一条**早就失效**的断言 ★★
+     原 ⑩b 写的是「存档模块给的是『放哪』而不是『下什么』（路径行或明确的清单里没记录）」，
+     判据 `#dlBody .dl-sv-row > 0 || empty`。
+     但 v10.46 已经按用户口径把这一屏**反过来**了（「只展示存档而不是存档位置」），
+     主区铺的是文件卡 `.svf`、路径整体让位到 #svLoc ⇒ `.dl-sv-row` 在 #dlBody 里恒为 0。
+     ⇒ 本断言自 v10.46 起**一直是红的**，而它所在的这个套件**不在 run-all 的 SUITES 里**
+       （它要真浏览器），所以没人发现。
+     按项目规矩（「旧护栏变红 ≠ 断言过时」）：先确认新口径要保的是什么，再改断言 ——
+     新口径要保的是「**能下载的文件**摆在主区」。 */
+  chk('⑩b ★ 存档模块给的是「**能下载的文件**」而不是「放哪」（v10.46 口径；旧断言正好写反了）',
+    sSv.svfRows > 0 || sSv.empty, `svfRows=${sSv.svfRows} empty=${sSv.empty} txt=${sSv.txt}`);
+  const svfOut = await p.evaluate(() => {
+    const cards = [...document.querySelectorAll('#dlBody .svf')];
+    return {
+      n: cards.length,
+      noOut: cards.filter((c) => !c.querySelector('.k a')).length,
+      withPo: cards.filter((c) => c.querySelector('button.po-btn[data-post-open]')).length,
+    };
+  });
+  chk('⑩c ★ 每张存档卡都至少有一个出口（直链 / 网盘 / 迅雷 / eD2K / 源站）—— 不许「看得见下不到」',
+    svfOut.n === 0 || svfOut.noOut === 0, JSON.stringify(svfOut));
+  /* ★ v10.51：存档卡也补了「原贴」入口（用户口径「下载链弹窗能看到获取贴内容」）。
+     ★ 判据**数据驱动**，不写死「全部都有」：这一屏只铺前 SVF_CAP 张，
+       服务端 `hasPost` 才是真源 ⇒ 拿接口同序前 N 条来对，避免「换个 GAME 就假红」。
+     ★ 正向锚点 `shown > 0` 必不可少：`withPo === expShown === 0` 与「整区空白」长得一样。 */
+  const svPoData = await p.evaluate(async () => {
+    const ctx = (() => { try { return (dlUni && dlUni.ctx) || {}; } catch (e) { return {}; } })();
+    const j = await fetch('/api/saves-yx/match?id=' + encodeURIComponent(ctx.id || '')
+      + '&t=' + encodeURIComponent(ctx.title || '')).then((r) => r.json());
+    const cards = [...document.querySelectorAll('#dlBody .svf')];
+    const shown = cards.length;
+    const expShown = (j.items || []).slice(0, shown).filter((x) => x.hasPost).length;
+    return { shown, expShown, withPo: cards.filter((c) => c.querySelector('button.po-btn[data-post-open]')).length };
+  });
+  chk('⑩d ★ v10.51 存档卡「原贴」入口与接口 hasPost **逐条对齐**（有正文才给，不空给）',
+    svPoData.shown > 0 && svPoData.withPo === svPoData.expShown, JSON.stringify(svPoData));
+  const svPost = await p.evaluate(async () => {
+    const b = document.querySelector('#dlBody .svf button.po-btn[data-post-open]');
+    if (!b) return { err: 'no btn' };
+    b.click();
+    return { src: b.getAttribute('data-src'), id: b.getAttribute('data-id') };
+  });
+  await until(p, () => {
+    const pop = document.getElementById('postPop');
+    return !!(pop && !pop.hidden && pop.classList.contains('on')
+      && !document.querySelector('#postBody .emu-loading'));
+  }, 8000);
+  const svPostRes = await p.evaluate(() => {
+    const pop = document.getElementById('postPop');
+    const body = document.getElementById('postBody');
+    const el = body && body.querySelector('.po-body');
+    return {
+      open: !!(pop && !pop.hidden && pop.classList.contains('on')),
+      src: (document.getElementById('postSub') || {}).textContent || '',
+      len: el ? el.textContent.length : 0,
+    };
+  });
+  chk('⑩e ★ v10.51 点存档卡「原贴」→ 弹窗打开且**真有正文**',
+    svPostRes.open && svPostRes.len > 20, JSON.stringify({ ...svPost, ...svPostRes }));
+  await p.evaluate(() => document.querySelector('#postPop [data-post="close"]').click());
+  await sleep(400);
+  /* ★ v10.51：整行可点之后，**行内/卡内的外链必须让开** ——
+     否则「点源站 ↗」会同时弹出原贴弹窗（两个弹窗叠一起）。
+     这条是上一条改动的**必要配套**，不能只验「能弹出」不验「该不弹的时候不弹」。 */
+  const linkSkip = await p.evaluate(async () => {
+    const a = document.querySelector('#dlBody .svf .k a[href]') || document.querySelector('#dlBody .d-dl-it .go');
+    if (!a) return { err: 'no link' };
+    a.addEventListener('click', (ev) => ev.preventDefault(), { once: true });
+    a.click();
+    await new Promise((r) => setTimeout(r, 300));
+    const pop = document.getElementById('postPop');
+    return { blocked: !(pop && !pop.hidden) };
+  });
+  chk('⑩f ★ v10.51 点行内外的外链（源站 / 下载通道）**不许**顺带弹出原贴弹窗',
+    linkSkip.blocked === true, JSON.stringify(linkSkip));
 
   await p.screenshot({ path: path.join(OUT, 'check-dluni-save.png') });
 

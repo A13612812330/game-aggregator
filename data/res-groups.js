@@ -106,8 +106,10 @@ function fromYx() {
       note: links.length ? (f.fileName || '') : ('未解析到直链' + (x.fileFailWhy ? '：' + x.fileFailWhy : '')),
       ts: x.date ? Date.parse(x.date) || 0 : 0,
       /* ★ v10.50：游侠补丁页的「简介 / 安装步骤 / 游戏截图」也能开原贴弹窗。
-       *   实测 desc 2,043/2,043 = 100%，shots 1,172 条有图（57.4%）。 */
-      hasPost: (String(x.desc || '').trim() || (x.steps || []).length || (x.shots || []).length) ? 1 : undefined,
+       *   实测 desc 2,043/2,043 = 100%，shots 1,172 条有图（57.4%）。
+       * ★ v10.51：判据收进 `savesYx.hasPost()` —— 下载弹窗的存档行要问同一个问题，
+       *   写两遍迟早漂（铁律 17）。 */
+      hasPost: savesYx.hasPost(x),
     });
   }
   return out;

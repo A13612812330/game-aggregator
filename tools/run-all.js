@@ -18,6 +18,11 @@
  *   静态套件已有 23 套，手敲 `node tools/test-*.js` 容易漏跑（漏跑的那套往往就是
  *   被改坏的那套）。这里把清单固化，避免"以为跑全了"。
  *   ⚠️ 新增静态套件时**必须**加进下面的 SUITES，否则它会永远不被防线覆盖。
+ *
+ * ★★ v10.51 补上「否则」的牙齿：上面那句原来是**纯注释**，没人验证。
+ *   实测后果见下面四张表前的注释 —— `test-v1025-dlstrip.js` 的一条断言红了 9 个版本
+ *   没人知道。现在 `checkCoverage()` 会断言 tools/ 下每个 `test-*.js` 都已登记，
+ *   没登记直接报错退出。新增套件时"要不要纳入防线"**必须**显式决定。
  */
 const { execFileSync } = require('child_process');
 const fs = require('fs');
@@ -25,6 +30,12 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const QUIET = process.argv.includes('--quiet');
+/* ★ v10.51：默认只跑静态层（秒级）。加 `--browser` 才把第二层「浏览器实拍」一起跑
+ * （需 8123 在跑；每套 9~35s）。两层的清单都在下面、且都受覆盖性守卫约束。 */
+const WITH_BROWSER = process.argv.includes('--browser');
+/* ★ v10.51：只跑覆盖性守卫就退出。存在的理由是**反证要快而聚焦** ——
+ *   验证「没登记的套件会被抓出来」不需要把 41 套断言全跑一遍。 */
+const GUARD_ONLY = process.argv.includes('--guard-only');
 
 /* 套件清单 —— 新增一个就往这里加一个。
  * 判据不是「有没有用浏览器」，而是「要不要人盯着」（下面这些都无需交互、秒级出结果）。
@@ -94,12 +105,90 @@ const SUITES = [
    * 本套件守「本轮全部抓取失败时磁盘缓存逐字节不变」（模块在临时沙箱里跑，不碰真实缓存）。 */
   'test-bhparams-nopoison.js',
 ];
-/* 刻意**不登记**的：
- *   · test-search-ui.js  —— 用 puppeteer，属第二层「浏览器实拍」，本脚本跑不了
- *   · test-emuhub.js     —— 已废弃的兼容壳，内部 require('./test-emulator-page.js')，
- *                           登记它只会把同一批断言算两遍（不是漏登记）
- *   · check-inline-syntax.js —— 它不是「断言套件」而是**前置闸**（见下面的 PREFLIGHT）：
- *                           只吐文件数、不吐断言数，混进 SUITES 会把条数汇总口径搅浑。 */
+
+/* ============================================================================
+ * ★★ v10.51 新增：未纳入静态防线的套件必须**登记**在下面三张表之一
+ * ----------------------------------------------------------------------------
+ * 起因（实测，不是推测）：v10.45 写的 `test-v1025-dlstrip.js` 里那条
+ *   「⑩b 存档模块给的是『放哪』而不是『下什么』」自 v10.46 起**一直是红的**
+ *   （v10.46 按用户口径把这一屏反过来 ⇒ `.dl-sv-row` 恒为 0），
+ *   而这个套件既不在 SUITES、也不在上面的「刻意不登记」注释里
+ *   ⇒ **没有任何东西在看着它**，红了 9 个版本没人发现。
+ *
+ * 更狠的一层（也是本轮顺手测出来的）：把浏览器实拍层 7 套跑一遍 ——
+ *   rail 15/17、more 9/11、search-ui 40/44 全红。
+ *   用 `git show HEAD:public/index.html` 换回未改动的主源复跑，**条数逐套一致**
+ *   ⇒ 证明这些红**不是**某一轮改出来的，而是长期没人跑。
+ *
+ * ⇒ 所以「不登记」这件事本身必须是**被机器断言的**，不能只写注释：
+ *   tools/ 下每个 `test-*.js` 必须**恰好**出现在 SUITES / BROWSER / COUNTERPROOF / SHIM
+ *   之一，否则本脚本直接报错。新增套件时「要不要纳入防线」这个决定**必须显式做出**。
+ *
+ * 每类都自带**可观测判据**（checkCoverage() 里逐个验），防止文件被塞进错类别：
+ *   · BROWSER      → 源码必须 `require('./browser')`（真浏览器专用连接层）
+ *   · COUNTERPROOF → 文件名必须含 `counterproof`
+ *   · SHIM         → 源码必须 `require('./test-…')`（复用另一个套件的壳）
+ * ========================================================================== */
+
+/* 第二层「浏览器实拍」：走 tools/browser.js（CDP 连真实 Edge），不在默认防线里。
+ * ★ 它们**可以**无人值守跑（v10.51 实测 9~35s/套，退出码随断言走），
+ *   单独分层的唯一原因是**慢一个数量级**（静态层 41 套合计秒级）且必须 8123 在跑。
+ *   跑法：`node tools/run-all.js --browser`（一次跑完），或按需单跑。 */
+const BROWSER = [
+  'test-v1025-dlstrip.js',   /* 详情页下载弹窗四模块（本体/Mod/修改器/存档）交互链 */
+  'test-v1025-gallery.js',   /* 画廊渲染 + 翻页 */
+  'test-v1025-merge.js',     /* 双源合并去重（截图不重复 + 补来字段标来源） */
+  'test-v1025-more.js',      /* 「更多」按钮 + 全部内容弹窗（数字两处一致/不串台） */
+  'test-v1025-rail.js',      /* 详情页竖向定位条（落点递增 + 高亮自一致） */
+  'test-v1025-search.js',    /* 搜索弹窗「同款聚拢 + 评分分级」 */
+  'test-search-ui.js',       /* 搜索弹窗 + 详情抽屉（分组排序 / 行密度 / 三档视口） */
+];
+/* 反证脚本：**故意打坏**被守护的行为，断言必须变红 ⇒ 它们「失败才是通过」，
+ * 永远不能进 SUITES（会把汇总搅成红）。跑法：单跑，看它自己报的「变红条数」。 */
+const COUNTERPROOF = [
+  'test-v1025-launcher-counterproof.js',
+  'test-v1025-search-counterproof.js',
+];
+/* 兼容壳：内部 require 另一个套件，登记它只会把同一批断言算两遍（不是漏登记）。 */
+const SHIM = [
+  'test-emuhub.js',
+];
+/* 另：check-inline-syntax.js 不是「断言套件」而是**前置闸**（见下面的 PREFLIGHT）：
+ *     只吐文件数、不吐断言数，混进 SUITES 会把条数汇总口径搅浑。它不在 test-* 命名下，
+ *     所以不参与上面的覆盖性断言。 */
+
+/**
+ * 覆盖性守卫：tools/ 下每个 `test-*.js` 必须**恰好**登记在四张表之一。
+ * 返回错误清单（空 = 通过）。见上面那段「起因」。
+ */
+function checkCoverage() {
+  const errs = [];
+  const dir = path.join(ROOT, 'tools');
+  const all = fs.readdirSync(dir).filter((f) => /^test-.*\.js$/.test(f)).sort();
+  const tables = { SUITES, BROWSER, COUNTERPROOF, SHIM };
+  const where = new Map();
+  for (const [name, list] of Object.entries(tables)) {
+    for (const f of list) {
+      if (where.has(f)) { errs.push(`${f} 同时登记在 ${where.get(f)} 与 ${name}`); continue; }
+      where.set(f, name);
+      if (!all.includes(f)) { errs.push(`${name} 里的 ${f} 在 tools/ 下不存在 —— 清单陈旧，删掉它`); continue; }
+      const src = fs.readFileSync(path.join(dir, f), 'utf8');
+      if (name === 'BROWSER' && !/require\(\s*['"]\.\/browser['"]\s*\)/.test(src)) {
+        errs.push(`BROWSER 里的 ${f} 没有 require('./browser') —— 它不像浏览器套件，是不是放错表了？`);
+      }
+      if (name === 'COUNTERPROOF' && !/counterproof/.test(f)) {
+        errs.push(`COUNTERPROOF 里的 ${f} 文件名不含 counterproof —— 命名不一致，下次会看漏`);
+      }
+      if (name === 'SHIM' && !/require\(\s*['"]\.\/test-/.test(src)) {
+        errs.push(`SHIM 里的 ${f} 没有 require('./test-…') —— 它不是壳，是不是放错表了？`);
+      }
+    }
+  }
+  for (const f of all) {
+    if (!where.has(f)) errs.push(`${f} 未登记 —— 它永远不会被任何防线跑到（请决定放进 SUITES 还是 BROWSER）`);
+  }
+  return { errs, all: all.length, counts: Object.fromEntries(Object.entries(tables).map(([k, v]) => [k, v.length])) };
+}
 
 /* 前置闸 —— 在跑任何断言**之前**执行。
  * ★ 为什么必须有：`public/*.html` 的内联脚本是 3400~4700 行的单块 JS，
@@ -165,6 +254,31 @@ function exitTiedToFailures(src) {
   return false;
 }
 
+/* ---------- 覆盖性守卫（★ v10.51）----------
+ * 放在**最前面**：它是「防线自身完不完整」的检查，比任何断言都先决 ——
+ * 一个没登记的套件跑都不会跑，断言写得再对也没用。
+ * 不通过就进 crashed，让汇总变红 + exit 1。 */
+{
+  const cov = checkCoverage();
+  const c = cov.counts;
+  if (!QUIET) {
+    console.log(`\n[覆盖性守卫] tools/test-*.js 共 ${cov.all} 个 ｜ 已登记：`
+      + `SUITES ${c.SUITES} · BROWSER ${c.BROWSER} · COUNTERPROOF ${c.COUNTERPROOF} · SHIM ${c.SHIM}`);
+  }
+  if (cov.errs.length) {
+    console.log('\n❌ 覆盖性守卫未通过：');
+    cov.errs.forEach((e) => console.log('   · ' + e));
+    crashed.push('覆盖性守卫（有套件未登记）');
+  } else if (!QUIET) {
+    console.log('  ✅ 每个 test-*.js 都已登记 —— 不存在「红了没人知道」的孤儿套件');
+  }
+  /* `--guard-only`：拿到结论即退出（反证用；也让本守卫能单独当 CI 门禁用） */
+  if (GUARD_ONLY) {
+    console.log(cov.errs.length ? '\n❌ 覆盖性守卫：不通过' : '\n✅ 覆盖性守卫：通过');
+    process.exit(cov.errs.length ? 1 : 0);
+  }
+}
+
 /* ---------- 前置闸 ---------- */
 let preOk = 0;
 for (const pf of PREFLIGHT) {
@@ -189,7 +303,11 @@ for (const pf of PREFLIGHT) {
   }
 }
 
-for (const s of SUITES) {
+/* 本轮实跑清单：静态层恒跑；`--browser` 时把第二层接在后面（同一套记账/汇总）。
+ * ⚠️ 浏览器层超时给大一些（实测最慢 35s，留 5 倍余量 —— CDP 首次连接偶发慢）。 */
+const TO_RUN = WITH_BROWSER ? [...SUITES, ...BROWSER] : SUITES;
+for (const s of TO_RUN) {
+  const isBrowser = BROWSER.includes(s);
   const file = path.join(ROOT, 'tools', s);
   if (!fs.existsSync(file)) { missing.push(s); continue; }
 
@@ -198,7 +316,8 @@ for (const s of SUITES) {
   let out = '', code = 0;
   try {
     out = execFileSync(process.execPath, [file], {
-      cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 180000,
+      cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: isBrowser ? 300000 : 180000,
     });
   } catch (e) {
     code = e.status == null ? -1 : e.status;
@@ -254,7 +373,9 @@ for (const s of SUITES) {
 }
 
 console.log(`\n${'#'.repeat(52)}`);
-console.log(`静态防线：${SUITES.length} 套`);
+console.log(`静态防线：${SUITES.length} 套${WITH_BROWSER ? '' : '（本次已跑）'}`);
+if (WITH_BROWSER) console.log(`浏览器实拍：${BROWSER.length} 套（--browser，本次已跑）`);
+else console.log(`浏览器实拍：${BROWSER.length} 套（本次**未跑** —— 要跑加 --browser）`);
 console.log(`前置闸：${preOk} / ${PREFLIGHT.length} 通过`);
 console.log(`通过 ${pass} / 失败 ${fail}`);
 if (missing.length) console.log(`⚠️ 清单里的文件不存在：${missing.join(', ')}`);
@@ -271,7 +392,10 @@ if (warnFmt.length) {
 console.log(`${'#'.repeat(52)}`);
 
 if (fail || crashed.length || missing.length || noExit.length || warnFmt.length) {
-  console.log('\n⚠️ 静态防线未全绿 —— 先修这里，别急着跑实拍。');
+  console.log(`\n⚠️ ${WITH_BROWSER ? '两层防线' : '静态防线'}未全绿 —— 先修这里，别急着跑线上验收。`);
   process.exit(1);
 }
-console.log('\n✅ 静态防线全绿。接下来：浏览器实拍（加大超时、分批跑）→ 线上验收。');
+console.log(WITH_BROWSER
+  ? '\n✅ 两层防线全绿。接下来：线上验收。'
+  : `\n✅ 静态防线全绿。接下来：浏览器实拍（node tools/run-all.js --browser）→ 线上验收。`);
+

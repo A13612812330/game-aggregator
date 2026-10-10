@@ -23,6 +23,9 @@ const res = fs.readFileSync(path.join(root, 'public/resources.html'), 'utf8');
  *   这里把第 4 张产物也读进来，四页一起验「共享资产真的同步了」。 */
 const upk = fs.readFileSync(path.join(root, 'public/unpack.html'), 'utf8');
 const rgSrc = fs.readFileSync(path.join(root, 'data/res-groups.js'), 'utf8');
+/* ★ v10.51：下载弹窗的存档行要判「这条有没有原贴正文」，判据收在 savesYx.hasPost()。
+ *   它是个**数据层单点**，光验页面看不见 ⇒ 直接把源码读进来验（与 rgSrc 同一套做法）。 */
+const yxSrc = fs.readFileSync(path.join(root, 'data/savesYx.js'), 'utf8');
 
 const R = [];
 const t = (n, c, e) => R.push([c, n, e || '']);
@@ -603,8 +606,12 @@ const GN = require(path.join(root, 'data', 'game-name'));
     /const sub = g\.nameEn/.test(rsec) && /slice\(0, 46\)/.test(rsec));
 
   /* —— ③ 原贴入口：按数据层的 hasPost 决定，纯链接源一点都不变 —— */
+  /* ★ v10.51：游侠那半边从「内联判据」改成调 `savesYx.hasPost()` ——
+     下载弹窗的存档行要问同一个问题，写两遍迟早漂（铁律 17）。
+     断言的**意图不变**（hasPost 来自数据层、不是前端猜的），判据跟着新写法走。 */
   t('★★ v10.50：hasPost 来自数据层（mods.content / yx 的 desc|steps|shots），不是前端猜的',
-    /hasPost: String\(x\.content/.test(rgSrc) && /hasPost: \(String\(x\.desc/.test(rgSrc));
+    /hasPost: String\(x\.content/.test(rgSrc)
+    && /hasPost: savesYx\.hasPost\(x\)/.test(rgSrc) && /function hasPost\(x\)/.test(yxSrc));
   t('★★ v10.50：条目按 `canPost = !!it.hasPost` 决定入口（无正文的行不加 class、不加按钮）',
     /const canPost = !!it\.hasPost/.test(rsec) && /data-post-open/.test(rsec)
     && /' has-post' : ''/.test(rsec));
@@ -656,6 +663,65 @@ const GN = require(path.join(root, 'data', 'game-name'));
     t('★ v10.50：截图缩略图 + 隐藏取图容器都在（复用主源既有灯箱，不另写一套）',
       POP_PAGES.every(([, h]) => /\.postpop-b \.po-shot img\{[^}]*aspect-ratio:16\/9/.test(h)
         && /\.postpop-b \.po-lb\{display:none\}/.test(h)));
+  }
+
+  /* ============ ★ v10.51 增量：下载弹窗的 Mod / 修改器 / 存档也能看原贴内容 ============
+   * 用户口径：「Mod 和修改器也同样，变成下载链弹窗能看到获取贴内容」。
+   * 数据其实**早就在手上**（`/api/mods/match` 每条都带 `content`，实测 mod 7,824/7,825、
+   * modifier 1,118/1,118 = 100%），只是 `dlModRowsHtml` 把它渲染成了一条纯外链。
+   * 这一组断言守三件事：
+   *   ① 原贴按钮收成**通用类** `.po-btn`（原先卡在 `.emu-card.grp .gl-lk button.po` 里，
+   *      换作用域就得抄第二份）；四页都得有这条规则体。
+   *   ② Mod / 修改器行改成「整行可点 + 行内按钮」，且**原有「源站 ↗」出口一个不少**。
+   *   ③ 整行可点的**必要配套**：委托里必须先判 `a[href]` 让开外链，再 `postOpen` ——
+   *      顺序写反 → 点「源站」同时弹原贴；没写 → 同样同时弹。
+   *      ⚠️ 光验「能弹出原贴」是**看不见这个 bug 的**（弹出也是个"功能"），必须验顺序。
+   */
+  const POBTN = /(?:^|\n)\s*\.po-btn\{([^}]*)\}/;
+  {
+    const bad = POP_PAGES.filter(([, h]) => !POBTN.test(h));
+    t('★★ v10.51 正向锚点：四页都取到 `.po-btn` 规则体（选择器改名/打错时下面几条会平白变绿）',
+      bad.length === 0, bad.map(([n]) => n).join(', ') || '全部命中');
+    t('★★ v10.51：原贴按钮是**通用类**（不再写死在 `.emu-card.grp .gl-lk button.po` 里）',
+      POP_PAGES.every(([, h]) => !/\.emu-card\.grp \.gl-lk button\.po\{/.test(h)
+        && /\.po-btn\{/.test(h)));
+    t('★ v10.51：通用类带 `flex:none`（两个 flex 容器里都不许被长标题挤扁）',
+      POP_PAGES.every(([, h]) => /flex:none/.test((h.match(POBTN) || [])[1] || '')));
+
+    /* ② Mod / 修改器行：整行 div + 行内按钮 + 保留外链出口 */
+    const modOk = /'<div class="d-dl-it' \+ \(canPost \? ' has-post' : ''\) \+ '"/.test(idx)
+      && /data-post-open data-src="mod"/.test(idx);
+    t('★★ v10.51：Mod / 修改器行整行可点开原贴（`div.d-dl-it.has-post` + `data-src="mod"`）', modOk);
+    t('★★ v10.51 反向：行**不再是**整行外链 `<a class="d-dl-it" href=…>`（回到旧写法这条就红）',
+      !/return '<a class="d-dl-it" href=/.test(idx));
+    t('★ v10.51：每行都保住「源站 ↗」出口（改了交互不能把原出口弄丢）',
+      /class="go" href="' \+ esc\(it\.url \|\| D_JIDI_MODS\)/.test(idx) && /源站 ↗/.test(idx));
+    t('★ v10.51：没有正文的条目**不给入口**（`canPost` 判据来自 `it.content`，不是一律给）',
+      /const canPost = !!String\(it\.content \|\| ''\)\.trim\(\);/.test(idx));
+
+    /* ③ 存档卡：同一套入口，src=yx */
+    t('★★ v10.51：存档卡也有「原贴」入口（`data-src="yx"` + `x.hasPost` 判据）',
+      /const poBtn = x\.hasPost/.test(idx) && /data-src="yx"/.test(idx));
+    t('★ v10.51：存档卡的「原贴」与同排通道按钮**同尺寸同圆角**（一排里混两个规格肉眼可见）',
+      /\.svf \.k button\.po-btn\{font-size:11px;border-radius:7px;padding:5px 9px\}/.test(idx));
+
+    /* ③' 委托顺序：先让开外链，再 postOpen */
+    const guard = idx.indexOf("if (t.closest('a[href]')) return;");
+    const openCall = idx.indexOf('postOpen(po.dataset.src, po.dataset.id);');
+    t('★★ v10.51：`bindPostDelegation` 里**先**让开 `a[href]`、**后**调 postOpen（顺序不能反）',
+      guard > -1 && openCall > -1 && guard < openCall, `guard@${guard} open@${openCall}`);
+    t('★ v10.51：整行可点后行内有 hover/cursor 反馈（`.d-dl-it.has-post{cursor:pointer}`）',
+      POP_PAGES.every(([, h]) => /\.d-dl-it\.has-post\{cursor:pointer\}/.test(h)));
+
+    /* ④ 数据层：判据只有一份 */
+    t('★★ v10.51：`savesYx.hasPost()` 是**唯一真源**（slim 与 res-groups 都调它，不各写一遍）',
+      /function hasPost\(x\) \{/.test(yxSrc) && /hasPost: hasPost\(x\),/.test(yxSrc)
+      && /hasPost: savesYx\.hasPost\(x\),/.test(rgSrc)
+      && !/hasPost: \(String\(x\.desc/.test(rgSrc));
+    t('★★ v10.51：`slim()`（存档弹窗取的那条路）也带上了 `hasPost` —— 正文照旧不下发，只发这个布尔',
+      /hasPost: hasPost\(x\),/.test(yxSrc) && /matchSlim/.test(yxSrc));
+    t('★ v10.51：hasPost 判据三选一（desc / steps / shots），与 v10.50 的口径一致',
+      /String\(x\.desc \|\| ''\)\.trim\(\) \|\| \(x\.steps \|\| \[\]\)\.length \|\| \(x\.shots \|\| \[\]\)\.length/.test(yxSrc));
   }
   /* 层级：原贴弹窗必须压在「查看全部」下载弹窗之上（那个弹窗里也能点开原贴）。
      ⚠️ 同一个选择器可能有多条规则（窄屏媒体查询里就有 `.dlpop{padding:10px}`）——

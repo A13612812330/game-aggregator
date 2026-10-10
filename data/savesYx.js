@@ -99,13 +99,29 @@ function match({ t = '', id = '' } = {}) {
   return { count: list.length, items: list };
 }
 
+/** 这条存档有没有**原贴正文**（简介 / 安装步骤 / 截图）。
+ *
+ * ★ v10.51：抽成函数并**导出**，因为有两个调用方要问同一个问题：
+ *     · 本文件的 `slim()`   → 详情页/下载弹窗据此决定给不给「原贴」入口
+ *     · `res-groups.js` 的 `fromYx()` → 资源页卡内行同一件事
+ *   同一个判据写两遍早晚会漂（铁律 17）。判据本身三选一：desc 有内容 / steps 非空 / shots 非空。
+ *   ★ 只回 1 或 undefined（与 res-groups 里各来源的写法一致）：`undefined` 在 JSON 里
+ *     直接消失，条目体积不变 —— 前端用 `!!it.hasPost` 判，不缺字段。
+ *   ⚠️ 与 `res-groups.js slimItem()` 的 `hasPost` 是**同名字段、同义**，不是两份东西。 */
+function hasPost(x) {
+  return (String(x.desc || '').trim() || (x.steps || []).length || (x.shots || []).length) ? 1 : undefined;
+}
+
 /** 瘦身投影：只留前端渲染要用的字段。
  *  ★ 为什么必须有这一层：完整条目带 `desc`（常见 700~1500 字中文长文）、`steps[]`、`shots[]`，
  *    实测 p50 1,785B / p90 2,411B —— 一款热门游戏在存档区能有十几条，直传就是几十 KB 的
  *    **纯浪费**（前端一个字段都没用）。投影后单条约 600B。
  *  ★ 投影放在**数据层**而不是路由里：将来别的页面（详情页 / 资源页卡片）取同一批数据时，
  *    不会因为「忘了瘦身」把长文一起发出去；要长文的调用方显式用 `match()` / `byLib()`。
- *  ★ 保留 `files` 全量（这是本模块存在的理由，一个通道都不能少）。 */
+ *  ★ 保留 `files` 全量（这是本模块存在的理由，一个通道都不能少）。
+ *  ★ v10.51 补 `hasPost`：正文**仍然不发**（投影的初衷不变），只补一个「有/没有」标记 ——
+ *    有了它，下载弹窗的存档行才能像 Mod/修改器行那样给「原贴」入口（用户口径
+ *    「Mod 和修改器也同样，变成下载链弹窗能看到获取贴内容」）。 */
 function slim(x) {
   return {
     id: x.id,
@@ -118,6 +134,7 @@ function slim(x) {
     libId: x.libId,
     matchHow: x.matchHow,
     files: x.files || null,
+    hasPost: hasPost(x),
   };
 }
 
@@ -127,4 +144,4 @@ function matchSlim(opts) {
   return { count: r.count, items: r.items.map(slim) };
 }
 
-module.exports = { ensure, stats, index, byLib, lookup, match, slim, matchSlim };
+module.exports = { ensure, stats, index, byLib, lookup, match, slim, matchSlim, hasPost };

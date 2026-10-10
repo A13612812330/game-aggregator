@@ -109,8 +109,11 @@ function glRow(cat, it, n) {
       + esc(it.note || '这条没有解析到下载链，去源站看') + '">源站</a>'
     : '';
   const canPost = !!it.hasPost;
+  /* ★ v10.51：类名从 `po` 换成通用 `.po-btn` —— 下载弹窗的 Mod/修改器/存档行也要用同一套样式，
+     原先那条 `.emu-card.grp .gl-lk button.po` 是卡内作用域写死的，换作用域就得抄第二份。
+     收成一条通用规则后，视觉规格只有一个来源（铁律 17）；`data-post-open` 三件套不变。 */
   const postBtn = canPost
-    ? '<button class="po" type="button" data-post-open data-src="' + esc(it.src || '')
+    ? '<button class="po-btn" type="button" data-post-open data-src="' + esc(it.src || '')
       + '" data-id="' + esc(it.id || '') + '" title="查看原贴内容（标题 / 正文 / 截图）">原贴</button>'
     : '';
   const lkHtml = '<span class="gl-lk">' + postBtn + two + more + fallback + '</span>';

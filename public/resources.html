@@ -564,9 +564,15 @@
         直接加 hover 底色会贴着字边；加 padding 又不抵消的话整列会往下错 8px。 */
   .emu-card.grp .gl-i.has-post{padding:4px 6px;margin:-4px -6px;border-radius:7px;cursor:pointer}
   .emu-card.grp .gl-i.has-post:hover{background:#F5F7FC}
-  .emu-card.grp .gl-lk button.po{font-family:var(--font);font-size:9.5px;font-weight:750;color:#475569;
-    background:#EEF1F6;border:1px solid #DDE3EC;border-radius:6px;padding:3px 7px;cursor:pointer;transition:.14s}
-  .emu-card.grp .gl-lk button.po:hover{background:#E3E8F1;border-color:#C9D4E8;color:var(--c-t1)}
+  /* ★ v10.51：原贴入口按钮收成**通用类** `.po-btn` —— 它现在跨两个作用域：
+   *   资源页卡内行（`.emu-card.grp` 下，v10.50 建的）与下载弹窗的 Mod/修改器/存档行（v10.51 新建）。
+   *   原先写在 `.emu-card.grp .gl-lk button.po` 下，换个作用域就得抄第二份 ⇒ 收成一条（铁律 17）。
+   *   ⚠️ 通用后它**不再落在卡片族选择器下** ⇒ `check-card-rules.js` 圆角例外表里那条
+   *      `.emu-card.grp .gl-lk button.po` 失效变陈旧，已同步删除（闸门自己会报「已陈旧」）。
+   *   `flex:none` 是给 `.gl-lk` / `.d-dl-it` 两个 flex 容器用的（不许被标题挤扁）。 */
+  .po-btn{font-family:var(--font);font-size:9.5px;font-weight:750;color:#475569;
+    background:#EEF1F6;border:1px solid #DDE3EC;border-radius:6px;padding:3px 7px;cursor:pointer;transition:.14s;flex:none}
+  .po-btn:hover{background:#E3E8F1;border-color:#C9D4E8;color:var(--c-t1)}
   .emu-card.grp .gl-lk a.bd-direct{background:var(--ch-139)}
   .emu-card.grp .gl-lk a.bd-baidu{background:var(--ch-baidu)}
   .emu-card.grp .gl-lk a.bd-xunlei{background:var(--ch-xunlei)}
@@ -991,6 +997,11 @@
   .d-dl-it .t{font-size:11.5px;font-weight:650;color:var(--c-t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .d-dl-it .m{font-size:10px;color:var(--c-t3)}
   .d-dl-it .go{flex:none;font-size:10.5px;font-weight:750;color:var(--c-primary);white-space:nowrap}
+  /* ★ v10.51：这一行从「纯外链」改成「整行可点开原贴」——行内 `.go`（源站 ↗）仍是外链，
+     点击由 `bindPostDelegation` 用 `a[href]` 判据让开，不会「点源站却弹出原贴」。
+     `.po` 是行内那个「原贴」按钮（通用类 `.po-btn`）。 */
+  .d-dl-it.has-post{cursor:pointer}
+  .d-dl-it .po-btn{margin-left:2px}
   .d-dl-links{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--c-border)}
   .d-dl-links a{font-size:10.5px;font-weight:700;color:var(--c-t2);background:#F1F3F8;border-radius:6px;
     padding:3px 8px;text-decoration:none}
@@ -1814,6 +1825,10 @@
   .svf .k a:hover{filter:brightness(.97);border-color:var(--c-border2)}
   .svf .k a.pri{color:#fff;background:var(--c-primary);border-color:transparent}
   .svf .k a.pri:hover{filter:brightness(1.06)}
+  /* ★ v10.51：「原贴」入口与同排的通道链接（`.svf .k a`）**必须同尺寸同圆角** ——
+     一排按钮里混两个规格，肉眼直接能看出来（同 v10.50 在资源页 `.gl-lk` 上踩过的同款问题）。
+     所以这里只覆盖尺寸，颜色/边框仍走通用 `.po-btn`。 */
+  .svf .k button.po-btn{font-size:11px;border-radius:7px;padding:5px 9px}
   /* 📍 存档**位置**二级弹窗（v10.46）。外壳复用 `.dlpop-h` / `.dlpop-b` / `.dlpop-x`
      （见 #svLoc 的 HTML 双类名），这里只写容器本身。
      ★ z-index 定 120：必须**高于**下载弹窗(110) —— 否则从存档模块点开会整个被盖住，
@@ -3524,8 +3539,11 @@ function glRow(cat, it, n) {
       + esc(it.note || '这条没有解析到下载链，去源站看') + '">源站</a>'
     : '';
   const canPost = !!it.hasPost;
+  /* ★ v10.51：类名从 `po` 换成通用 `.po-btn` —— 下载弹窗的 Mod/修改器/存档行也要用同一套样式，
+     原先那条 `.emu-card.grp .gl-lk button.po` 是卡内作用域写死的，换作用域就得抄第二份。
+     收成一条通用规则后，视觉规格只有一个来源（铁律 17）；`data-post-open` 三件套不变。 */
   const postBtn = canPost
-    ? '<button class="po" type="button" data-post-open data-src="' + esc(it.src || '')
+    ? '<button class="po-btn" type="button" data-post-open data-src="' + esc(it.src || '')
       + '" data-id="' + esc(it.id || '') + '" title="查看原贴内容（标题 / 正文 / 截图）">原贴</button>'
     : '';
   const lkHtml = '<span class="gl-lk">' + postBtn + two + more + fallback + '</span>';
@@ -5473,19 +5491,44 @@ function dlUniPaintBody(d) {
   paintDownload();
 }
 
-/** 社区帖行（Mod / 修改器共用；与旧 openModList 的行版式一致） */
+/** 社区帖行（Mod / 修改器共用）
+ *
+ * ★ v10.51 改行为（用户口径：「Mod 和修改器也同样，变成下载链弹窗能看到获取贴内容」）：
+ *   原实现整行是一个 `<a href=源站 target=_blank>` + 「打开帖子 ↗」——
+ *   用户必须先跳到机地、再自己找正文。而**正文本来就在手上**：
+ *   `/api/mods/match` 每条都带 `content`（实测 mod 232~1,014 字、modifier 950~1,014 字），
+ *   只是这里没渲染。这与 v10.50 的 `mods.json.content`、v10.48 的 `official_url` 是**同一个
+ *   「界面缺字段 ≠ 数据源没有」**的第 3 次现场。
+ *   ⇒ 行改成 `<div class="d-dl-it has-post" data-post-open data-src="mod" data-id="...">`：
+ *      · 整行可点 → 复用 v10.50 的 `#postPop`（原地看标题 + 正文 + 截图，正文按原贴布局）；
+ *      · 行尾 `源站 ↗` 仍是外链（原出口一个都没少）。
+ *   ⚠️ 两个必须的配套：
+ *      a) `bindPostDelegation` 里加了 `a[href]` 让行 —— 否则点「源站 ↗」会**同时**弹原贴；
+ *      b) 没有 `content` 的条目**不给原贴入口**（`has-post` 与按钮都不出），
+ *         而不是给一个点开说「没有正文」的空壳 —— 那等于把「没数据」当成「有功能」。
+ *   ★ 为什么 src 写死 `mod`：这些帖子全来自机地 `mods.json`（`kind` 只区分 Mod / 修改器），
+ *     `/api/res/post?src=mod&id=` 就是从同一份文件按 id 取正文 —— 与列表同源，不会两处口径。 */
 function dlModRowsHtml(items, kind) {
   const M = D_MOD_META[kind];
   return items.map((it) => {
     const nets = [...new Set((it.links || []).map((l) => l.kind).filter(Boolean))].slice(0, 3).join(' / ');
     const cn = (it.links || []).length;
     const when = it.ut ? new Date(it.ut * 1000).toISOString().slice(0, 10) : '';
+    const canPost = !!String(it.content || '').trim();
     const meta = [nets || '', cn ? cn + ' 个直链' : '未见直链', when].filter(Boolean).join(' · ');
-    return '<a class="d-dl-it" href="' + esc(it.url || D_JIDI_MODS) + '" target="_blank" rel="noopener">' +
-      '<span class="k' + (kind === 'modifier' ? ' mf' : '') + '">' + esc(M.nm) + '</span>' +
-      '<span class="bd"><span class="t" title="' + esc(it.title || '') + '">' + esc(it.title || '') + '</span>' +
-      '<span class="m">' + esc(meta) + '</span></span>' +
-      '<span class="go">打开帖子 ↗</span></a>';
+    const poBtn = canPost
+      ? '<button class="po-btn" type="button" data-post-open data-src="mod" data-id="' + esc(it.id || '') +
+        '" title="查看原贴内容（标题 / 正文 / 截图）">原贴</button>'
+      : '';
+    return '<div class="d-dl-it' + (canPost ? ' has-post' : '') + '"'
+      + (canPost ? ' data-post-open data-src="mod" data-id="' + esc(it.id || '') + '" role="button" tabindex="0"' : '')
+      + '>'
+      + '<span class="k' + (kind === 'modifier' ? ' mf' : '') + '">' + esc(M.nm) + '</span>'
+      + '<span class="bd"><span class="t" title="' + esc(it.title || '') + '">' + esc(it.title || '') + '</span>'
+      + '<span class="m">' + esc(meta) + '</span></span>'
+      + poBtn
+      + '<a class="go" href="' + esc(it.url || D_JIDI_MODS) + '" target="_blank" rel="noopener noreferrer">源站 ↗</a>'
+      + '</div>';
   }).join('');
 }
 
@@ -5561,13 +5604,21 @@ function svfCard(x) {
   if (f.thunder) ks.push('<a href="' + esc(f.thunder) + '">迅雷链接</a>');
   if (f.ed2k) ks.push('<a href="' + esc(f.ed2k) + '">eD2K 链接</a>');
   if (!ks.length) ks.push('<a class="pri" href="' + esc(x.sourceUrl || '') + '" target="_blank" rel="noopener">去源站页面取 ↗</a>');
+  /* ★ v10.51：与 Mod / 修改器两行**同一口径** —— 这条存档有正文就给「原贴」入口，
+     点了在原位看标题 + 简介 + 安装步骤 + 截图（不跳走、不丢当前这一屏的下载通道）。
+     `hasPost` 由服务端 `savesYx.slim()` 现算（正文照旧不下发，只发这个布尔）。
+     ⚠️ 没有正文时**不给空壳入口** —— 那等于把「没数据」当成「有功能」。 */
+  const poBtn = x.hasPost
+    ? '<button class="po-btn" type="button" data-post-open data-src="yx" data-id="' + esc(x.id || '') +
+      '" title="查看原贴内容（标题 / 简介 / 安装步骤 / 截图）">原贴</button>'
+    : '';
   const meta = [x.date, x.matchHow === 'bracket' ? '书名号匹配' : (x.matchHow === 'prefix' ? '前缀匹配' : '')]
     .filter(Boolean).join(' · ');
   return '<div class="svf"><div class="h"><span class="nm">' + esc(svfTitle(x) || '存档文件') + '</span>' +
     (x.size ? '<span class="sz">' + esc(x.size) + '</span>' : '') + '</div>' +
     (f.fileName ? '<div class="m">文件 <code>' + esc(f.fileName) + '</code></div>' : '') +
     '<div class="m">' + esc(meta) + (x.id ? ' · 源站条目 #' + esc(x.id) : '') + '</div>' +
-    '<div class="k">' + ks.join('') + '</div></div>';
+    '<div class="k">' + poBtn + ks.join('') + '</div></div>';
 }
 
 /** 存档模块：主区 = **可下载的文件**（v10.46 起）。
@@ -6496,7 +6547,18 @@ function bindPostDelegation() {
       return;
     }
     const po = t.closest('[data-post-open]');
-    if (po) { postOpen(po.dataset.src, po.dataset.id); return; }
+    if (po) {
+      /* ★ v10.51：整个 `[data-post-open]` 容器可点之后，**容器内的外链必须让开** ——
+         下载弹窗的 Mod / 修改器行里有「源站 ↗」、存档卡里有「⬇ 直接下载 / 网盘」，
+         不让开就会「点源站同时弹出原贴」（两个弹窗叠在一起）。
+         ★ 判据用 `a[href]` 而不是给每个链接挂 `data-stop`：链接是**渲染时生成**的，
+           挂标记等于要在三处渲染函数里各记得补一次，早晚漏（铁律 17）。
+         ⚠️ 这一条**必须排在 `.gl-lk a` 那条之前**：那里是「行本身可点、通道让开」的另一半，
+           两处是同一个语义，只是容器不同。 */
+      if (t.closest('a[href]')) return;
+      postOpen(po.dataset.src, po.dataset.id);
+      return;
+    }
     /* 卡内整行可点 —— 但下载通道是外链，必须让开（否则点「迅雷」会同时开原贴弹窗） */
     if (t.closest('.gl-lk a')) return;
     const row = t.closest('.gl-i.has-post');

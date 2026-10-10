@@ -387,6 +387,22 @@ async function main() {
       btns.length > 0 && btns.length === rowsHas.length, `${btns.length} vs ${rowsHas.length}`);
     ok('★ v10.50：入口按钮带 data-src / data-id（缺一个就打不开对应那条）',
       btns.length > 0 && btns.every((b) => b.dataset.src && b.dataset.id));
+    /* ★ v10.51：原贴按钮升成**通用类** `.po-btn` —— 下载弹窗的 Mod / 修改器 / 存档行
+       也要用同一套视觉，原先写死在 `.emu-card.grp .gl-lk button.po` 里换作用域就得抄第二份。
+       ⚠️ 这类「改名」最容易留下半成品（按钮出来了、样式没跟），所以样式要**同时**验：
+       通用规则体在读入的 resources.html 里必须真的有，且类名确实换了。 */
+    ok('★★ v10.51：原贴入口用的是通用类 `.po-btn`（不再写死在卡内作用域里）',
+      /* ⚠️ 反向判据用 `classList.contains('po')` 精确判**整串类名**，
+         不能写 `/\bpo\b/` —— `-` 是非单词字符，`\bpo\b` 在 `po-btn` 里**也命中**（实测踩到）。 */
+      btns.length > 0 && btns.every((b) => b.classList.contains('po-btn') && !b.classList.contains('po')),
+      btns.length ? btns[0].className : '无样本');
+    /* 规则体从**服务端实发的那份 resources.html** 里取 —— jsdom 的 `W.document` 拿不到
+       `<style>` 文本的可靠来源，直接 fetch 一次最直白（与线上加载的是同一个文件）。 */
+    const pagesrc = await fetch(BASE + '/resources.html').then((r) => r.text());
+    const poRule = (pagesrc.match(/\.po-btn\{([^}]*)\}/) || [])[1] || '';
+    ok('★★ v10.51：通用类 `.po-btn` 的样式规则体在页面里（只改类名不搬样式 ⇒ 按钮裸奔）',
+      !!poRule && /border-radius:6px/.test(poRule) && /padding:3px 7px/.test(poRule),
+      poRule ? '规则体已取到' : '未命中 .po-btn{');
 
     /* 接口一致性：入口对应的那条**真的**有正文（入口不是摆设） */
     const b0 = btns[0] || null;
