@@ -202,8 +202,8 @@ const j = (o) => JSON.stringify(o);
   await sleep(2600);
   const d1 = await p.evaluate(() => {
     const rows = [...document.querySelectorAll('#smBody .sm-row')];
-    const withChips = rows.filter((r) => r.querySelector('.sm-res-b'));
-    const chips = withChips.length ? [...withChips[0].querySelectorAll('.sm-res-b')] : [];
+    const withChips = rows.filter((r) => r.querySelector('.res-chip'));
+    const chips = withChips.length ? [...withChips[0].querySelectorAll('.res-chip')] : [];
     const rr = chips[0] ? chips[0].getBoundingClientRect() : null;
     return {
       rows: rows.length,
@@ -239,7 +239,7 @@ const j = (o) => JSON.stringify(o);
 
   /* 点「N MOD」chip → 关搜索 + 开抽屉 + 开下载弹窗 + 落在 mod 页签 + 真拉到列表 */
   await p.evaluate(() => {
-    const c = document.querySelector('#smBody .sm-res-b.mod');
+    const c = document.querySelector('#smBody .res-chip.mod');
     if (c) c.click();
   });
   await sleep(3200);

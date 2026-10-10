@@ -420,14 +420,31 @@ function libOpts(req) {
   const bhOnly = String(req.query.bh || '') === '1';
   const pcOnly = String(req.query.pc || '') === '1';
   /* ★ v10.5 横切筛选：库里有「修改器 / 云存档」收录的游戏
-   *   （两个索引库每条都挂 libId，这里用 id 集合做 O(1) 命中） */
+   *   （两个索引库每条都挂 libId，这里用 id 集合做 O(1) 命中）
+   * ★ v10.53：三个**资源维度**筛选（MOD / 修改器 / 存档）+ 一个 MOD 新开关，
+   *   全部改走 `data/res-groups.js` 的聚合层 —— 与卡面上的资源 chip **同源**。
+   *
+   *   为什么换口径（实测对比，2026-10-10）：
+   *     · 旧 `🛠 有修改器` = `xref.trainerIds()`（GCM 清单）→ **2,391 款**
+   *       但卡面上的 `🛠 N 修改器` 来自聚合层（GTrainers 5,510 + GCM 3,683）→ 3,691 款
+   *       ⇒ 1,300 款卡上明明有修改器 chip，却筛不出来。
+   *     · 旧 `💾 有云存档` = `xref.saveIds()`（Ludusavi 存档**位置**）→ **6,274 款**，
+   *       而聚合层能**下**的存档文件只有 1,377 款 —— 筛出来的 5,119 款卡面上
+   *       一个 💾 chip 都没有（v10.46 起「存档给文件不给位置」，位置库已只活在详情弹窗里）。
+   *   ⇒ 统一后：筛选命中 = 卡面有对应 chip，两边不可能再对不上。
+   *     代价是旧的「位置库」筛选没了 —— 它筛的是卡面看不见的维度，已在 v10.53 文档里说明。
+   *   ⚠️ 手游专区 `/emulator.html` 的同类开关**不跟着改**：那边的卡面角标来自
+   *     `xref.flags`，筛选与角标本来就是同源自洽的（口径不同但各自不矛盾），
+   *     要不要统一属于「模块补齐」那批，不混进本版。 */
+  const modOnly = String(req.query.mod || '') === '1';
   const trOnly = String(req.query.tr || '') === '1';
   const svOnly = String(req.query.sv || '') === '1';
   const filters = [];
   if (bhOnly) filters.push((g) => !!bannerhub.lookup(g.title));
   if (pcOnly) filters.push((g) => !!phonecfg.lookup(g.title));
-  if (trOnly) { const set = xref.trainerIds(); filters.push((g) => set.has(g.id)); }
-  if (svOnly) { const set = xref.saveIds(); filters.push((g) => set.has(g.id)); }
+  if (modOnly) { const set = resGroups.libIdsFor('mod'); filters.push((g) => set.has(g.id)); }
+  if (trOnly) { const set = resGroups.libIdsFor('trainers'); filters.push((g) => set.has(g.id)); }
+  if (svOnly) { const set = resGroups.libIdsFor('saves'); filters.push((g) => set.has(g.id)); }
   return {
     sizeMin: req.query.sizeMin,
     sizeMax: req.query.sizeMax,
@@ -1561,13 +1578,21 @@ app.get('/api/library/related', (req, res) => {
 });
 
 // GET /api/library/browse?g=动作冒险&limit=50&offset=0&sort=updated|score|size&sizeMin=&sizeMax=&bh=1
+//
+// ★ v10.53：改用 `withRes` —— 首页「最新收录 / 分类浏览」的卡片从此也带
+//   `res`（本款有多少 MOD / 修改器 / 存档）+ `resId`（计数归属的库内 id）。
+//   为什么不是只挂 `bh`/`pc` 两个手机端来源：卡片上原本只有「📱 可玩」「🎮 实测」
+//   两枚徽标，而**筛选行里已经有 🛠 有修改器 / 💾 有存档 两个开关** ——
+//   筛出来的卡片上却没有任何对应标记，等于「筛出来看不见为什么」。
+//   挂上 `res` 之后，筛选行的每一个开关在卡面上都有对应 chip（同源，见 libOpts 注释）。
+//   ⚠️ `withRes` 内部对全 0 的条目**不挂字段**，所以绝大多数卡片的回包体积不变。
 app.get('/api/library/browse', (req, res) => {
   const g = String(req.query.g || '').trim();
   const sort = ['score', 'size'].includes(String(req.query.sort || '')) ? String(req.query.sort) : 'updated';
   const limit = Math.min(parseInt(req.query.limit || '50', 10) || 50, 100);
   const offset = Math.max(0, parseInt(req.query.offset || '0', 10) || 0);
   const r = gamesDb.browse(g, limit, offset, sort, libOpts(req));
-  res.json({ ok: true, ...r, items: r.items.map(withBh) });
+  res.json({ ok: true, ...r, items: r.items.map(withRes) });
 });
 
 // GET /api/search/all?q=&limit= — ★ 统一全站搜索（端游库 + 手游中心 + 修改器 + 云存档）

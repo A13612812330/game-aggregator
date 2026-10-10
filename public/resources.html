@@ -259,21 +259,33 @@
   .src-badge.sv{color:#0369A1;background:#E0F2FE}
   .sm-row .pill.src-tr{color:#0F766E;background:#ECFDF5}
   .sm-row .pill.ver2{color:#334155;background:#F1F5F9;font-family:var(--font-num);font-weight:750}
-  /* ★ v10.52：搜索结果行里的「资源计数」chip
-   *   搜到游戏本体时顺带说明它有多少 MOD / 修改器 / 存档 —— 数字来自 /api/search/all
-   *   新挂的 `res` 字段（服务端复用 resGroups.countsFor，5 路来源已按游戏聚合，不重做匹配）。
-   *   chip 是**独立按钮**：点它直接进详情并落到对应下载页签，与整行的「查看详情」分开
-   *   （所以 bindSmRows 里必须先判 chip、再判行，否则会同时开抽屉又开弹窗）。
-   *   圆角 7px 属「卡片内部小按钮」，与 `.sm-row .go2` 同类 ⇒ 已登记进
-   *   tools/check-card-rules.js 的 RAD_EXCEPT（不登记会被闸门判成「新增卡片容器」）。 */
-  .sm-row .sm-res{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:3px}
-  .sm-row .sm-res-b{font-family:var(--font);font-size:10.5px;font-weight:750;border-radius:7px;padding:2px 7px;cursor:pointer;transition:.14s;flex:none}
-  .sm-row .sm-res-b.mod{color:#6D28D9;background:#F5F3FF;border:1px solid #DDD6FE}
-  .sm-row .sm-res-b.mod:hover{background:#EDE9FE;border-color:#C4B5FD}
-  .sm-row .sm-res-b.modifier{color:#0F766E;background:#ECFDF5;border:1px solid #A7F3D0}
-  .sm-row .sm-res-b.modifier:hover{background:#D1FAE5;border-color:#6EE7B7}
-  .sm-row .sm-res-b.save{color:#0369A1;background:#E0F2FE;border:1px solid #BAE6FD}
-  .sm-row .sm-res-b.save:hover{background:#BAE6FD;border-color:#7DD3FC}
+  /* ★ v10.52 新增 / ★ v10.53 提升为**通用组件**：资源计数 chip
+   *   （🧩 717 MOD / 🛠 22 修改器 / 💾 104 存档）
+   *
+   *   为什么需要：卡片上原本只有「📱 可玩」「🎮 实测」两枚手机端徽标，
+   *   而这款游戏有多少 MOD / 修改器 / 存档，界面上一个字都没有 —— 实测搜「赛博朋克2077」
+   *   返回 4 个桶的条数，却没说这款实际有 **717 个 MOD**。
+   *   数字来自服务端挂的 `res` 字段（`/api/search/all` 与 `/api/library/browse` 都走 `withRes`，
+   *   内部复用 `data/res-groups.js` 的聚合层，5 路来源已按游戏聚合，不重做匹配）。
+   *
+   *   两个挂载点（**同一份实现**，铁律 17）：
+   *     · 搜索结果行 `.sm-row`（v10.52 起）
+   *     · 首页内容库卡 `.row-card`（v10.53 起）
+   *   ⇒ 选择器**不写卡片族前缀**（`.sm-row .sm-res-b` → `.res-chip`）：
+   *     组件本身与容器无关，谁挂谁用；也让 `tools/check-card-rules.js` 的
+   *     KEY 正则显式收录 `res-chip`，圆角例外仍然是**登记出来的**而不是静默跳过。
+   *
+   *   ⚠️ chip 是**独立按钮**：点是「去这款的 Mod / 存档」，不是「看这款游戏」——
+   *     所以两处绑定都必须 `stopPropagation`（否则抽屉与下载弹窗同开、页签还落空）。
+   *   ⚠️ 只有基础那条带 `border-radius`，`.mod` / `.modifier` / `.save` 三个配色变体只改颜色。 */
+  .res-chips{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px}
+  .res-chip{font-family:var(--font);font-size:10.5px;font-weight:750;border-radius:7px;padding:2px 7px;cursor:pointer;transition:.14s;flex:none}
+  .res-chip.mod{color:#A21CAF;background:#FDF4FF;border:1px solid #F5D0FE}
+  .res-chip.mod:hover{background:#FAE8FF;border-color:#F0ABFC}
+  .res-chip.modifier{color:#0F766E;background:#ECFDF5;border:1px solid #A7F3D0}
+  .res-chip.modifier:hover{background:#D1FAE5;border-color:#6EE7B7}
+  .res-chip.save{color:#0369A1;background:#E0F2FE;border:1px solid #BAE6FD}
+  .res-chip.save:hover{background:#BAE6FD;border-color:#7DD3FC}
   .sm-row .pill.cld{color:#0369A1;background:#E0F2FE}
   /* 云存档结果行直接把「存档路径」亮出来 —— 这是用户搜索时最想看到的信息 */
   .sm-row .pth{font-size:10.5px;color:var(--c-t2);font-family:var(--font-num);line-height:1.3;
@@ -368,6 +380,13 @@
   .bh-toggle.sv-badge:hover{border-color:#0369A1;color:#0369A1}
   .bh-toggle.sv-badge.on{background:linear-gradient(135deg,#0284C7,#0369A1);color:#fff;border-color:transparent;box-shadow:0 3px 10px rgba(3,105,161,.26)}
   .bh-toggle.sv-badge.on:hover{color:#fff}
+  /* ★ v10.53：第五个开关「🧩 有 MOD」—— 与卡面上的 `.res-chip.mod` 同色系（洋红）。
+   *   为什么不是紫：`🎮 有实测记录` 已经是紫（#7C3AED），而两者经常**同卡相邻**出现，
+   *   同色会让「实测」和「MOD」看起来像同一类东西。5 个维度要 5 个能分开的色相。 */
+  .bh-toggle.mod-badge{background:#fff;color:var(--c-t2)}
+  .bh-toggle.mod-badge:hover{border-color:#A21CAF;color:#A21CAF}
+  .bh-toggle.mod-badge.on{background:linear-gradient(135deg,#A21CAF,#D946EF);color:#fff;border-color:transparent;box-shadow:0 3px 10px rgba(162,28,175,.26)}
+  .bh-toggle.mod-badge.on:hover{color:#fff}
 
   /* 卡片上的「📱 可玩」徽标 */
   .bh-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:750;padding:1.5px 6px;border-radius:5px;background:linear-gradient(135deg,rgba(230,65,93,.14),rgba(249,115,22,.14));color:#C2410C;white-space:nowrap;flex:none}
@@ -1012,6 +1031,20 @@
   .d-dl-it .t{font-size:11.5px;font-weight:650;color:var(--c-t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .d-dl-it .m{font-size:10px;color:var(--c-t3)}
   .d-dl-it .go{flex:none;font-size:10.5px;font-weight:750;color:var(--c-primary);white-space:nowrap}
+  /* ★ v10.53：GTrainers 条目行（修改器 / 存档两个页签共用）。
+     为什么用橙色 `k.gt`：GT 是「第三方文件站」，与机地社区帖（青绿）/ GCM 清单（琥珀）
+     要在**一眼**之内分开 —— 三者的可信度与风险不同（GCM 那条明确写着「不含下载地址」）。 */
+  .d-dl-it .k.gt{color:#7C2D12;background:#FFEDD5}
+  /* 下载通道放在 `.bd` 的第三行（**不是**行尾 `.go`）：
+     一条 GT 条目常带 2~4 个通道，全塞行尾会在窄屏把标题挤没（`.go` 是 `flex:none`）。 */
+  .d-dl-it .dl-res-lk{display:flex;flex-wrap:wrap;gap:5px;margin-top:3px}
+  .d-dl-it .dl-res-lk a{font-size:10.5px;font-weight:750;color:var(--c-primary);
+    background:rgba(46,107,255,.08);border:1px solid rgba(46,107,255,.22);border-radius:6px;
+    padding:1.5px 8px;white-space:nowrap;text-decoration:none;transition:.14s}
+  .d-dl-it .dl-res-lk a:hover{background:var(--c-primary);color:#fff;border-color:var(--c-primary)}
+  .d-dl-it .dl-res-lk a.pri{color:#fff;background:linear-gradient(135deg,#0F766E,#14B8A6);border-color:transparent}
+  .d-dl-it .dl-res-lk a.pri:hover{background:linear-gradient(135deg,#115E59,#0D9488)}
+  .d-dl-it .dl-res-lk a.src{color:var(--c-t2);background:#fff;border-color:var(--c-border)}
   /* ★ v10.51：这一行从「纯外链」改成「整行可点开原贴」——行内 `.go`（源站 ↗）仍是外链，
      点击由 `bindPostDelegation` 用 `a[href]` 判据让开，不会「点源站却弹出原贴」。
      `.po` 是行内那个「原贴」按钮（通用类 `.po-btn`）。 */
@@ -1796,8 +1829,11 @@
   .dlm i{font-style:normal;font-family:var(--font-num);font-size:10.5px;font-weight:800;
     color:var(--c-t3);background:#fff;border-radius:999px;padding:1px 6px;border:1px solid var(--c-border)}
   .dlm.on i{color:var(--c-primary);border-color:rgba(46,107,255,.3)}
-  /* 第三方（GCM 元数据）段：与社区帖段视觉上分开 —— 前者没有下载地址，不能长得像能点 */
-  .dl-gcm{margin-top:14px;padding-top:11px;border-top:1px dashed var(--c-border2)}
+  /* 第三方（GCM 元数据）段：与社区帖段视觉上分开 —— 前者没有下载地址，不能长得像能点
+     ★ v10.53：同一条分界线复用到 `.dl-agg`（聚合层的 GTrainers 段）——
+     两段都是「机地之外的来源」，排版意图一致；类名分开是因为语义不同
+     （一个明确**没有**下载链，另一个**有**真直链），将来要分别调样式时不用先拆类。 */
+  .dl-gcm,.dl-agg{margin-top:14px;padding-top:11px;border-top:1px dashed var(--c-border2)}
   .dlpop .emu-loading{padding:22px 4px;text-align:center;font-size:12.5px;color:var(--c-t2)}
   .dlpop .emu-empty{padding:20px 4px;text-align:center;font-size:12.5px;line-height:1.8;color:var(--c-t3)}
   .dl-note+.dl-sv-list{margin-top:9px}
@@ -2420,11 +2456,21 @@ let curSort = 'updated';
 let curSize = 'all';    // SIZES[].k
 let curBh = false;      // 仅看有手机模拟器配置（BannerHub 社区）的游戏
 let curPc = false;      // 仅看本站实测库里有记录的游戏（phonecfg）
-let curTr = false;      // ★ v10.5 仅看「修改器」库收录到的游戏
-let curSv = false;      // ★ v10.5 仅看「云存档」库收录到的游戏
+let curMod = false;     // ★ v10.53 仅看机地社区 MOD 收录到的游戏（端游资源聚合层）
+let curTr = false;      // ★ v10.5 仅看有修改器的游戏（★ v10.53 起口径见 filterQuery 注释）
+let curSv = false;      // ★ v10.5 仅看有存档的游戏（★ v10.53 起口径见 filterQuery 注释）
 let offset = 0, total = 0, listEl = null, loading = false;
 
-/** 当前筛选 → 附加查询串（容量区间 + 仅手机可玩 + 仅有实测记录 + 有修改器/云存档） */
+/** 当前筛选 → 附加查询串（容量区间 + 五个只看开关）
+ *
+ *  ★ v10.53：`🛠 有修改器 / 💾 有存档` 的**口径换了**，并新增 `🧩 有 MOD`。
+ *  三者现在都走 `data/res-groups.js` 的聚合层，与卡面上的资源 chip **同源**：
+ *      🧩 有 MOD      → 264 款（机地社区 MOD）
+ *      🛠 有修改器     → 3,691 款（旧口径 2,391 款 = 只有 GCM 清单，漏掉 GTrainers 的 1,300 款）
+ *      💾 有存档      → 1,377 款（旧口径 6,274 款 = Ludusavi 存档**位置**，卡面无法体现）
+ *  ⇒ 判据从「库里有没有这类记录」改成「**能不能下到**、卡上有没有 chip」。
+ *  为什么必须换：否则筛出来的卡片上没有任何对应标记（旧 sv 口径 5,119 款如此），
+ *  而卡上有 🛠 chip 的 1,300 款又筛不到 —— 用户看到的就是「筛选和卡面各说各话」。 */
 function filterQuery() {
   const s = SIZES.find((x) => x.k === curSize) || SIZES[0];
   let q = '';
@@ -2432,6 +2478,7 @@ function filterQuery() {
   if (s.max != null) q += '&sizeMax=' + s.max;
   if (curBh) q += '&bh=1';
   if (curPc) q += '&pc=1';
+  if (curMod) q += '&mod=1';
   if (curTr) q += '&tr=1';
   if (curSv) q += '&sv=1';
   return q;
@@ -2440,7 +2487,10 @@ function filterQuery() {
  *  与上方「分类」行同语言：行首标签定名，控件组横排，结果计数贴右。
  *  ★ v10.5：开关从「容量」行拆出来独占「筛选」行 —— 四个开关挤在容量行里会溢出换行，
  *  行内出现半行空档、读起来像排版事故；单独成行既对齐手机专区的分行结构，
- *  也让「筛选」这件事有了名字。 */
+ *  也让「筛选」这件事有了名字。
+ *  ★ v10.53：新增第五个开关「🧩 有 MOD」。五个开关在**宽屏**（≥1024）仍是一行
+ *  （实测见 tools/test-filter-layout.js）；窄屏按既有规则在行内折行。
+ *  开关顺序＝卡面 chip 的出现顺序：手机是「怎么玩」两枚，后三个是「有什么可下」。 */
 function filterBarHtml() {
   return `<div class="filter-bar">
     <div class="filter-row">
@@ -2457,8 +2507,9 @@ function filterBarHtml() {
       <span class="filter-lb">筛选</span>
       <button class="bh-toggle ${curBh ? 'on' : ''}" id="bhToggle" type="button" title="只看有 BannerHub 社区模拟器配置的游戏">📱 社区有配置</button>
       <button class="bh-toggle pc-badge ${curPc ? 'on' : ''}" id="pcToggle" type="button" title="只看本站实测库里有记录的 PC 游戏">🎮 有实测记录</button>
-      <button class="bh-toggle tr-badge ${curTr ? 'on' : ''}" id="trToggle" type="button" title="只看「修改器」库里收录到的游戏（按端游库 id 关联）">🛠 有修改器</button>
-      <button class="bh-toggle sv-badge ${curSv ? 'on' : ''}" id="svToggle" type="button" title="只看「云存档」库里查到存档位置的游戏（按端游库 id 关联）">💾 有云存档</button>
+      <button class="bh-toggle mod-badge ${curMod ? 'on' : ''}" id="modToggle" type="button" title="只看机地社区 MOD 收录到的游戏（按端游库 id 关联）">🧩 有 MOD</button>
+      <button class="bh-toggle tr-badge ${curTr ? 'on' : ''}" id="trToggle" type="button" title="只看「能下到」修改器的游戏：GTrainers 真直链 + GCM 清单（按端游库 id 关联）">🛠 有修改器</button>
+      <button class="bh-toggle sv-badge ${curSv ? 'on' : ''}" id="svToggle" type="button" title="只看「能下到」存档文件的游戏：游侠存档 + GTrainers（按端游库 id 关联）">💾 有存档</button>
       <span class="fx-sp"></span>
     </div>
   </div>`;
@@ -2471,8 +2522,9 @@ function filterCountText(n) {
   if (s && s.k !== 'all') bits.push(s.nm);
   if (curBh) bits.push('📱 社区有配置');
   if (curPc) bits.push('🎮 有实测记录');
+  if (curMod) bits.push('🧩 有 MOD');
   if (curTr) bits.push('🛠 有修改器');
-  if (curSv) bits.push('💾 有云存档');
+  if (curSv) bits.push('💾 有存档');
   return (bits.length ? bits.join(' · ') + ' · ' : '') + `命中 ${n.toLocaleString()} 款`;
 }
 
@@ -2516,6 +2568,7 @@ function rowCard(it) {
       <div class="tt"><h3>${esc(n.zh)}</h3><span class="src-badge ${SRC[it.source] ? SRC[it.source].cls : 'xd'}">${SRC[it.source] ? SRC[it.source].nm : 'XDGAME'}</span></div>
       ${n.en ? `<div class="en">${esc(n.en)}</div>` : ''}
       <div class="meta">${meta.join('')}</div>
+      ${resChips(it)}
     </div>
     <span class="go">查看 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
   </article>`;
@@ -2564,7 +2617,11 @@ async function renderList(reset) {
     const pt = $('#pcToggle'); if (pt) pt.addEventListener('click', () => {
       curPc = !curPc; offset = 0; renderList(true);
     });
-    /* ★ v10.5 两个横切筛选：库里有修改器 / 库里有云存档（按钮宽度恒定，只切 on 态） */
+    /* ★ v10.5 三个横切筛选：库里有 MOD / 修改器 / 存档（按钮宽度恒定，只切 on 态）
+     *   ★ v10.53：`🧩 有 MOD` 为新增；后两个口径换到资源聚合层（见 filterQuery 注释）。 */
+    const mt = $('#modToggle'); if (mt) mt.addEventListener('click', () => {
+      curMod = !curMod; offset = 0; renderList(true);
+    });
     const tt = $('#trToggle'); if (tt) tt.addEventListener('click', () => {
       curTr = !curTr; offset = 0; renderList(true);
     });
@@ -2586,7 +2643,8 @@ async function renderList(reset) {
       lastDateShown = null;
       const c = $('#listCount'); if (c) c.textContent = `共 ${total.toLocaleString()} 款`;
       const fc = $('#filterCount'); if (fc) fc.textContent = filterCountText(total);
-      listEl.innerHTML = items.length ? renderBatch() : `<div class="empty"><div class="big">📂</div>当前筛选下暂无收录<br><span class="note" style="font-size:12px">试试放宽容量区间或取消「📱 社区有配置」「🎮 有实测记录」</span></div>`;
+      /* ★ v10.53：空态提示不再逐个点名开关（开关从 4 个涨到 5 个，点名单会越长越假）。 */
+      listEl.innerHTML = items.length ? renderBatch() : `<div class="empty"><div class="big">📂</div>当前筛选下暂无收录<br><span class="note" style="font-size:12px">试试放宽容量区间，或关掉「筛选」行里的任一开关</span></div>`;
       offset = items.length;
     } else {
       listEl.insertAdjacentHTML('beforeend', renderBatch());
@@ -2905,11 +2963,12 @@ function openDetailFromSearch(el) {
  *     先开弹窗会被随后的一次 #drawerBody 重绘抢走层级。 */
 async function openResTab(id, title, tab) {
   if (!id) { toast('这一项未关联本地端游库，暂无资源入口'); return; }
+  /* 搜索弹窗里点 chip：先把搜索态存进快照并关掉弹窗（返回时能复原），
+     再走与首页卡 chip **同一个**落点函数（gotoResTab）。 */
   const body = $('#smBody');
   smSnapshot = { q: (lastQ || $('#searchInput').value.trim()), html: body.innerHTML, scroll: body.scrollTop };
   closeSearch();
-  await openDetailById(id, title);
-  openUniDownload({ id: String(id), title: String(title || ''), tab });
+  await gotoResTab(id, title, tab);
 }
 const QUICK_WORDS = ['艾尔登法环', '赛博朋克2077', '只狼', '巫师3', '剑星', '荒野大镖客', 'GTA5', '生化危机4', '死亡搁浅'];
 function lockBody() { document.body.style.overflow = 'hidden'; }
@@ -2976,21 +3035,20 @@ function paintSearchHome() {
 }
 function quickSearch(k) { const inp = $('#searchInput'); inp.value = k; $('#smClear').classList.remove('hidden'); doSearch(); }
 /* 弹窗内统一结果行（联想 / 本地命中 / 源站实时共用同一渲染） */
-/* ★ v10.52：搜索结果行里的「资源计数」chip
- *   为什么加：搜索的 4 个桶（端游库 / 手游中心 / 修改器 / 云存档）**没有任何一个**
- *   回答「这款游戏有多少 MOD / 存档」。实测搜「赛博朋克2077」返回 pc 2 / 手游 1 /
- *   修改器 3 / 云存档 1 —— 而这款实际有 **717 个 MOD**，结果里一个字都没出现。
- *   `it.res` 由服务端 `/api/search/all` 挂上（带孪生兜底，所以机地那条也拿得到 XD 的数字）。
+/* ★ v10.52 新增 / ★ v10.53 提升为通用组件：资源计数 chip（🧩 N MOD / 🛠 N 修改器 / 💾 N 存档）
+ *
+ *   挂载点：搜索结果行 `.sm-row`、首页内容库卡 `.row-card`（样式与理由见 CSS 里 `.res-chips` 那段）。
+ *   `it.res` / `it.resId` 由服务端挂上 —— `/api/search/all` 与 `/api/library/browse` 都走 `withRes`。
  *   ⚠️ 缺字段 / 全 0 一律不渲染 —— 「没有 chip」与「这一区空白」对用户是同一个意思，
- *     留个空 div 只是噪声。
- *   ⚠️ chip 带 data-res-tab，点击由 bindSmRows 单独接管（**不**复用整行的「查看详情」）——
- *     两者行为不同：整行是「看这款游戏」，chip 是「直接去它的 Mod / 存档」。 */
-const SM_RES = [
+ *     留个空 div 只是噪声；服务端也据此**不挂字段**（两边判据一致）。
+ *   ⚠️ chip 是**独立按钮**（不是「看这款游戏」，是「直接去它的 Mod / 存档」）：
+ *     两个挂载点的绑定都必须 `stopPropagation`，否则抽屉与下载弹窗同时开。 */
+const RES_CHIPS = [
   ['mod', 'mod', '🧩', 'MOD'],
   ['trainers', 'modifier', '🛠', '修改器'],
   ['saves', 'save', '💾', '存档'],
 ];
-function smResChips(it) {
+function resChips(it) {
   const r = it && it.res;
   if (!r) return '';
   /* ★ `resId` 优先：计数**归属**的那条库内 id（服务端带出），与显示条目的 id 可能不同 ——
@@ -2998,10 +3056,18 @@ function smResChips(it) {
    *   拿显示条目的 id 去开弹窗，`/api/mods/match?id=jidi-3277800` 会查空
    *   （只能靠名称模糊兜底撞回来，那是运气不是设计）。 */
   const rid = it.resId || it.id || '';
-  const bits = SM_RES.filter(([k]) => Number(r[k]) > 0).map(([k, tab, ic, nm]) =>
-    `<button type="button" class="sm-res-b ${tab}" data-res-tab="${tab}"` +
+  const bits = RES_CHIPS.filter(([k]) => Number(r[k]) > 0).map(([k, tab, ic, nm]) =>
+    `<button type="button" class="res-chip ${tab}" data-res-tab="${tab}"` +
     ` data-res-id="${esc(rid)}" data-res-title="${esc(it.title || '')}">${ic} ${Number(r[k])} ${nm}</button>`);
-  return bits.length ? `<div class="sm-res">${bits.join('')}</div>` : '';
+  return bits.length ? `<div class="res-chips">${bits.join('')}</div>` : '';
+}
+/* ★ v10.53：chip 的**唯一**点击落点 —— 两处挂载点（搜索行 / 首页卡）共用一条路。
+ *   顺序不能颠倒：先 `await openDetailById`（抽屉要先拿到这款游戏，弹窗靠它取 id），
+ *   再 `openUniDownload` 落到指定页签。 */
+async function gotoResTab(id, title, tab) {
+  if (!id) { toast('这一项未关联本地端游库，暂无资源入口'); return; }
+  await openDetailById(id, title);
+  openUniDownload({ id: String(id), title: String(title || ''), tab });
 }
 function smRow(it) {
   const n = splitName(it.title);
@@ -3013,7 +3079,7 @@ function smRow(it) {
   const s = SRC[it.source] || { nm: 'XDGAME', cls: 'xd' };
   return `<div class="sm-row" data-url="${esc(it.url)}" data-fb="${rankFb(it)}">
     ${it.cover ? `<img src="${esc(it.cover)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<span class="ph2">${esc(n.zh.charAt(0))}</span>`}
-    <div class="bd"><div class="t">${esc(n.zh)}</div>${n.en ? `<div class="en">${esc(n.en)}</div>` : ''}<div class="m">${meta.join('')}</div>${smResChips(it)}</div>
+    <div class="bd"><div class="t">${esc(n.zh)}</div>${n.en ? `<div class="en">${esc(n.en)}</div>` : ''}<div class="m">${meta.join('')}</div>${resChips(it)}</div>
     <span class="src-badge ${s.cls}">${s.nm}</span>
     <span class="go2">查看详情 →</span>
   </div>`;
@@ -3094,8 +3160,10 @@ function smMobileRow(it) {
 function bindSmRows() {
   /* ★ v10.52：资源计数 chip 必须**最先**挂、并且 stopPropagation ——
      它长在 `.sm-row` 里面，不拦住的话行那层的「查看详情」会一起触发：
-     结果是抽屉和下载弹窗同时开，而弹窗还落不到指定页签。 */
-  $$('#smBody .sm-res-b').forEach((b) => b.addEventListener('click', (e) => {
+     结果是抽屉和下载弹窗同时开，而弹窗还落不到指定页签。
+     ★ v10.53：类名从 `.sm-res-b` 提升为通用 `.res-chip`（首页卡也用同一组件）；
+     走 `openResTab`（搜索态的存档/复原也归它管），与首页卡的 `gotoResTab` 共用同一个落点。 */
+  $$('#smBody .res-chip').forEach((b) => b.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
     openResTab(b.dataset.resId, b.dataset.resTitle, b.dataset.resTab);
@@ -3326,6 +3394,14 @@ function toggleAutoLive(el) {
   if (el.checked && lastQ) searchLive(lastQ);
 }
 function bindRowCards(root) {
+  /* ★ v10.53：资源 chip 必须**先挂** + `stopPropagation` —— 它长在 `.row-card` 内部，
+     不拦住的话卡片那层的 `openDetail` 会一起触发：抽屉与下载弹窗同开、页签还落空。
+     （与 v10.52 搜索行里 `.res-chip` 的处理同一条规则，两处都写在各自绑定的最前面。） */
+  $$('.res-chip', root || document).forEach((b) => b.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    gotoResTab(b.dataset.resId, b.dataset.resTitle, b.dataset.resTab);
+  }));
   $$('.row-card', root || document).forEach(c => c.addEventListener('click', () => openDetail(c.dataset.url, c.dataset.fb)));
 }
 
@@ -5331,23 +5407,31 @@ async function dlUniLoad(k) {
       st.data.body = d;
       st.cnt.body = d.links;
     } else if (k === 'mod' || k === 'modifier') {
-      const [community, gcm] = await Promise.all([
+      /* ★ v10.53：修改器页签多取一路 **GTrainers**（聚合层）—— 见 dlUniFetchGt 注释。
+         `mod` 页签不取：聚合层的 mod 分区本来就只有机地社区帖一个来源（GT 只进存档/修改器）。 */
+      const [community, gcm, gtr] = await Promise.all([
         dlUniFetchMods(st.ctx, k),
         k === 'modifier' ? dlUniFetchGcm(st.ctx) : Promise.resolve([]),
+        k === 'modifier' ? dlUniFetchGt(st.ctx, 'trainers') : Promise.resolve([]),
       ]);
-      st.data[k] = { community, gcm };
-      st.cnt[k] = community.count + gcm.length;
+      st.data[k] = { community, gcm, gtr };
+      /* 角标 = 三个来源之和。★ v10.53 起这个数**与卡面 chip / 首页筛选完全同源**
+         （都出自 data/res-groups.js），不会再出现「卡上写 3、点进去 1 条」。 */
+      st.cnt[k] = community.count + gcm.length + gtr.length;
     } else {
       /* ★ v10.46：存档 = 两条线并行取（文件 / 位置），互不阻塞 ——
-         某一条挂了另一条照样能画，不会出现「文件接口慢就把整页卡在加载态」。 */
-      const [files, loc] = await Promise.all([
+         某一条挂了另一条照样能画，不会出现「文件接口慢就把整页卡在加载态」。
+         ★ v10.53：再加第三条 **GTrainers 存档**（聚合层），同样并行、同样失败不拖垮整页。 */
+      const [files, loc, gts] = await Promise.all([
         dlUniFetchSaveFiles(st.ctx),
         dlUniFetchSaveLoc(st.ctx),
+        dlUniFetchGt(st.ctx, 'saves'),
       ]);
-      st.data.save = { files, loc };
+      st.data.save = { files, loc, gts };
       /* 页签角标只认**文件数**：模块主区就是文件，把位置条数加进来会 over-claim
-         （用户看到「12」点进去只有 2 个能下载，剩下 10 条是路径） */
-      st.cnt.save = files.count;
+         （用户看到「12」点进去只有 2 个能下载，剩下 10 条是路径）。
+         ★ v10.53 起 = 游侠文件 + GTrainers 文件 —— 与卡面 `💾 N 存档` 同一个数。 */
+      st.cnt.save = files.count + gts.length;
     }
   } catch (e) {
     st.data[k] = { error: String((e && e.message) || e) };
@@ -5443,6 +5527,33 @@ async function dlUniFetchMods(ctx, kind) {
   return { items, count: (j && j.count) || items.length, error: (j && j.error) || null };
 }
 
+/** ★ v10.53：聚合层的 GTrainers 条目行 —— 修改器 / 存档两个页签**共用一处**（铁律 17）。
+ *  形状来自 `/api/res/game` 的 `slimItem`（见 data/res-groups.js 的注释）：
+ *  `{ src, cat, id, title, size, date, downloads, links:[{label,url,cls}], page, note, srcLabel }`。
+ *  ⚠️ 下载通道排在 `.bd` 的第三行而不是行尾 `.go`：GT 一条常有 2~4 个通道，
+ *     塞行尾会把标题挤没（`.go` 是 `flex:none`，窄屏直接溢出）。 */
+function dlResRowsHtml(items) {
+  return items.map((x) => {
+    const links = (x.links || []).filter((l) => l.ch !== 'src');
+    const ks = links.map((l, i) => '<a' + (i === 0 ? ' class="pri"' : '') +
+      ' href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer">' +
+      (i === 0 ? '⬇ ' : '') + esc(l.label || '下载') + ' ↗</a>');
+    if (x.page) ks.push('<a class="src" href="' + esc(x.page) + '" target="_blank" rel="noopener noreferrer">源站 ↗</a>');
+    return '<div class="d-dl-it"><span class="k gt">GT</span>' +
+      '<span class="bd"><span class="t" title="' + esc(x.title || '') + '">' + esc(x.title || '') + '</span>' +
+      '<span class="m">' + esc(x.srcLabel || 'GTrainers') + (x.note ? ' · ' + esc(x.note) : '') + '</span>' +
+      '<span class="dl-res-lk">' + ks.join('') + '</span></span></div>';
+  }).join('');
+}
+
+/** 聚合层段落的外壳（标题 + 免责/说明 + 行）。两个页签共用。 */
+function dlResSection(items) {
+  return '<div class="dl-agg"><div class="dl-note">另有 <b>' + items.length +
+    '</b> 个来自 <b>GTrainers</b> 的文件（<b>真实文件直链</b>，无需注册、无需网盘客户端）' +
+    ' · <a href="https://gtrainers.com/" target="_blank" rel="noopener">gtrainers.com ↗</a></div>' +
+    dlResRowsHtml(items) + '</div>';
+}
+
 /** ②b 修改器模块的第三方段落：Game Cheats Manager 元数据（**没有下载地址**） */
 async function dlUniFetchGcm(ctx) {
   const t = String(ctx.title || '').trim();
@@ -5450,6 +5561,37 @@ async function dlUniFetchGcm(ctx) {
   try {
     const j = await fetch(api('/api/trainers/match?t=' + encodeURIComponent(t))).then((r) => r.json());
     return (j && j.items) || [];
+  } catch (e) { return []; }
+}
+
+/** ★ v10.53：聚合层里的 **GTrainers** 条目（修改器 / 存档两个页签都要）。
+ *
+ *  为什么必须补这一步（实测，2026-10-10）：
+ *    `data/res-groups.js`（v10.47）把 5 路来源按游戏聚合之后，
+ *    **卡面 chip / 搜索行 / 首页筛选 / 资源页 / 详情抽屉** 五处都认 GTrainers，
+ *    只有**这个下载弹窗**还在按老口径各取各的：
+ *      · 修改器页签 = 机地社区帖（`/api/mods/match`）+ GCM 清单（`/api/trainers/match`）
+ *      · 存档页签   = 游侠补丁网（`/api/saves-yx/match`）
+ *    实测后果（按库内 id 能对应上的组统计）：
+ *      · 「🛠 有修改器」3,691 款里 **1,300 款（35.2%）只有 GTrainers** ⇒ chip 点进来是空页签
+ *      · 「💾 有存档」1,377 款里 **842 款（61.1%）只有 GTrainers**  ⇒ 同上
+ *    ⇒ 这是「界面缺字段 ≠ 数据源没有」的第 5 次现场（前四次 v10.48 / v10.50 / v10.51 / v10.52）：
+ *      数据早在聚合层里，只是这个消费者没接上去。
+ *
+ *  ⚠️ 只取 `src === 'gt'`：机地帖（有「原贴」入口）与 GCM（要写明「不含下载地址」）
+ *     各自有专属渲染，一起取回来会渲染两遍。
+ *  ⚠️ 失败返回空数组而不是抛出：GT 段只是**增量**，取不到不该把整个页签变成错误页
+ *     （与 `dlUniFetchGcm` 同一策略）。 */
+async function dlUniFetchGt(ctx, cat) {
+  const id = String(ctx.id || '').trim();
+  const t = String(ctx.title || '').trim();
+  if (!id && !t) return [];
+  try {
+    const qs = 'limit=60' + (id ? '&id=' + encodeURIComponent(id) : '') +
+      (t ? '&t=' + encodeURIComponent(t) : '');
+    const j = await fetch(api('/api/res/game?' + qs)).then((r) => r.json());
+    const items = (j && j.items && j.items[cat]) || [];
+    return items.filter((x) => x && x.src === 'gt');
   } catch (e) { return []; }
 }
 
@@ -5606,12 +5748,16 @@ function dlUniPaintMod(d, kind) {
     return;
   }
   const c = d.community || { items: [], count: 0 };
+  const gtr = d.gtr || [];
   const out = [];
   /* 模块说明先摆出来：「修改器」与「Mod」的风险差异是用户决策要用到的信息 */
   if (M.hint) out.push('<div class="dl-note" style="margin:0 0 8px">' + esc(M.hint) + '</div>');
   if (!c.items.length) {
-    out.push('<div class="dlpop-empty">这款游戏在机地社区没有收录 ' + M.nm +
-      '<br><span style="font-size:11.5px">可以点下面的按钮到机地 MOD / 修改器区自己搜</span></div>');
+    /* ★ v10.53：机地没有、但聚合层有 GTrainers 时**不能**说「没有收录」——
+       下面的 GT 段马上就会列出条目，空态文案会自相矛盾（实测踩到的正是这一格）。 */
+    out.push('<div class="dlpop-empty">这款游戏在<span style="white-space:nowrap">机地社区</span>没有收录 ' + M.nm +
+      (gtr.length ? '' : '<br><span style="font-size:11.5px">可以点下面的按钮到机地 MOD / 修改器区自己搜</span>') +
+      '</div>');
   } else {
     out.push('<div class="dl-note">机地社区共 <b>' + c.count + '</b> 条 ' + M.nm +
       ' 帖（本页铺 ' + c.items.length + ' 条）· 点任意一条去源站帖子取件</div>');
@@ -5636,6 +5782,9 @@ function dlUniPaintMod(d, kind) {
           (meta ? '<span class="m">' + esc(meta) + '</span>' : '') + '</span></div>';
       }).join('') + '</div>');
   }
+  /* ★ v10.53：聚合层的 GTrainers 段（排在 GCM 段之后、模块出口链接**之前**）——
+     出口是「去别处找」，内容是「已经找到了」；把内容排在出口之后会被读成「这一屏到此为止」。 */
+  if (kind === 'modifier' && gtr.length) out.push(dlResSection(gtr));
   out.push('<div class="d-dl-links">' + dModLinks() + '</div>');
   body.innerHTML = out.join('');
 }
@@ -5693,37 +5842,50 @@ function svfCard(x) {
 function dlUniPaintSave(d) {
   const body = $('#dlBody');
   const files = (d && d.files) || { count: 0, items: [] };
+  const gts = (d && d.gts) || [];
   const loc = (d && d.loc) || null;
   const items = files.items || [];
   const locN = loc ? ((loc.paths || []).length + (loc.regs || []).length) : 0;
   const out = [];
-  out.push('<div class="dl-sv-head"><span class="t">💾 存档文件 <b>' + items.length + '</b> 个</span>' +
+  /* ★ v10.53：页头数字 = **游侠文件 + GTrainers 文件**，与卡面 `💾 N 存档`
+     （`dlUniLoad` 的 `st.cnt.save`）逐字同源 —— 改前卡上写 5、点进来只有 0 条就是这个缺口。 */
+  out.push('<div class="dl-sv-head"><span class="t">💾 存档文件 <b>' + (items.length + gts.length) + '</b> 个</span>' +
     '<button class="dl-sv-loc" type="button" data-dl-svloc="1">📍 存档位置' +
     (locN ? '（' + locN + '）' : '') + '</button></div>');
+  /* ★ v10.53：空态判据从「游侠没文件」放宽成「两路都没有」——
+     实测 842/1377（61.1%）的「💾 有存档」游戏**只有 GTrainers**，
+     若仍按老判据早退，这些游戏点进来正是「卡上有数、页里空白」。 */
   if (!items.length) {
     out.push('<div class="dlpop-empty">' +
       (files.error ? '存档文件索引读取失败：' + esc(files.error)
         : '游侠补丁网的存档区里没有这款游戏的可下载存档') +
-      '<br><span style="font-size:11.5px">存档区按游戏名匹配，冷门 / 新发售的游戏可能还没人上传；' +
-      '也可以点右上角看<b>本机存档位置</b>，或去存档库按名搜</span></div>');
+      (gts.length ? '' : '<br><span style="font-size:11.5px">存档区按游戏名匹配，冷门 / 新发售的游戏可能还没人上传；' +
+        '也可以点右上角看<b>本机存档位置</b>，或去存档库按名搜</span>') + '</div>');
+  } else {
+    out.push('<div class="dl-note">来源 <b>游侠补丁网 · 存档区</b>。' +
+      '「直接下载」是源站文件直链，<b>免登录、免网盘客户端</b>；网盘 / 迅雷 / eD2K 是同一份文件的备用通道，' +
+      '哪个通用哪个。<b>覆盖前先退出游戏并备份原存档</b>。</div>');
+    const all = !!(dlUni && dlUni.svfAll);
+    const shown = all ? items : items.slice(0, SVF_CAP);
+    out.push('<div class="dl-svf-list">' + shown.map((x) => svfCard(x)).join('') + '</div>');
+    /* 展开 / 收起（与「本体」模块的 `data-dl-all` 同款交互：数据已在手上，不再发请求） */
+    if (items.length > SVF_CAP) {
+      out.push('<div class="d-dl-links">' + (all
+        ? '<button type="button" class="dl-more" data-dl-svf="less">收起，只看前 ' + SVF_CAP + ' 条</button>'
+        : '<button type="button" class="dl-more" data-dl-svf="all">展开全部 ' + items.length +
+          ' 条（已显示前 ' + SVF_CAP + ' 条）</button>') + '</div>');
+    }
+  }
+  /* ★ v10.53：聚合层 GTrainers 存档段（与修改器页签共用 `dlResSection`，铁律 17）——
+     排在出口链接**之前**：出口是「去别处找」，内容是「已经找到了」。
+     ⚠️ 与游侠文件**不合并去重**：两边的「同一份存档」没有可靠判据（文件名不同、打包格式不同），
+        硬去重会把两条不同的通道砍掉一条。两边各自的来源说明已经写清，让用户自己选。 */
+  if (gts.length) out.push(dlResSection(gts));
+  /* 出口链接：**游侠没有文件时**照旧给（改前行为不变）—— GT 段插在它前面 */
+  if (!items.length) {
     out.push('<div class="d-dl-links">' +
       '<a href="https://patch.ali213.net/showclass/class5_1.html" target="_blank" rel="noopener">游侠存档区 ↗</a>' +
       '<a href="/resources.html#sv">存档库</a></div>');
-    body.innerHTML = out.join('');
-    return;
-  }
-  out.push('<div class="dl-note">来源 <b>游侠补丁网 · 存档区</b>。' +
-    '「直接下载」是源站文件直链，<b>免登录、免网盘客户端</b>；网盘 / 迅雷 / eD2K 是同一份文件的备用通道，' +
-    '哪个通用哪个。<b>覆盖前先退出游戏并备份原存档</b>。</div>');
-  const all = !!(dlUni && dlUni.svfAll);
-  const shown = all ? items : items.slice(0, SVF_CAP);
-  out.push('<div class="dl-svf-list">' + shown.map((x) => svfCard(x)).join('') + '</div>');
-  /* 展开 / 收起（与「本体」模块的 `data-dl-all` 同款交互：数据已在手上，不再发请求） */
-  if (items.length > SVF_CAP) {
-    out.push('<div class="d-dl-links">' + (all
-      ? '<button type="button" class="dl-more" data-dl-svf="less">收起，只看前 ' + SVF_CAP + ' 条</button>'
-      : '<button type="button" class="dl-more" data-dl-svf="all">展开全部 ' + items.length +
-        ' 条（已显示前 ' + SVF_CAP + ' 条）</button>') + '</div>');
   }
   /* 页脚只在这一屏有额外信息时才写 —— 空话不写（`.dlpop-f` 是共享节点，
      不主动清空会把上一次「本体」模块的页脚留在存档页上） */

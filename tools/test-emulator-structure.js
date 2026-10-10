@@ -772,11 +772,11 @@ const GN = require(path.join(root, 'data', 'game-name'));
   const miss = (re) => P4.filter(([, h]) => !re.test(h)).map(([n]) => n).join(',') || '四页齐';
 
   /* ① 正向锚点：不配这两条，下面「chip 带 data-res-tab」之类可以在「压根没渲染」时平白变绿 */
-  t('★★ v10.52 正向锚点：`smRow` 真的调用了 `smResChips(it)`（不调用时下面几条会平白变绿）',
-    /<div class="m">\$\{meta\.join\(''\)\}<\/div>\$\{smResChips\(it\)\}/.test(idx));
-  t('★★ v10.52 正向锚点：四页都取到 `.sm-res-b` 规则体（改坏规则体时下面几条会被绕过）',
-    P4.every(([, h]) => /\.sm-row \.sm-res-b\{[^}]*border-radius:7px/.test(h)),
-    miss(/\.sm-row \.sm-res-b\{[^}]*border-radius:7px/));
+  t('★★ v10.52 正向锚点：`smRow` 真的调用了 `resChips(it)`（不调用时下面几条会平白变绿）',
+    /<div class="m">\$\{meta\.join\(''\)\}<\/div>\$\{resChips\(it\)\}/.test(idx));
+  t('★★ v10.52 正向锚点：四页都取到 `.res-chip` 规则体（改坏规则体时下面几条会被绕过）',
+    P4.every(([, h]) => /\.res-chip\{[^}]*border-radius:7px/.test(h)),
+    miss(/\.res-chip\{[^}]*border-radius:7px/));
 
   /* ② 服务端：复用聚合层，不重做匹配 */
   t('★★ v10.52：`/api/search/all` 的端游桶改挂 `withRes`（不再是 withBh）',
@@ -806,46 +806,264 @@ const GN = require(path.join(root, 'data', 'game-name'));
     /\['mod', 'mod', '🧩', 'MOD'\]/.test(idx) && /\['trainers', 'modifier', '🛠', '修改器'\]/.test(idx)
     && /\['saves', 'save', '💾', '存档'\]/.test(idx));
   t('★★ v10.52：chip 带 `data-res-tab` / `data-res-id` / `data-res-title` 三件套（缺一个就点不动或点错）',
-    /class="sm-res-b \$\{tab\}" data-res-tab="\$\{tab\}"/.test(idx)
+    /class="res-chip \$\{tab\}" data-res-tab="\$\{tab\}"/.test(idx)
     && /data-res-id="\$\{esc\(rid\)\}"/.test(idx)
     && /data-res-title="\$\{esc\(it\.title \|\| ''\)\}"/.test(idx));
   t('★ v10.52：全 0 / 缺字段**不渲染** chip（返回空串，不留空 div）',
-    /return bits\.length \?/.test(idx) && /<div class="sm-res">\$\{bits\.join\(''\)\}<\/div>/.test(idx));
+    /return bits\.length \?/.test(idx) && /<div class="res-chips">\$\{bits\.join\(''\)\}<\/div>/.test(idx));
   t('★ v10.52：`filter(([k]) => Number(r[k]) > 0)` —— 只列真有货的那几档，0 的不占位',
-    /SM_RES\.filter\(\(\[k\]\) => Number\(r\[k\]\) > 0\)/.test(idx));
+    /RES_CHIPS\.filter\(\(\[k\]\) => Number\(r\[k\]\) > 0\)/.test(idx));
 
-  /* ⑤ 直达链路 + 委托顺序 */
-  t('★★ v10.52：`openResTab` 先 `await openDetailById` **再**开弹窗（顺序反了会被随后一次重绘抢层级）',
+  /* ⑤ 直达链路 + 委托顺序
+   *   ★ v10.53：落点抽成 `gotoResTab`（搜索行与首页卡**共用一条路**）——
+   *     所以「顺序」这条断言钉在 `gotoResTab` 里，`openResTab` 只负责存快照 + 关弹窗。 */
+  t('★★ v10.52：`gotoResTab` 先 `await openDetailById` **再**开弹窗（顺序反了会被随后一次重绘抢层级）',
     (() => {
-      const f = idx.indexOf('async function openResTab(');
+      const f = idx.indexOf('async function gotoResTab(');
       if (f < 0) return false;
       const a = idx.indexOf('await openDetailById(id, title);', f);
       const b = idx.indexOf("openUniDownload({ id: String(id), title: String(title || ''), tab });", f);
       return a > f && b > a;
     })());
+  t('★★ v10.53：两处挂载点都走 `gotoResTab`（搜索行经 `openResTab`、首页卡直接调）—— 落点只有一处实现',
+    /await gotoResTab\(id, title, tab\);/.test(idx)
+    && /gotoResTab\(b\.dataset\.resId, b\.dataset\.resTitle, b\.dataset\.resTab\)/.test(idx));
   t('★★ v10.52：chip 的点击必须 `stopPropagation` —— chip 长在 `.sm-row` 里，不拦住会同时开抽屉 + 弹窗',
     (() => {
-      const f = idx.indexOf("$$('#smBody .sm-res-b')");
+      const f = idx.indexOf("$$('#smBody .res-chip')");
       if (f < 0) return false;
       const seg = idx.slice(f, f + 400);
       return seg.includes('e.stopPropagation();') && seg.includes('openResTab(b.dataset.resId');
     })());
   t('★ v10.52：chip 悬挂点排在行点击**之前**（先判特例再判通用，读代码时顺序即语义）',
-    idx.indexOf("$$('#smBody .sm-res-b')") <
+    idx.indexOf("$$('#smBody .res-chip')") <
     idx.indexOf("$$('#smBody .sm-row').forEach(r => r.addEventListener('click', () => openDetailFromSearch(r)));"));
 
   /* ⑥ 闸门登记：chip 的 7px 圆角属「卡片内部小按钮」，与 .sm-row .go2 同类 */
-  t('★ v10.52：`.sm-row .sm-res-b` 已登记进 check-card-rules 的 RAD_EXCEPT（不登记会被判成新增卡片容器）',
-    /'\.sm-row \.sm-res-b',/.test(chkSrc));
+  t('★ v10.52：`.res-chip` 已登记进 check-card-rules 的 RAD_EXCEPT（不登记会被判成新增卡片容器）',
+    /'\.res-chip',/.test(chkSrc));
+  t('★ v10.53：`res-chip` 同时进了闸门的 KEY 正则（不进的话这条例外根本不进扫描 = 静默跳过）',
+    /skeleton\|res-chip\)/.test(chkSrc));
 
   /* ⑦ 派生页同步（铁律 1：只改主源不重建 ⇒ 派生页静默漂移） */
-  t('[派生页] 四页都同步了 `.sm-res` 容器与三档配色',
-    P4.every(([, h]) => /\.sm-row \.sm-res\{/.test(h) && /\.sm-row \.sm-res-b\.mod\{/.test(h)
-      && /\.sm-row \.sm-res-b\.modifier\{/.test(h) && /\.sm-row \.sm-res-b\.save\{/.test(h)),
-    miss(/\.sm-row \.sm-res-b\.save\{/));
-  t('[派生页] 四页都同步了 `smResChips` 与 `openResTab`',
-    P4.every(([, h]) => /function smResChips\(it\)/.test(h) && /async function openResTab\(/.test(h)),
-    miss(/async function openResTab\(/));
+  t('[派生页] 四页都同步了 `.res-chips` 容器与三档配色',
+    P4.every(([, h]) => /\.res-chips\{/.test(h) && /\.res-chip\.mod\{/.test(h)
+      && /\.res-chip\.modifier\{/.test(h) && /\.res-chip\.save\{/.test(h)),
+    miss(/\.res-chip\.save\{/));
+  t('[派生页] 四页都同步了 `resChips` 与 `gotoResTab`',
+    P4.every(([, h]) => /function resChips\(it\)/.test(h) && /async function gotoResTab\(/.test(h)),
+    miss(/async function gotoResTab\(/));
+}
+
+/* ============================================================================
+ * ★ v10.53 增量：首页内容库卡也挂「资源维度」+ 筛选行补「🧩 有 MOD」
+ * ----------------------------------------------------------------------------
+ * 用户口径（本轮四条线里的第 ② 条）：「首页展示效果」。
+ * 改前的实测缺口：首页卡片只有「📱 可玩」「🎮 实测」两枚手机端徽标，
+ *   而**筛选行里已经有 🛠 有修改器 / 💾 有存档 两个开关** ——
+ *   筛出来的卡片上没有任何对应标记（6,274 款「有云存档」里 5,119 款卡面空白），
+ *   反过来卡上有 🛠 的 1,300 款（GTrainers）又筛不到。**筛选和卡面各说各话。**
+ *
+ * 本版两处动作：
+ *   ① 组件通用化：`.sm-row .sm-res-b` → `.res-chip`（搜索行 + 首页卡共用一处实现）
+ *   ② 口径同源：`mod/tr/sv` 三个筛选全走 `data/res-groups.js` 的聚合层，
+ *      与卡面 chip 同一张表 ⇒ 「筛出来的每一款，卡上都有 chip」成了可断言的性质。
+ *
+ * ⚠️ 判据里 **不写死命中款数**（264 / 1,377 / 3,691）：那是数据驱动的数字，
+ *   写死等于把套件绑在今天的 mods.json 上。条数对齐交给浏览器实拍套件
+ *   `test-v1053-home-res.js`（它拿接口回包逐档比）。
+ * ========================================================================== */
+{
+  const srvSrc = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
+  const chkSrc = fs.readFileSync(path.join(root, 'tools/check-card-rules.js'), 'utf8');
+  const P4 = [['主源', idx], ['emulator', emu], ['resources', res], ['unpack', upk]];
+  const miss = (re) => P4.filter(([, h]) => !re.test(h)).map(([n]) => n).join(',') || '四页齐';
+
+  /* ① 聚合层的「有资源 id 集合」—— 筛选与卡面同源的**唯一**依据 */
+  t('★★ v10.53：res-groups 导出 `libIdsFor(cat)`（筛选用「哪些款有资源」的 O(1) 命中表）',
+    /function libIdsFor\(cat\)/.test(rgSrc) && /libIdsFor, slimItem, post,/.test(rgSrc));
+  t('★★ v10.53：集合在 `build()` 里从 `gByCat` 摊平（与卡面 chip 同出一张 `byKeyCat` 表 ⇒ 不会漂移）',
+    /const libIds = \{ mod: new Set\(\), saves: new Set\(\), trainers: new Set\(\) \};/.test(rgSrc)
+    && /for \(const x of gByCat\[c\]\) if \(x\.key\.startsWith\('L:'\)\) libIds\[c\]\.add\(x\.key\.slice\(2\)\);/.test(rgSrc));
+  t('★ v10.53：未知分区返回空集而不是 undefined（调用方一律 `.has()`，undefined 会当场炸）',
+    /return \(cache\.libIds && cache\.libIds\[cat\]\) \|\| EMPTY_SET;/.test(rgSrc));
+
+  /* ② 服务端：三个筛选统一口径 */
+  t('★★ v10.53：`/api/library/browse` 改挂 `withRes`（首页卡片从此带 res / resId）',
+    /res\.json\(\{ ok: true, \.\.\.r, items: r\.items\.map\(withRes\) \}\);/.test(srvSrc));
+  t('★★ v10.53：`mod` / `tr` / `sv` 三个筛选都走 `resGroups.libIdsFor`（与卡面同源）',
+    /const modOnly = String\(req\.query\.mod \|\| ''\) === '1';/.test(srvSrc)
+    && /if \(modOnly\) \{ const set = resGroups\.libIdsFor\('mod'\); filters\.push\(\(g\) => set\.has\(g\.id\)\); \}/.test(srvSrc)
+    && /if \(trOnly\) \{ const set = resGroups\.libIdsFor\('trainers'\); filters\.push\(\(g\) => set\.has\(g\.id\)\); \}/.test(srvSrc)
+    && /if \(svOnly\) \{ const set = resGroups\.libIdsFor\('saves'\); filters\.push\(\(g\) => set\.has\(g\.id\)\); \}/.test(srvSrc));
+  /* ⚠️ 这条是「反向」断言：旧口径必须**真的消失**，而不是留着当第二份真源（铁律 17）。
+     若哪天有人把 xref 版加回来，卡面与筛选会重新分叉，而页面照常渲染、没人会发现。
+     ⚠️ 判据必须**先剥注释**再找 —— libOpts 上方那段注释里**故意写了** `xref.trainerIds()`
+     说明「旧口径是什么」，不剥的话这条断言会因为注释而假红（本轮实测踩到，第一次写就红了）。 */
+  t('★★ v10.53 反向：libOpts 函数体内**不再**用 `xref.trainerIds/saveIds`（旧口径留着=第二份真源）',
+    (() => {
+      const body = (srvSrc.split('function libOpts')[1] || '').split('function withBh')[0];
+      const code = body.replace(/\/\*[\s\S]*?\*\//g, '');   // 剥块注释
+      return !/xref\.trainerIds\(/.test(code) && !/xref\.saveIds\(/.test(code);
+    })());
+  t('★ v10.53：`xref` 仍被 `require` 且 `/api/xref/stats` 仍在（换的是库筛选口径，不是废掉这个模块）',
+    /const xref = require\('\.\/data\/xref'\);/.test(srvSrc) && /app\.get\('\/api\/xref\/stats'/.test(srvSrc));
+
+  /* ③ 前端：首页卡挂 chip + 第五个开关 */
+  t('★★ v10.53 正向锚点：`rowCard` 真的渲染了 `resChips(it)`（不渲染时下面几条会平白变绿）',
+    /<div class="meta">\$\{meta\.join\(''\)\}<\/div>\s*\n\s*\$\{resChips\(it\)\}/.test(idx));
+  /* ⚠️ 判据要用**同一串里的相对位置**比（`seg.indexOf` 返回的是相对偏移，
+     拿它跟绝对偏移 `f` 比永远为假 —— 本轮第一次写就这么红了一条）。 */
+  t('★★ v10.53：订阅式绑定 —— 首页卡的 chip 挂在 `.row-card` 的 `openDetail` **之前**且 `stopPropagation`',
+    (() => {
+      const f = idx.indexOf('function bindRowCards(');
+      if (f < 0) return false;
+      const seg = idx.slice(f, f + 700);
+      const iChip = seg.indexOf("$$('.res-chip', root || document)");
+      const iRow = seg.indexOf("$$('.row-card', root || document)");
+      return iChip > 0 && iRow > iChip
+        && seg.includes('e.stopPropagation();') && seg.includes('gotoResTab(b.dataset.resId');
+    })());
+  t('★ v10.53：第五个开关 `#modToggle` 在筛选行里、且带 `.mod-badge` 配色类',
+    /id="modToggle" type="button" title="只看机地社区 MOD 收录到的游戏/.test(idx)
+    && /class="bh-toggle mod-badge \$\{curMod \? 'on' : ''\}"/.test(idx));
+  t('★★ v10.53：`curMod` 四件套齐全（声明 / 查询串 / 计数文案 / 事件绑定）—— 缺一个开关就是死的',
+    /let curMod = false;/.test(idx)
+    && /if \(curMod\) q \+= '&mod=1';/.test(idx)
+    && /if \(curMod\) bits\.push\('🧩 有 MOD'\);/.test(idx)
+    && /const mt = \$\('#modToggle'\); if \(mt\) mt\.addEventListener\('click', \(\) => \{/.test(idx));
+  /* ⚠️ 这枚 chip 的色相是有理由的：`🎮 有实测记录` 已经是紫，而两者经常同卡相邻出现 */
+  t('★ v10.53：`.mod-badge` 用洋红而不是紫（与「🎮 有实测记录」的紫分开，两枚会同卡相邻）',
+    /\.bh-toggle\.mod-badge\.on\{background:linear-gradient\(135deg,#A21CAF,#D946EF\)/.test(idx)
+    && /\.res-chip\.mod\{color:#A21CAF;/.test(idx));
+  /* ⚠️ 负向判据只认**按钮标签**（`>💾 有云存档<`），不认整份源码里有没有这五个字 ——
+     主源另有一处注释写着「emulator.html 的『💾 有云存档』开关仍在用」，
+     那是对**跨页口径分叉**的如实记录，不该被这条断言判死（本轮实测：第一次写就假红）。 */
+  t('★ v10.53：`💾` 的文案与 tooltip 都改成「存档」（旧文案「有云存档」指的是位置库，口径已换）',
+    /💾 有存档<\/button>/.test(idx) && /title="只看「能下到」存档文件的游戏：游侠存档 \+ GTrainers/.test(idx)
+    && !/>💾 有云存档</.test(idx));
+  t('★ v10.53：空态提示不再点名具体开关（4 个涨到 5 个，点名单只会越写越假）',
+    /试试放宽容量区间，或关掉「筛选」行里的任一开关/.test(idx));
+
+  /* ④ 派生页同步（铁律 1） */
+  /* ⚠️ 「无旧名残留」只查**代码形态**（`.sm-res-b{` / `class="sm-res-b` / `function smResChips(`）——
+     注释里**故意留着**旧名（说明「从哪改到哪」），把它一起判死等于逼注释失去信息量。 */
+  t('[派生页] 四页都同步了 `.res-chips` / `.res-chip` 通用类（无 `.sm-res-b` 代码残留）',
+    P4.every(([, h]) => /\.res-chips\{/.test(h) && /\.res-chip\{/.test(h)
+      && !/\.sm-res-b\{/.test(h) && !/class="sm-res-b/.test(h)),
+    miss(/\.res-chips\{/));
+  t('[派生页] 四页都同步了 `#modToggle` 与 `.mod-badge`（派生页共用筛选条 HTML）',
+    P4.every(([, h]) => /id="modToggle"/.test(h) && /\.bh-toggle\.mod-badge\{/.test(h)),
+    miss(/id="modToggle"/));
+  t('[派生页] 四页都同步了 `libIdsFor` 口径的筛选（`&mod=1` 查询串）',
+    P4.every(([, h]) => /q \+= '&mod=1';/.test(h)),
+    miss(/q \+= '&mod=1';/));
+  t('★ v10.53 反向：主源已无 `smResChips` / `SM_RES` / `.sm-res-b{` 旧名**代码**残留',
+    !/function smResChips\(|const SM_RES =|\.sm-res-b\{|class="sm-res-b/.test(idx)
+    && P4.every(([, h]) => !/function smResChips\(|const SM_RES =|\.sm-res-b\{|class="sm-res-b/.test(h)));
+  t('★ v10.53：闸门 KEY 正则显式收录 `res-chip`（不收录 ⇒ 这条例外根本不进扫描）',
+    /const KEY = \/\\\.\(rel-it\|x-it\|row-card\|sm-row\|rk-card\|rk-skel\|sk-th\|emu-card\|skeleton\|res-chip\)\\b\/;/.test(chkSrc));
+}
+
+/* ============================================================================
+ * ★ v10.53 增量（二）：下载弹窗补 **GTrainers 腿** —— 让「卡上有数」真的点得进去
+ * ----------------------------------------------------------------------------
+ * 这是「界面缺字段 ≠ 数据源没有」的第 5 次现场：
+ *   v10.47 起 `data/res-groups.js` 已把 5 路来源按游戏聚合，**卡面 chip / 搜索行 /
+ *   首页筛选 / 资源页 / 详情抽屉** 五处都认 GTrainers，**只有这个弹窗**还在按老口径
+ *   各取各的（修改器 = 机地帖 + GCM；存档 = 游侠文件）⇒ chip 点进去是空页签。
+ *   实测（按库内 id 能对应上的组）：🛠 有修改器 3,691 款里 **1,300 款（35.2%）只有 GT**；
+ *   💾 有存档 1,377 款里 **842 款（61.1%）只有 GT**。
+ *
+ * ⚠️ 判据里同样**不写死条数**（1,300 / 842 是今天的快照）——
+ *   这些数交给浏览器实拍套件 `test-v1053-home-res.js` 逐档比。
+ * ⚠️ 排序类判据一律用**同一串内的相对位置**（`indexOf` 互比），
+ *   不要拿相对偏移去比绝对偏移（本轮第一版就这么假红了一条）。
+ * ========================================================================== */
+{
+  const srvSrc = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
+  const P4 = [['主源', idx], ['emulator', emu], ['resources', res], ['unpack', upk]];
+  const miss = (re) => P4.filter(([, h]) => !re.test(h)).map(([n]) => n).join(',') || '四页齐';
+
+  /* ① 取数：两路都真的接了 GT */
+  t('★★ v10.53：`dlUniFetchGt(ctx, cat)` 存在，且**只收 `src === \'gt\'`**（机地/GCM 各有专属渲染，混进来会渲染两遍）',
+    /async function dlUniFetchGt\(ctx, cat\)/.test(idx)
+    && /return items\.filter\(\(x\) => x && x\.src === 'gt'\);/.test(idx));
+  t('★ v10.53：GT 取数走 `/api/res/game`（聚合层的唯一出口，不另开查询口径）',
+    /const j = await fetch\(api\('\/api\/res\/game\?' \+ qs\)\)\.then\(\(r\) => r\.json\(\)\);/.test(idx));
+  t('★ v10.53：GT 取数**失败返回空数组**而不是抛（GT 段是增量，取不到不该把整个页签变错误页）',
+    /} catch \(e\) \{ return \[\]; \}/.test(idx));
+  t('★★ v10.53：`dlUniFetchGt` **恰好两处调用**（修改器页签 + 存档页签）—— 少一处就是漏一条腿',
+    count(idx, /dlUniFetchGt\(st\.ctx, /g) === 2,
+    `实际 ${count(idx, /dlUniFetchGt\(st\.ctx, /g)} 处`);
+
+  /* ② 角标：改成「之和」，与卡面 chip 同源 */
+  t('★★ v10.53：修改器角标 = 机地 + GCM + GT 三者之和',
+    /st\.cnt\[k\] = community\.count \+ gcm\.length \+ gtr\.length;/.test(idx));
+  t('★★ v10.53：存档角标 = 游侠文件 + GT 文件（**不含**位置条数，位置在右上角弹窗里）',
+    /st\.cnt\.save = files\.count \+ gts\.length;/.test(idx));
+  t('★ v10.53：存档三路也是**并行**取（`Promise.all`，任一路慢/挂不拖着整页）',
+    /const \[files, loc, gts\] = await Promise\.all\(\[/.test(idx));
+  t('★ v10.53：页签角标数不再出现「位置 + 文件」加起来的老口径（`loc` 只喂位置弹窗）',
+    !/st\.cnt\.save = files\.count \+ loc/.test(idx));
+
+  /* ③ 渲染：GT 段共用一处实现（铁律 17） */
+  t('★★ v10.53：GT 行渲染 `dlResRowsHtml` **只有一处实现**，且只被 `dlResSection` 调用（两个页签共用）',
+    count(idx, /function dlResRowsHtml\(items\)/g) === 1
+    && count(idx, /dlResRowsHtml\(items\)/g) === 2,
+    `定义 ${count(idx, /function dlResRowsHtml\(items\)/g)} / 调用 ${count(idx, /dlResRowsHtml\(items\)/g)}`);
+  t('★ v10.53：GT 行带独立来源角标 `.k.gt`（与机地 `mod`/`mf`、GCM 的 `.tagx` 视觉可分）',
+    /<div class="d-dl-it"><span class="k gt">GT<\/span>/.test(idx));
+  t('★ v10.53：`.d-dl-it .k.gt` 有专属配色（新增角标必须有样式，否则渲染成裸块）',
+    /\.d-dl-it \.k\.gt\{/.test(idx));
+  t('★ v10.53：GT 下载通道用 `.dl-res-lk`（`.bd` 第三行，**不塞行尾 `.go`** —— GT 一条常 2~4 通道，塞行尾窄屏会把标题挤没）',
+    /<span class="dl-res-lk">/.test(idx) && /\.d-dl-it \.dl-res-lk a\{/.test(idx));
+  t('★ v10.53：`.dl-agg` 段落容器有样式（与 `.dl-gcm` 合并选择器，两个第三方段落同款外观）',
+    /\.dl-gcm,\.dl-agg\{/.test(idx));
+
+  /* ④ 排序：内容段必须排在「出口链接」**之前**（出口是「去别处找」，内容是「已经找到了」） */
+  t('★★ v10.53：修改器页签的 GT 段排在 `.d-dl-links`（模块出口）**之前**',
+    (() => {
+      const seg = idx.split('function dlUniPaintMod(')[1] || '';
+      const iGt = seg.indexOf('out.push(dlResSection(gtr))');
+      const iOut = seg.indexOf(`out.push('<div class="d-dl-links">' + dModLinks()`);
+      return iGt > 0 && iOut > 0 && iGt < iOut;
+    })());
+  t('★★ v10.53：存档页签的 GT 段排在「游侠存档区 / 存档库」出口**之前**',
+    (() => {
+      const seg = idx.split('function dlUniPaintSave(')[1] || '';
+      const iGt = seg.indexOf('out.push(dlResSection(gts))');
+      const iOut = seg.indexOf('游侠存档区 ↗');
+      return iGt > 0 && iOut > 0 && iGt < iOut;
+    })());
+  t('★ v10.53：修改器页签**只对 `modifier`** 挂 GT 段（`mod` 分区聚合层本来就只有机地一个来源，挂上去是空段）',
+    /if \(kind === 'modifier' && gtr\.length\) out\.push\(dlResSection\(gtr\)\);/.test(idx));
+
+  /* ⑤ 空态：这是本轮真正的那个 bug —— 老判据「游侠没文件就早退」会把 GT-only 的 842 款判成空白 */
+  t('★★ v10.53：存档空态判据放宽成「两路都没有」，`!items.length` 分支**不再提前 return**',
+    !/if \(!items\.length\) \{[\s\S]{0,260}body\.innerHTML = out\.join\(''\);\s*\n\s*return;/.test(
+      idx.split('function dlUniPaintSave(')[1] || ''));
+  t('★★ v10.53：机地空态在 `gtr.length` 时**不再**提示「到机地 MOD / 修改器区自己搜」（会和下面的 GT 段自相矛盾）',
+    /\(gtr\.length \? '' : '<br><span style="font-size:11\.5px">可以点下面的按钮到机地 MOD \/ 修改器区自己搜<\/span>'\)/.test(idx));
+  t('★ v10.53：游侠空态在 `gts.length` 时**不再**追「去存档库按名搜」（同上，GT 段就在下面）',
+    /\(gts\.length \? '' : '<br><span style="font-size:11\.5px">存档区按游戏名匹配/.test(idx));
+  t('★ v10.53：存档页头数字含 GT（`items.length + gts.length`）—— 与角标、与卡面 chip 三处同数',
+    /💾 存档文件 <b>' \+ \(items\.length \+ gts\.length\) \+ '<\/b> 个/.test(idx));
+
+  /* ⑥ 服务端出口仍在（前端接了但接口没了 = 静默空段） */
+  t('★ v10.53：`/api/res/game` 仍在，且 `limit` 有上限（无上限时前端传 `limit=200` 会变成任意大查询）',
+    /app\.get\('\/api\/res\/game'/.test(srvSrc)
+    && /const limit = Math\.min\(200, Math\.max\(1, parseInt\(req\.query\.limit, 10\) \|\| 60\)\);/.test(srvSrc)
+    && /out\.items\[c\] = resGroups\.byLib\(c, id, limit\);/.test(srvSrc));
+
+  /* ⑦ 四页同步（铁律 1） */
+  t('[派生页] 四页都同步了 `dlUniFetchGt` + GT 段渲染',
+    P4.every(([, h]) => /async function dlUniFetchGt\(ctx, cat\)/.test(h)
+      && /function dlResSection\(items\)/.test(h)), miss(/async function dlUniFetchGt\(ctx, cat\)/));
+  t('[派生页] 四页的存档页签都接了 GT 段（`out.push(dlResSection(gts))`）与放宽后的空态',
+    P4.every(([, h]) => /out\.push\(dlResSection\(gts\)\)/.test(h)
+      && /\(gts\.length \? '' : '<br><span style="font-size:11\.5px">存档区按游戏名匹配/.test(h)),
+    miss(/out\.push\(dlResSection\(gts\)\)/));
 }
 /* 专属 CSS 泄漏闸：追加的 CSS 必须整段待在 <style> 内 */
 t('端游资源页 <style> 唯一', count(res, /<style>/g) === 1, `实际 ${count(res, /<style>/g)}`);

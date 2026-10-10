@@ -277,7 +277,21 @@ function build() {
     }
   }
 
-  cache = { sig: s, all, groups, byCat, gByCat, lib, byKeyCat };
+  /* ★ v10.53：三个分区各自的「有资源的端游库 id」集合 —— 首页/搜索**筛选用**的 O(1) 命中表。
+   *   为什么要它：原来的「🛠 有修改器 / 💾 有云存档」两个筛选走 `data/xref.js`
+   *   （GCM 清单 2,391 款 / Ludusavi 存档**位置** 6,274 款），而卡面上挂的资源 chip
+   *   走的是本聚合层（GTrainers / 游侠存档**文件**）—— 两边口径不同 ⇒
+   *   筛出来的卡片上可能一个对应 chip 都没有，反过来有 chip 的又筛不到。
+   *   这里把「本层认为这款有资源」的 id 摊平成集合，让筛选与卡面**同源**。
+   *   ⚠️ 只收 `L:`（用 libId 归组）的键：少数没关联到端游库的来源（`N:` 按游戏名归组）
+   *     拿不到端游库 id，本来就无法与某一款库内游戏对应 —— 筛选是「按库内 id 交集」，
+   *     把它们塞进集合反而会造出一批永远命不中的死 id。 */
+  const libIds = { mod: new Set(), saves: new Set(), trainers: new Set() };
+  for (const c of Object.keys(gByCat)) {
+    for (const x of gByCat[c]) if (x.key.startsWith('L:')) libIds[c].add(x.key.slice(2));
+  }
+
+  cache = { sig: s, all, groups, byCat, gByCat, lib, byKeyCat, libIds };
   sig = s;
   return cache;
 }
@@ -538,7 +552,21 @@ function countsFor(libId) {
   return out;
 }
 
+/** ★ v10.53：某分区「有资源的端游库 id 集合」—— 供 `/api/library/*` 的筛选做 O(1) 交集。
+ *
+ *  与 `countsFor(id)` 的关系：`countsFor` 答「**这一款**有多少条」（详情页 / 卡面 chip 用），
+ *  本函数答「**哪些款**至少有一条」（筛选用）。两者同出一张 `byKeyCat` 表，不会互相漂移。
+ *
+ *  ⚠️ 调用方拿到的是**共享的 Set**，只读不写 —— 别 `add` 进去（会污染缓存）。
+ *  @param {'mod'|'saves'|'trainers'} cat
+ *  @returns {Set<string>} */
+const EMPTY_SET = new Set();   /* 未知分区返回空集，而不是 undefined（调用方一律 `.has()`） */
+function libIdsFor(cat) {
+  build();
+  return (cache.libIds && cache.libIds[cat]) || EMPTY_SET;
+}
+
 module.exports = {
-  build, groups, items, stats, byLib, countsFor, slimItem, post,
+  build, groups, items, stats, byLib, countsFor, libIdsFor, slimItem, post,
   SRC_LABEL, SRC_KEY, MOUNT, PREVIEW,
 };

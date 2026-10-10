@@ -34,7 +34,7 @@ const FILES = [
 ];
 
 /* 卡片族选择器（判定「这条规则属不属于卡片」） */
-const KEY = /\.(rel-it|x-it|row-card|sm-row|rk-card|rk-skel|sk-th|emu-card|skeleton)\b/;
+const KEY = /\.(rel-it|x-it|row-card|sm-row|rk-card|rk-skel|sk-th|emu-card|skeleton|res-chip)\b/;
 /* 其中「承载图片的槽位」 */
 const IMGSLOT = /\.(th|cov|sk-th)\b|^\.sm-row img|\.noimg|\.ph2/;
 
@@ -109,13 +109,18 @@ const RAD_EXCEPT = new Set([
   '.grp-pop .emu-card.grp',
   '.row-card .go',            // 行卡尾部箭头钮
   '.sm-row .go2',             // ★ 闸门新增：小行卡尾部箭头钮
-  /* ★ v10.52 闸门新增：`.sm-row .sm-res-b` —— 搜索结果行里的**资源计数 chip**
-   *   （🧩 717 MOD / 🛠 22 修改器 / 💾 104 存档）。
-   *   与 .cov-btn / .cfg-btn / .gl-lk a 同类：它是**行内的小按钮**，
-   *   比所在行小一号才是对的；走 --cd-r 会跟行卡同圆角、看起来像行里嵌了张小卡片。
-   *   ⚠️ 只有基础那条（`.sm-row .sm-res-b`）带 border-radius ——
+  /* ★ v10.52 闸门新增：资源计数 chip（🧩 717 MOD / 🛠 22 修改器 / 💾 104 存档）。
+   *   与 .cov-btn / .cfg-btn / .gl-lk a 同类：它是**行内 / 卡内的小按钮**，
+   *   比所在容器小一号才是对的；走 --cd-r 会跟卡片同圆角、看起来像卡里嵌了张小卡片。
+   *
+   *   ★ v10.53：选择器由 `.sm-row .sm-res-b` 改为**通用类 `.res-chip`**。
+   *   原因：这个组件在 v10.53 从「搜索结果行专属」提升成「搜索行 + 首页内容库卡共用」，
+   *   写死 `.sm-row` 前缀的话首页那份就落不进任何规则里（静默失效）。
+   *   同时把它加进上面 KEY 正则 —— **不这么做的话它会静默溜过这道闸**
+   *   （KEY 匹配不上 ⇒ 这条规则根本不进扫描），那正是本文件开头批评的「静默跳过」。
+   *   ⚠️ 只有基础那条（`.res-chip`）带 border-radius ——
    *      `.mod` / `.modifier` / `.save` 三个配色变体只改颜色，不重复写圆角。 */
-  '.sm-row .sm-res-b',
+  '.res-chip',
   '.rel-row .rel-it .why',    // ★ 闸门新增：「为什么推荐」角标
   '.skeleton .sk-l1',         // 骨架条（假文字，比卡片小一号）
 ]);

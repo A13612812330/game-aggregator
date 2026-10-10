@@ -91,7 +91,8 @@ function loadPuppeteer() {
         rowCount: rows.length,
         segCanScroll: seg ? seg.scrollWidth > seg.clientWidth + 1 : false,
         togglesWrapped: R('#bhToggle') && seg ? R('#bhToggle').top > seg.getBoundingClientRect().bottom - 4 : false,
-        /* ★ v10.5：四个开关应独占「筛选」行（原先挤在容量行里 → 溢出换行、半行空档） */
+        /* ★ v10.5：四个开关应独占「筛选」行（原先挤在容量行里 → 溢出换行、半行空档）
+         *   ★ v10.53：加到五个（新增「🧩 有 MOD」）—— 行的归属没变，只是多一个开关。 */
         togglesOwnRow: (() => {
           const t = R('#bhToggle'), s = R('#sizePills');
           return !!t && !!s && t.top >= s.bottom - 2;
@@ -107,14 +108,17 @@ function loadPuppeteer() {
 
     t(m.docScroll <= m.vw + 1, `[${tag}] 无横向溢出（scrollWidth ${m.docScroll} ≤ ${m.vw}）`);
     t(m.rowCount === 3, `[${tag}] 三行标签为「排序 / 容量 / 筛选」`, m.labels.join(' / '));
-    t(m.switchCount === 4, `[${tag}] 四个只看开关都在（社区有配置 / 有实测记录 / 有修改器 / 有云存档）`, String(m.switchCount));
+    /* ★ v10.53：开关数 4 → 5（新增「🧩 有 MOD」）。这条是**布局**判据：
+       五个开关在宽屏仍必须同行 —— 加开关最容易的翻车方式就是让它把行挤爆。 */
+    t(m.switchCount === 5, `[${tag}] 五个只看开关都在（社区有配置 / 有实测记录 / 有 MOD / 有修改器 / 有存档）`, String(m.switchCount));
     if (w <= 430) {
       t(m.togglesWrapped, `[${tag}] 开关不与容量控件抢行`);
       t(m.segCanScroll, `[${tag}] 容量控件可横向滑动`);
     }
-    t(m.togglesOwnRow, `[${tag}] 四个开关独占「筛选」行（不再与容量控件抢行）`);
-    /* 窄屏放不下四个开关，允许它们在「筛选」行内折行；宽屏必须一行排开 */
-    if (w >= 1024) t(m.togglesSameLine, `[${tag}] 宽屏下四个开关同行排开`);
+    t(m.togglesOwnRow, `[${tag}] 五个开关独占「筛选」行（不再与容量控件抢行）`);
+    /* ★ v10.53：窄屏放不下五个开关，允许它们在「筛选」行内折行；宽屏必须一行排开
+       （1024 是**实测**的临界值：五个开关合计约 470px，1024 单列布局下主列约 950px ⇒ 富余） */
+    if (w >= 1024) t(m.togglesSameLine, `[${tag}] 宽屏下五个开关同行排开`);
     /* 英文角标收起的断点与 CSS 一致（max-width:760px 含 760） */
     if (w <= 760) t(m.lbHidden === true, `[${tag}] 英文角标已收起（中文档位优先露出）`);
     else t(m.lbHidden === false, `[${tag}] 英文角标保留（宽屏有空间）`);
@@ -144,7 +148,9 @@ function loadPuppeteer() {
     }));
     t(r2.on === true, '[交互] 点「📱 社区有配置」进入活跃态');
     t(r2.cnt.includes('社区有配置'), '[交互] 计数文案带上开关条件', r2.cnt);
-    /* ★ v10.5 两个新开关：切换后命中数应变小且计数文案带上条件 */
+    /* ★ v10.5 两个新开关：切换后命中数应变小且计数文案带上条件
+     *   ★ v10.53：新增第三个资源开关「🧩 有 MOD」；`💾` 的文案从「有云存档」改成「有存档」
+     *   （口径同步换到资源聚合层，见 server.js 的 libOpts 注释）。 */
     await p.evaluate(() => document.getElementById('bhToggle').click());   // 复位
     await sleep(900);
     await p.evaluate(() => document.getElementById('trToggle').click());
@@ -158,13 +164,23 @@ function loadPuppeteer() {
     t(r3.cnt.includes('有修改器'), '[交互] 计数文案带上「有修改器」', r3.cnt);
     await p.evaluate(() => document.getElementById('trToggle').click());
     await sleep(1000);
+    await p.evaluate(() => document.getElementById('modToggle').click());
+    await sleep(1200);
+    const r3b = await p.evaluate(() => ({
+      on: document.getElementById('modToggle').classList.contains('on'),
+      cnt: document.getElementById('filterCount').textContent,
+    }));
+    t(r3b.on === true, '[交互] 点「🧩 有 MOD」进入活跃态');
+    t(r3b.cnt.includes('🧩 有 MOD'), '[交互] 计数文案带上「🧩 有 MOD」', r3b.cnt);
+    await p.evaluate(() => document.getElementById('modToggle').click());
+    await sleep(1000);
     await p.evaluate(() => document.getElementById('svToggle').click());
     await sleep(1200);
     const r4 = await p.evaluate(() => ({
       on: document.getElementById('svToggle').classList.contains('on'),
       cnt: document.getElementById('filterCount').textContent,
     }));
-    t(r4.on === true && r4.cnt.includes('有云存档'), '[交互] 点「💾 有云存档」进入活跃态并更新计数', r4.cnt);
+    t(r4.on === true && r4.cnt.includes('💾 有存档'), '[交互] 点「💾 有存档」进入活跃态并更新计数', r4.cnt);
     await p.close();
   }
 

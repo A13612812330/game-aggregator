@@ -281,7 +281,10 @@ eq(dl.serverOf('https://store.steampowered.com/app/1/'), '其他链接',
     '★ 存档位置走 /api/saves/match（Ludusavi 路径库，哨兵口径：给的是「放哪」）');
   ok(!/async function dlUniFetchSave\(/.test(idx),
     '★★ 反向断言：旧的单一 dlUniFetchSave 已删除（拆成 Files / Loc，留着就是永不执行的死代码）');
-  ok(/async function dlUniFetchGcm\(/.test(idx) && /\.dl-gcm\{/.test(idx),
+  /* ⚠️ v10.53：选择器由 `.dl-gcm{` 变成 `.dl-gcm,.dl-agg{`（GTrainers 段复用了同一套外壳，
+     两个「第三方段落」外观必须一致）。判据跟着放宽到「`.dl-gcm` 在某个选择器里」，
+     但不允许整个选择器消失 —— 否则 GCM 段会掉成裸块。 */
+  ok(/async function dlUniFetchGcm\(/.test(idx) && /\.dl-gcm[,\{]/.test(idx),
     '★ 修改器模块另取 GCM 元数据并单独一段（它没有下载地址，不能长得像能点开的社区帖）');
   ok(/function dlUniResolveItem\(/.test(idx) && /\/api\/library\/item\?id=/.test(idx),
     '★ 只有 libId / 标题时先反查端游库拿详情页 —— 否则「本体」会误报「这条没有源站详情页」');
@@ -333,12 +336,15 @@ eq(dl.serverOf('https://store.steampowered.com/app/1/'), '其他链接',
     '★ 关下载弹窗时一并关位置弹窗（否则留下浮在空页面上的孤立卡片，且它 z-index 更高挡着点击）');
   ok(/\$\('#dlFoot'\)\.innerHTML = '';/.test(idx),
     '★ #dlFoot 是共享页脚，换页签先清 —— 否则存档那句「其中 N 条没能解析出下载通道」会跟到「本体」页签上');
-  ok(/st\.cnt\.save = files\.count;/.test(idx),
-    '★ 页签角标只认**文件数**（把位置条数加进来 = over-claim：显示 12 点进去只有 2 个能下载）');
-  /* ★★ 这条的判据必须锚到**尾分号**：第一版写成 `/st\.cnt\.save = files\.count/` 是**假绿** ——
-     变异成 `files.count + locN` 后前缀照样匹配，反证时一条都没红（本轮反证实测抓出）。 */
-  ok(!/st\.cnt\.save = files\.count \+ /.test(idx),
-    '★★ 反向断言：角标不再叠加任何东西（over-claim 回归会当场变红）');
+  /* ★ v10.53：角标 = 游侠文件 + **GTrainers 文件**（都出自 `data/res-groups.js` 的 saves 分区，
+     与卡面 `💾 N 存档` 同一个数）。仍然**只认文件**：位置条数在右上角弹窗里，加进来就是 over-claim。 */
+  ok(/st\.cnt\.save = files\.count \+ gts\.length;/.test(idx),
+    '★ 页签角标只认**文件数**（游侠 + GT；把位置条数加进来 = over-claim：显示 12 点进去只有 2 个能下载）');
+  /* ★★ 反向断言必须锚到**「加了哪些东西」**：v10.46 那版写的是「不许出现 `files.count + `」，
+     v10.53 起 `+ gts.length` 是**设计要的**，老判据会假红。
+     真正要守的不变量没变 —— **位置（loc）永远不许进角标**。 */
+  ok(!/st\.cnt\.save = [^;]*\bloc/.test(idx),
+    '★★ 反向断言：角标不再叠加**位置**条数（over-claim 回归会当场变红）');
   ok(/await dlUniLoad\('save'\)/.test(idx)
     && /for \(let i = 0; i < 40 && dlUni === st && st\.busy\.save; i\+\+\)/.test(idx),
     '★★ 位置弹窗在数据未回时先兜底取数并**等 busy 落下** —— dlUniLoad 在加载中会直接 return，'
