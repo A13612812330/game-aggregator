@@ -132,15 +132,21 @@ const HEAD_LINES = cut(idxLines, idxHeadA, idxHeadB - 1).split('\n');
  * 约束：所有 id 必须与 resource-sections.js 里 getElementById 的取值一一对应，
  *       否则某个 init 拿不到节点 → 切过去一片空白。已由文件末尾「出站自检」强制校验。 */
 
-/* ① MOD（#mods）：机地社区 MOD 专区帖，带网盘直链 */
+/* ① MOD（#mods）：机地社区 MOD 专区帖，带网盘直链
+ * ★ v10.47：一卡一款游戏（卡内铺前 3 条），卡形与另两个分区完全一致。
+ *   ⇒ HTML 骨架因此大幅收敛：排序项由 resource-sections.js 从 GRP_META 生成
+ *     （不在这里写死，免得 HTML 一张表、JS 一张表各自漂）；
+ *     「仅看匹配端游」开关**删掉** —— 组卡按定义就是「能对上端游库的游戏」，
+ *     留一个恒真的开关只会误导。 */
 const MODS_HTML = `
 <main class="wrap" id="mods" data-et="md">
   <div class="sec-h"><span class="bar md"></span><h2>MOD</h2><span class="en">MODS</span><span class="more" id="mdCount"></span></div>
   <div class="emu-intro md">
     <span class="ic">🧩</span>
     <div class="tx">
-      <b>PC 游戏 MOD，一处查全</b>——数据来自<b>机地社区 MOD 专区</b>，每条都带<b>网盘直链</b>，
-      点「打开源站帖」或盘口按钮即可取件；能对上端游库的<b>直接点进游戏详情</b>。
+      <b>PC 游戏 MOD，按游戏看，一屏一款</b>——数据来自<b>机地社区 MOD 专区</b>，
+      每条都带<b>网盘直链</b>；卡内先列<b>前 3 条</b>，点「展开全部」原地铺开其余条目。
+      点封面或卡身<b>直接进游戏详情</b>。
       <span style="opacity:.75">本站只做聚合与指路，<b>不转存、不提供文件</b>。装 MOD 前请先备份存档。</span>
       <span id="mdBuilt" style="opacity:.75"></span>
     </div>
@@ -149,68 +155,69 @@ const MODS_HTML = `
   <div class="emu-bar">
     <div class="emu-bar-row">
       <input class="emu-search" id="mdSearch" type="text" placeholder="搜索：赛博朋克2077 / 艾尔登法环 / 剑星…" autocomplete="off">
+      <select class="emu-sel" id="mdSrc"><option value="">全部来源</option></select>
     </div>
     <div class="emu-bar-row">
       <span class="emu-bar-lb">排序</span>
-      <div class="emu-sorts" id="mdSorts">
-        <button class="emu-sort on" data-s="new" type="button">最新发布</button>
-        <button class="emu-sort" data-s="hot" type="button">最热</button>
-        <button class="emu-sort" data-s="game" type="button">按游戏</button>
-      </div>
-      <span class="emu-bar-sp"></span>
-      <button class="emu-refresh md on em-tg" id="mdToggleLib" type="button" title="只显示能对上端游库的游戏">仅看匹配端游</button>
+      <div class="emu-sorts" id="mdSorts"></div>
     </div>
   </div>
-  <div class="emu-grid md" id="mdGrid"></div>
+  <div class="emu-grid md grp" id="mdGrid"></div>
   <button class="load-more" id="mdMore" style="display:none">加载更多</button>
 </main>`;
 
-/* ② 存档（#resSaves）：Ludusavi 存档位置库（正文与 emulator 版逐字一致，仅默认口径放宽） */
+/* ② 存档（#resSaves）：**可下载的存档**（游侠补丁网 + GTrainers）
+ * ★ v10.47 改形（用户口径「只展示真有存档的而不是存档位置的」）：
+ *   本页不再出 Ludusavi 的「存档位置库」卡片 —— 位置回答的是「放哪」，
+ *   与「去哪下」是两件事，混在一页里用户分不清哪个能点。
+ *   位置线保留在**详情页的「📍 存档位置」二级弹窗**（v10.46 已落地），不在这里重复。 */
 const SAVES_HTML = `
 <main class="wrap et-hide" id="resSaves" data-et="sv">
   <div class="sec-h"><span class="bar sv"></span><h2>存档</h2><span class="en">SAVE DATA</span><span class="more" id="svCount"></span></div>
   <div class="emu-intro sv">
     <span class="ic">💾</span>
     <div class="tx">
-      <b>存档到底放在哪？</b>——这张表给出每款游戏的<b>存档文件位置</b>与<b>注册表存档项</b>，
-      照着路径就能备份、迁移、跨设备接档；同时标出<b>是否支持云同步</b>（Steam / GOG / Epic / Origin…）。
-      数据来自开源存档清单 <b>Ludusavi</b>（MIT 许可，社区长期维护）。
-      <span style="opacity:.75">路径里的 <code>&lt;用户名&gt;</code> 换成你自己的系统用户名即可；模拟器里则是虚拟 C 盘下的同一路径。</span>
+      <b>找存档，直接给能下载的</b>——这一页只列<b>真有存档文件</b>的游戏：
+      来自<b>游侠补丁网存档区</b>与 <b>GTrainers</b>，每条都给<b>真实下载链</b>
+      （直链 / 网盘 / eD2K），点开就能取件；卡内先列<b>前 3 条</b>，点「展开全部」原地铺开。
+      <span style="opacity:.75">想要「存档放在哪个目录」请点进游戏详情 —— 那里有独立的<b>存档位置</b>视图（含注册表项与云同步支持）。</span>
       <span id="svBuilt" style="opacity:.75"></span>
     </div>
   </div>
   <div class="emu-stats" id="svStats"></div>
   <div class="emu-bar">
     <div class="emu-bar-row">
-      <input class="emu-search" id="svSearch" type="text" placeholder="搜索：艾尔登法环 / ELDEN RING / 博德之门3…" autocomplete="off">
+      <input class="emu-search" id="svSearch" type="text" placeholder="搜索：艾尔登法环 / 鬼谷八荒 / 荒野大镖客2…" autocomplete="off">
+      <select class="emu-sel" id="svSrc"><option value="">全部来源</option></select>
     </div>
     <div class="emu-bar-row">
       <span class="emu-bar-lb">排序</span>
-      <div class="emu-sorts" id="svSorts">
-        <button class="emu-sort on" data-s="paths" type="button" title="存档项多的游戏优先">存档最多</button>
-        <button class="emu-sort" data-s="cloud" type="button">云同步优先</button>
-        <button class="emu-sort" data-s="name" type="button">名称</button>
-      </div>
-      <span class="emu-bar-sp"></span>
-      <button class="emu-refresh sv em-tg" id="svPhone" type="button" title="只显示手游中心里能玩的游戏">仅看手机能玩</button>
-      <button class="emu-refresh sv em-tg" id="svCloud" type="button" title="只显示支持云同步的游戏">仅看云同步</button>
+      <div class="emu-sorts" id="svSorts"></div>
     </div>
   </div>
-  <div class="emu-grid sv" id="svGrid"></div>
+  <div class="emu-grid sv grp" id="svGrid"></div>
   <button class="load-more" id="svMore" style="display:none">加载更多</button>
 </main>`;
 
-/* ③ 修改器（#resTrainers）：GCM 公开清单元数据（正文与 emulator 版逐字一致） */
+/* ③ 修改器（#resTrainers）：GCM 清单 + GTrainers + FearlessRevolution
+ * ★ v10.47：**这一区新增了两个「有真下载链」的来源**（用户口径「都需要，帮我分类补充」）：
+ *   · GTrainers 修改器区 —— 真实文件直链
+ *   · FearlessRevolution —— CE 表 / Trainer 附件直链
+ *   原先这一区只有 GCM 清单（**刻意不给下载链**：官方走一次性 S3 签名 URL），
+ *   所以旧版整区没有下载按钮。现在卡内条目的按钮是**按来源各自决定**的：
+ *   有链就给链，没有就给「源站」出口 —— 不再一律导流。 */
 const TRAINERS_HTML = `
 <main class="wrap et-hide" id="resTrainers" data-et="tr">
   <div class="sec-h"><span class="bar tr"></span><h2>修改器</h2><span class="en">TRAINERS</span><span class="more" id="trCount"></span></div>
   <div class="emu-intro tr">
     <span class="ic">🛠</span>
     <div class="tx">
-      <b>单机游戏修改器，一处查全</b>——数据来自 <b>Game Cheats Manager</b> 的公开清单，
-      汇总 <b>5 个来源</b>：<b>风灵月影</b>（业界标准、数量最多）、<b>CE 修改表</b>、<b>社区贡献</b>、<b>小幸修改器</b>、<b>GCM 精选</b>。
-      每条都标了<b>来源与版本</b>，并<b>自动关联端游库</b>——能对上库的可以直接点进游戏详情。
-      <span style="opacity:.75">本站<b>不托管修改器文件</b>：官方下载走的是一次性签名链接，无法离线复现，请用卡片上的「获取方式」到官方渠道取。</span>
+      <b>单机游戏修改器，按游戏看</b>——合了三个来源：<b>GTrainers</b> 修改器区、
+      <b>FearlessRevolution</b> 的 CE 修改表 / Trainer（这两家都给<b>真实下载链</b>），
+      以及 <b>Game Cheats Manager</b> 的公开清单（只做「有没有 / 什么版本」，
+      它官方走一次性签名链接，本站不代为分发）。
+      卡内先列<b>前 3 条</b>，点「展开全部」原地铺开。
+      <span style="opacity:.75">拿到的修改器多为<b>独立 exe / CE 表</b>，<b>不用放进游戏目录</b>，运行后自行挂上进程；用前请先备份存档。</span>
       <span id="trBuilt" style="opacity:.75"></span>
     </div>
   </div>
@@ -218,21 +225,14 @@ const TRAINERS_HTML = `
   <div class="emu-bar">
     <div class="emu-bar-row">
       <input class="emu-search" id="trSearch" type="text" placeholder="搜索：艾尔登法环 / ELDEN RING / 只狼…" autocomplete="off">
-      <select class="emu-sel" id="trSource"><option value="">全部来源</option></select>
+      <select class="emu-sel" id="trSrc"><option value="">全部来源</option></select>
     </div>
     <div class="emu-bar-row">
       <span class="emu-bar-lb">排序</span>
-      <div class="emu-sorts" id="trSorts">
-        <button class="emu-sort on" data-s="lib" type="button" title="能对上端游库（有封面、点得进详情）的优先">匹配优先</button>
-        <button class="emu-sort" data-s="zh" type="button">中文名</button>
-        <button class="emu-sort" data-s="name" type="button">英文名</button>
-        <button class="emu-sort" data-s="source" type="button">按来源</button>
-      </div>
-      <span class="emu-bar-sp"></span>
-      <button class="emu-refresh tr on em-tg" id="trToggleLib" type="button" title="只显示能对上端游库的游戏">仅看匹配端游</button>
+      <div class="emu-sorts" id="trSorts"></div>
     </div>
   </div>
-  <div class="emu-grid tr" id="trGrid"></div>
+  <div class="emu-grid tr grp" id="trGrid"></div>
   <button class="load-more" id="trMore" style="display:none">加载更多</button>
 </main>`;
 
@@ -282,12 +282,24 @@ function switchResTab(t, opts) {
   el.setAttribute('href', '#md');
   el.addEventListener('click', (e) => { e.preventDefault(); switchResTab('md'); });
 })();
-/** 子页签数字回填（MOD 条数 / 存档收录数 / 修改器条数） */
+/** 子页签数字回填（MOD / 存档 / 修改器各覆盖多少款游戏）
+ *  ★ v10.47：改读 /api/res/stats?list=1 —— 一次请求拿三个分区。
+ *    旧版分别打 /api/mods/stats、/api/saves/stats、/api/trainers/stats 三次，
+ *    而页签上要显示的数字口径变了（现在是**游戏组数**，不是条目数），
+ *    三次请求里有两个已经对不上（saves 那处显示的是存档**位置**库的 6,625 款，
+ *    与「只展示真有存档」的新口径直接矛盾）。
+ *  ⚠️ 数字口径：取 **groups**（覆盖游戏数），不是 items（条目数）。
+ *  ⚠️ 本段在模板串内部：注释里**不能出现反引号**（会把模板串提前闭合，
+ *     实测报 "Unexpected identifier"）。行内代码一律用单引号或书名号代替。 */
 async function fillTabNums() {
   const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.textContent = Number(v).toLocaleString(); };
-  try { const s = await fetch(api('/api/mods/stats')).then((r) => r.json()); if (s && s.byKind) set('tabNumMd', s.byKind.mod || s.total); } catch (e) {}
-  try { const s = await fetch(api('/api/saves/stats')).then((r) => r.json()); if (s && s.total != null) set('tabNumSv', s.total); } catch (e) {}
-  try { const s = await fetch(api('/api/trainers/stats')).then((r) => r.json()); if (s && s.total != null) set('tabNumTr', s.total); } catch (e) {}
+  try {
+    const s = await fetch(api('/api/res/stats?list=1')).then((r) => r.json());
+    const c = (s && s.cats) || {};
+    if (c.mod) set('tabNumMd', c.mod.groups);
+    if (c.saves) set('tabNumSv', c.saves.groups);
+    if (c.trainers) set('tabNumTr', c.trainers.groups);
+  } catch (e) {}
 }
 /* 底部 Tab */
 const tb = document.getElementById('tabbar');
@@ -374,34 +386,17 @@ const out = [
     .emu-grid.sv{grid-template-columns:1fr}
   }
 
-  /* ===== MOD 分区专属（卡片上的盘口按钮行）=====
-     盘口配色与详情页下载弹窗的 .lk 同源语义（迅雷蓝 / 百度蓝 / 夸克紫…），
-     一处定义，两处读起来一致。 */
-  .emu-card.md .md-lk{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
-  .emu-card.md .md-lk .lk{font-size:10.5px;font-weight:750;color:#fff;background:#8892A6;
-    border-radius:6px;padding:4px 8px;text-decoration:none;white-space:nowrap;transition:.14s}
-  .emu-card.md .md-lk .lk:hover{filter:brightness(1.12)}
-  .emu-card.md .md-lk .lk.bd-baidu{background:#2B6DE5}
-  .emu-card.md .md-lk .lk.bd-xunlei{background:#2A6FD6}
-  .emu-card.md .md-lk .lk.bd-quark{background:#5A6BF5}
-  .emu-card.md .md-lk .lk.bd-189{background:#1A73E8}
-  .emu-card.md .md-lk .lk.bd-139{background:#0FA968}
-  .emu-card.md .md-lk .lk.bd-ali{background:#5B6BF0}
-  .emu-card.md .md-lk .lk.bd-123{background:#3C7DF5}
-  .emu-card.md .md-lk .lk.bd-lanzou{background:#4C8BF5}
-  .emu-card.md .md-lk .lk.bd-steam{background:#1B2838}
-  .emu-card.md .md-lk .lk.bd-uc{background:#3C7DF5}
-  .emu-card.md .md-lk .lk.bd-pikpak{background:#3D5AFE}
-  .emu-card.md .md-lk .lk.bd-other{background:#9AA3B5}
-  .emu-card.md .md-lk .lk-more{font-size:10.5px;font-weight:700;color:var(--c-t3);padding:4px 4px}
-  .emu-card.md .md-go{margin-top:7px}
-  .emu-card.md .md-go a{font-size:11px;font-weight:700;color:var(--c-primary);text-decoration:none}
-  .emu-card.md .md-go a:hover{text-decoration:underline}
-  /* MOD 分区的分区主色（青蓝），与存档天蓝 / 修改器青绿区分开 */
+  /* ===== 三分区的分区主色（只留「本页专属」的那几条）=====
+     ★ v10.47：整组「MOD 卡上的盘口按钮」（.emu-card.md .md-lk / .md-lk .lk / 各 .bd-* 配色 /
+       .md-go）**已删除**。原因不是搬家而是改形：MOD 区改成「按游戏聚合卡」后，
+     盘口按钮由 .emu-card.grp .gl-lk a 渲染，而组卡样式在**主源 index.html** 里
+     （三个分区共用一份卡 CSS），本页再留一份就成了第二实现。
+     盘口色值的唯一真源也一并收到 index.html 的 :root 的 --ch-* 变量。
+     ⚠️ 旧写法有个真坑值得记：.md-lk .lk.bd-* 那十条把十六进制**手抄**了一份，
+        与详情页 .dl-it .lk.bd-* 完全相同却互不相干 —— 典型的「三份手抄必然漂」。
+     ⚠️ 本段在模板串内部：注释里**不能出现反引号**（会提前闭合模板串）。 */
   .bar.md{background:linear-gradient(90deg,#2E6BFF,#4F8CFF)}
   .emu-intro.md{background:linear-gradient(135deg,#EEF4FF,#F7FAFF);border-color:#D8E4FF}
-  .emu-refresh.md.on{background:rgba(46,107,255,.1);border-color:rgba(46,107,255,.34);color:var(--c-primary)}
-  .emu-card.md .tg.md{background:rgba(46,107,255,.1);color:var(--c-primary)}
 </style>
 </head>
 <body data-page="resources">

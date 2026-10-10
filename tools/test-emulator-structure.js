@@ -266,23 +266,29 @@ t('XD 详情取到厂商 / 发行日期（.article-meta-item）',
 t('XD 详情从版本介绍文本里提容量（容量xxGB）', /容量\\s\*\(\[\\d\.\]\+/.test(xdFetch));
 t('XD 详情返回标签 tags（新版 .article-tags）', /\.article-tags a/.test(xdFetch) && /tags,/.test(xdFetch));
 
-/* ② 云存档卡片：v10.45 改版后卡面**不再铺路径**，改成整宽按钮开合并弹窗的「存档」模块。
+/* ② 云存档卡片：v10.45 不再铺路径 → v10.47 起**整卡改形**
  *   ★ v10.44：这段实现已搬去 tools/resource-sections.js（存档页签在端游资源页）
- *   ★ v10.45：`.paths` / `.cp` / `copyText` 全部撤出卡面 ⇒ 断言按铁律「搬家 + 反向断言」处理：
- *      正向锚点（.sv-open 真的渲染 + 真的把 tab:'save' 递出去）保证反向断言不是「选择器写错才为真」；
- *      反向断言（.paths / copyText 不许回来）保证哪天有人把路径又铺回卡面会当场变红。 */
-t('存档卡片改成 .sv-open 整宽按钮（卡面唯一动作，正向锚点）',
-  /class="sv-open"/.test(rsec) && /data-sv-open/.test(rsec));
-t('★ .sv-open 把 tab:\'save\' 递给合并弹窗（落点要跟着入口走，不是默认的「本体」）',
-  /tab:\s*'save'/.test(rsec));
-t('★ .sv-open 带兜底：主脚本那块被裁掉时给 toast，不能变成「点了没反应」',
-  /typeof openUniDownload === 'function'/.test(rsec) && /暂时打不开存档弹窗/.test(rsec));
-t('★★ 反向断言：卡面实现里已无 .paths 铺路径（本轮改版的核心诉求）',
+ *   ★ v10.45：`.paths` / `.cp` / `copyText` 全部撤出卡面 ⇒ 按铁律「搬家 + 反向断言」处理
+ *   ★ v10.47：卡面从「一卡一条 + .sv-open 整宽按钮」改成「一卡一款游戏 + 卡内条目 + 展开全部」
+ *     ⇒ `.sv-open` / `data-sv-open` / `tab:'save'` 全废。
+ *     ⚠️ 这四条旧正向断言**不是删掉了事，而是换成了新形态里守同一类行为的三条**
+ *        （照铁律 35「断言搬家 = 搬家 + 反向断言」：只删 ⇒ 零覆盖）：
+ *        · 卡面必须有可点动作（.grp-more 展开全部 / .cov-btn 进详情）
+ *        · 卡内通道外链不能被整卡点击吞掉
+ *        · 未命中端游库要给明确提示（不能点了没反应）
+ *        废形态同时加进反向断言，防止哪天被捡回来。 */
+t('★ 组卡卡面动作在（.grp-more 展开全部 + .cov-btn 进详情，正向锚点）',
+  /class="grp-more"/.test(rsec) && /class="cov-btn"/.test(rsec) && /data-grp-more/.test(rsec));
+t('★ 卡内下载通道是外链，不被整卡点击吞掉（closest(\'.gl-lk a\') 早退）',
+  /closest\('\.gl-lk a'\)/.test(rsec));
+t('★ 未命中端游库时给明确提示（toast），不能变成「点了没反应」',
+  /typeof toast === 'function'/.test(rsec) && /未收录进本地端游库/.test(rsec));
+t('★★ 反向断言：卡面实现里已无 .paths 铺路径（v10.45 核心诉求）',
   !/class="paths"/.test(rsec) && !/closest\('\.paths'\)/.test(rsec));
 t('★★ 反向断言：copyText 已从派生页驱动里删除（复制搬进了弹窗的 #svLoc 位置弹窗）',
   !/function copyText/.test(rsec));
-t('云存档卡片给出「没对上端游库」的明确提示',
-  /可以点「查看存档位置」看路径/.test(rsec));
+t('★★ 反向断言：v10.47 废掉的卡面动作不再回来（sv-open / data-sv-open / tab:\'save\'）',
+  !/class="sv-open"/.test(rsec) && !/data-sv-open/.test(rsec) && !/tab:\s*'save'/.test(rsec));
 
 /* ③ 点击语义统一：libId 优先于 bhk（旧版 bhk 优先导致点正文进配置面板） */
 {
@@ -324,8 +330,18 @@ t('开关 JS 不再改 textContent（只切 .on 类）',
   };
   chk(emu, ['emuToggleLib', 'emuToggleBoth', 'emuToggleTr', 'emuToggleSv'],
     '手机专区 4 个筛选开关都挂了 em-tg 类');
-  chk(res, ['mdToggleLib', 'trToggleLib', 'svPhone', 'svCloud'],
-    '端游资源页 4 个筛选开关都挂了 em-tg 类');
+  /* ★ v10.47：端游资源页的四个开关（mdToggleLib / trToggleLib / svPhone / svCloud）**整组删掉**。
+   *   为什么要删而不是留：三个分区改成「按游戏聚合卡」后，组卡按定义就是「能对上端游库的游戏」
+   *   （分组键优先用 libId）⇒ 「仅看匹配端游」成了一个恒真的开关；
+   *   而「只看手机能玩 / 只看云同步」是 **Ludusavi 位置库**的属性，位置线已整体让位给
+   *   「可下载的存档」与 #svLoc 弹窗，本页再也不出位置卡 ⇒ 这两个开关没有数据可筛。
+   *   ⚠️ 只写反向断言会被「整页开关都丢了」满足 ⇒ 必须配正向锚点：
+   *      三个分区各自的**来源下拉**（mdSrc / svSrc / trSrc）才是新的筛选入口。 */
+  t('★★ 端游资源页不再有恒真/无数据的筛选开关（反向：四个旧开关已删）',
+    ['mdToggleLib', 'trToggleLib', 'svPhone', 'svCloud'].every((i) => !res.includes(`id="${i}"`)),
+    ['mdToggleLib', 'trToggleLib', 'svPhone', 'svCloud'].filter((i) => res.includes(`id="${i}"`)).join(', ') || '全部已删');
+  t('★ 正向锚点：三个分区各有一个「来源」下拉（新筛选入口，防止上一条「整页丢了才为真」）',
+    ['id="mdSrc"', 'id="svSrc"', 'id="trSrc"'].every((s) => res.includes(s)));
 }
 
 /* ⑤ 横切筛选：交叉索引 + 两端点 */
@@ -450,27 +466,41 @@ t('本页切换条是独立的 #resTabs / .res-tab（未复用手机专区的骨
 const buildRes = fs.readFileSync(path.join(root, 'tools', 'build-resource-page.js'), 'utf8');
 t('生成器里硬编码了三个分区骨架常量 MODS_HTML / SAVES_HTML / TRAINERS_HTML',
   /const MODS_HTML = /.test(buildRes) && /const SAVES_HTML = /.test(buildRes) && /const TRAINERS_HTML = /.test(buildRes));
-t('端游资源页有「MOD」分区骨架（计数/搜索/排序/开关/网格/更多）',
-  ['id="mdCount"', 'id="mdBuilt"', 'id="mdStats"', 'id="mdSearch"', 'id="mdSorts"', 'id="mdToggleLib"', 'id="mdGrid"', 'id="mdMore"']
+/* ★ v10.47：三个分区的骨架 id 变了 —— 排序项改由 resource-sections.js 从 GRP_META
+ *   生成（不再写死在 HTML 里，免得 HTML 一张表、JS 一张表各自漂），
+ *   开关换成来源下拉。这份清单必须与「生成器里硬编码的常量」和
+ *   「resource-sections.js 里 getElementById 的取值」两侧同时对齐。 */
+t('端游资源页有「MOD」分区骨架（计数/搜索/来源/排序/网格/更多）',
+  ['id="mdCount"', 'id="mdBuilt"', 'id="mdStats"', 'id="mdSearch"', 'id="mdSorts"', 'id="mdSrc"', 'id="mdGrid"', 'id="mdMore"']
     .every((s) => res.includes(s)));
-t('端游资源页有「存档」分区骨架（计数/搜索/排序/两个开关/网格/更多）',
-  ['id="svCount"', 'id="svBuilt"', 'id="svStats"', 'id="svSearch"', 'id="svSorts"', 'id="svPhone"', 'id="svCloud"', 'id="svGrid"', 'id="svMore"']
+t('端游资源页有「存档」分区骨架（计数/搜索/来源/排序/网格/更多）',
+  ['id="svCount"', 'id="svBuilt"', 'id="svStats"', 'id="svSearch"', 'id="svSorts"', 'id="svSrc"', 'id="svGrid"', 'id="svMore"']
     .every((s) => res.includes(s)));
-t('端游资源页有「修改器」分区骨架（计数/搜索/来源/排序/开关/网格/更多）',
-  ['id="trCount"', 'id="trBuilt"', 'id="trStats"', 'id="trSearch"', 'id="trSource"', 'id="trSorts"', 'id="trToggleLib"', 'id="trGrid"', 'id="trMore"']
+t('端游资源页有「修改器」分区骨架（计数/搜索/来源/排序/网格/更多）',
+  ['id="trCount"', 'id="trBuilt"', 'id="trStats"', 'id="trSearch"', 'id="trSrc"', 'id="trSorts"', 'id="trGrid"', 'id="trMore"']
     .every((s) => res.includes(s)));
-/* ★ v10.45：存档卡面不再铺路径 ⇒ `.emu-card .paths` 规则已删。
- *   先反向断言「真的删了」，再给一条**正向锚点**（.sv-open 规则存在），否则上一条
- *   在「CSS 整块丢了」的情况下也会为真 —— 反向断言必须配正向锚点才有意义。 */
-t('★★ 存档卡片不再铺路径：resources.html 里 .emu-card .paths 规则已删除（反向）',
-  !/\.emu-card \.paths\{/.test(res));
-t('存档卡片改用 .emu-card .sv-open 整宽按钮（正向锚点，防止上一条「丢了才为真」）',
-  /\.emu-card \.sv-open\{/.test(res));
-t('存档卡片云同步徽标 .tg.cloud 仍在', /\.emu-card \.tg\.cloud\{/.test(res));
-t('存档网格在窄屏收敛为单列（卡内有整宽按钮 + 徽标行，两列会挤断）',
-  /max-width:430px[\s\S]{0,200}\.emu-grid\.sv\{grid-template-columns:1fr\}/.test(res));
-t('修改器卡片带「放置位置」说明（用户明确要的信息）',
-  /tr-note[\s\S]{0,120}放置位置/.test(res));
+/* ★ v10.47：三个分区改「按游戏聚合卡」后，整组旧卡面样式（.emu-card .paths / .sv-open /
+ *   .emu-card.md .md-lk / .emu-card .tr-note / .emu-card .tr-go）**已删除**。
+ *   同 v10.45 的写法：先反向断言「真的删了」，再给正向锚点 ——
+ *   否则「CSS 整块丢了」也会让反向断言为真。
+ * ★★ 判据必须**同时查主源和派生页**：第一版只查了 `res`（派生页），
+ *   反证时往**主源**加回 `.emu-card .sv-open{…}` —— 断言照样 PASS
+ *   （因为没重建派生页，res 里当然还是没有）。可**主源才是唯一编辑入口**：
+ *   下一个人只要改了主源又碰巧重建，旧样式就回来了，而这条「已删」断言
+ *   在重建前一直是绿的 —— 白白给人「守住了」的错觉。
+ *   ⇒ 主源与派生页各查一遍（幂等，代价可忽略）。 */
+const DEAD_SEL = ['.emu-card .paths{', '.emu-card .sv-open{', '.emu-card.md .md-lk{',
+  '.emu-card .tr-note{', '.emu-card .tr-go{'];
+t('★★ 旧卡面样式整组已删（反向：主源 + 派生页的 paths / sv-open / md-lk / tr-note / tr-go 都无命中）',
+  DEAD_SEL.every((s) => !idx.includes(s) && !res.includes(s)),
+  DEAD_SEL.filter((s) => idx.includes(s) || res.includes(s)).join(', ') || '全部已删');
+t('★ 正向锚点：组卡样式在（.emu-grid.grp / .emu-card.grp .gl / .emu-card.grp .grp-more）',
+  /\.emu-grid\.grp\{/.test(res) && /\.emu-card\.grp \.gl\{/.test(res) && /\.emu-card\.grp \.grp-more\{/.test(res));
+t('组卡封面比「一卡一条」矮（92 → 78px）：主体信息在卡内列表，封面只做识别',
+  /\.emu-card\.grp \.cov\{height:78px/.test(res));
+t('组卡通道按钮与卡内展开按钮都走卡片内小圆角（不走 --cd-r，否则像卡里嵌卡）',
+  /\.emu-card\.grp \.gl-lk a\{[^}]*border-radius:6px/.test(res)
+  && /\.emu-card\.grp \.grp-more\{[^}]*border-radius:8px/.test(res));
 /* 专属 CSS 泄漏闸：追加的 CSS 必须整段待在 <style> 内 */
 t('端游资源页 <style> 唯一', count(res, /<style>/g) === 1, `实际 ${count(res, /<style>/g)}`);
 t('端游资源页 <script> 数正常（≤3）', count(res, /<script/g) <= 3, `实际 ${count(res, /<script/g)}`);

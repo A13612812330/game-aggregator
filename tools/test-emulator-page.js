@@ -304,8 +304,12 @@ async function main() {
    */
   ok('本页已无 #trainers / #saves 分区（已迁 /resources.html）',
     !q('#trainers') && !q('#saves'));
-  ok('本页已无修改器 / 云存档的任何骨架 id（不留空壳节点）',
-    !q('#trGrid') && !q('#svGrid') && !q('#trSource') && !q('#svPhone'));
+  ok('本页已无修改器 / 云存档 / MOD 的任何骨架 id（不留空壳节点）',
+    /* ⚠️ v10.47：id 清单必须用**当前真实存在**的那些。原先钉的 #trSource / #svPhone
+       已随资源页改版消失（改成 #trSrc；svPhone 整个删掉）⇒ 那两条恒真、等于没守。
+       这里换成三区各自的网格 / 来源下拉 / 计数 —— 任一漏过来就是整块骨架搬错页。 */
+    ['trGrid', 'svGrid', 'mdGrid', 'trSrc', 'svSrc', 'mdSrc', 'trCount', 'svCount', 'mdCount']
+      .every((i) => !q('#' + i)));
 
   /* ---- 直接切「模拟器指南」（第 3 个平级页签，不再经二级） ---- */
   click(q('#emuTabs .emu-tab[data-et="eg"]'));

@@ -234,7 +234,8 @@ console.log('\n=== ⑤ 修改器 + 云存档同行、各最多 5 行 ===');
   ok(/\.d-pair\{[^}]*align-items:stretch/.test(IDX), '★ 两块**等高**（v10.31 用户口径；v10.29 的 start 已作废）');
   ok(!/\.d-pair\{[^}]*align-items:start/.test(IDX), '★★ 反向断言：.d-pair 不再 align-items:start');
   ok(/\.d-rows\{min-height:calc\(var\(--d-row-h\) \* var\(--d-rows\)\)\}/.test(IDX),
-    '★★ 行容器固定预留 5 行槽位（只有 1 条的卡片也不缩水 —— 「固定显示五个」的落点）');
+    '★★ 行容器固定预留 3 行槽位（只有 1 条的卡片也不缩水 —— 「固定显示三个」的落点；'
+    + 'v10.47 用户口径把预留行数从 5 收到 3）');
   ok(/\.d-pair \.d-hint2\{margin-top:auto\}/.test(IDX),
     '预留出来的空档不能把提示顶在半空 ⇒ 提示沉到卡底');
 
@@ -247,21 +248,28 @@ console.log('\n=== ⑤ 修改器 + 云存档同行、各最多 5 行 ===');
     String((IDX.match(/finally \{ syncPair\(\); \}/g) || []).length) + ' 处');
 
   const tr = (/async function loadTrBlock\([\s\S]*?\n\}/.exec(IDX) || [''])[0];
-  ok(/const MAXTR = 5;/.test(tr), '★ 修改器行数上限 = 5');
+  ok(/const MAXTR = 3;/.test(tr), '★ 修改器行数上限 = 3（v10.47 用户口径「预留行数 5 → 3」）');
   ok(/items\.slice\(0, MAXTR\)/.test(tr), '★★ 上限真的用在 slice 上（只声明常量不引用 = 没生效）');
   ok(!/items\.slice\(0, 8\)/.test(tr), '旧的 8 行上限已清');
-  ok(/items\.length > MAXTR/.test(tr), '超出才给「更多」（不足 5 行给个点开一样的按钮不如没有）');
+  ok(/items\.length > MAXTR/.test(tr), '超出才给「更多」（不足 3 行给个点开一样的按钮不如没有）');
   ok(/dMoreHd\(/.test(tr), '★ 更多按钮走 dMoreHd（卡片右上角版式）');
   ok(/\$\{more\}<\/h4>/.test(tr), '★ 按钮在 **h4 卡头里**，不是正文流末位的一整行');
 
   const sv = (/async function loadSvBlock\([\s\S]*?\n\}/.exec(IDX) || [''])[0];
-  ok(/const MAXROWS = 5;/.test(sv), '★ 云存档行数上限 = 5');
-  ok(/const pTake = Math\.min\(paths\.length, MAXROWS\);/.test(sv), '路径先吃额度');
-  ok(/const rTake = Math\.min\(regs\.length, MAXROWS - pTake\);/.test(sv),
-    '★★ 注册表吃**剩余**额度（写死 3+2 时「1 条路径 + 5 条注册表」会白空 2 行）');
-  ok(!/MAXP = 3, MAXR = 2/.test(sv), '旧的 3+2 写死上限已清');
-  ok(/\(paths\.length - pTake\) \+ \(regs\.length - rTake\)/.test(sv), 'hidden 也按实际额度算（否则按钮和内容对不上）');
+  /* ★ v10.47 改形：详情页云存档块不再铺「存档位置」（那是 Ludusavi 路径库，一个文件都下不了，
+     与「存档」这个块名对不上），改铺**可下载的存档条目**（游侠存档区 + GTrainers）；
+     位置线整体让位到卡头右上角的「📍 存档位置」→ 同一个 #svLoc 二级弹窗。
+     ⇒ 旧的三条「额度分配」断言（pTake / rTake / hidden 按实际额度）**守护对象已消失**：
+        它们守的是「路径 + 注册表**共吃 5 行额度**」那套排布，而新块里根本没有路径行。
+        按铁律 35（断言搬家 = 搬家 + 反向断言）**换成新形态守同一类诉求的三条**：
+        「上限真的用在 slice 上」「超出才给 h4 卡头里的入口」「位置入口没丢」——
+        诉求（别白空、别假接口、入口对得上）没变，只是落点换了。 */
+  ok(/const MAXROWS = 3;/.test(sv), '★ 云存档行数上限 = 3');
+  ok(/items\.slice\(0, MAXROWS\)/.test(sv), '★★ 上限真的用在 slice 上（只声明常量不引用 = 没生效）');
+  ok(/items\.length > MAXROWS/.test(sv), '超出才给「更多」（不足 3 条给个点开一样的按钮不如没有）');
+  ok(/dMoreHd\(/.test(sv), '★ 更多按钮走 dMoreHd（卡片右上角版式）');
   ok(/\$\{more\}<\/h4>/.test(sv), '★ 云存档的按钮同样在 h4 卡头里');
+  ok(/data-d-svloc/.test(sv), '★ 位置入口仍在卡头（📍 存档位置 → 同一个 #svLoc 弹窗，不是消失）');
 
   const mh = fnBody('dMoreHd');
   ok(mh.length > 0, '★ 新增 dMoreHd()（卡片右上角更多按钮）');

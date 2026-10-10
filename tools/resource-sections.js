@@ -7,396 +7,205 @@
  *   ⇒ MOD / 存档 / 修改器 三者本质是**端游资源**，挂在「手机专区」下语义不成立
  *     （用户为此迷路过一次：找存档得先去手机专区）。本页把它们平级抽出来。
  *
- * 分区与数据源（一个分区一套数据，互不替代）：
- *   · MOD     #mods      → data/mods.json   的 kind='mod'      （机地社区帖，带网盘直链）
- *   · 存档    #resSaves  → data/saves.json                      （Ludusavi 存档位置库）
- *   · 修改器  #resTrainers → data/trainers.json                 （GCM 公开清单元数据）
+ * ★★ v10.47 三个分区**统一改形**（本轮最大的一次改动）：
+ *   用户口径：「MOD 按游戏做卡片而不是按 MOD，其次优化下卡片的大小」
+ *            「存档只展示真有存档的而不是存档位置的，且优化下卡片显示效果」
+ *            「（修改器）同样按游戏聚合」
+ *            「卡内列前 3 条 + 展开全部」。
+ *   ⇒ 三个分区共用**同一种卡形**：一卡一款游戏，卡内铺前 3 条可下载条目，
+ *     超出部分由卡内「展开全部 N 条」原地铺开。渲染器只有一份（`grpCard`），
+ *     差异全部收在 `GRP_META` 这张表里（标题 / 排序项 / 统计口径）。
+ *   ⚠️ 这不是「搬家」而是**改形**：旧的「一卡一条」渲染器（mdCard / svCard / trCard）
+ *     已整组删除，同时删掉了配套的 `.md-lk` / `.sv-open` / `.tr-go` 等卡面样式 ——
+ *     本项目对死样式的一贯处理是**删**（留着会让人以为旧形态还在）。
+ *
+ * 数据来源（一个分区一套数据，互不替代）：
+ *   · MOD     #mods      → data/res-groups.js cat=mod      机地社区帖（网盘直链）
+ *   · 存档    #resSaves  → cat=saves                       游侠存档文件 + GTrainers 存档
+ *   · 修改器  #resTrainers → cat=trainers                  GCM 清单 + GTrainers + FearlessRevolution
  *
  * ⚠️ 本文件是**被整段注入到页面主脚本块里**的（同 emulator-sections.js），
  *    所以不能出现 require / module.exports；只能依赖主源共享脚本的
  *    esc / api / toast / openDetailById 这些既有全局。
  *    （写注释时也别出现 script 标签字面量 —— 语法闸按它数块数，会被算成两块。）
- * ⚠️ 三个分区虽在本页，但「修改器」与「MOD」的**阅读语义没变**：它们是搬家，不是重写。
- *    ★ v10.45 例外一处：**存档卡片改版**（卡面不再铺路径，改为按钮直达合并弹窗的
- *    「存档」模块）—— 这是用户明确要求，不是搬家过程中顺手改的。
+ * ⚠️ 注释里**故意不复述断言用的字符串原文**：那些断言是在派生页源码里做 indexOf 式
+ *    字符串搜索的，注释里出现同一串会让断言**恒真**（本项目在 PITFALLS 里记过这个坑）。
  * ========================================================================== */
 
-/* 每页条数（原 emulator-sections.js 的 EMU_PAGE_SIZE —— 搬家后改本页口径） */
+/* 每页几组（原 EMU_PAGE_SIZE 是「几条」，v10.47 起是「几款游戏」） */
 const RES_PAGE_SIZE = 24;
 
-/* 盘口 → 徽标类名 / 展示名（与详情页下载弹窗的 .lk 配色共用一份语义） */
-const RES_PAN_CLS = {
-  '迅雷网盘': 'xunlei', '百度网盘': 'baidu', '夸克网盘': 'quark', '阿里云盘': 'ali',
-  '天翼云盘': '189', '移动云盘': '139', '123网盘': '123', '蓝奏云': 'lanzou',
-  'UC网盘': 'uc', 'Steam': 'steam', 'PikPak': 'pikpak',
+/* 三个分区的展示口径。★ 一处定义：标题、卡类、统计口径、排序项、来源徽标顺序
+ *   全部在这张表里，渲染器只读不改 —— 免得三份代码各自漂。
+ * ⚠️⚠️ 键名不许重复！这里踩过一次**静默覆盖**：原先容器 id 与排序项都叫 `sorts`，
+ *   对象字面量里后者覆盖前者 ⇒ `document.getElementById(meta.sorts)` 收到的是数组、
+ *   恒返回 null ⇒ 三个分区的排序项**从来没渲染出来过**，且不报错。
+ *   ⇒ 容器 id 改叫 `sortsBox`，排序项保持 `sorts`。
+ *   （本项目铁律 17：同一份口径只留一处；这里是「同一个键不要两种东西」。） */
+const GRP_META = {
+  mod: {
+    grid: 'mdGrid', count: 'mdCount', stats: 'mdStats', built: 'mdBuilt',
+    more: 'mdMore', search: 'mdSearch', sortsBox: 'mdSorts', srcBox: 'mdSrc',
+    kindCls: 'k-mod', label: 'MOD',
+    /* 卡面统计口径：条目数 / 覆盖游戏 / 带下载通道的条目数 / 通道覆盖率 */
+    statLabel: ['覆盖游戏', 'MOD 条数', '带下载通道', '通道覆盖率'],
+    sorts: [['count', '条目最多'], ['new', '最近更新'], ['game', '按游戏名']],
+  },
+  saves: {
+    grid: 'svGrid', count: 'svCount', stats: 'svStats', built: 'svBuilt',
+    more: 'svMore', search: 'svSearch', sortsBox: 'svSorts', srcBox: 'svSrc',
+    kindCls: 'k-saves', label: '存档',
+    statLabel: ['覆盖游戏', '可下载存档', '带下载通道', '通道覆盖率'],
+    sorts: [['count', '存档最多'], ['new', '最近更新'], ['game', '按游戏名']],
+  },
+  trainers: {
+    grid: 'trGrid', count: 'trCount', stats: 'trStats', built: 'trBuilt',
+    more: 'trMore', search: 'trSearch', sortsBox: 'trSorts', srcBox: 'trSrc',
+    kindCls: 'k-trainers', label: '修改器',
+    statLabel: ['覆盖游戏', '修改器条数', '可下载条数', '可下载占比'],
+    sorts: [['count', '条目最多'], ['game', '按游戏名'], ['new', '最近更新']],
+  },
 };
-const resPanCls = (k) => RES_PAN_CLS[k] || 'other';
-const resPanName = (k) => String(k || '外部页面').replace(/网盘$/, '');
+
+/* 三个分区的运行时状态（结构与语义完全同形，只是分开存） */
+const grpState = {
+  mod: { q: '', sort: 'count', src: '', offset: 0, total: 0, items: [], inited: false, loading: false },
+  saves: { q: '', sort: 'count', src: '', offset: 0, total: 0, items: [], inited: false, loading: false },
+  trainers: { q: '', sort: 'count', src: '', offset: 0, total: 0, items: [], inited: false, loading: false },
+};
+
+/* 来源展示名。★ 与 data/res-groups.js 的 SRC_LABEL 是同一份口径，
+ *   但这里是浏览器端、拿不到那个模块 —— 所以**由服务端随 stats 一起下发**
+ *   （见 initGrp 里的 s.srcLabel），本常量只作接口失败时的兜底。 */
+const GRP_SRC_FALLBACK = { mod: '机地 MOD', yx: '游侠存档', gt: 'GTrainers', fr: 'FearlessRevolution', gcm: 'GCM 清单' };
+let grpSrcLabel = Object.assign({}, GRP_SRC_FALLBACK);
+
+const grpSrcName = (k) => grpSrcLabel[k] || GRP_SRC_FALLBACK[k] || k;
 
 /* ============================================================================
- * ① MOD 分区（#mods）
- *  数据：data/mods.json 里 kind='mod' 的机地社区帖（带网盘直链）
+ * 卡片渲染（三个分区共用）
  * ========================================================================== */
-const mdState = { q: '', sort: 'new', matched: true, offset: 0, total: 0, items: [], inited: false, loading: false };
 
-function mdCard(it) {
-  const title = it.title || '?';
-  const game = it.game || '';
-  const cov = it.cover
-    ? '<div class="cov"><img src="' + esc(it.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
-      + (it.libId ? '<button class="cov-btn" data-lib="' + esc(it.libId) + '" data-title="' + esc(it.libTitle || game || title) + '" type="button">查看游戏详情</button>' : '')
-      + '</div>'
-    : '<div class="cov noimg"><span>' + esc(String(game || title).slice(0, 2).toUpperCase()) + '</span></div>';
-
-  /* 盘口按钮：只取真正的取件口（「其他链接」是源站内链，不足以当下载口） */
-  const lks = (it.links || []).filter((l) => l && l.url && l.kind && l.kind !== '其他链接');
-  const lkHtml = lks.slice(0, 3)
-    .map((l) => '<a class="lk bd-' + resPanCls(l.kind) + '" href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer">' + esc(resPanName(l.kind)) + '</a>')
+/** 卡内一行条目：序号 + 标题 + 通道按钮（最多 2 个，超出显示 +N） */
+function glRow(cat, it, n) {
+  const links = it.links || [];
+  const two = links.slice(0, 2)
+    .map((l) => '<a class="bd-' + esc(l.cls || 'other') + '" href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer"'
+      + ' title="' + esc(l.label + (l.size ? ' · ' + l.size : '')) + '">' + esc(String(l.label).slice(0, 12)) + '</a>')
     .join('');
-  const lkMore = lks.length > 3 ? '<span class="lk-more">+' + (lks.length - 3) + '</span>' : '';
-
-  const src = it.url || ('https://52jidi.com/post/detail/' + it.id);
-  const altHtml = (game && game !== title) ? '<div class="alt" title="' + esc(game) + '">' + esc(String(game).slice(0, 46)) + '</div>' : '';
-
-  return '<article class="emu-card md' + (it.cover ? ' has-cov' : '') + '" data-name="' + esc(title) + '" data-lib="' + esc(it.libId || '') + '" data-libt="' + esc(it.libTitle || '') + '">'
-    + cov
-    + '<div class="bd">'
-    + '<h4 title="' + esc(title) + '">' + esc(title) + '</h4>'
-    + altHtml
-    + '<div class="meta">'
-    + '<span class="tg md">MOD</span>'
-    + (lks.length ? '<span class="pill">' + lks.length + ' 个网盘</span>' : '<span class="tg dim">无直链</span>')
-    + (it.pv ? '<span class="pill">' + Number(it.pv).toLocaleString() + ' 浏览</span>' : '')
-    + (it.libId ? '<span class="tg">已关联端游库</span>' : '')
-    + '</div>'
-    + (lkHtml ? '<div class="md-lk">' + lkHtml + lkMore + '</div>' : '')
-    + '<div class="md-go"><a href="' + esc(src) + '" target="_blank" rel="noopener noreferrer">打开源站帖 ↗</a></div>'
-    + '</div>'
-    + '</article>';
+  const more = links.length > 2 ? '<span class="more">+' + (links.length - 2) + '</span>' : '';
+  /* ★ 没有任何下载通道时**不静默留空**：给一个「源站」出口，并说明为什么没有按钮。
+   *   这条是铁律「存在 ≠ 可见」的正向落点：卡内每一行都必须有一个可点的去处。 */
+  const fallback = (!links.length && it.page)
+    ? '<a class="bd-other" href="' + esc(it.page) + '" target="_blank" rel="noopener noreferrer" title="'
+      + esc(it.note || '这条没有解析到下载链，去源站看') + '">源站</a>'
+    : '';
+  const lkHtml = '<span class="gl-lk">' + two + more + fallback + '</span>';
+  const sizeTxt = it.size ? '<span class="sz">' + esc(String(it.size).slice(0, 12)) + '</span>' : '';
+  const title = it.title || it.game || '?';
+  const mute = links.length ? '' : ' mute';
+  return '<div class="gl-i" data-src="' + esc(it.src || '') + '">'
+    + '<span class="n">' + n + '</span>'
+    + '<span class="t' + mute + '" title="' + esc(title) + '">' + esc(title) + '</span>'
+    + sizeTxt
+    + lkHtml
+    + '</div>';
 }
 
-function bindMdCards() {
-  const g = document.getElementById('mdGrid'); if (!g || g.dataset.bound) return;
-  g.dataset.bound = '1';
-  g.addEventListener('click', (e) => {
-    /* 盘口按钮 / 源站帖 是外链，别被卡片点击吞掉 */
-    if (e.target.closest('.lk') || e.target.closest('.md-go a')) return;
-    const btn = e.target.closest('.cov-btn');
-    const card = e.target.closest('.emu-card'); if (!card) return;
-    if (btn && btn.dataset.lib && typeof openDetailById === 'function') {
-      e.stopPropagation();
-      openDetailById(btn.dataset.lib, btn.dataset.title || card.dataset.libt || card.dataset.name);
-      return;
-    }
-    if (card.dataset.lib && typeof openDetailById === 'function') {
-      openDetailById(card.dataset.lib, card.dataset.libt || card.dataset.name);
-      return;
-    }
-    if (typeof toast === 'function') toast('这款未收录进本地端游库，暂无详情页');
-  });
-}
+/** 一张游戏组卡 */
+function grpCard(cat, g) {
+  const meta = GRP_META[cat];
+  const game = g.game || '?';
+  const libTitle = g.libTitle || '';
+  const alt = (libTitle && libTitle !== game) ? '<div class="alt" title="' + esc(libTitle) + '">' + esc(String(libTitle).slice(0, 46)) + '</div>' : '';
 
-async function loadMd(more) {
-  if (mdState.loading) return;
-  mdState.loading = true;
-  const grid = document.getElementById('mdGrid');
-  if (!more) { mdState.offset = 0; if (grid) grid.innerHTML = '<div class="emu-loading">正在拉取 MOD 清单…</div>'; }
-  try {
-    const qs = new URLSearchParams({
-      q: mdState.q, kind: 'mod', sort: mdState.sort,
-      limit: RES_PAGE_SIZE, offset: mdState.offset,
-    });
-    if (!mdState.matched) qs.set('all', '1');
-    const j = await fetch(api('/api/mods/list?' + qs)).then((r) => r.json());
-    mdState.total = j.total || 0;
-    const items = j.items || [];
-    mdState.items = more ? mdState.items.concat(items) : items;
-    mdState.offset = mdState.items.length;
-    if (grid) grid.innerHTML = mdState.items.length ? mdState.items.map(mdCard).join('') : '<div class="emu-empty">没有匹配的 MOD，换个关键词试试</div>';
-    const cnt = document.getElementById('mdCount'); if (cnt) cnt.textContent = '共 ' + mdState.total.toLocaleString() + ' 条';
-    const mo = document.getElementById('mdMore');
-    if (mo) mo.style.display = mdState.items.length < mdState.total ? '' : 'none';
-  } catch (e) {
-    if (grid) grid.innerHTML = '<div class="emu-empty">拉取失败，请稍后重试</div>';
-  } finally { mdState.loading = false; }
-}
+  /* 封面：有就用真图（组卡封面取自端游库/条目），没有就沿用既有 .cov.ph 占位块
+     （同尺寸、只放缩写 —— 不这么写网格被拉齐后卡顶会空出一块）。 */
+  const covBtn = g.libId
+    ? '<button class="cov-btn" data-lib="' + esc(g.libId) + '" data-title="' + esc(libTitle || game) + '" type="button">查看游戏详情</button>'
+    : '';
+  const cov = g.cover
+    ? '<div class="cov"><img src="' + esc(g.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' + covBtn + '</div>'
+    : '<div class="cov ph"><span>' + esc(String(game).slice(0, 2).toUpperCase()) + '</span></div>';
 
-async function initMd() {
-  if (mdState.inited) return; mdState.inited = true;
-  bindMdCards();
-  try {
-    const s = await fetch(api('/api/mods/stats')).then((r) => r.json());
-    const box = document.getElementById('mdStats');
-    if (box) {
-      box.innerHTML = [
-        ['MOD 总数', (s.byKind && s.byKind.mod) || s.total], ['已关联端游', s.matched],
-        ['网盘地址', s.linkTotal], ['覆盖游戏', s.games],
-      ].map(([k, v]) => '<div class="st"><b>' + (v == null ? '—' : (typeof v === 'number' ? v.toLocaleString() : esc(v))) + '</b><span>' + k + '</span></div>').join('');
-    }
-    const built = document.getElementById('mdBuilt');
-    if (built && s.builtAt) built.textContent = '（清单更新于 ' + new Date(s.builtAt).toLocaleString('zh-CN', { hour12: false }) + '）';
-  } catch (e) {}
-  const si = document.getElementById('mdSearch');
-  if (si && !si.dataset.bound) {
-    si.dataset.bound = '1';
-    let t;
-    si.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { mdState.q = si.value.trim(); loadMd(false); }, 260); });
-  }
-  const sorts = document.getElementById('mdSorts');
-  if (sorts && !sorts.dataset.bound) {
-    sorts.dataset.bound = '1';
-    sorts.addEventListener('click', (e) => {
-      const b = e.target.closest('.emu-sort'); if (!b) return;
-      sorts.querySelectorAll('.emu-sort').forEach((x) => x.classList.toggle('on', x === b));
-      mdState.sort = b.dataset.s; loadMd(false);
-    });
-  }
-  const mo = document.getElementById('mdMore');
-  if (mo && !mo.dataset.bound) { mo.dataset.bound = '1'; mo.addEventListener('click', () => loadMd(true)); }
-  const tg = document.getElementById('mdToggleLib');
-  if (tg) {
-    const paint = () => { tg.classList.toggle('on', mdState.matched); };
-    paint();
-    if (!tg.dataset.bound) {
-      tg.dataset.bound = '1';
-      tg.addEventListener('click', () => { mdState.matched = !mdState.matched; paint(); loadMd(false); });
-    }
-  }
-  await loadMd(false);
-}
+  /* 来源徽标：这张卡里的条目分别来自哪些源（卡内可能混源，例如存档 = 游侠 + GTrainers） */
+  const srcTags = Object.keys(g.bySrc || {})
+    .sort((a, b) => (g.bySrc[b] || 0) - (g.bySrc[a] || 0))
+    .map((k) => '<span class="tg src ' + esc(k) + '">' + esc(grpSrcName(k)) + '</span>')
+    .join('');
 
-/* ============================================================================
- * ② 存档分区（#resSaves）—— 自 emulator-sections.js 搬家，路径展示于 v10.45 改版
- *
- * ★ v10.45：**卡面不再铺路径**。用户口径：
- *   「存档位置显示有点多以及杂（先优化存档页面中的卡片，不在卡片中显示位置）」，
- *   并拍板「卡面留按钮，点开合并弹窗的『存档』模块」。
- *   旧版把最多 3 条路径 + 2 条注册表（`.paths` / `.cp`）直接铺在卡面上，
- *   卡又高又花、一屏扫不完；路径本身在**详情页「云存档位置」块**与
- *   **合并下载弹窗的「存档」模块**里都有，
- *   这里再铺一份属于「同一份数据三套渲染」。
- *   ★ v10.46：那处落点又下移一层 —— 弹窗的存档模块主区改成「可下载的**文件**」
- *     （游侠存档区），位置收进模块**右上角**的「📍 存档位置」按钮 → #svLoc 二级弹窗。
- *     ⚠️ 所以本页卡片的按钮文案「查看 N 条存档位置」点进去**先看到的是文件**，
- *       位置要在弹窗里再点一次右上角 —— 文案没说谎（位置确实在里面），但下轮若要改措辞，
- *       记得同步 test-emulator-structure.js 里那条 toast 文案断言。
- *     ⚠️⚠️ 这段注释里**故意不复述那条 toast 的原文**：断言是用 `indexOf` 式字符串去
- *       `resources.html` 源码里搜的，注释里出现同一串会让断言**恒真**
- *       （本项目在 PITFALLS 里记过这个坑）。
- * ★ 搬到本页后默认口径保持不变：本页是端游资源语境 ⇒ 默认给全量（phone=false）。
- * ========================================================================== */
-const svState = { q: '', sort: 'paths', phone: false, cloud: false, offset: 0, total: 0, items: [], inited: false, loading: false };
-
-function svCard(it) {
-  const title = it.title || it.name || '?';
-  const paths = it.paths || [];
-  const regs = it.regs || [];
-  const cloud = it.cloud || [];
-
-  const cov = it.libCover
-    ? '<div class="cov"><img src="' + esc(it.libCover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
-      + (it.libId ? '<button class="cov-btn" data-lib="' + esc(it.libId) + '" data-title="' + esc(title) + '" type="button">查看游戏详情</button>' : '')
-      + '</div>'
-    : '<div class="cov noimg"><span>' + esc(String(title).slice(0, 2).toUpperCase()) + '</span></div>';
-
-  const altHtml = (it.name && it.name !== title) ? '<div class="alt" title="' + esc(it.name) + '">' + esc(String(it.name).slice(0, 46)) + '</div>' : '';
-
-  const cloudTags = cloud.length
-    ? cloud.map((c) => '<span class="tg cloud">☁ ' + esc(String(c).toUpperCase()) + '</span>').join('')
-    : '<span class="tg dim">不支持云同步</span>';
-
-  /* 唯一动作：打开合并下载弹窗并直接落在「存档」模块（`data-sv-open` 由 bindSvCards 分流）。
-     ⚠️ 条数写进按钮文案 —— 卡面上没有路径了，用户需要一个「值不值得点」的量。
-     注册表项也算一条记录（弹窗右上角「📍 存档位置」里两类都逐条列出），所以合计。 */
-  const total = paths.length + regs.length;
-  const open = '<button class="sv-open" type="button" data-sv-open'
-    + ' data-title="' + esc(title) + '" data-lib="' + esc(it.libId || '') + '">'
-    + (total ? '查看 ' + total + ' 条存档位置' : '查看存档位置') + '</button>';
-
-  return '<article class="emu-card sv' + (it.libCover ? ' has-cov' : '') + '" data-name="' + esc(title) + '" data-lib="' + esc(it.libId || '') + '">'
-    + cov
-    + '<div class="bd">'
-    + '<h4 title="' + esc(title) + '">' + esc(title) + '</h4>'
-    + altHtml
-    + '<div class="meta">'
-    + (it.phone ? '<span class="tg phone">手机能玩</span>' : '')
-    + '<span class="pill">' + paths.length + ' 条存档</span>'
-    + (regs.length ? '<span class="pill">' + regs.length + ' 项注册表</span>' : '')
-    + '</div>'
-    + '<div class="tgs">' + cloudTags + '</div>'
-    + open
-    + '</div>'
-    + '</article>';
-}
-
-function bindSvCards() {
-  const g = document.getElementById('svGrid'); if (!g || g.dataset.bound) return;
-  g.dataset.bound = '1';
-  /* 点击分流：点 .sv-open 开弹窗「存档」模块；点正文其余位置有 libId 就进游戏详情。 */
-  g.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-sv-open]');
-    if (btn) {
-      e.stopPropagation();
-      /* 跨页共享：openUniDownload 在主脚本里（派生页同样带上），这里只负责把参数递过去。
-         ⚠️ 兜底也要有 —— 万一某天主脚本那块被裁掉，按钮不能变成「点了没反应」。 */
-      if (typeof openUniDownload === 'function') {
-        openUniDownload({
-          title: btn.dataset.title || '', id: btn.dataset.lib || '', tab: 'save',
-        });
-      } else if (typeof toast === 'function') {
-        toast('暂时打不开存档弹窗，请刷新页面重试');
-      }
-      return;
-    }
-    const card = e.target.closest('.emu-card'); if (!card) return;
-    const cbtn = e.target.closest('.cov-btn');
-    const lib = (cbtn && cbtn.dataset.lib) || card.dataset.lib;
-    if (lib && typeof openDetailById === 'function') {
-      openDetailById(lib, (cbtn && cbtn.dataset.title) || card.dataset.name);
-      return;
-    }
-    if (typeof toast === 'function') toast('这条没对上端游库，没有详情页；可以点「查看存档位置」看路径');
-  });
-}
-
-async function loadSv(more) {
-  if (svState.loading) return;
-  svState.loading = true;
-  const grid = document.getElementById('svGrid');
-  if (!more) { svState.offset = 0; if (grid) grid.innerHTML = '<div class="emu-loading">正在拉取存档位置库…</div>'; }
-  try {
-    const qs = new URLSearchParams({
-      q: svState.q, sort: svState.sort, limit: RES_PAGE_SIZE, offset: svState.offset,
-    });
-    /* ★ 开关语义：phone 关掉 = 放开到全量（stats=all）。本页默认关（看全部端游） */
-    if (svState.phone) qs.set('phone', '1'); else qs.set('stats', 'all');
-    if (svState.cloud) qs.set('cloud', '1');
-    const j = await fetch(api('/api/saves/list?' + qs)).then((r) => r.json());
-    svState.total = j.total || 0;
-    const items = j.items || [];
-    svState.items = more ? svState.items.concat(items) : items;
-    svState.offset = svState.items.length;
-    if (grid) grid.innerHTML = svState.items.length ? svState.items.map(svCard).join('') : '<div class="emu-empty">没有匹配的游戏，换个关键词试试</div>';
-    const cnt = document.getElementById('svCount'); if (cnt) cnt.textContent = '共 ' + svState.total.toLocaleString() + ' 款';
-    const mo = document.getElementById('svMore');
-    if (mo) mo.style.display = svState.items.length < svState.total ? '' : 'none';
-  } catch (e) {
-    if (grid) grid.innerHTML = '<div class="emu-empty">拉取失败，请稍后重试</div>';
-  } finally { svState.loading = false; }
-}
-
-async function initSv() {
-  if (svState.inited) return; svState.inited = true;
-  bindSvCards();
-  try {
-    const s = await fetch(api('/api/saves/stats')).then((r) => r.json());
-    const box = document.getElementById('svStats');
-    if (box) {
-      box.innerHTML = [
-        ['收录游戏', s.total], ['存档位置', s.pathCount], ['支持云同步', s.withCloud], ['手机能玩', s.phonePlayable],
-      ].map(([k, v]) => '<div class="st"><b>' + (v == null ? '—' : (typeof v === 'number' ? v.toLocaleString() : esc(v))) + '</b><span>' + k + '</span></div>').join('');
-    }
-    const built = document.getElementById('svBuilt');
-    if (built && s.builtAt) built.textContent = '（清单更新于 ' + new Date(s.builtAt).toLocaleString('zh-CN', { hour12: false }) + '，源：' + s.source + '）';
-  } catch (e) {}
-  const si = document.getElementById('svSearch');
-  if (si && !si.dataset.bound) {
-    si.dataset.bound = '1';
-    let t;
-    si.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { svState.q = si.value.trim(); loadSv(false); }, 260); });
-  }
-  const sorts = document.getElementById('svSorts');
-  if (sorts && !sorts.dataset.bound) {
-    sorts.dataset.bound = '1';
-    sorts.addEventListener('click', (e) => {
-      const b = e.target.closest('.emu-sort'); if (!b) return;
-      sorts.querySelectorAll('.emu-sort').forEach((x) => x.classList.toggle('on', x === b));
-      svState.sort = b.dataset.s; loadSv(false);
-    });
-  }
-  const mo = document.getElementById('svMore');
-  if (mo && !mo.dataset.bound) { mo.dataset.bound = '1'; mo.addEventListener('click', () => loadSv(true)); }
-  const ph = document.getElementById('svPhone');
-  if (ph) {
-    const paint = () => { ph.classList.toggle('on', svState.phone); };
-    paint();
-    if (!ph.dataset.bound) {
-      ph.dataset.bound = '1';
-      ph.addEventListener('click', () => { svState.phone = !svState.phone; paint(); loadSv(false); });
-    }
-  }
-  const cl = document.getElementById('svCloud');
-  if (cl) {
-    const paint = () => { cl.classList.toggle('on', svState.cloud); };
-    paint();
-    if (!cl.dataset.bound) {
-      cl.dataset.bound = '1';
-      cl.addEventListener('click', () => { svState.cloud = !svState.cloud; paint(); loadSv(false); });
-    }
-  }
-  await loadSv(false);
-}
-
-/* ============================================================================
- * ③ 修改器分区（#resTrainers）—— 自 emulator-sections.js 搬家，正文逐字未改
- *
- * ★ 关于「放置位置」：修改器是**独立 exe，不需要放进游戏目录**。
- *   直接运行即可，它会自己挂上游戏进程。
- * ★ 本页**刻意不做下载按钮**：GCM 官方下载走一次性 S3 签名 URL（依赖客户端密钥），
- *   无法离线复现也不该绕过。所以改为「信息展示 + 获取方式引导」。
- * ========================================================================== */
-const trState = { q: '', source: '', sort: 'lib', matched: true, offset: 0, total: 0, items: [], inited: false, loading: false };
-
-/** 5 个来源的展示名与官方获取入口（链接均已实测 200） */
-const TR_SRC = {
-  fling: { label: '风灵月影', go: 'https://flingtrainer.com/', goLabel: '风灵月影官网' },
-  cheat_table: { label: 'CE 修改表', go: 'https://gamezonelabs.com/products/gcm/trainers', goLabel: 'GCM 修改器库' },
-  community: { label: '社区贡献', go: 'https://gamezonelabs.com/products/gcm/trainers', goLabel: 'GCM 修改器库' },
-  xiaoxing: { label: '小幸修改器', go: 'https://gamezonelabs.com/products/gcm/trainers', goLabel: 'GCM 修改器库' },
-  gcm: { label: 'GCM 精选', go: 'https://github.com/dyang886/Game-Cheats-Manager/releases', goLabel: 'GCM 下载页' },
-};
-
-function trCard(it) {
-  const zh = it.zh || '';
-  const en = it.name || '';
-  const title = zh || en || '?';
-  const meta = TR_SRC[it.source] || { label: it.source || '未知来源', go: '', goLabel: '' };
-
-  const cov = it.libCover
-    ? '<div class="cov"><img src="' + esc(it.libCover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
-      + (it.libId ? '<button class="cov-btn" data-lib="' + esc(it.libId) + '" data-title="' + esc(it.libTitle || title) + '" type="button">查看游戏详情</button>' : '')
-      + '</div>'
-    : '<div class="cov noimg"><span>' + esc(String(title).slice(0, 2).toUpperCase()) + '</span></div>';
-
-  /* 中文名优先做标题，英文名降级成别名行；两者相同时不重复渲染 */
-  const altHtml = (zh && en && zh !== en) ? '<div class="alt" title="' + esc(en) + '">' + esc(String(en).slice(0, 46)) + '</div>' : '';
-
-  const go = meta.go
-    ? '<div class="tr-go"><a href="' + esc(meta.go) + '" target="_blank" rel="noopener noreferrer">获取方式 ↗ ' + esc(meta.goLabel) + '</a></div>'
+  const rows = (g.items || []).map((it, i) => glRow(cat, it, i + 1)).join('');
+  const moreBtn = g.more
+    ? '<button class="grp-more" type="button" data-grp-more data-cat="' + cat + '" data-key="' + esc(g.key) + '" data-title="'
+      + esc(game) + '">展开全部 ' + Number(g.count).toLocaleString() + ' 条 ▾</button>'
     : '';
 
-  return '<article class="emu-card' + (it.libCover ? ' has-cov' : '') + '" data-name="' + esc(title) + '" data-lib="' + esc(it.libId || '') + '" data-libt="' + esc(it.libTitle || '') + '">'
+  return '<article class="emu-card grp' + (g.cover ? ' has-cov' : '') + '" data-cat="' + cat + '" data-key="' + esc(g.key) + '"'
+    + ' data-lib="' + esc(g.libId || '') + '" data-libt="' + esc(libTitle || game) + '" data-name="' + esc(game) + '">'
     + cov
     + '<div class="bd">'
-    + '<h4 title="' + esc(title) + '">' + esc(title) + '</h4>'
-    + altHtml
+    + '<h4 title="' + esc(game) + '">' + esc(game) + '</h4>'
+    + alt
     + '<div class="meta">'
-    + '<span class="tg src ' + esc(it.source) + '">' + esc(meta.label) + '</span>'
-    + (it.version ? '<span class="pill ver">v ' + esc(it.version) + '</span>' : '')
-    + (it.libId ? '<span class="tg">已关联端游库</span>' : '')
+    + '<span class="tg ' + meta.kindCls + '">' + esc(meta.label) + '</span>'
+    + '<span class="pill">' + Number(g.count).toLocaleString() + ' 条</span>'
+    + (srcTags || '')
     + '</div>'
-    + go
-    + '<div class="tr-note">💡 <b>放置位置</b>：独立 exe，<b>不用放进游戏目录</b>，双击运行即可（会自动挂上游戏进程）。</div>'
+    + '<div class="gl">' + rows + '</div>'
+    + moreBtn
     + '</div>'
     + '</article>';
 }
 
-function bindTrCards() {
-  const g = document.getElementById('trGrid'); if (!g || g.dataset.bound) return;
+/** 「展开全部」：把这个组剩余条目原地铺进卡内（不跳页、不换弹窗） */
+async function grpExpand(btn) {
+  if (btn.dataset.busy === '1') return;
+  btn.dataset.busy = '1';
+  btn.disabled = true;
+  const old = btn.textContent;
+  btn.textContent = '正在展开…';
+  const cat = btn.dataset.cat;
+  const key = btn.dataset.key;
+  try {
+    /* limit 封顶 300：赛博朋克2077 单组 717 条，一次全铺会把 DOM 撑爆、且没人会滚到底。
+       服务端会回 `truncated`，此时按钮**改成说明文案**而不是消失 —— 让用户知道上面还有。 */
+    const j = await fetch(api('/api/res/items?cat=' + encodeURIComponent(cat) + '&key=' + encodeURIComponent(key) + '&limit=300'))
+      .then((r) => r.json());
+    const card = btn.closest('.emu-card');
+    const gl = card && card.querySelector('.gl');
+    const items = j.items || [];
+    if (!gl || !items.length) throw new Error('空结果');
+    gl.innerHTML = items.map((it, i) => glRow(cat, it, i + 1)).join('');
+    if (j.truncated) {
+      btn.removeAttribute('data-grp-more');
+      btn.disabled = false;
+      btn.dataset.busy = '';
+      btn.textContent = '已铺前 ' + items.length + ' 条（共 ' + Number(j.total).toLocaleString() + ' 条，其余请进游戏详情）';
+    } else {
+      btn.remove();
+    }
+  } catch (e) {
+    btn.disabled = false;
+    btn.dataset.busy = '';
+    btn.textContent = old;
+    if (typeof toast === 'function') toast('展开失败，请稍后重试');
+  }
+}
+
+/** 网格点击分流（三个分区同一套）：展开全部 / 卡内通道外链 / 封面按钮 / 整卡进详情 */
+function bindGrpGrid(cat) {
+  const meta = GRP_META[cat];
+  const g = document.getElementById(meta.grid);
+  if (!g || g.dataset.bound) return;
   g.dataset.bound = '1';
   g.addEventListener('click', (e) => {
+    const more = e.target.closest('[data-grp-more]');
+    if (more) { e.stopPropagation(); grpExpand(more); return; }
+    /* 卡内的下载通道是外链，别被整卡的点击吞掉 */
+    if (e.target.closest('.gl-lk a')) return;
     const btn = e.target.closest('.cov-btn');
-    const card = e.target.closest('.emu-card'); if (!card) return;
+    const card = e.target.closest('.emu-card');
+    if (!card) return;
     if (btn && btn.dataset.lib && typeof openDetailById === 'function') {
       e.stopPropagation();
       openDetailById(btn.dataset.lib, btn.dataset.title || card.dataset.libt || card.dataset.name);
@@ -410,80 +219,125 @@ function bindTrCards() {
   });
 }
 
-async function loadTr(more) {
-  if (trState.loading) return;
-  trState.loading = true;
-  const grid = document.getElementById('trGrid');
-  if (!more) { trState.offset = 0; if (grid) grid.innerHTML = '<div class="emu-loading">正在拉取修改器清单…</div>'; }
+/* ============================================================================
+ * 通用加载 / 初始化（三个分区共用一份实现，靠 GRP_META 区分）
+ * ========================================================================== */
+
+async function loadGrp(cat, more) {
+  const meta = GRP_META[cat];
+  const st = grpState[cat];
+  if (st.loading) return;
+  st.loading = true;
+  const grid = document.getElementById(meta.grid);
+  if (!more) {
+    st.offset = 0;
+    if (grid) grid.innerHTML = '<div class="emu-loading">正在拉取' + esc(meta.label) + '清单…</div>';
+  }
   try {
     const qs = new URLSearchParams({
-      q: trState.q, source: trState.source, sort: trState.sort,
-      limit: RES_PAGE_SIZE, offset: trState.offset,
+      cat, q: st.q, sort: st.sort, limit: RES_PAGE_SIZE, offset: st.offset,
     });
-    if (!trState.matched) qs.set('stats', 'all');
-    const j = await fetch(api('/api/trainers/list?' + qs)).then((r) => r.json());
-    trState.total = j.total || 0;
+    if (st.src) qs.set('src', st.src);
+    const j = await fetch(api('/api/res/groups?' + qs)).then((r) => r.json());
+    if (!j || j.ok === false) throw new Error((j && j.error) || '接口返回异常');
+    st.total = j.total || 0;
     const items = j.items || [];
-    trState.items = more ? trState.items.concat(items) : items;
-    trState.offset = trState.items.length;
-    if (grid) grid.innerHTML = trState.items.length ? trState.items.map(trCard).join('') : '<div class="emu-empty">没有匹配的修改器，换个关键词试试</div>';
-    const cnt = document.getElementById('trCount'); if (cnt) cnt.textContent = '共 ' + trState.total.toLocaleString() + ' 条';
-    const mo = document.getElementById('trMore');
-    if (mo) mo.style.display = trState.items.length < trState.total ? '' : 'none';
+    st.items = more ? st.items.concat(items) : items;
+    st.offset = st.items.length;
+    if (grid) {
+      grid.innerHTML = st.items.length
+        ? st.items.map((g) => grpCard(cat, g)).join('')
+        : '<div class="emu-empty">没有匹配的游戏，换个关键词试试</div>';
+    }
+    const cnt = document.getElementById(meta.count);
+    /* ★ 计数文案写「款游戏」而不是「条」：卡是游戏粒度，写「条」会和卡内条数打架 */
+    if (cnt) cnt.textContent = '共 ' + st.total.toLocaleString() + ' 款游戏';
+    const mo = document.getElementById(meta.more);
+    if (mo) mo.style.display = st.items.length < st.total ? '' : 'none';
   } catch (e) {
     if (grid) grid.innerHTML = '<div class="emu-empty">拉取失败，请稍后重试</div>';
-  } finally { trState.loading = false; }
+  } finally { st.loading = false; }
 }
 
-async function initTr() {
-  if (trState.inited) return; trState.inited = true;
-  bindTrCards();
+/** 统计条 + 构建时间 + 来源筛选下拉（三处同形，靠 GRP_META 取值） */
+async function grpPaintMeta(cat, s) {
+  const meta = GRP_META[cat];
+  const box = document.getElementById(meta.stats);
+  if (box && s) {
+    const vals = [s.groups, s.items, s.withLink, (s.linkPct == null ? '—' : s.linkPct + '%')];
+    box.innerHTML = meta.statLabel
+      .map((k, i) => '<div class="st"><b>' + (vals[i] == null ? '—' : (typeof vals[i] === 'number' ? vals[i].toLocaleString() : esc(String(vals[i])))) + '</b><span>' + esc(k) + '</span></div>')
+      .join('');
+  }
+  const built = document.getElementById(meta.built);
+  if (built) {
+    const t = s && s.builtAt ? new Date(s.builtAt).toLocaleString('zh-CN', { hour12: false }) : '';
+    built.textContent = t ? '（清单更新于 ' + t + '）' : '';
+  }
+  const sel = document.getElementById(meta.srcBox);
+  if (sel && s && s.bySrc) {
+    const cur = grpState[cat].src;
+    sel.innerHTML = '<option value="">全部来源</option>' + Object.keys(s.bySrc)
+      .sort((a, b) => (s.bySrc[b] || 0) - (s.bySrc[a] || 0))
+      .map((k) => '<option value="' + esc(k) + '">' + esc(grpSrcName(k)) + '（' + Number(s.bySrc[k]).toLocaleString() + '）</option>')
+      .join('');
+    sel.value = cur;
+  }
+}
+
+/** 一个分区的完整初始化：绑定 + 拉统计 + 绑排序/搜索/来源/加载更多 + 首屏 */
+async function initGrp(cat) {
+  const meta = GRP_META[cat];
+  const st = grpState[cat];
+  if (st.inited) return;
+  st.inited = true;
+  bindGrpGrid(cat);
+
   try {
-    const s = await fetch(api('/api/trainers/stats')).then((r) => r.json());
-    const box = document.getElementById('trStats');
-    if (box) {
-      box.innerHTML = [
-        ['修改器总数', s.total], ['已关联端游', s.matched], ['来源数', (s.sources || []).length], ['匹配率', s.matchedRate + '%'],
-      ].map(([k, v]) => '<div class="st"><b>' + (v == null ? '—' : (typeof v === 'number' ? v.toLocaleString() : esc(v))) + '</b><span>' + k + '</span></div>').join('');
-    }
-    const built = document.getElementById('trBuilt');
-    if (built && s.builtAt) built.textContent = '（清单更新于 ' + new Date(s.builtAt).toLocaleString('zh-CN', { hour12: false }) + '）';
-    const sel = document.getElementById('trSource');
-    if (sel && s.sources) {
-      sel.innerHTML = '<option value="">全部来源</option>' + s.sources
-        .map((x) => '<option value="' + esc(x.key) + '">' + esc(x.label) + '（' + Number(x.count).toLocaleString() + '）</option>').join('');
-    }
+    const s = await fetch(api('/api/res/stats?cat=' + cat)).then((r) => r.json());
+    if (s && s.srcLabel) grpSrcLabel = Object.assign(grpSrcLabel, s.srcLabel);
+    await grpPaintMeta(cat, s);
+    /* ★ 统计里的来源名要等接口回来才知道 ⇒ 回来后再重绘一次来源下拉（名字不再靠兜底表） */
   } catch (e) {}
-  const si = document.getElementById('trSearch');
-  if (si && !si.dataset.bound) {
-    si.dataset.bound = '1';
-    let t;
-    si.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { trState.q = si.value.trim(); loadTr(false); }, 260); });
-  }
-  const sel = document.getElementById('trSource');
-  if (sel && !sel.dataset.bound) {
-    sel.dataset.bound = '1';
-    sel.addEventListener('change', () => { trState.source = sel.value; loadTr(false); });
-  }
-  const sorts = document.getElementById('trSorts');
+
+  /* 排序项由 GRP_META 生成（三处同形，避免 HTML 与 JS 两处各写一份） */
+  const sorts = document.getElementById(meta.sortsBox);
   if (sorts && !sorts.dataset.bound) {
     sorts.dataset.bound = '1';
+    sorts.innerHTML = meta.sorts
+      .map(([k, label], i) => '<button class="emu-sort' + (i === 0 ? ' on' : '') + '" data-s="' + esc(k) + '" type="button">' + esc(label) + '</button>')
+      .join('');
     sorts.addEventListener('click', (e) => {
       const b = e.target.closest('.emu-sort'); if (!b) return;
       sorts.querySelectorAll('.emu-sort').forEach((x) => x.classList.toggle('on', x === b));
-      trState.sort = b.dataset.s; loadTr(false);
+      st.sort = b.dataset.s;
+      loadGrp(cat, false);
     });
   }
-  const mo = document.getElementById('trMore');
-  if (mo && !mo.dataset.bound) { mo.dataset.bound = '1'; mo.addEventListener('click', () => loadTr(true)); }
-  const tg = document.getElementById('trToggleLib');
-  if (tg) {
-    const paint = () => { tg.classList.toggle('on', trState.matched); };
-    paint();
-    if (!tg.dataset.bound) {
-      tg.dataset.bound = '1';
-      tg.addEventListener('click', () => { trState.matched = !trState.matched; paint(); loadTr(false); });
-    }
+
+  const si = document.getElementById(meta.search);
+  if (si && !si.dataset.bound) {
+    si.dataset.bound = '1';
+    let t;
+    si.addEventListener('input', () => {
+      clearTimeout(t);
+      t = setTimeout(() => { st.q = si.value.trim(); loadGrp(cat, false); }, 260);
+    });
   }
-  await loadTr(false);
+
+  const sel = document.getElementById(meta.srcBox);
+  if (sel && !sel.dataset.bound) {
+    sel.dataset.bound = '1';
+    sel.addEventListener('change', () => { st.src = sel.value; loadGrp(cat, false); });
+  }
+
+  const mo = document.getElementById(meta.more);
+  if (mo && !mo.dataset.bound) { mo.dataset.bound = '1'; mo.addEventListener('click', () => loadGrp(cat, true)); }
+
+  await loadGrp(cat, false);
 }
+
+/* 三个分区各自的入口（页面骨架与派生页生成器按这些名字调用，别改名） */
+function initMd() { return initGrp('mod'); }
+function initSv() { return initGrp('saves'); }
+function initTr() { return initGrp('trainers'); }

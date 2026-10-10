@@ -41,7 +41,7 @@
   },
   {
     "name": "AC3SP",
-    "count": 28
+    "count": 29
   },
   {
     "name": "AC4BFSP",
@@ -653,7 +653,7 @@
   },
   {
     "name": "Battlefield__1",
-    "count": 9
+    "count": 10
   },
   {
     "name": "Battlefield__6",
@@ -673,7 +673,7 @@
   },
   {
     "name": "Battlefield__V",
-    "count": 11
+    "count": 12
   },
   {
     "name": "Battletoads",
@@ -937,7 +937,7 @@
   },
   {
     "name": "Buckshot_Roulette",
-    "count": 2
+    "count": 3
   },
   {
     "name": "Bulletstorm__Full_Clip_Edition",
@@ -1057,7 +1057,7 @@
   },
   {
     "name": "Cairn",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Call_Of_Duty_MW2",
@@ -1617,7 +1617,7 @@
   },
   {
     "name": "DARK_SOULS___REMASTERED",
-    "count": 42
+    "count": 43
   },
   {
     "name": "DAVE_THE_DIVER",
@@ -1717,7 +1717,7 @@
   },
   {
     "name": "DRAGON_BALL_Sparking__ZERO",
-    "count": 33
+    "count": 34
   },
   {
     "name": "DRAGON_BALL_XENOVERSE",
@@ -2082,6 +2082,10 @@
   {
     "name": "Diablo_II",
     "count": 7
+  },
+  {
+    "name": "Diablo_II___Lord_of_Destruction",
+    "count": 1
   },
   {
     "name": "Dig2",
@@ -2521,7 +2525,7 @@
   },
   {
     "name": "Euro_Truck_Simulator_2",
-    "count": 256
+    "count": 257
   },
   {
     "name": "Euro_Truck_Simulator_2_Demo",
@@ -2805,6 +2809,10 @@
   },
   {
     "name": "FNiA_3D_CE_1_0",
+    "count": 1
+  },
+  {
+    "name": "FPS_Chess",
     "count": 1
   },
   {
@@ -3369,7 +3377,7 @@
   },
   {
     "name": "GTA_IV__San_Andreas_Setup",
-    "count": 5
+    "count": 6
   },
   {
     "name": "GTA_SA__Liberty_City_Beta_7_Install_Program_________________",
@@ -3553,7 +3561,7 @@
   },
   {
     "name": "God_of_War",
-    "count": 150
+    "count": 151
   },
   {
     "name": "God_of_War_1_de_ps2_",
@@ -3681,7 +3689,7 @@
   },
   {
     "name": "Grand_Theft_Auto_IV__The_Complete_Edition",
-    "count": 395
+    "count": 400
   },
   {
     "name": "Grand_Theft_Auto_IV__The_Complete_Edition_",
@@ -3721,7 +3729,7 @@
   },
   {
     "name": "Grand_Theft_Auto_V_Legacy",
-    "count": 1509
+    "count": 1518
   },
   {
     "name": "Grand_Theft_Auto_V_Legacy22",
@@ -4085,7 +4093,7 @@
   },
   {
     "name": "Hollow_Knight__Silksong",
-    "count": 47
+    "count": 48
   },
   {
     "name": "Hollow_Knight_______________________________________________",
@@ -4961,7 +4969,7 @@
   },
   {
     "name": "METAL_GEAR_RISING__REVENGEANCE",
-    "count": 26
+    "count": 28
   },
   {
     "name": "METAL_GEAR_SOLID_4__Guns_of_the_Patriots_-_Master_Collection_Version",
@@ -5237,7 +5245,7 @@
   },
   {
     "name": "Marvel_s_Spider-Man_2",
-    "count": 14
+    "count": 15
   },
   {
     "name": "Marvel_s_Spider-Man_Remastered",
@@ -5733,7 +5741,7 @@
   },
   {
     "name": "NARUTO_STORM_3_FB",
-    "count": 16
+    "count": 17
   },
   {
     "name": "NARUTO_STORM_REVOLUTION",
@@ -5969,7 +5977,7 @@
   },
   {
     "name": "Need_for_Speed_9",
-    "count": 114
+    "count": 115
   },
   {
     "name": "Need_for_Speed_MONST_WANTEND",
@@ -6109,7 +6117,7 @@
   },
   {
     "name": "Ni_no_Kuni_Wrath_of_the_White_Witch__Remastered",
-    "count": 5
+    "count": 6
   },
   {
     "name": "Ni_no_Kuni__Wrath_of_the_White_Witch__Remastered",
@@ -6657,7 +6665,7 @@
   },
   {
     "name": "PlayGTAV",
-    "count": 114
+    "count": 115
   },
   {
     "name": "PlayGTAVOptiJuegos7Z",
@@ -6861,7 +6869,7 @@
   },
   {
     "name": "Pro_Evolution_Soccer_2013",
-    "count": 2979
+    "count": 2999
   },
   {
     "name": "Pro_Evolution_Soccer_20132",
@@ -6945,7 +6953,7 @@
   },
   {
     "name": "Pro_Evolution_Soccer_2017",
-    "count": 181
+    "count": 182
   },
   {
     "name": "Pro_Evolution_Soccer_2017seting",
@@ -7010,6 +7018,10 @@
   {
     "name": "Promise_Mascot_Agency",
     "count": 3
+  },
+  {
+    "name": "PromisestoKeep",
+    "count": 1
   },
   {
     "name": "Prop_Sumo",
@@ -7109,7 +7121,7 @@
   },
   {
     "name": "REDlauncher",
-    "count": 2
+    "count": 3
   },
   {
     "name": "REM",
@@ -7245,7 +7257,7 @@
   },
   {
     "name": "Red_Dead_Redemption_2",
-    "count": 51
+    "count": 52
   },
   {
     "name": "Redout_2",
@@ -7313,7 +7325,7 @@
   },
   {
     "name": "Resident_Evil_4",
-    "count": 59
+    "count": 60
   },
   {
     "name": "Resident_Evil_4_",
@@ -8056,6 +8068,10 @@
     "count": 2
   },
   {
+    "name": "Slime_Rancher",
+    "count": 1
+  },
+  {
     "name": "Snapshot__Lewd_Shores",
     "count": 1
   },
@@ -8277,6 +8293,10 @@
   },
   {
     "name": "Star_Trek_Armada_2",
+    "count": 1
+  },
+  {
+    "name": "Star_Trek_Legacy______________________________________________",
     "count": 1
   },
   {
@@ -8553,7 +8573,7 @@
   },
   {
     "name": "THE_KING_OF_FIGHTERS_XIII_GLOBAL_MATCH",
-    "count": 33
+    "count": 35
   },
   {
     "name": "THE_KING_OF_FIGHTERS_XV",
@@ -9769,7 +9789,7 @@
   },
   {
     "name": "Wolverine",
-    "count": 9
+    "count": 10
   },
   {
     "name": "Woolfe",
@@ -10661,7 +10681,7 @@
   },
   {
     "name": "mxbikes",
-    "count": 2
+    "count": 4
   },
   {
     "name": "my_eyes_deceive",

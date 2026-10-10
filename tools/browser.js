@@ -47,24 +47,39 @@ function findBrowser() { return CANDIDATES.find((p) => fs.existsSync(p)) || null
 
 /**
  * 连接（必要时先拉起）一个可调试的浏览器。
+ *
+ * opt:
+ *   port      CDP 端口（默认 9222）
+ *   root      项目根（用于放 profile）
+ *   window    窗口尺寸
+ *   headless  ★ v10.47 新增，默认 **true**（保持既有调用方行为不变）。
+ *             false ⇒ 走**有头**模式。为什么需要它：Cloudflare 的 managed challenge
+ *             对 headless 特征敏感，实测 fearlessrevolution 在 headless 下
+ *             24s 仍停在挑战页，换有头后 ~20s 放行（见 tools/fetch-fr.js 文件头）。
+ *   profile   ★ v10.47 新增，自定义 user-data-dir。默认沿用 `.cache/chrome-preview`。
+ *             需要它是因为 **cf_clearance 存在 profile 里** —— 固定一个专用目录，
+ *             第二次起就秒过挑战（实测 20s → 0.8s）。
  * @returns {Promise<{browser:object, close:Function, spawned:boolean}>}
  */
 async function connectBrowser(opt = {}) {
   const port = opt.port || DEFAULT_PORT;
   const root = opt.root || path.join(__dirname, '..');
+  const headless = opt.headless !== false;
   const puppeteer = require('puppeteer-core');
   let child = null;
 
   if (!(await cdpUp(port))) {
     const exe = findBrowser();
     if (!exe) throw new Error('未找到可用的 Chromium 内核浏览器（Chrome / Edge 均不在预期路径）');
-    const profile = path.join(root, '.cache', 'chrome-preview');
+    const profile = opt.profile || path.join(root, '.cache', 'chrome-preview');
     fs.mkdirSync(profile, { recursive: true });
-    child = spawn(exe, [
-      '--headless=new', '--no-sandbox', '--disable-gpu',
+    const args = ['--no-sandbox', '--disable-gpu',
       `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
-      `--window-size=${opt.window || '1440,1100'}`, 'about:blank',
-    ], { detached: true, stdio: 'ignore' });
+      `--window-size=${opt.window || '1440,1100'}`];
+    if (headless) args.unshift('--headless=new');
+    else args.push('--no-first-run', '--no-default-browser-check');
+    args.push('about:blank');
+    child = spawn(exe, args, { detached: true, stdio: 'ignore' });
     child.unref();
     for (let i = 0; i < 24 && !(await cdpUp(port)); i++) await sleep(500);
     if (!(await cdpUp(port))) throw new Error(`浏览器 CDP 端口 ${port} 未就绪（${exe}）`);
@@ -98,8 +113,8 @@ async function newPage(browser, { width = 1440, height = 1100, scale = 1 } = {})
  * 之后的 `b.newPage()` / `b.close()` 用法完全不变（close 会连带收掉拉起的进程）。
  * 存在的意义：puppeteer 自己的 spawn 链在本机沙箱里走不通（见文件头 ①②）。
  */
-async function launchBrowser() {
-  const h = await connectBrowser();
+async function launchBrowser(opt = {}) {
+  const h = await connectBrowser(opt);
   return h.browser;
 }
 

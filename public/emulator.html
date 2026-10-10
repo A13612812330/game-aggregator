@@ -34,9 +34,34 @@
     /* ★ v10.31：「修改器 / 云存档」两侧卡片的**单行槽位高**（用户口径
        「固定显示五个，而不是如果一边只有一个那个卡片大小就变小了」）。
        实测单行节距 = 32.7px 行高 + 4px 间距 ≈ 36.7px；×5 = 183.5px 的槽位底高，
-       保证「只有 1 条」的那一侧也占满五行的高度，两张卡不再一大一小。 */
+       保证「只有 1 条」的那一侧也占满五行的高度，两张卡不再一大一小。
+       ★ v10.47：两侧卡片改「按游戏聚合」后，卡内是**可下载条目**（一行一条，
+       带下载按钮），不再是一行文字路径 —— 5 行在这个密度下过高。用户口径
+       「更紧凑：预留行数 5 → 3」⇒ 3 × 36.7 ≈ 110px 的槽位底高。
+       ⚠️ 改这个值会同时影响两侧（--d-rows 是共享变量），这正是要的：
+          v10.31 的教训就是「两边不一样高」，不能只改一侧。 */
     --d-row-h:36.7px;
-    --d-rows:5;             /* 两侧各固定预留 5 行槽位 */
+    --d-rows:3;             /* 两侧各固定预留 3 行槽位（v10.47：5 → 3） */
+
+    /* ★ v10.47：盘口 / 通道配色的**唯一真源**。
+       同一组色值原先在两处各写了一份（详情页下载弹窗 `.dl-it .lk.bd-*`，
+       资源页 MOD 卡的 `.md-lk .lk.bd-*`）。v10.47 新增「组卡」的通道按钮时
+       会变成第三份 —— 三份手抄的十六进制必然漂。
+       ⇒ 收到这里一份，三个作用域都只写 `background:var(--ch-*)`。 */
+    --ch-baidu:#2B6DE5;
+    --ch-xunlei:#2A6FD6;
+    --ch-quark:#5A6BF5;
+    --ch-189:#1A73E8;
+    --ch-139:#0FA968;
+    --ch-ali:#5B6BF0;
+    --ch-123:#3C7DF5;
+    --ch-lanzou:#4C8BF5;
+    --ch-steam:#1B2838;
+    --ch-uc:#3C7DF5;
+    --ch-pikpak:#3D5AFE;
+    --ch-ed2k:#5E6B7F;      /* eD2K 电驴链（游侠存档的备用通道） */
+    --ch-file:#0F766E;      /* 直链附件（FR 的 .CT / 压缩包） */
+    --ch-other:#9AA3B5;
   }
   /* ★ v10.23：`hidden` 属性必须真的能藏住元素。
      浏览器给 `[hidden]` 的默认样式是 `display:none`，但它写在 **UA 样式表**里，
@@ -471,38 +496,108 @@
   .emu-grid.pc .emu-card{border-color:#E9E4FB}
   .emu-grid.pc .emu-card:hover{border-color:#C4B5FD;box-shadow:0 8px 22px rgba(124,58,237,.14)}
 
-  /* ============ 🛠 修改器分区（手机专区·第五页签） ============
-     数据源 Game Cheats Manager 公开清单，5 个来源各有一个配色，一眼看出「这份修改器打哪来」。
-     ⚠️ 本页**不含下载直链**（官方走签名 S3），所以卡片底部是「获取引导」而非下载按钮。 */
+  /* ============ 🛠 修改器分区（资源页·第三页签） ============
+     ★ v10.47 口径已变：本区不再只有 GCM 清单，而是 **GCM + GTrainers + FearlessRevolution**
+     三源合并 —— 后两家给**真实下载链**，GCM 仍刻意不给（官方走一次性 S3 签名 URL）。
+     ⇒ 卡内按钮按来源各自决定（有链给链，没链给「源站」出口），不再一律导流。
+     ⚠️ 旧「一卡一条」形态的下面五条 GCM 细分来源徽标（fling / cheat_table / community /
+        xiaoxing / gcm）、`.pill.ver`、`.tr-note`、`.tr-go` **已整组删除**（v10.47 改形后零用法：
+        精确 grep `tg src fling` 等全库 0 命中；`pill ver2` 才是活的，见搜索弹窗那条）。
+     ⚠️ 别把这几条和上面 `.tg.src.bh|pc|both` 混了 —— 那是**手机专区**的社区/实测来源徽标，仍在用。 */
   .sec-h .bar.tr{background:linear-gradient(180deg,#0F766E,#0D9488)}
   .emu-intro.tr{background:linear-gradient(120deg,#ECFDF5,#F0FDFA);border-color:#99F6E4}
   .emu-intro.tr .ic{background:linear-gradient(135deg,#0F766E,#14B8A6)}
   .emu-intro.tr .tx b{color:#0F766E}
   .emu-grid.tr .emu-card{border-color:#D5F2EA}
   .emu-grid.tr .emu-card:hover{border-color:#5EEAD4;box-shadow:0 8px 22px rgba(13,148,136,.15)}
-  .emu-card .tg.src.fling{color:#B91C1C;background:#FEE2E2}
-  .emu-card .tg.src.cheat_table{color:#1D4ED8;background:#DBEAFE}
-  .emu-card .tg.src.community{color:#0F766E;background:#CCFBF1}
-  .emu-card .tg.src.xiaoxing{color:#A16207;background:#FEF3C7}
-  .emu-card .tg.src.gcm{color:#6D28D9;background:#F5F3FF}
-  .emu-card .pill.ver{color:#334155;background:#F1F5F9;font-family:var(--font-num);font-weight:750}
-  .emu-card .tr-note{margin-top:2px;border-top:1px dashed var(--c-border);padding-top:7px;
-    font-size:10.5px;line-height:1.5;color:var(--c-t3)}
-  .emu-card .tr-note b{color:#0F766E}
-  .emu-card .tr-go{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
-  .emu-card .tr-go a{font-size:10.5px;font-weight:750;text-decoration:none;border-radius:7px;padding:4px 10px;
-    border:1px solid #99F6E4;background:#F0FDFA;color:#0F766E;transition:.15s}
-  .emu-card .tr-go a:hover{background:#0F766E;color:#fff;border-color:transparent}
+
+  /* ============ 🗂 端游资源「按游戏聚合」组卡（v10.47 · 三页签共用一套卡形） ============
+     用户口径：「MOD 按游戏做卡片而不是按 MOD」「存档只展示真有存档的而不是存档位置的」
+     「（修改器）同样按游戏聚合」+「卡内列前 3 条 + 展开全部」。
+     ⇒ 卡从「一卡一条（.emu-card 旧形态）」变成「一卡一款游戏，卡内铺 3 条条目」。
+
+     两处尺寸是专门调过的，不是随手写的：
+       · 网格更宽（248 → 316px）：条目行要同时放「序号 + 标题 + 通道按钮」，
+         248px 下标题只剩 6~7 个汉字就省略号，等于没写；
+       · 封面更矮（92 → 78px）：组卡的**主体信息在卡内列表**，封面只是识别用，
+         留 92px 会把每张卡顶得很高、一屏看不到两组。
+       ⚠️ 封面这条属于「图片槽定高」，必须在 tools/check-card-rules.js 的 IMG_EXCEPT
+         里显式登记（含理由与期望值），否则前置闸会报「定高且无 aspect-ratio」。 */
+  .emu-grid.grp{grid-template-columns:repeat(auto-fill,minmax(316px,1fr));gap:11px}
+  .emu-card.grp{padding:11px 12px;gap:6px}
+  .emu-card.grp .cov{height:78px;margin:-2px -2px 1px}
+  .emu-card.grp h4{font-size:13.5px;font-weight:750;line-height:1.35;margin:0;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+  .emu-card.grp .meta{margin-top:1px}
+  .emu-card.grp .gl{display:flex;flex-direction:column;gap:4px;margin-top:6px;
+    border-top:1px dashed var(--c-border);padding-top:7px}
+  .emu-card.grp .gl-i{display:flex;align-items:flex-start;gap:6px;min-width:0}
+  .emu-card.grp .gl-i .n{flex:none;width:13px;font:800 10px/1.6 var(--font-num);color:#A8B1C2;text-align:right}
+  .emu-card.grp .gl-i .t{flex:1;min-width:0;font-size:11px;line-height:1.5;color:var(--c-t1);word-break:break-word;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .emu-card.grp .gl-i .t.mute{color:var(--c-t3)}
+  .emu-card.grp .gl-i .sz{flex:none;font:700 10px/1.6 var(--font-num);color:var(--c-t3);white-space:nowrap}
+  .emu-card.grp .gl-lk{flex:none;display:flex;gap:4px;align-items:center;margin-top:1px}
+  .emu-card.grp .gl-lk a{font-size:9.5px;font-weight:750;color:#fff;background:var(--ch-other);
+    border-radius:6px;padding:3px 7px;text-decoration:none;white-space:nowrap;transition:.14s}
+  .emu-card.grp .gl-lk a:hover{filter:brightness(1.12)}
+  .emu-card.grp .gl-lk span.more{font:750 9.5px/1 var(--font-num);color:var(--c-t3);padding:3px 2px}
+  .emu-card.grp .gl-lk a.bd-direct{background:var(--ch-139)}
+  .emu-card.grp .gl-lk a.bd-baidu{background:var(--ch-baidu)}
+  .emu-card.grp .gl-lk a.bd-xunlei{background:var(--ch-xunlei)}
+  .emu-card.grp .gl-lk a.bd-quark{background:var(--ch-quark)}
+  .emu-card.grp .gl-lk a.bd-189{background:var(--ch-189)}
+  .emu-card.grp .gl-lk a.bd-139{background:var(--ch-139)}
+  .emu-card.grp .gl-lk a.bd-ali{background:var(--ch-ali)}
+  .emu-card.grp .gl-lk a.bd-123{background:var(--ch-123)}
+  .emu-card.grp .gl-lk a.bd-lanzou{background:var(--ch-lanzou)}
+  .emu-card.grp .gl-lk a.bd-steam{background:var(--ch-steam)}
+  .emu-card.grp .gl-lk a.bd-uc{background:var(--ch-uc)}
+  .emu-card.grp .gl-lk a.bd-pikpak{background:var(--ch-pikpak)}
+  .emu-card.grp .gl-lk a.bd-ed2k{background:var(--ch-ed2k)}
+  .emu-card.grp .gl-lk a.bd-file{background:var(--ch-file)}
+  .emu-card.grp .gl-lk a.bd-other{background:var(--ch-other)}
+  /* 「展开全部 N 条」——卡内含 0 条以上时才有；点了在**原地**铺完剩余条目。
+     它是卡片**内部**的整宽按钮，圆角比卡片小一号（与 .cfg-btn 同类）⇒
+     登记在 check-card-rules.js 的 RAD_EXCEPT。 */
+  .emu-card.grp .grp-more{width:100%;margin-top:7px;font-family:var(--font);font-size:11px;font-weight:750;
+    color:var(--c-primary);background:#F5F7FC;border:1px solid var(--c-border);border-radius:8px;
+    padding:6px 0;cursor:pointer;transition:.15s}
+  .emu-card.grp .grp-more:hover{background:#EEF2FA;border-color:#C9D4E8}
+  .emu-card.grp .grp-more[disabled]{opacity:.55;cursor:default}
+  .emu-card.grp .gl-i.more-row .t{color:var(--c-t3)}
+  /* 三个分区的组卡主色（与各自 .bar / .emu-intro 同色系） */
+  .emu-card.grp .tg.k-mod{background:rgba(46,107,255,.1);color:#2E6BFF}
+  .emu-card.grp .tg.k-saves{background:rgba(2,132,199,.1);color:#0284C7}
+  .emu-card.grp .tg.k-trainers{background:rgba(13,148,136,.1);color:#0F766E}
+  /* 来源徽标：新增 gt / fr / yx 三个（原 .tg.src.* 是 GCM 的 5 个来源，语义不同，另起一组） */
+  .emu-card.grp .tg.src.mod{color:#2E6BFF;background:rgba(46,107,255,.1)}
+  .emu-card.grp .tg.src.yx{color:#0369A1;background:#E0F2FE}
+  .emu-card.grp .tg.src.gt{color:#B45309;background:#FEF3C7}
+  .emu-card.grp .tg.src.fr{color:#B91C1C;background:#FEE2E2}
+  .emu-card.grp .tg.src.gcm{color:#6D28D9;background:#F5F3FF}
 
   /* ============ 💾 云存档分区（端游资源页·第二页签） ============
      ★ v10.45：卡片**不再铺路径**。用户口径：
        「存档位置显示有点多以及杂（先优化存档页面中的卡片，不在卡片中显示位置）」。
      旧版把最多 3 条路径 + 2 条注册表直接铺在卡面（下面那组 `.paths` / `.cp` 规则），
      卡又高又花，一屏扫不完；而这些内容的正确落点是**合并下载弹窗的「存档」模块**
-     （`dlUniPaintSave`，逐条带「复制」）与详情页的「云存档位置」块。
-     ⚠️ 原 `.emu-card .paths` / `.paths .p` / `.paths .p i` / `.paths .more` / `.cp` 六组规则
-        **已整组删除**（不是留着不用）—— 留着会让人以为卡面还有路径区，
-        进而把「不渲染」改回「渲染」（本项目对死样式的一贯处理：删）。 */
+     （由 `svLocHtml` 渲染进 #svLoc 弹窗，逐条带「复制」）与详情页的「云存档位置」块。
+     ★ v10.46 又下移了一层：存档模块主区改铺「可下载的**文件**」，位置收进模块
+       **右上角**的「📍 存档位置」按钮 → #svLoc（用户口径：要文件，不要位置）。
+     ★ v10.47 第三次改形：本页**只出「真有可下载存档」的游戏**（用户口径「存档只展示真有
+       存档的而不是存档位置的」）—— 不再出 Ludusavi「存档位置库」的卡片（位置回答的是「放哪」，
+       与「去哪下」是两件事，混在一页里用户分不清哪个能点）。位置线只在**详情页**的
+       「📍 存档位置」二级弹窗保留。卡形随之并入三页签共用的 `.emu-card.grp`。
+     ⚠️ 历次删掉的死样式（**已整组删除**，不是留着不用；留着会让人以为旧形态还在，
+        进而把「不渲染」改回「渲染」—— 本项目对死样式的一贯处理是删）：
+        · v10.45  `.emu-card .paths` / `.paths .p` / `.paths .p i` / `.paths .more` / `.cp`
+        · v10.47  `.emu-card.sv .bd` / `.emu-card .sv-open`（含 :hover）
+                  / `.emu-card .tr-note` / `.emu-card .tr-go` / `.emu-card .pill.ver`
+                  / `.emu-card .tg.src.fling|cheat_table|community|xiaoxing|gcm`
+        ⚠️ 上面这份清单写在注释里，所以守它的**反向断言必须带 `{`**（判的是「规则真的没了」，
+           不是「字符串没出现」）—— 不带 `{` 会被这段注释自己命中，把「已删」判成「还在」。
+           test-emulator-structure.js 里那条就是这么写的，别改成不带 `{` 的形式。 */
   .sec-h .bar.sv{background:linear-gradient(180deg,#0284C7,#0369A1)}
   .emu-intro.sv{background:linear-gradient(120deg,#EFF6FF,#F0F9FF);border-color:#BAE6FD}
   .emu-intro.sv .ic{background:linear-gradient(135deg,#0284C7,#38BDF8)}
@@ -510,16 +605,15 @@
   .emu-grid.sv{grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
   .emu-grid.sv .emu-card{border-color:#DBEAFE}
   .emu-grid.sv .emu-card:hover{border-color:#7DD3FC;box-shadow:0 8px 22px rgba(2,132,199,.14)}
-  /* 存档卡片的唯一动作：打开合并弹窗的「存档」模块。
-     `margin-top:auto` 让它在卡片被同行其它卡撑高时沉到底部（`.emu-card` 已是 flex column，
-     但按钮在 `.bd` 里，所以同时给 `.bd` 补一条 flex 纵向布局）。 */
-  .emu-card.sv .bd{display:flex;flex-direction:column;flex:1 1 auto;min-width:0}
-  .emu-card .sv-open{display:block;width:100%;margin-top:auto;font-family:inherit;font-size:11.5px;
-    font-weight:750;color:#0369A1;background:#F0F9FF;border:1px solid #BAE6FD;border-radius:8px;
-    padding:7px 9px;cursor:pointer;transition:.15s;-webkit-tap-highlight-color:transparent}
-  .emu-card .sv-open:hover{background:#0369A1;border-color:transparent;color:#fff}
-  .emu-card .tg.cloud{color:#0369A1;background:#E0F2FE;font-weight:750}
-  .emu-card .tg.phone{color:#15803D;background:#DCFCE7;font-weight:750}
+  /* ★ v10.47 删：卡面「☁ 云存档 / 📱 手机能玩」徽标的两条规则
+     —— 它们随 v10.45/v10.46 存档卡改版一起没了。
+     判据：精确 grep `class="tg cloud"` / `class="tg phone"` **全库零命中**
+     （只有详情页的 `d-tg cloud` / `d-tg phone`，那是另一套类名，别混）。
+     ⚠️ 本注释**故意不写完整选择器**（不写「.emu-card」+「.tg.」连写），
+        否则将来加「已删」反向断言时会被这段注释自己命中，判成「还在」。
+     ⚠️ 紧跟着的 `.emu-refresh.sv` / `.emu-refresh.tr` **不能一起删**：
+        emulator.html（手游中心）的「🛠 有修改器」「💾 有云存档」开关仍在用，
+        见 tools/build-emulator-page.js 的两个按钮。 */
   .emu-refresh.sv{color:#0369A1;border-color:#7DD3FC;background:rgba(255,255,255,.85)}
   .emu-refresh.sv:hover{background:#0369A1;color:#fff;border-color:transparent}
   .emu-refresh.sv.on{background:#0369A1;color:#fff;border-color:transparent;box-shadow:0 3px 10px rgba(3,105,161,.3)}
@@ -572,6 +666,43 @@
   .d-sv .p i{flex:none;font-style:normal;font-size:9.5px;font-weight:800;color:#0369A1;background:#E0F2FE;
     border-radius:4px;padding:1px 5px;font-family:var(--font);margin-top:1px;white-space:nowrap}
   .d-sv .p.reg i{color:#7C2D12;background:#FFEDD5}
+  /* ★ v10.47：详情页「修改器」「存档」两块的行样式。
+     ★ 为什么不再复用 `.d-tr-it`：旧行是「来源徽标 + 名称 + 版本」，**没有任何动作**；
+       新行必须带**下载出口**（用户口径「未有下载链接原因是未获取到真实下载链」）——
+       行尾要放得下一个按钮，`.nm` 的 flex 基数与换行策略都得跟着改，不是加个字段的事。
+     列序：来源徽标 / 名称（占满余宽）/ 体积或版本 / 下载按钮。
+     ⚠️ 名称用 `min-width:0 + ellipsis` 单行截断：这两块卡在窄屏只有 ~150px 宽，
+        两行标题会把卡片顶高，而卡高必须与另一侧一致（.d-pair 是 stretch）。 */
+  .d-res-it{display:flex;align-items:center;gap:7px;padding:6px 0;border-top:1px dashed var(--c-border)}
+  .d-res-it:first-of-type{border-top:0;padding-top:0}
+  .d-res-it .nm{flex:1 1 auto;min-width:0;font-size:11.5px;font-weight:650;color:var(--c-t2);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .d-res-it .ver{flex:none;font-size:10.5px;font-weight:750;color:#334155;background:#F1F5F9;border-radius:5px;
+    padding:1.5px 6px;font-family:var(--font-num);white-space:nowrap}
+  .d-res-it .d-res-lk{flex:none;font-size:10px;font-weight:750;color:#fff;background:var(--ch-other);
+    border-radius:6px;padding:3px 8px;text-decoration:none;white-space:nowrap;transition:.14s}
+  .d-res-it .d-res-lk:hover{filter:brightness(1.12)}
+  .d-res-it .d-res-lk.bd-direct{background:var(--ch-139)}
+  .d-res-it .d-res-lk.bd-baidu{background:var(--ch-baidu)}
+  .d-res-it .d-res-lk.bd-xunlei{background:var(--ch-xunlei)}
+  .d-res-it .d-res-lk.bd-quark{background:var(--ch-quark)}
+  .d-res-it .d-res-lk.bd-189{background:var(--ch-189)}
+  .d-res-it .d-res-lk.bd-139{background:var(--ch-139)}
+  .d-res-it .d-res-lk.bd-ali{background:var(--ch-ali)}
+  .d-res-it .d-res-lk.bd-123{background:var(--ch-123)}
+  .d-res-it .d-res-lk.bd-lanzou{background:var(--ch-lanzou)}
+  .d-res-it .d-res-lk.bd-pikpak{background:var(--ch-pikpak)}
+  .d-res-it .d-res-lk.bd-ed2k{background:var(--ch-ed2k)}
+  .d-res-it .d-res-lk.bd-file{background:var(--ch-file)}
+  .d-res-it .d-res-lk.bd-other{background:var(--ch-other)}
+  .d-res-it .d-res-more{flex:none;font:750 10px/1 var(--font-num);color:var(--c-t3)}
+  /* v10.47：新增四个来源徽标（gt / fr / yx / mod）。
+     旧的五个（fling / cheat_table / community / xiaoxing / gcm）是 **GCM 清单**的来源，
+     新这四个是**库**的来源 —— 两组语义不同，颜色也刻意不同，避免用户混读。 */
+  .d-tg.gt{color:#B45309;background:#FEF3C7}
+  .d-tg.fr{color:#B91C1C;background:#FEE2E2}
+  .d-tg.yx{color:#0369A1;background:#E0F2FE}
+  .d-tg.mod{color:#2E6BFF;background:rgba(46,107,255,.1)}
   .d-blk .more{font-size:10px;color:var(--c-t3);margin-top:5px}
   /* ★ v10.25 双源合并的「来源小徽标」—— 比 .d-tg / .src-badge 小一号，
      用在区块标题行内（「版本介绍〔来自XDGAME〕」「游戏预览〔含机地 3 张〕」），
@@ -605,6 +736,16 @@
   .d-blk h4 .cnt+.d-more-hd{margin-left:6px}
   .d-blk h4 .d-more-hd:hover{background:#EAF1FF;border-color:var(--c-primary)}
   .d-blk h4 .d-more-hd .ar{font-size:9px;margin-left:2px}
+  /* ★ v10.47：详情页「存档」卡头的「📍 存档位置」按钮。
+     为什么单独一个类而不是复用 .d-more-hd：两者**同时出现**在同一张卡头
+     （「存档位置」开二级弹窗、「全部 N」开全量弹窗，是两个不同动作）。
+     复用同一个类会让 `.cnt+.d-more-hd` 那条 6px 规则把两个按钮挤在一起、分不清谁是谁。
+     配色刻意用中性灰（次要动作）—— 主色蓝留给「全部 N」。 */
+  .d-blk h4 .d-loc-hd{margin-left:auto;flex:none;font:inherit;font-size:10.5px;font-weight:750;
+    color:var(--c-t2);background:#F1F5F9;border:1px solid var(--c-border);border-radius:7px;
+    padding:2px 7px;white-space:nowrap;cursor:pointer;transition:.15s}
+  .d-blk h4 .d-loc-hd:hover{background:#EAF1FF;border-color:var(--c-primary);color:var(--c-primary)}
+  .d-blk h4 .d-loc-hd+.d-more-hd{margin-left:6px}
   /* 「全部内容」弹窗里的行：比 .d-dl-it 更松，允许长标题与路径换行（存档路径必须完整可见） */
   .df-note{font-size:11px;line-height:1.7;color:var(--c-t3);margin:-2px 0 10px}
   .df-note b{color:var(--c-t2)}
@@ -1659,17 +1800,19 @@
   .dl-it .lk{font-size:10.5px;font-weight:750;color:#fff;background:#8892A6;border-radius:6px;
     padding:5px 8px;text-decoration:none;white-space:nowrap;transition:.14s}
   .dl-it .lk:hover{filter:brightness(1.12)}
-  .dl-it .bd-baidu,.dl-it .lk.bd-baidu{background:#2B6DE5}
-  .dl-it .bd-xunlei,.dl-it .lk.bd-xunlei{background:#2A6FD6}
-  .dl-it .bd-quark,.dl-it .lk.bd-quark{background:#5A6BF5}
-  .dl-it .bd-189,.dl-it .lk.bd-189{background:#1A73E8}
-  .dl-it .bd-139,.dl-it .lk.bd-139{background:#0FA968}
-  .dl-it .bd-ali,.dl-it .lk.bd-ali{background:#5B6BF0}
-  .dl-it .bd-123,.dl-it .lk.bd-123{background:#3C7DF5}
-  .dl-it .bd-lanzou,.dl-it .lk.bd-lanzou{background:#4C8BF5}
-  .dl-it .bd-steam,.dl-it .lk.bd-steam{background:#1B2838}
-  .dl-it .bd-pikpak,.dl-it .lk.bd-pikpak{background:#3D5AFE}
-  .dl-it .bd-other,.dl-it .lk.bd-other{background:#9AA3B5}
+  /* ★ v10.47：色值搬到 :root 的 --ch-*（唯一真源），这里只留「哪个类用哪个变量」。
+     资源页的组卡与 MOD 卡读同一组变量 ⇒ 三处不会再各漂各的。 */
+  .dl-it .bd-baidu,.dl-it .lk.bd-baidu{background:var(--ch-baidu)}
+  .dl-it .bd-xunlei,.dl-it .lk.bd-xunlei{background:var(--ch-xunlei)}
+  .dl-it .bd-quark,.dl-it .lk.bd-quark{background:var(--ch-quark)}
+  .dl-it .bd-189,.dl-it .lk.bd-189{background:var(--ch-189)}
+  .dl-it .bd-139,.dl-it .lk.bd-139{background:var(--ch-139)}
+  .dl-it .bd-ali,.dl-it .lk.bd-ali{background:var(--ch-ali)}
+  .dl-it .bd-123,.dl-it .lk.bd-123{background:var(--ch-123)}
+  .dl-it .bd-lanzou,.dl-it .lk.bd-lanzou{background:var(--ch-lanzou)}
+  .dl-it .bd-steam,.dl-it .lk.bd-steam{background:var(--ch-steam)}
+  .dl-it .bd-pikpak,.dl-it .lk.bd-pikpak{background:var(--ch-pikpak)}
+  .dl-it .bd-other,.dl-it .lk.bd-other{background:var(--ch-other)}
   .dl-it .tx{flex:1;min-width:0}
   /* ★ 标题最多 2 行、不再一刀切断；完整文本仍在 title 属性里（悬停可读全文） */
   .dl-it .tx b{display:-webkit-box;font-size:12.5px;font-weight:750;line-height:1.45;color:var(--c-t1);
@@ -5230,107 +5373,131 @@ function syncPair() {
   w.classList.toggle('solo', n <= 1);
 }
 
-/* 🛠 修改器：这款有没有修改器、来自哪个来源、什么版本 */
+/* ★ v10.47：详情页「修改器 / 存档」两块的**共用行渲染**。
+ *
+ *  为什么两块能共用（它们以前各写一份）：
+ *  改形之后两块的**行语义完全一致** —— 「一条能下载的资源」= 来源徽标 + 名称 + 体积/版本 + 下载出口。
+ *  差异只有数据来自哪个 cat，全部收在调用处。再各写一份渲染器就是第二实现（铁律 17）。
+ *
+ *  ★ 行尾**必须有出口**（用户口径：「我看了下未有下载链接原因是未获取到真实下载链」）：
+ *    · 有 links → 给第一个通道做按钮（直链 / 夸克 / 迅雷…），其余收成 +N；
+ *    · 没有 links（GCM 清单**刻意不给**下载链，官方走一次性签名 URL）→ 给「源站」按钮，
+ *      并用手记 note 作 title，说明为什么没有下载按钮。**不静默留空**。 */
+function dResRow(it) {
+  const links = it.links || [];
+  const first = links[0];
+  const btn = first
+    ? '<a class="d-res-lk bd-' + esc(first.cls || 'other') + '" href="' + esc(first.url) + '" target="_blank" rel="noopener noreferrer" title="'
+      + esc(first.label + (first.size ? ' · ' + first.size : '')) + '">' + esc(String(first.label).slice(0, 8)) + '</a>'
+    : (it.page
+      ? '<a class="d-res-lk bd-other" href="' + esc(it.page) + '" target="_blank" rel="noopener noreferrer" title="'
+        + esc(it.note || '这条没有解析到下载链，去源站看') + '">源站</a>'
+      : '');
+  const moreLk = links.length > 1 ? '<span class="d-res-more">+' + (links.length - 1) + '</span>' : '';
+  const meta = it.size || (it.note && !links.length ? '' : (it.note || ''));
+  const title = it.title || it.game || '?';
+  return '<div class="d-res-it"><span class="d-tg ' + esc(it.src || '') + '">' + esc(it.srcLabel || it.src || '') + '</span>'
+    + '<span class="nm" title="' + esc(title) + '">' + esc(title) + '</span>'
+    + (meta ? '<span class="ver">' + esc(String(meta).slice(0, 14)) + '</span>' : '')
+    + btn + moreLk + '</div>';
+}
+
+/** 全量弹窗用：把一批条目铺成同一套行（让「全部 N」里看到的和卡内长得一样） */
+function dResFullHtml(note, items) {
+  return '<div class="df-note">' + note + '</div>' + (items || []).map(dResRow).join('');
+}
+
+/* 🛠 修改器：这款有哪些修改器、来自哪个来源、**能不能直接下**
+ *
+ * ★ v10.47 改形（用户口径「顺带优化下游戏详情页中修改器和存档卡片的高度」
+ *   + 「未获取到真实下载链」）：
+ *   ① 数据源换成 `/api/res/game` —— 它把 **GCM 清单 + GTrainers 修改器 + FearlessRevolution
+ *      CE 表**合并到同一形状。旧版只读 `/api/trainers/match`（只有 GCM 元数据，
+ *      **一个下载地址都没有**），所以整块只能写「文件放到游戏安装根目录」这种提示。
+ *   ② 行数上限 5 → 3（用户拍板「更紧凑：预留行数 5 → 3」），与 `--d-rows` 同步。
+ *      ⚠️ 两处**必须一起改**：`.d-rows` 只负责撑底高，上限决定实际铺几行；
+ *         只改一处会出现「卡里 5 行、槽位只留 3 行」或反之，两块又不一样高。 */
 async function loadTrBlock(d, title) {
   const slot = $('#trBlock');
   if (!slot) return;
   const t = String(title || (d && d.title) || '').trim();
   if (t.length < 2) return;
+  const gid = String((d && d.id) || '');
   try {
-    const j = await fetch(api('/api/trainers/match?t=' + encodeURIComponent(t))).then(r => r.json());
-    const items = (j && j.items) || [];
+    const j = await fetch(api('/api/res/game?id=' + encodeURIComponent(gid) + '&t=' + encodeURIComponent(t) + '&limit=100')).then(r => r.json());
+    const items = (j && j.items && j.items.trainers) || [];
     if (!items.length) { slot.innerHTML = ''; return; }             // 无收录就不占版面
-    /* ★ v10.29：上限 8 → 5（用户口径「修改器和云存档同行固定最多5行」）。
-       两块的卡头在同一横线上，行数不等会让「最多 5 行」这句话在视觉上不成立。
-       ★ v10.31：行外面**套一层 `.d-rows`** —— 只有 1 条来源时，靠它的
-       `min-height:calc(var(--d-row-h) * var(--d-rows))` 把卡片撑到五行的高度，
-       否则 1 条的卡片会缩成一小块（用户口径「如果一边只有一个那个卡片大小就变小了」）。
-       云存档那边同样是 `.d-rows`（它本来就有容器 `.d-sv`，加个类即可）。 */
-    const MAXTR = 5;
-    const rows = items.slice(0, MAXTR).map((it) => {
-      const src = it.source || 'gcm';
-      const nm = it.zh || it.name || '';
-      return `<div class="d-tr-it"><span class="d-tg ${esc(src)}">${esc(D_TR_SRC[src] || src)}</span>
-        <span class="nm" title="${esc(it.name || nm)}">${esc(nm)}</span>
-        ${it.version ? `<span class="ver">v ${esc(it.version)}</span>` : ''}</div>`;
-    }).join('');
-    /* ★ v10.25：原来这里是一句「另有 N 个来源未展示，去手机专区「修改器」页看全部」——
-       数据就在**当前这个响应**里（/api/trainers/match 返回全量，没截断），
-       直接把整份存进 dFullStore，按钮只带 token。
-       ★ v10.29：按钮从「整行」挪到**卡头右上角**（用户口径「其他则为卡片右上角更多按钮查看全部」），
-       条数写进按钮（`全部 N`），不必再写「查看全部 N 个来源」那么长。 */
+    const MAXTR = 3;
+    const rows = items.slice(0, MAXTR).map(dResRow).join('');
+    const canDl = items.filter((x) => (x.links || []).length).length;
+    /* ★ v10.29：按钮在卡头右上角；★ v10.25：全量数据就在当前响应里，直接整份存进 store */
     const more = items.length > MAXTR
-      ? dMoreHd(dFullPut({ type: 'tr', title: '修改器 · 全部来源', sub: t, items }), `全部 ${items.length}`)
+      ? dMoreHd(dFullPut({ type: 'tr2', title: '修改器 · 全部条目', sub: t, items }), `全部 ${items.length}`)
       : '';
-    /* ★ v10.32（第 4 条）：底部提示文案改成**显式三行**。
-       用户口径：「修改器跟云存档的底部都预留三行」→ 追问后澄清
-       「就是底部文案优化下，我需要他们同高，不是说真预留」。
-       ⇒ 要的不是加空白槽位，是**两块底部文案排布一致**。
-       实测（xd-692，探针 `_probe-v1032-hint.js`）：两卡已同高（330.4 = 330.4），
-       但 hint 一个 **4 行 77.3px**、一个 **3 行 59.9px**，**差 17.3px 正好一整行** ——
-       根因是这段比云存档多排了一行，且只有它用 `<br>`、云存档靠自动折行。
-       ⇒ 两段统一为「用法 → 注意 → 来源」三行骨架，各 2 个 `<br>`；
-         每行控制在 ~25 个全角宽以内（hint 宽 306px ÷ 10.5px ≈ 29 全角），
-         保证 306px（最窄的两列）下**每行不折行** ⇒ 两块 hint 恒为 3 行 = 51.975px 文字高，
-         上下边同时对齐（`.d-pair .d-hint2{margin-top:auto}` 已把它沉到卡底）。
-       ⚠️ 文案长度是**布局约束**，不是随手删字：改长一行 = 那侧变 4 行 = 高度差又回来，
-         所以静态断言守 `<br>` 条数、实拍断言守**渲染行数 === 3**（两处都要，缺一处会漏）。 */
-    slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>修改器<span class="cnt">${items.length} 个来源</span>${more}</h4>
+    /* 底部提示文案仍是**显式三行**（v10.32 的约定：两块各 2 个 <br>、每行 ~25 全角以内，
+       保证 306px 最窄两列下不折行 ⇒ 两块 hint 高度恒等）。
+       ⚠️ 文案长度是**布局约束**：改长一行 = 那侧变 4 行 = 高度差又回来。 */
+    slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>修改器<span class="cnt">${items.length} 条${canDl ? ' · ' + canDl + ' 条带下载链' : ''}</span>${more}</h4>
       <div class="d-rows">${rows}</div>
-      <div class="d-hint2">文件放到<b>游戏安装根目录</b>（与主程序 .exe 同级）。<br>
-        启动前先运行 Cheat Engine，再加载 CE 表格。<br>
-        数据来自 Game Cheats Manager，<a href="${D_GCM_URL}" target="_blank" rel="noopener">打开 GCM 下载页 ↗</a></div></div>`;
+      <div class="d-hint2">拿到的多为独立 exe / CE 表，<b>不用放进游戏目录</b>。<br>
+        启动后它会自行挂上游戏进程；用前请先备份存档。<br>
+        来源：GTrainers · FearlessRevolution · GCM 清单。</div></div>`;
   } catch (e) {} finally { syncPair(); }
 }
 
-/* 💾 云存档：存档文件放哪（用户最想要的答案），路径不截断，直接给可抄的完整串 */
+/* 💾 存档：这款**有哪些存档可以下**（用户口径「只展示存档而不是存档位置」）
+ *
+ * ★ v10.47 改形：旧版读 `/api/saves/match`（Ludusavi）—— 给的是「存档放在哪个目录」，
+ *   **一个文件都下不了**，与「存档」这个页签的名字对不上，也与 v10.46 已经改过的
+ *   合并弹窗（主区铺可下载文件、位置收进二级弹窗）**口径不一致**。
+ *   现在：主区只铺**可下载的存档**（游侠存档区 + GTrainers），
+ *        位置线整体让位到卡头右上角的「📍 存档位置」→ 同一个 #svLoc 二级弹窗。 */
 async function loadSvBlock(d, title) {
   const slot = $('#svBlock');
   if (!slot) return;
   const t = String(title || (d && d.title) || '').trim();
   if (t.length < 2) return;
+  const gid = String((d && d.id) || '');
   try {
-    const j = await fetch(api('/api/saves/match?t=' + encodeURIComponent(t))).then(r => r.json());
-    const h = j && j.hit;
-    if (!h) { slot.innerHTML = ''; return; }
-    const paths = h.paths || [], regs = h.regs || [];
-    if (!paths.length && !regs.length) { slot.innerHTML = ''; return; }
-    /* ★ v10.29：行数上限从「路径 3 + 注册表 2」改成**合计最多 5 行**（用户口径
-       「修改器和云存档同行固定最多5行，其他则为卡片右上角更多按钮查看全部」）。
-       为什么不是继续写死 3+2：路径条数少时会白白空出额度（1 条路径 + 5 条注册表
-       照样只显示 3 行）。改成「先给路径、余额给注册表」——
-       既守住 5 行上限，也不会浪费；路径优先是因为用户打开这块多半是来抄存档路径的。 */
-    const MAXROWS = 5;
-    const pTake = Math.min(paths.length, MAXROWS);
-    const rTake = Math.min(regs.length, MAXROWS - pTake);
-    const rows = [];
-    for (const p of paths.slice(0, pTake)) {
-      const tg = (p.tags && p.tags.length) ? String(p.tags[0]) : 'save';
-      const label = tg === 'save' ? '存档' : (tg === 'config' ? '配置' : tg);
-      rows.push(`<div class="p"><i>${esc(label)}</i><span>${esc(p.shown || p.raw)}</span></div>`);
-    }
-    for (const r of regs.slice(0, rTake)) rows.push(`<div class="p reg"><i>注册表</i><span>${esc(r.raw)}</span></div>`);
-    const hidden = (paths.length - pTake) + (regs.length - rTake);
-    /* ★ v10.25：同上 —— /api/saves/match 返回的 hit 就是全量，直接整份存进 store。
-       ★ v10.29：按钮从「整行」挪到卡头右上角（同 loadTrBlock）。 */
-    const more = hidden > 0
-      ? dMoreHd(dFullPut({ type: 'sv', title: '云存档位置 · 全部记录', sub: t, hit: h }),
-        `全部 ${paths.length + regs.length}`)
+    const j = await fetch(api('/api/res/game?id=' + encodeURIComponent(gid) + '&t=' + encodeURIComponent(t) + '&limit=100')).then(r => r.json());
+    const items = (j && j.items && j.items.saves) || [];
+    if (!items.length) { slot.innerHTML = ''; return; }
+    const MAXROWS = 3;
+    const rows = items.slice(0, MAXROWS).map(dResRow).join('');
+    const canDl = items.filter((x) => (x.links || []).length).length;
+    const more = items.length > MAXROWS
+      ? dMoreHd(dFullPut({ type: 'sv2', title: '存档 · 全部条目', sub: t, items }), `全部 ${items.length}`)
       : '';
-    const tags = [];
-    (h.cloud || []).forEach(c => tags.push(`<span class="d-tg cloud">☁ ${esc(String(c).toUpperCase())}</span>`));
-    if (h.phone) tags.push('<span class="d-tg phone">手机能玩</span>');
-    if (h.installDir) tags.push(`<span class="d-tg dim">安装目录 ${esc(h.installDir)}</span>`);
-    /* ★ v10.32（第 4 条）：与上面「修改器」那段**同骨架的三行**（用法 → 注意 → 来源）。
-       原来它是**靠自动折行**排到 3 行的 ⇒ 宽度一变行数就变，两块底部立刻不齐；
-       现在显式两个 `<br>` 钉死三行，两块 hint 高度永远相等（各 51.975px 文字高）。 */
-    slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>云存档位置<span class="cnt">${paths.length + regs.length} 条记录</span>${more}</h4>
-      ${tags.length ? `<div class="d-tg-row" style="margin-bottom:6px">${tags.join('')}</div>` : ''}
-      <div class="d-rows d-sv">${rows.join('')}</div>
-      <div class="d-hint2">路径中的 <code>&lt;用户名&gt;</code> / <code>&lt;平台账号ID&gt;</code> 是占位符。<br>
-        按你自己的账号替换；<b>存档前先退出游戏</b>，避免被覆盖。<br>
-        数据来自 Ludusavi 开源清单（MIT）。</div></div>`;
+    /* 位置入口：同一动作在合并弹窗里也有（`.dl-sv-loc`），两处都开同一个 #svLoc */
+    const locBtn = `<button type="button" class="d-loc-hd" data-d-svloc>📍 存档位置</button>`;
+    slot.innerHTML = `<div class="d-blk"><h4><span class="ic"></span>存档<span class="cnt">${items.length} 条${canDl ? ' · ' + canDl + ' 条带下载链' : ''}</span>${locBtn}${more}</h4>
+      <div class="d-rows">${rows}</div>
+      <div class="d-hint2">压缩包内多为存档本体，按包内说明放回原位。<br>
+        查「该放到哪个目录」请点右上角 📍 存档位置。<br>
+        来源：游侠补丁网存档区 · GTrainers。</div></div>`;
+    const lb = slot.querySelector('[data-d-svloc]');
+    if (lb) lb.addEventListener('click', () => openDetailSvLoc(t, gid));
   } catch (e) {} finally { syncPair(); }
+}
+
+/** 详情页卡头「📍 存档位置」→ #svLoc 二级弹窗。
+ *  ★ 为什么不复用 `openSvLoc()`：那个函数的数据来自**合并下载弹窗**的状态（`dlUni.data.save`），
+ *    在详情页点它等于要求用户先去开一次下载弹窗 —— 一条通往「存档位置」的路不该以
+ *    「先打开另一个弹窗」为前提。这里自己取一次 `/api/saves/match` 再交给同一个 svLocHtml 渲染，
+ *    **版式与弹窗里的完全一致**（同一渲染函数），只是取数路子不同。 */
+async function openDetailSvLoc(t, gid) {
+  const pop = $('#svLoc');
+  if (!pop) return;
+  $('#svLocSub').textContent = splitName(t).zh || t;
+  pop.hidden = false;
+  requestAnimationFrame(() => pop.classList.add('on'));
+  $('#svLocBody').innerHTML = '<div class="dlpop-load"><i></i>正在读取存档位置…</div>';
+  try {
+    const j = await fetch(api('/api/saves/match?t=' + encodeURIComponent(t) + (gid ? '&id=' + encodeURIComponent(gid) : ''))).then(r => r.json());
+    $('#svLocBody').innerHTML = svLocHtml(j && j.hit);
+  } catch (e) {
+    $('#svLocBody').innerHTML = '<div class="dlpop-empty">读取失败，请稍后重试</div>';
+  }
 }
 
 /* 详情内双源互链：机地话题 ↔ XD 版本
@@ -6632,22 +6799,34 @@ function dMoreHd(k, label) {
    10 行 ≈ 640px，正好落在 `.dlpop-box` 的 80vh 可视区里 —— 翻页后不必再滚动就能看全。 */
 const DF_PAGE = 10;
 const D_FULL_RENDER = {
-  /* 🛠 修改器（Game Cheats Manager 公开数据，没有下载地址，只给来源与版本） */
-  tr(p) {
+  /* 🛠 修改器 · 全部条目（★ v10.47 新写法）
+   *
+   *  ★ 为什么替换掉旧的 `tr`（而不是并存）：旧渲染器的载荷是 `/api/trainers/match`
+   *    的 GCM 条目 —— 字段只有 name / zh / version / source，**没有 url**，
+   *    所以它只能铺「来源 + 名称 + 版本」。新载荷来自 `/api/res/game`，
+   *    每条都带 `links`（GTrainers 直链 / FearlessRevolution 附件链 / GCM 的空链）。
+   *    ⇒ 旧渲染器在新载荷下会**丢掉全部下载链**，留着比删掉更危险。
+   *    同因，旧的 `sv` 渲染器（载荷是 Ludusavi 的 hit.paths/hit.regs）也一并删掉：
+   *    详情页的「存档」已改成「只展示可下载的存档」，位置线整体挪到 #svLoc。 */
+  tr2(p) {
     const items = p.items || [];
-    return '<div class="df-note">共 <b>' + items.length + '</b> 个来源 · 清单聚合自 Game Cheats Manager 公开数据，' +
-      '本站不提供文件；<a href="' + D_GCM_URL + '" target="_blank" rel="noopener">打开 GCM 下载页 ↗</a></div>' +
-      items.map((it, i) => {
-        const src = it.source || 'gcm';
-        const nm = it.zh || it.name || '';
-        const en = (it.name && it.name !== nm) ? it.name : '';
-        const meta = [en, it.version ? 'v ' + it.version : ''].filter(Boolean).join(' · ');
-        return '<div class="df-row"><span class="ix">' + (i + 1) + '</span><span class="bd">' +
-          '<span class="t"><span class="tagx">' + esc(D_TR_SRC[src] || src) + '</span>' + esc(nm) + '</span>' +
-          (meta ? '<span class="m">' + esc(meta) + '</span>' : '') + '</span></div>';
-      }).join('');
+    const canDl = items.filter((x) => (x.links || []).length).length;
+    return dResFullHtml('共 <b>' + items.length + '</b> 条修改器 · 其中 <b>' + canDl + '</b> 条带真实下载链。' +
+      'GTrainers / FearlessRevolution 点按钮即取件；GCM 清单**不提供文件**（官方走一次性签名链接），' +
+      '可点「源站」到官方渠道。', items);
   },
-  /* 💾 云存档：路径**不截断**（这是用户真正要抄的东西），注册表单列一组 */
+  /* 💾 存档 · 全部条目（可下载的存档包） */
+  sv2(p) {
+    const items = p.items || [];
+    const canDl = items.filter((x) => (x.links || []).length).length;
+    return dResFullHtml('共 <b>' + items.length + '</b> 条可下载存档 · 其中 <b>' + canDl + '</b> 条带直链。' +
+      '「直链」按钮点开即下载；网盘 / eD2K 需相应客户端。' +
+      '要查<b>存档该放到哪个目录</b>，请用卡头的「📍 存档位置」。', items);
+  },
+  /* 💾 云存档**位置**：路径**不截断**（这是用户真正要抄的东西），注册表单列一组。
+     ★ v10.47 起这个渲染器不再由详情页调用（位置改走 #svLoc 弹窗，用 svLocHtml）；
+       保留是因为**合并下载弹窗的「存档」模块仍可能投递同形状载荷**，
+       删掉会让那条路径静默变成「没有可展示的内容」。 */
   sv(p) {
     const h = p.hit || {};
     const paths = h.paths || [], regs = h.regs || [];

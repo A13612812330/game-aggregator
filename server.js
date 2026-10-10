@@ -398,6 +398,10 @@ const trainers = require('./data/trainers');
 const mods = require('./data/mods');
 const saves = require('./data/saves');
 const savesYx = require('./data/savesYx');
+/* ★ v10.47：两个「有真实下载链」的新来源 + 按游戏聚合层 */
+const gt = require('./data/gtrainers');
+const fr = require('./data/fr');
+const resGroups = require('./data/res-groups');
 const pcreq = require('./data/pcreq');
 const bhparams = require('./data/bhparams');
 const emuguide = require('./data/emuguide');
@@ -826,6 +830,103 @@ app.get('/api/saves-yx/match', (req, res) => {
   const id = String(req.query.id || '').trim();
   const r = savesYx.matchSlim({ t, id });
   res.json({ ok: true, t, id, count: r.count, items: r.items });
+});
+
+/* ============ 📦 端游资源「按游戏聚合」（v10.47 三页签的数据底座） ============
+ *
+ * 用户口径：「MOD 按游戏做卡片而不是按 MOD」「存档只展示真有存档的而不是存档位置的」
+ * 「（修改器）同样按游戏聚合」。
+ *
+ * 这一组接口把**五路来源**按游戏收成一组一组，前端三个页签共用同一套形状：
+ *   cat=mod       机地社区帖 MOD（网盘直链）
+ *   cat=saves     游侠存档文件 + GTrainers 存档   ← 「真有存档」
+ *   cat=trainers  GCM 清单 + GTrainers 修改器 + FearlessRevolution CE 表
+ *
+ * ★ 与既有的 /api/{mods,saves,trainers}/{list,match} **并存不替代**：
+ *     - 那些是「按条」的接口，详情页弹窗 / 其它页面还在用，口径不能动；
+ *     - 这里是「按游戏组」的汇总，分组键与排序都是新口径。
+ *   ⇒ 所以这不是第二套实现，而是同一批数据（data/res-groups.js 直接读那四个模块）
+ *     的**另一种视图**；匹配口径只有一处（抓取阶段的 data/mod-match.js）。
+ */
+const RES_CATS = ['mod', 'saves', 'trainers'];
+
+// GET /api/res/stats?cat=mod|saves|trainers — 概览（组数 / 条目数 / 有下载链比例 / 分源分布）
+app.get('/api/res/stats', (req, res) => {
+  const cat = String(req.query.cat || '').trim();
+  if (!RES_CATS.includes(cat)) {
+    /* list=1 → 一次给三个分区（页签数字胶囊用）；否则报错而不是猜一个 */
+    if (req.query.list === '1') {
+      const out = {};
+      for (const c of RES_CATS) out[c] = resGroups.stats(c);
+      return res.json({ ok: true, cats: out, srcLabel: resGroups.SRC_LABEL });
+    }
+    return res.status(400).json({ ok: false, error: 'cat 必须是 mod / saves / trainers' });
+  }
+  res.json(resGroups.stats(cat));
+});
+
+// GET /api/res/groups?cat=&q=&sort=count|game|new&limit=&offset= — 分页取「游戏组」
+app.get('/api/res/groups', (req, res) => {
+  const cat = String(req.query.cat || '').trim();
+  if (!RES_CATS.includes(cat)) return res.status(400).json({ ok: false, error: 'cat 必须是 mod / saves / trainers' });
+  res.json(resGroups.groups(cat, {
+    q: req.query.q, sort: req.query.sort, src: req.query.src,
+    limit: req.query.limit, offset: req.query.offset,
+  }));
+});
+
+// GET /api/res/items?cat=&key=&limit= — 展开某一组的全部条目（卡内「展开全部 N 条」）
+app.get('/api/res/items', (req, res) => {
+  const cat = String(req.query.cat || '').trim();
+  const key = String(req.query.key || '').trim();
+  if (!RES_CATS.includes(cat)) return res.status(400).json({ ok: false, error: 'cat 必须是 mod / saves / trainers' });
+  if (!key) return res.status(400).json({ ok: false, error: '缺少 key' });
+  res.json(resGroups.items(cat, key, req.query.limit));
+});
+
+// GET /api/res/game?id=<端游库id>&t=<游戏名>&limit= — 详情页一次拿三个分区
+//   ★ 详情页「修改器」「存档」两块卡片的**唯一数据源**（v10.47）：只给能下载的条目，
+//     「存档位置」不再从这里出（它在 /api/saves/match，只进弹窗的二级位置视图）。
+//   ★ id 缺失时按名字反查一次（详情页偶尔只有标题）。
+app.get('/api/res/game', (req, res) => {
+  const t = String(req.query.t || '').trim();
+  let id = String(req.query.id || '').trim();
+  const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 60));
+  if (!id && t) {
+    const g = gamesDb.search(t, 1)[0];
+    if (g) id = g.id;
+  }
+  const out = { ok: true, id, t, counts: { mod: 0, saves: 0, trainers: 0 }, items: { mod: [], saves: [], trainers: [] } };
+  if (id) {
+    for (const c of RES_CATS) {
+      out.items[c] = resGroups.byLib(c, id, limit);
+      out.counts[c] = resGroups.byLib(c, id, 100000).length;
+    }
+  }
+  res.json(out);
+});
+
+/* ---- 两个新来源的原始概览（排查用：能分别看到「抓了多少 / 匹配多少」）---- */
+
+// GET /api/gt/stats — GTrainers（存档 + 修改器，真实直链）
+app.get('/api/gt/stats', (_req, res) => res.json(gt.stats()));
+
+// GET /api/gt/match?t=&id=&cat=saves|trainers — 某款游戏的 GTrainers 条目
+app.get('/api/gt/match', (req, res) => {
+  const t = String(req.query.t || '').trim();
+  const id = String(req.query.id || '').trim();
+  const cat = String(req.query.cat || '').trim();
+  res.json(Object.assign({ ok: true, t, id, cat }, gt.matchSlim({ t, id, cat })));
+});
+
+// GET /api/fr/stats — FearlessRevolution（只有修改器；整站在 CF 后面，见 data/fr.js）
+app.get('/api/fr/stats', (_req, res) => res.json(fr.stats()));
+
+// GET /api/fr/match?t=&id= — 某款游戏的 FR CE 表 / Trainer
+app.get('/api/fr/match', (req, res) => {
+  const t = String(req.query.t || '').trim();
+  const id = String(req.query.id || '').trim();
+  res.json(Object.assign({ ok: true, t, id }, fr.matchSlim({ t, id })));
 });
 
 /* ================= 🖥 PC 配置要求（最低 / 推荐） =================

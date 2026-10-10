@@ -121,9 +121,11 @@ console.log('\n=== ② 置顶图与列表同源 ===');
 }
 
 /* ============================================================
- *  ③ 修改器 + 云存档：固定 5 行槽位、两卡永远等高
+ *  ③ 修改器 + 云存档：固定 3 行槽位、两卡永远等高
+ *  ★ v10.47：用户口径把预留行数从 5 收到 3（「更紧凑：预留行数 5 → 3」）——
+ *    「两卡等高」这个诉求没变，只是共同的高度基准变矮了。
  * ============================================================ */
-console.log('\n=== ③ 修改器 + 云存档「固定显示五个」 ===');
+console.log('\n=== ③ 修改器 + 云存档「固定显示三个」 ===');
 {
   /* 行槽位变量在 :root 一处定义 */
   for (const [v, why] of [
@@ -132,7 +134,7 @@ console.log('\n=== ③ 修改器 + 云存档「固定显示五个」 ===');
   ]) {
     ok(new RegExp(v + '\\s*:').test(ROOTVARS), '定义了 ' + v + '（' + why + '）');
   }
-  ok(/--d-rows\s*:\s*5/.test(ROOTVARS), '★★ --d-rows = 5（用户口径「固定显示五个」）');
+  ok(/--d-rows\s*:\s*3/.test(ROOTVARS), '★★ --d-rows = 3（用户口径「更紧凑：预留行数 5 → 3」）');
 
   /* 变量必须真的被引用 —— 只定义不引用 = 规范没生效（v10.30 的 :root 断言就是在防这个）。 */
   ok(/\.d-rows\{min-height:calc\(var\(--d-row-h\) \* var\(--d-rows\)\)\}/.test(IDX),
@@ -158,9 +160,15 @@ console.log('\n=== ③ 修改器 + 云存档「固定显示五个」 ===');
   const tr = (/async function loadTrBlock\([\s\S]*?\n\}/.exec(IDX) || [''])[0];
   const sv = (/async function loadSvBlock\([\s\S]*?\n\}/.exec(IDX) || [''])[0];
   ok(/<div class="d-rows">/.test(tr), '★★ 修改器模板真的套了 .d-rows（不是只写了 CSS 类）');
-  ok(/<div class="d-rows d-sv">/.test(sv), '★★ 云存档模板真的套了 .d-rows（保留 d-sv 自己的行样式）');
-  ok(/const MAXTR = 5;/.test(tr) && /items\.slice\(0, MAXTR\)/.test(tr),
-    '★ 修改器上限 5 且真的用在 slice 上（只声明常量不引用 = 没生效）');
+  /* ★ v10.47：云存档模板不再带 `d-sv` 修饰类 —— 新块铺的是「可下载存档条目」，
+     行样式与修改器块**完全同形**（都走 .d-res-it），不再需要各自的变体。
+     ⇒ 断言改钉「两块都套了 .d-rows」这个**共同前提**（这才是等高诉求的落点），
+        而不是那个已经消失的旧类名。 */
+  ok(/<div class="d-rows">/.test(sv), '★★ 云存档模板真的套了 .d-rows（不是只写了 CSS 类）');
+  ok(/const MAXTR = 3;/.test(tr) && /items\.slice\(0, MAXTR\)/.test(tr),
+    '★ 修改器上限 3 且真的用在 slice 上（只声明常量不引用 = 没生效）');
+  ok(/const MAXROWS = 3;/.test(sv) && /items\.slice\(0, MAXROWS\)/.test(sv),
+    '★ 云存档上限 3 且真的用在 slice 上（两块基准一致，「等高」才成立）');
 }
 
 /* ============================================================

@@ -1,19 +1,23 @@
 /* 端游资源「独立页」端到端回归 —— /resources.html 三页签（MOD / 存档 / 修改器）
  *
- * 为什么有这一页（v10.44）：
- *   用户口径：「手游的样式更新下，也需要划分模块 MOD，存档，修改器，
- *             手机专区保留手机中心 + 机型兼容 + 模拟器指南」。
- *   ⇒ MOD / 存档 / 修改器 从「手机专区」平级抽出，独立成 /resources.html
- *     （它们本质是**端游资源**；挂在手机专区下语义不成立，用户为找存档迷路过）。
- *
  * 本文件与 test-emulator-page.js 是**一对**：
- *   · 那边测「手机专区 3 页签」，并留了一组**反向断言**（本页不该再有 tr/sv）；
- *   · 这边测「三类资源 3 页签」，其中 MOD 是**新写**的分区，存档/修改器是从手机专区
- *     搬过来的（正文逐字未改）—— 搬家最容易出错的地方是「搬完忘了改默认口径」，
- *     所以这里专门钉了两条口径断言（存档默认全量 / 修改器默认只看匹配端游）。
+ *   · 那边测「手机专区 3 页签」，并留了一组**反向断言**（本页不该再有 tr/sv 那套旧开关）；
+ *   · 这边测「三类资源 3 页签」。
+ *
+ * ★★ v10.47 整段重写（不是小修）——三个分区**统一改形**，旧断言全部失效：
+ *   用户口径：「MOD 按游戏做卡片而不是按 MOD」「存档只展示真有存档的而不是存档位置的」
+ *            「（修改器）同样按游戏聚合」「卡内列前 3 条 + 展开全部」。
+ *   ⇒ 一卡一款游戏（`article.emu-card.grp`），卡内铺前 3 条可下载条目，
+ *     超出部分由卡内「展开全部 N 条」原地铺开。三个分区共用同一份渲染器。
+ *   ⚠️ 已删的旧卡面元素（本文件全部改成**反向断言**守住，防止有人捡回来）：
+ *      `.md-lk` / `.md-go`（MOD 一卡一条）· `.sv-open` / `.paths` / `.cp`（存档位置卡面）
+ *      · `.tr-go` / `.tr-note`（修改器导流卡）· `#mdToggleLib` / `#svPhone` / `#trToggleLib`
+ *      （恒真或口径已废的开关）。
+ *   ⚠️ 反向断言**必须配正向锚点**：选择器写错 ⇒ 计数 0 ⇒ 平白变绿。
+ *      所以每组反向断言旁边都有一条「新形态真的渲染出来了」的正向断言。
  *
  * 为什么用 jsdom：沙箱里 Chrome/Edge headless 起不来；要验的是纯 DOM 行为
- * （页签 .et-hide 切换、深链 bootTab、卡片渲染、点击分流、默认开关），jsdom 足够。
+ * （页签 .et-hide 切换、深链 bootTab、组卡渲染、卡内展开、点击分流），jsdom 足够。
  *
  * 运行：node tools/test-resource-page.js
  * 前置：服务已在 8123 端口运行（node server.js）
@@ -57,9 +61,29 @@ async function makeDom(url) {
       w.requestAnimationFrame = (cb) => setTimeout(() => cb(Date.now()), 0);
     },
   });
-  await new Promise((r) => setTimeout(r, 2200));
+  /* ★ 首屏现在是**两轮**请求（/api/res/stats?cat=… 之后再 /api/res/groups?…），
+     比旧版（一轮 stats + 一轮 list）更晚，2200ms 会偶发取样到「正在拉取…」占位。 */
+  await new Promise((r) => setTimeout(r, 2800));
   return { dom, errs };
 }
+
+/* 三区共用的卡形取样器 —— 「按游戏聚合」的核心判据只有这一套，别在三个区各写一遍 */
+function shapeOf(qa, sel) {
+  const cards = qa(sel + ' .emu-card');
+  return {
+    n: cards.length,
+    grp: cards.filter((c) => c.classList.contains('grp')).length,
+    cov: cards.filter((c) => c.querySelector('.cov')).length,
+    meta: cards.filter((c) => c.querySelector('.meta .tg')).length,
+    gl: cards.filter((c) => c.querySelector('.gl .gl-i')).length,
+    over3: cards.filter((c) => c.querySelectorAll('.gl .gl-i').length > 3).length,
+    deadEl: cards.filter((c) => c.querySelector('.md-lk,.md-go,.sv-open,.tr-go,.tr-note,.paths,.cp')).length,
+    noCat: cards.filter((c) => !c.dataset.cat).length,
+    noOut: cards.filter((c) => [...c.querySelectorAll('.gl .gl-i')].some((r) => !r.querySelector('.gl-lk a'))).length,
+  };
+}
+const shapeStr = (s) => `卡 ${s.n} ｜ grp ${s.grp} ｜ cov ${s.cov} ｜ meta ${s.meta} ｜ gl ${s.gl}`
+  + ` ｜ 超 3 条 ${s.over3} ｜ 残留旧元素 ${s.deadEl} ｜ 无 data-cat ${s.noCat} ｜ 行内无出口 ${s.noOut}`;
 
 async function main() {
   const { dom: d1, errs: e1 } = await makeDom(BASE + PAGE);
@@ -120,254 +144,193 @@ async function main() {
   ok('关闭后弹窗回到关闭态', !!smodal && !smodal.classList.contains('show'));
 
   /* ============================================================
-   * 二、MOD 分区（本轮新写）
+   * 二、MOD 分区 —— v10.47 新形态：一卡一款游戏
    * ============================================================ */
-  const mdCards = qa('#mdGrid .emu-card');
-  ok('MOD 网格已渲染卡片', mdCards.length > 0, `共 ${mdCards.length} 张`);
-  ok('MOD 卡片带「MOD」徽标', qa('#mdGrid .emu-card .tg.md').length === mdCards.length,
-    `${qa('#mdGrid .emu-card .tg.md').length} / ${mdCards.length}`);
+  const md = shapeOf(qa, '#mdGrid');
+  ok('MOD 网格已渲染**游戏组卡**（>0 张）', md.n > 0, `实际 ${md.n} 张`);
+  ok('★★ MOD 卡**全部**是聚合卡 .emu-card.grp（用户诉求：按游戏做卡片而不是按 MOD）',
+    md.n > 0 && md.grp === md.n, `${md.grp} / ${md.n}`);
+  ok('每张组卡都带封面槽 .cov（有图用图 / 无图占位，网格不会被拉齐掏空）',
+    md.n > 0 && md.cov === md.n, `${md.cov} / ${md.n}`);
+  ok('每张组卡都有分类徽标 .meta .tg 与条数胶囊 .pill', md.n > 0 && md.meta === md.n,
+    `${md.meta} / ${md.n}`);
+  ok('每张组卡都带 data-cat（点卡进详情要靠它认分区）', md.n > 0 && md.noCat === 0,
+    `无 data-cat ${md.noCat} 张`);
+  /* ★★ 用户口径「卡内列前 3 条 + 展开全部」：未展开时**卡内行数不得超过 3** */
+  ok('★★ 卡内明文最多 3 条（未展开时）——「前 3 条」是用户明确口径',
+    md.n > 0 && md.over3 === 0, `超 3 条的卡 ${md.over3} 张`);
+  ok('★ 组卡真的铺出了卡内行 .gl .gl-i（正向锚点：上一条「≤3」不能因整卡空掉而变绿）',
+    md.n > 0 && md.gl === md.n, `${md.gl} / ${md.n}`);
+  /* ★ 铁律「存在 ≠ 可见」的正向落点：卡内每一行都必须有一个**可点的去处**
+     （有通道给通道按钮，没通道给「源站」兜底出口）—— 不能出现一行什么都没有。 */
+  ok('★ 卡内每一行都有可点出口（有链给链，没链给「源站」兜底）',
+    md.n > 0 && md.noOut === 0, `行内无出口的卡 ${md.noOut} 张`);
+  /* ★★ 反向断言组：旧「一卡一条」形态的痕迹必须清零。
+     ⚠️ 单独一条反向断言会被「整卡没渲染」满足 ⇒ 上面已有 grp/cov/gl 三条正向锚点。 */
+  ok('★★ 反向：MOD 卡面已无旧「一卡一条」元素（.md-lk / .md-go 归零）',
+    md.deadEl === 0, `残留 ${md.deadEl} 张`);
+  ok('★★ 反向：三个恒真/废口径的旧开关已删（#mdToggleLib / #svPhone / #trToggleLib）',
+    ['mdToggleLib', 'svPhone', 'trToggleLib'].every((i) => !q('#' + i)));
+  ok('★ 正向锚点：三个分区各有新的「来源」下拉（#mdSrc / #svSrc / #trSrc）',
+    ['mdSrc', 'svSrc', 'trSrc'].every((i) => !!q('#' + i)));
+  ok('★ 正向锚点：组卡有「展开全部 N 条」按钮（.grp-more）',
+    qa('#mdGrid .emu-card .grp-more').length > 0,
+    `实际 ${qa('#mdGrid .emu-card .grp-more').length} 个`);
   /* 盘口按钮是这一区的核心：用户要的是**能直接取件**的出口，不是跳源站首页 */
-  ok('MOD 卡片渲染出盘口取件按钮（.md-lk .lk）',
-    qa('#mdGrid .emu-card .md-lk .lk').length > 0, `实际 ${qa('#mdGrid .emu-card .md-lk .lk').length} 个`);
-  ok('盘口按钮是真外链（href 非 # 、target=_blank）', (() => {
-    const a = q('#mdGrid .emu-card .md-lk .lk');
-    return !!a && /^https?:/.test(a.getAttribute('href') || '') && a.getAttribute('target') === '_blank';
-  })(), (() => { const a = q('#mdGrid .emu-card .md-lk .lk'); return a ? a.getAttribute('href') : '(缺失)'; })());
-  ok('盘口按钮挂了盘口配色类 bd-*（与详情页下载弹窗同源语义）',
-    qa('#mdGrid .emu-card .md-lk .lk[class*="bd-"]').length > 0,
-    `实际 ${qa('#mdGrid .emu-card .md-lk .lk[class*="bd-"]').length} 个`);
-  ok('MOD 卡片都带「打开源站帖」外链（取件口之外的兜底出口）',
-    qa('#mdGrid .emu-card .md-go a').length === mdCards.length,
-    `${qa('#mdGrid .emu-card .md-go a').length} / ${mdCards.length}`);
-  ok('MOD 计数已回填', /共 [\d,]+ 条/.test(q('#mdCount').textContent || ''), q('#mdCount').textContent || '');
-  ok('MOD 统计条已回填 4 格', qa('#mdStats .st').length === 4, `实际 ${qa('#mdStats .st').length}`);
-  ok('MOD「仅看匹配端游」默认开启（与手机专区口径一致）',
-    !!q('#mdToggleLib') && q('#mdToggleLib').classList.contains('on'),
-    q('#mdToggleLib') ? q('#mdToggleLib').textContent.trim() : '(缺失)');
-  /* 关掉 → 放开到全量，计数应变大（证明开关真的接了后端，不是纯样式） */
   {
-    const before = q('#mdCount').textContent || '';
-    click(q('#mdToggleLib'));
-    await sleep(1700);
-    const after = q('#mdCount').textContent || '';
-    const num = (s) => Number(String(s).replace(/[^\d]/g, '')) || 0;
-    ok('关掉「仅看匹配端游」→ 放开到全量（计数变大）', num(after) > num(before), `${before} → ${after}`);
-    click(q('#mdToggleLib'));  // 复原
-    await sleep(1500);
+    const a = q('#mdGrid .emu-card .gl-lk a');
+    const links = qa('#mdGrid .emu-card .gl-lk a');
+    ok('MOD 卡内通道是真外链（href 非 # 、target=_blank）',
+      !!a && /^https?:/.test(a.getAttribute('href') || '') && a.getAttribute('target') === '_blank',
+      a ? a.getAttribute('href') : '(缺失)');
+    ok('通道按钮挂了盘口配色类 bd-*（与详情页下载弹窗同源语义）',
+      links.filter((x) => /(^|\s)bd-/.test(x.className)).length > 0,
+      `${links.filter((x) => /(^|\s)bd-/.test(x.className)).length} / ${links.length}`);
   }
-  /* 点正文：有 libId 就进详情；没命中要给出明确提示（不能点了没反应） */
+  ok('MOD 计数文案是「共 N 款游戏」（卡是游戏粒度，写「条」会和卡内条数打架）',
+    /共 [\d,]+ 款游戏/.test(q('#mdCount').textContent || ''), q('#mdCount').textContent || '');
+  ok('MOD 统计条已回填 4 格', qa('#mdStats .st').length === 4, `实际 ${qa('#mdStats .st').length}`);
+  ok('MOD 排序项由 JS 从 GRP_META 生成（3 个 .emu-sort，第一个默认 on）',
+    qa('#mdSorts .emu-sort').length === 3 && qa('#mdSorts .emu-sort')[0].classList.contains('on'),
+    `实际 ${qa('#mdSorts .emu-sort').length} 项 ｜ on=${(q('#mdSorts .emu-sort.on') || {}).textContent || '(无)'}`);
+  /* 点封面按钮：有 libId 就进详情；没命中要给出明确提示（不能点了没反应） */
   {
     const withLib = qa('#mdGrid .emu-card').find((c) => c.dataset.lib);
     if (withLib) {
-      click(withLib.querySelector('h4'));
+      const btn = withLib.querySelector('.cov-btn');
+      ok('带 libId 的组卡有「查看游戏详情」按钮（.cov-btn，压在封面上）', !!btn);
+      click(btn || withLib.querySelector('h4'));
       await sleep(1500);
-      ok('点 MOD 卡片正文（命中端游库）→ 打开游戏详情抽屉',
+      ok('点组卡封面按钮 → 打开游戏详情抽屉',
         q('#drawer').classList.contains('show'), q('#drawer').className);
       W.closeDetail(); await sleep(300);
     } else {
-      ok('MOD 卡片正文点击（本轮无命中样本，跳过）', true, '无 data-lib 卡片');
+      ok('组卡正文点击（本轮无命中样本，跳过）', true, '无 data-lib 卡片');
+    }
+  }
+  /* ★★ 「展开全部」：这是本轮新形态的**唯一交互**，必须真的把行铺开 */
+  {
+    const more = qa('#mdGrid .emu-card .grp-more')[0];
+    if (more) {
+      const card = more.closest('.emu-card');
+      const before = card.querySelectorAll('.gl .gl-i').length;
+      const errN = e1.length;
+      click(more);
+      await sleep(1800);
+      const after = card.querySelectorAll('.gl .gl-i').length;
+      ok('★★ 点「展开全部 N 条」→ 卡内原地铺开更多行（不跳页、不换弹窗）',
+        after > before, `${before} → ${after} 行`);
+      ok('展开过程中不抛异常', e1.length === errN, e1.slice(errN).join(' | '));
+      ok('展开后仍不超出服务端封顶（≤300，避免 717 条撑爆 DOM）', after <= 300, `${after} 行`);
+    } else {
+      ok('展开全部（本轮无 overflow 组，跳过）', true, '无 .grp-more');
+    }
+  }
+  /* ★ 搜索真的接了后端（来源下拉在本轮数据下多为单源，用搜索验接口更稳） */
+  {
+    const si = q('#mdSearch');
+    const before = qa('#mdGrid .emu-card').length;
+    ok('MOD 有搜索框 #mdSearch', !!si);
+    if (si) {
+      si.value = '赛博朋克';
+      si.dispatchEvent(new W.Event('input', { bubbles: true }));
+      await sleep(1800);
+      const after = qa('#mdGrid .emu-card').length;
+      ok('★ 搜索词 → 列表按关键词收窄（证明前端真的打 /api/res/groups?q=…）',
+        after > 0 && after < before, `${before} → ${after} 张`);
+      ok('搜索命中的第一张卡就是「赛博朋克2077」',
+        /赛博朋克/.test((q('#mdGrid .emu-card') || {}).dataset?.name || ''),
+        (q('#mdGrid .emu-card') || {}).dataset?.name || '(缺失)');
+      si.value = '';
+      si.dispatchEvent(new W.Event('input', { bubbles: true }));
+      await sleep(1500);
     }
   }
 
   /* ============================================================
-   * 三、存档分区（自手机专区搬家）
+   * 三、存档分区 —— v10.47 口径：只出**真有存档文件**的游戏
    * ============================================================ */
   click(q('#resTabs .res-tab[data-et="sv"]'));
-  await sleep(1800);
+  await sleep(2000);
   ok('切「存档」→ #resSaves 显示、#mods 同时收起',
     !q('#resSaves').classList.contains('et-hide') && q('#mods').classList.contains('et-hide'));
   ok('切「存档」→ 页签高亮同步', (q('#resTabs .res-tab.on') || {}).dataset?.et === 'sv');
-  ok('存档网格已渲染卡片', qa('#svGrid .emu-card').length > 0, `实际 ${qa('#svGrid .emu-card').length}`);
-  /* ★★ v10.45 改版（用户口径：「存档位置显示有点多以及杂，先优化存档页面中的卡片，
-   *   不在卡片中显示位置」）——卡面**不再铺路径**，改成一个整宽按钮开合并弹窗的「存档」模块。
-   *   所以这里第一组是**反向断言**：卡面必须干净。反向断言最容易「因为选择器写错而平白变绿」
-   *   （选择器不存在 ⇒ 计数 0 ⇒ 通过），所以下面还有一条正向断言钉住 `.sv-open` 真的渲染出来了。 */
-  ok('★★ 存档卡面已不再铺路径（.paths 必须为 0）——本轮改版的核心诉求',
-    qa('#svGrid .emu-card .paths').length === 0,
-    `实际 ${qa('#svGrid .emu-card .paths').length} 个 .paths`);
-  ok('★★ 存档卡面也没有路径行右侧的「复制」键（.cp 已搬进弹窗）',
-    qa('#svGrid .emu-card .cp').length === 0,
-    `实际 ${qa('#svGrid .emu-card .cp').length} 个 .cp`);
-  const svOpens = qa('#svGrid .emu-card .sv-open');
-  ok('存档卡片带「查看 N 条存档位置」整宽按钮（卡面唯一动作，正向锚点）',
-    svOpens.length > 0, `实际 ${svOpens.length} 个 .sv-open`);
-  ok('按钮文案含条数（卡面没有路径了，条数是「值不值得点」的量）',
-    svOpens.length > 0 && /查看\s*\d+\s*条存档位置/.test(svOpens[0].textContent || ''),
-    svOpens.length ? svOpens[0].textContent.trim() : '(缺失)');
-  ok('按钮带 data-sv-open / data-title（点它要能把游戏名递给合并弹窗）',
-    svOpens.length > 0 && svOpens[0].hasAttribute('data-sv-open') && !!svOpens[0].dataset.title,
-    svOpens.length ? JSON.stringify({ title: svOpens[0].dataset.title, lib: svOpens[0].dataset.lib }) : '(缺失)');
-  /* ★★ v10.46：下面要断「主区铺出的是文件卡（.svf）」。**不能随便挑第一张卡** ——
-   *   存档网格里的游戏是 Ludusavi 那份（只有路径），而 .svf 来自游侠存档区那份（有文件），
-   *   两份库的交集不是全部：抽到没有游侠存档的游戏，这条断言就会**平白变红**
-   *   （上一版就是这样：78/79，红的其实不是代码而是取样）。
-   *   ⇒ 先问服务端要「有游侠存档的 libId 集合」，再挑一张 data-lib 落在集合里的卡。
-   *   取不到集合时退回第一张，并如实把「未按 libId 取样」写进证据串（不许静默降级成假绿）。 */
-  let svPick = svOpens[0];
-  let svPickWhy = '未按 libId 取样（接口没取到）';
-  try {
-    const r = await fetch('http://127.0.0.1:8123/api/saves-yx/index');
-    const j = await r.json();
-    const ids = new Set(Object.keys(j.byLib || {}));
-    const hit = svOpens.find((b) => ids.has(b.dataset.lib || ''));
-    if (hit) { svPick = hit; svPickWhy = `libId=${hit.dataset.lib}（在游侠存档索引内）`; }
-    else if (ids.size) svPickWhy = `索引 ${ids.size} 个 libId 与 ${svOpens.length} 张卡无交集`;
-  } catch (e) { svPickWhy = '接口异常：' + String((e && e.message) || e); }
   {
-    svPick.dispatchEvent(new W.MouseEvent('click', { bubbles: true, cancelable: true }));
-    await sleep(1500);
-    const pop = q('#dlPop');
-    ok('点「查看 N 条存档位置」→ 合并弹窗打开（这是卡面唯一动作，必须真有反应）',
-      !!(pop && !pop.hidden), pop ? `hidden=${pop.hidden}` : '(无 #dlPop)');
-    const onTab = q('#dlModTabs .dlm.on');
-    ok('★ 弹窗自动落在「存档」模块（不是默认的「本体」）—— 落点要跟着入口走',
-      !!(onTab && /存档/.test(onTab.textContent || '')),
-      onTab ? onTab.textContent.trim() : '(无 .dlm.on)');
-    /* ★ v10.46：主区的**正向锚点**也要有 —— 只有反向断言（「没有路径」）
-       会被「主区整个空掉」满足，等于什么都没守住。
-       ★ 取样已按上方 svPick 收窄到「该游戏确实在游侠存档索引里」，否则会平白变红。 */
-    ok('★ 存档模块主区铺出的是**文件**卡（.svf）',
-      qa('#dlBody .svf').length > 0,
-      `实际 ${qa('#dlBody .svf').length} 张 .svf（取样 ${svPickWhy}）`);
-    /* ★ v10.46 **第二次搬家**（不是删掉）：路径从「合并弹窗的存档模块主区」
-     *   又下移一层 —— 主区现在铺的是可下载的**文件**（游侠存档区），
-     *   路径收进模块**右上角**的「📍 存档位置」按钮 → #svLoc 二级弹窗。
-     *   ⇒ 取样点再换一次：`#svLocBody .dl-sv-row code`；
-     *     判据本身（≥9 成含分隔符 / 注册表头、每条配复制键）**逐字保留** ——
-     *     判据不变的搬家才是安全的搬家；同时补一条反向断言守住老位置（主区不许再有路径行）。
-     *   ★ 判据别钉死盘符：Ludusavi 的存档位置大量以占位词开头
-     *   （`<游戏安装目录>\…` / `<winAppData>\…`），带盘符的只是其中一部分
-     *   （实测首个卡片就是 `<游戏安装目录>\Hannah and Joseph Games\…`，
-     *     钉 `[A-Z]:\\` 会当场假红）。
-     *   这里只要求「解析出了路径分隔符或注册表头」——即它确实是条路径，
-     *   而不是原样透出的占位 token；并且**抽全量**看比例，不看单张卡。 */
-    ok('★★ 反向断言：存档模块**主区**不再铺路径（用户诉求「要文件不要位置」）',
-      qa('#dlBody .dl-sv-row').length === 0,
-      `实际 ${qa('#dlBody .dl-sv-row').length} 条 .dl-sv-row`);
-    const svBtn = q('#dlBody [data-dl-svloc]');
-    ok('存档模块右上角有「📍 存档位置」入口（没文件的游戏上它也必须在）',
-      !!svBtn, svBtn ? svBtn.textContent.trim() : '(无 [data-dl-svloc])');
-    if (svBtn) svBtn.dispatchEvent(new W.MouseEvent('click', { bubbles: true, cancelable: true }));
-    await sleep(900);
-    const svPop = q('#svLoc');
-    ok('点「📍 存档位置」→ 位置弹窗打开（二级弹窗，压在下载弹窗之上）',
-      !!(svPop && !svPop.hidden), svPop ? `hidden=${svPop.hidden}` : '(无 #svLoc)');
-    const codes = qa('#svLocBody .dl-sv-row code').map((c) => c.textContent || '');
-    const hit = codes.filter((t) => /[\\/]|HKEY_/.test(t)).length;
-    ok('存档路径已解析为可读形式（≥9 成路径行含路径分隔符 / 注册表头）',
-      codes.length > 0 && hit >= Math.ceil(codes.length * 0.9),
-      `${hit} / ${codes.length}  例：${(codes[0] || '').slice(0, 70)}`);
-    ok('位置弹窗里每条路径都配了「复制」键（复制从卡面搬到了这里）',
-      codes.length > 0 && qa('#svLocBody .dl-sv-row .dl-cp').length === codes.length,
-      `rows=${codes.length} cp=${qa('#svLocBody .dl-sv-row .dl-cp').length}`);
-    /* 关掉弹窗，别影响后面的用例。★ 顺序不能反：位置弹窗压在下载弹窗**之上**，
-       先关下面那层会把它留成一张浮在空页面上的孤卡。 */
-    const svx = q('#svLoc .svloc-x');
-    if (svx) svx.dispatchEvent(new W.MouseEvent('click', { bubbles: true, cancelable: true }));
-    await sleep(500);
-    const cb = q('#dlPop [data-dl="close"]');
-    if (cb) cb.dispatchEvent(new W.MouseEvent('click', { bubbles: true, cancelable: true }));
-    await sleep(500);
+    const sv = shapeOf(qa, '#svGrid');
+    ok('存档网格已渲染组卡', sv.n > 0, `实际 ${sv.n} 张`);
+    ok('★★ 存档卡全部是聚合卡 .emu-card.grp（与 MOD 同一种卡形）', sv.n > 0 && sv.grp === sv.n,
+      `${sv.grp} / ${sv.n}`);
+    ok('存档卡都有封面槽 / 分类徽标 / 卡内行（三处同形）',
+      sv.n > 0 && sv.cov === sv.n && sv.meta === sv.n && sv.gl === sv.n, shapeStr(sv));
+    ok('★★ 存档卡内明文最多 3 条（未展开时）', sv.n > 0 && sv.over3 === 0, `超 3 条的卡 ${sv.over3} 张`);
+    ok('★★ 反向：存档卡面已无旧「位置卡」元素（.paths / .cp / .sv-open 归零）',
+      sv.deadEl === 0, `残留 ${sv.deadEl} 张`);
+    /* ★★ 本轮核心口径：这一页只列「真有存档」的游戏 ⇒ 卡内每一行都应有**下载通道**。
+       实测 /api/res/stats?cat=saves 的 withLink = items（100%）。所以这条不该有例外；
+       若哪天出现「只有源站兜底」的行，说明混进了没有文件的条目 —— 正是用户要去掉的形态。 */
+    const rows = qa('#svGrid .emu-card .gl .gl-i');
+    const withCh = rows.filter((r) => r.querySelector('.gl-lk a:not(.bd-other)')).length;
+    ok('★★ 存档卡内每行都带**真实下载通道**（不是「去源站」兜底）——「只展示真有存档的」',
+      rows.length > 0 && withCh === rows.length,
+      `${withCh} / ${rows.length} 行有真通道`);
+    ok('存档计数文案是「共 N 款游戏」', /共 [\d,]+ 款游戏/.test(q('#svCount').textContent || ''),
+      q('#svCount').textContent || '');
+    ok('存档统计条已回填 4 格', qa('#svStats .st').length === 4, `实际 ${qa('#svStats .st').length}`);
+    ok('存档来源下拉已填充（「全部来源」+ 至少 1 个源）', qa('#svSrc option').length >= 2,
+      qa('#svSrc option').map((o) => o.textContent).join(' ｜ '));
   }
-  ok('存档卡片带云同步 / 不支持徽标',
-    qa('#svGrid .emu-card .tg.cloud, #svGrid .emu-card .tg.dim').length > 0);
-  /* ★ 口径断言（搬家的关键）：手机专区语境默认「仅看手机能玩」；
-   *   搬到端游资源语境后**默认给全量**，口径必须与页签标题一致。 */
-  ok('存档「仅看手机能玩」默认**关闭**（本页是端游资源语境，默认给全量）',
-    !!q('#svPhone') && !q('#svPhone').classList.contains('on'),
-    q('#svPhone') ? ('class=' + q('#svPhone').className) : '(缺失)');
-  {
-    const before = q('#svCount').textContent || '';
-    const num = (s) => Number(String(s).replace(/[^\d]/g, '')) || 0;
-    ok('默认全量计数 > 手机能玩子集（证明默认口径真的是「全部」而不是继承旧默认）',
-      num(before) > 1163, before);
-    click(q('#svPhone'));
-    await sleep(1800);
-    const after = q('#svCount').textContent || '';
-    ok('打开「仅看手机能玩」→ 计数收窄', num(after) > 0 && num(after) < num(before), `${before} → ${after}`);
-    ok('切换前后文案恒定（状态只靠 .on 类表达，按钮宽度不变）',
-      !/[✓○已开]/.test(q('#svPhone').textContent || '') && q('#svPhone').classList.contains('on'),
-      q('#svPhone').textContent.trim());
-    click(q('#svPhone'));  // 复原
-    await sleep(1500);
-  }
-  /* 点击分流（v10.45 改版后只剩两条路）：.sv-open 开弹窗「存档」模块 / 正文进详情。
-     ⚠️ 旧用例测的 `.paths` / `.cp` 已随卡面一起消失，这里换成对应的**新**分流，
-        并保留一条反向断言钉住「卡面真的没有 .paths 了」，防止哪天有人把路径又铺回卡面。 */
+  /* 点整卡 → 进详情（组卡的统一分流） */
   {
     const svCard = qa('#svGrid .emu-card').find((c) => c.dataset.lib);
     if (svCard) {
-      const p = svCard.querySelector('.paths');
-      ok('★ 反向断言：这条卡片上确实没有 .paths（新分流用例的前提成立）', !p);
-      const errN = e1.length;
-      const btn = svCard.querySelector('.sv-open');
-      ok('卡片带 .sv-open（新分流的入口）', !!btn);
-      if (btn) {
-        click(btn);
-        await sleep(1200);
-        const pop = q('#dlPop');
-        ok('点「查看 N 条存档位置」→ 弹窗打开且**没有**同时进详情（分流不能两头都触发）',
-          !!(pop && !pop.hidden) && !q('#drawer').classList.contains('show'),
-          JSON.stringify({ pop: !!(pop && !pop.hidden), drawer: q('#drawer').classList.contains('show') }));
-        const cp = q('#dlBody .dl-sv-row .dl-cp');
-        if (cp) {
-          click(cp);
-          await sleep(400);
-          ok('点弹窗里的「复制」→ 不抛异常（剪贴板降级路径要能兜住）', e1.length === errN, e1.slice(errN).join(' | '));
-        }
-        const cb = q('#dlPop [data-dl="close"]');
-        if (cb) { click(cb); await sleep(500); }
-      }
-      click(svCard.querySelector('h4'));
+      click(svCard.querySelector('.cov-btn') || svCard.querySelector('h4'));
       await sleep(1500);
-      ok('点存档卡片正文 → 打开游戏详情抽屉', q('#drawer').classList.contains('show'), q('#drawer').className);
+      ok('点存档组卡 → 打开游戏详情抽屉', q('#drawer').classList.contains('show'), q('#drawer').className);
       W.closeDetail(); await sleep(300);
     } else {
-      ok('存档卡片正文点击（本轮无命中样本，跳过）', true, '无 data-lib 卡片');
+      ok('存档组卡点击（本轮无命中样本，跳过）', true, '无 data-lib 卡片');
     }
   }
-  ok('存档统计条已回填 4 格', qa('#svStats .st').length === 4, `实际 ${qa('#svStats .st').length}`);
 
   /* ============================================================
-   * 四、修改器分区（自手机专区搬家）
+   * 四、修改器分区 —— v10.47：同样按游戏聚合（GCM + GTrainers + FR 三源）
    * ============================================================ */
   click(q('#resTabs .res-tab[data-et="tr"]'));
-  await sleep(1800);
+  await sleep(2000);
   ok('切「修改器」→ #resTrainers 显示、#resSaves 同时收起',
     !q('#resTrainers').classList.contains('et-hide') && q('#resSaves').classList.contains('et-hide'));
   ok('切「修改器」→ 页签高亮同步', (q('#resTabs .res-tab.on') || {}).dataset?.et === 'tr');
-  ok('修改器网格已渲染卡片', qa('#trGrid .emu-card').length > 0, `实际 ${qa('#trGrid .emu-card').length}`);
-  ok('修改器卡片带来源徽标（.tg.src）', qa('#trGrid .emu-card .tg.src').length > 0,
-    `实际 ${qa('#trGrid .emu-card .tg.src').length}`);
-  ok('修改器卡片带版本号胶囊（.pill.ver）', qa('#trGrid .emu-card .pill.ver').length > 0,
-    `实际 ${qa('#trGrid .emu-card .pill.ver').length}`);
-  /* ★ 本页刻意不给下载直链（GCM 走一次性签名 URL，不该绕过），只做「获取方式」引导 */
-  ok('修改器卡片有「获取方式」外链（不提供下载直链，导流官方）',
-    qa('#trGrid .emu-card .tr-go a').length > 0, `实际 ${qa('#trGrid .emu-card .tr-go a').length}`);
-  ok('修改器卡片有「放置位置」说明（用户明确要的信息）',
-    qa('#trGrid .emu-card .tr-note').length > 0 &&
-    /放置位置/.test(qa('#trGrid .emu-card .tr-note')[0].textContent || ''));
-  ok('修改器来源下拉已填充（全部来源 + N 个来源）', qa('#trSource option').length >= 6,
-    `实际 ${qa('#trSource option').length} 项`);
-  ok('修改器「仅看匹配端游」默认开启', !!q('#trToggleLib') && q('#trToggleLib').classList.contains('on'),
-    q('#trToggleLib') ? q('#trToggleLib').textContent.trim() : '(缺失)');
-  /* 选一个具体来源 → 列表收窄（证明下拉真的接了后端） */
   {
-    const sel = q('#trSource');
-    const before = qa('#trGrid .emu-card').length;
-    const opt = qa('#trSource option')[1];
-    if (sel && opt) {
-      sel.value = opt.value;
-      sel.dispatchEvent(new W.Event('change', { bubbles: true }));
+    const tr = shapeOf(qa, '#trGrid');
+    ok('修改器网格已渲染组卡', tr.n > 0, `实际 ${tr.n} 张`);
+    ok('★★ 修改器卡全部是聚合卡 .emu-card.grp（三区统一卡形）', tr.n > 0 && tr.grp === tr.n,
+      `${tr.grp} / ${tr.n}`);
+    ok('修改器卡都有封面槽 / 分类徽标 / 卡内行（三处同形）',
+      tr.n > 0 && tr.cov === tr.n && tr.meta === tr.n && tr.gl === tr.n, shapeStr(tr));
+    ok('★★ 修改器卡内明文最多 3 条（未展开时）', tr.n > 0 && tr.over3 === 0, `超 3 条的卡 ${tr.over3} 张`);
+    ok('★★ 反向：修改器卡面已无旧「导流卡」元素（.tr-go / .tr-note 归零）',
+      tr.deadEl === 0, `残留 ${tr.deadEl} 张`);
+    ok('修改器卡带来源徽标 .tg.src（卡内可能混源，要能看出条目来自哪）',
+      qa('#trGrid .emu-card .tg.src').length > 0, `实际 ${qa('#trGrid .emu-card .tg.src').length} 个`);
+    ok('修改器卡内每行都有可点出口（有链给链，GCM 走「源站」兜底）',
+      tr.n > 0 && tr.noOut === 0, `行内无出口的卡 ${tr.noOut} 张`);
+    ok('修改器计数文案是「共 N 款游戏」', /共 [\d,]+ 款游戏/.test(q('#trCount').textContent || ''),
+      q('#trCount').textContent || '');
+    ok('修改器统计条已回填 4 格', qa('#trStats .st').length === 4, `实际 ${qa('#trStats .st').length}`);
+    ok('修改器来源下拉已填充（「全部来源」+ 至少 1 个源）', qa('#trSrc option').length >= 2,
+      qa('#trSrc option').map((o) => o.textContent).join(' ｜ '));
+    /* 排序项点一下：证明排序真的接后端（顺序变化不稳，这里只钉「不抛异常 + on 转移」） */
+    const sorts = qa('#trSorts .emu-sort');
+    if (sorts.length >= 3) {
+      const errN = e1.length;
+      click(sorts[2]);
       await sleep(1800);
-      ok('改「来源」下拉 → 列表按来源收窄', qa('#trGrid .emu-card').length <= before,
-        `${before} → ${qa('#trGrid .emu-card').length}（来源 ${opt.value}）`);
-      sel.value = '';
-      sel.dispatchEvent(new W.Event('change', { bubbles: true }));
-      await sleep(1500);
+      ok('点排序项「按游戏名」→ 不抛异常且高亮转移（证明排序真的打后端）',
+        e1.length === errN && sorts[2].classList.contains('on'), `${sorts[2].textContent} on=${sorts[2].classList.contains('on')}`);
+    } else {
+      ok('修改器排序项（不足 3 项，跳过）', true, `实际 ${sorts.length} 项`);
     }
   }
-  ok('修改器计数已回填', /共 [\d,]+ 条/.test(q('#trCount').textContent || ''), q('#trCount').textContent || '');
 
   /* ---- 底 Tab「端游资源」：切页签而不是重载（且不抛异常） ---- */
   const errN2 = e1.length;
@@ -378,13 +341,34 @@ async function main() {
   ok('data-page 标记为 resources（主源脚本据此放行「首页」真跳转）',
     W.document.body.getAttribute('data-page') === 'resources',
     String(W.document.body.getAttribute('data-page')));
-  /* ★ v10.23 同款：先摘掉 style/script 再取文本，否则 CSS 注释里的选择器片段会假红 */
+  /* ★ v10.23 同款：先摘掉 style/script 再取文本，否则 CSS 注释里的选择器片段会假红
+     ★★ 判据必须要求「括号内有声明冒号」—— 原判据 [.#]\w+\s*\{[^}]*\} 太宽，
+        被 GTrainers 的**数据标题**撞红了：那条修改器叫「… v1.0 {FLiNG}」（FLiNG 是修改器
+        作者的署名约定），`.0 {FLiNG}` 长得正好像一条 CSS 规则。CSS 声明块里必有 属性:值，
+        数据标题里没有 —— 用这个差异区分，而不是删断言。
+     ★★ 证据串同时带**抓到的那一段**：本条变红过一次，没有片段就只能猜。 */
   {
     const bt = W.document.body.cloneNode(true);
     [...bt.querySelectorAll('style,script')].forEach((n) => n.remove());
     const BODY_TXT = bt.textContent || '';
+    const hit = BODY_TXT.match(/[.#][\w-]+\s*\{[^}]*:[^}]*\}/);
     ok('页面上不残留裸 CSS 文本（专属 CSS 未掉到 </style> 外）',
-      !/[.#][\w-]+\s*\{[^}]*\}/.test(BODY_TXT), BODY_TXT.slice(0, 60).replace(/\s+/g, ' '));
+      !hit, hit ? ('抓到：' + hit[0].slice(0, 90)) : BODY_TXT.slice(0, 40).replace(/\s+/g, ' '));
+  }
+  /* ---- 页签数字口径：必须等于 /api/res/stats?list=1 的 groups（游戏组数），不是 items ---- */
+  {
+    try {
+      const s = await fetch(BASE + '/api/res/stats?list=1').then((r) => r.json());
+      const c = (s && s.cats) || {};
+      const num = (el) => Number(String((el || {}).textContent || '').replace(/[^\d]/g, '')) || 0;
+      const pairs = [['tabNumMd', 'mod'], ['tabNumSv', 'saves'], ['tabNumTr', 'trainers']];
+      const bad = pairs.filter(([id, k]) => !(c[k] && num(q('#' + id)) === c[k].groups));
+      ok('★ 页签数字 == /api/res/stats 的 groups（游戏组数口径，三处一致）',
+        bad.length === 0,
+        pairs.map(([id, k]) => `${k}:页签${num(q('#' + id))}/接口${c[k] ? c[k].groups : '?'}`).join(' ｜ '));
+    } catch (e) {
+      ok('页签数字口径核对（接口异常）', false, String((e && e.message) || e));
+    }
   }
   d1.window.close();
 
