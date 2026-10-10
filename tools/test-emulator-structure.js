@@ -501,6 +501,22 @@ t('组卡封面比「一卡一条」矮（92 → 78px）：主体信息在卡内
 t('组卡通道按钮与卡内展开按钮都走卡片内小圆角（不走 --cd-r，否则像卡里嵌卡）',
   /\.emu-card\.grp \.gl-lk a\{[^}]*border-radius:6px/.test(res)
   && /\.emu-card\.grp \.grp-more\{[^}]*border-radius:8px/.test(res));
+/* ★★ v10.48：修改器「第三方来源」跳转通道的三档配色。
+   ★ 主源 :root 是唯一真源 —— 所以**主源和派生页都要查**（只查派生页的话，
+     有人只改主源不重建，这里照样绿，而线上加载的正是派生页）。 */
+t('★ v10.48：第三方来源通道配色三档都在（--ch-fling / -cheat / -src）',
+  ['--ch-fling', '--ch-cheat', '--ch-src'].every((v) => idx.includes(v) && res.includes(v)));
+t('★ v10.48：三个新通道类在主源与派生页都有规则（卡内 .gl-lk a 与详情页 .d-res-lk 两处）',
+  ['bd-fling', 'bd-cheat', 'bd-src'].every((c) => idx.includes('.gl-lk a.' + c) && res.includes('.gl-lk a.' + c))
+  && ['bd-fling', 'bd-cheat', 'bd-src'].every((c) => idx.includes('.d-res-lk.' + c) && res.includes('.d-res-lk.' + c)));
+/* ★★ v10.48：「查看全部」改弹窗后新增的样式，以及被它取代的旧实现。 */
+t('★ v10.48：弹窗内全量列表 + 搜索条样式在（.grp-pop-s 与卡片语义重置）',
+  /\.grp-pop-s\{/.test(res) && /\.grp-pop \.emu-card\.grp\{[^}]*padding:0/.test(res));
+t('★★ v10.48 反向：旧的「原地展开」实现（grpExpand）已从资源页脚本里消失',
+  !/function grpExpand\s*\(/.test(res),
+  /function grpExpand\s*\(/.test(res) ? '仍存在 ⇒ 行为没真正改' : '已删');
+t('★ v10.48：卡内按钮文案改成「查看全部 N 条 ▸」（行为已不是原地展开，文案不能留在旧说法）',
+  /查看全部 ' \+ Number/.test(res) && !/展开全部 ' \+ Number/.test(res));
 /* 专属 CSS 泄漏闸：追加的 CSS 必须整段待在 <style> 内 */
 t('端游资源页 <style> 唯一', count(res, /<style>/g) === 1, `实际 ${count(res, /<style>/g)}`);
 t('端游资源页 <script> 数正常（≤3）', count(res, /<script/g) <= 3, `实际 ${count(res, /<script/g)}`);

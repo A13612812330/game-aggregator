@@ -145,7 +145,7 @@ const MODS_HTML = `
     <span class="ic">🧩</span>
     <div class="tx">
       <b>PC 游戏 MOD，按游戏看，一屏一款</b>——数据来自<b>机地社区 MOD 专区</b>，
-      每条都带<b>网盘直链</b>；卡内先列<b>前 3 条</b>，点「展开全部」原地铺开其余条目。
+      每条都带<b>网盘直链</b>；卡内先列<b>前 3 条</b>，点「查看全部」在<b>弹窗里</b>看全量、可搜索。
       点封面或卡身<b>直接进游戏详情</b>。
       <span style="opacity:.75">本站只做聚合与指路，<b>不转存、不提供文件</b>。装 MOD 前请先备份存档。</span>
       <span id="mdBuilt" style="opacity:.75"></span>
@@ -179,7 +179,7 @@ const SAVES_HTML = `
     <div class="tx">
       <b>找存档，直接给能下载的</b>——这一页只列<b>真有存档文件</b>的游戏：
       来自<b>游侠补丁网存档区</b>与 <b>GTrainers</b>，每条都给<b>真实下载链</b>
-      （直链 / 网盘 / eD2K），点开就能取件；卡内先列<b>前 3 条</b>，点「展开全部」原地铺开。
+      （直链 / 网盘 / eD2K），点开就能取件；卡内先列<b>前 3 条</b>，点「查看全部」在<b>弹窗里</b>看全量、可搜索。
       <span style="opacity:.75">想要「存档放在哪个目录」请点进游戏详情 —— 那里有独立的<b>存档位置</b>视图（含注册表项与云同步支持）。</span>
       <span id="svBuilt" style="opacity:.75"></span>
     </div>
@@ -214,9 +214,9 @@ const TRAINERS_HTML = `
     <div class="tx">
       <b>单机游戏修改器，按游戏看</b>——合了三个来源：<b>GTrainers</b> 修改器区、
       <b>FearlessRevolution</b> 的 CE 修改表 / Trainer（这两家都给<b>真实下载链</b>），
-      以及 <b>Game Cheats Manager</b> 的公开清单（只做「有没有 / 什么版本」，
-      它官方走一次性签名链接，本站不代为分发）。
-      卡内先列<b>前 3 条</b>，点「展开全部」原地铺开。
+      以及 <b>Game Cheats Manager</b> 的公开清单（本体走一次性签名链接，本站不代为分发；
+      但每条都配了<b>来源站跳转</b>，点一下直接去原作者页）。
+      卡内先列<b>前 3 条</b>，点「查看全部」在<b>弹窗里</b>看全量、可搜索。
       <span style="opacity:.75">拿到的修改器多为<b>独立 exe / CE 表</b>，<b>不用放进游戏目录</b>，运行后自行挂上进程；用前请先备份存档。</span>
       <span id="trBuilt" style="opacity:.75"></span>
     </div>

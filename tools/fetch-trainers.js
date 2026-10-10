@@ -52,6 +52,51 @@ const SOURCE_META = {
   cheat_table: { label: 'CE 修改表', desc: 'Cheat Engine 修改表，覆盖面极广' },
 };
 
+/* ★★ v10.48：给「第三方来源」一条可点的跳转链 + 一个短标签。
+ *
+ * 背景（这是本轮用户报的问题的根因）：
+ *   用户口径「修改器中的第三方修改器来源我也需要你提供跳转链接」。
+ *   上游 `official_url` **本来就有**（实测 3,597 / 3,875 = 92.8%），
+ *   本地缓存 `_gcm-raw.json` 里**也一直存着** —— 是这里写 `items` 时
+ *   只挑了 11 个字段、把它丢了；而 res-groups 的 `page` 指向 `libUrl`
+ *   （端游库的 xdgame 链接）⇒ 点过去是游戏详情，不是修改器来源站。
+ *
+ * ★ 为什么按**主机名**判定、而不是按 `source`：
+ *   同一个 `source=community`（595 条）下面混着 mrantifun.net / nexusmods.com /
+ *   bilibili.com / github.com / playground.ru … 十几个站，
+ *   按 source 只能给一个笼统标签，点进去仍不知道去哪。
+ *
+ * ★ 标签为什么控制在 12 字符内：卡内 `.gl-lk a` 是 `.slice(0, 12)` 截断展示的
+ *   （见 tools/resource-sections.js 的 glRow），写长了会被截成半截词。 */
+const SITE_MATCH = [
+  [/flingtrainer\.com$/i, '风灵月影', 'fling'],
+  [/thecheatscript\.com$/i, 'CheatScript', 'cheat'],
+  [/fearlessrevolution\.com$/i, 'FearlessRev', 'src'],
+  [/xiaoxingjie\.com$/i, '小幸', 'src'],
+  [/mrantifun\.net$/i, 'MrAntiFun', 'src'],
+  [/nexusmods\.com$/i, 'Nexus', 'src'],
+  [/3dmgame\.com$/i, '3DM', 'src'],
+  [/bilibili\.com$/i, 'B站', 'src'],
+  [/ali213\.net$/i, '游侠', 'src'],
+  [/github\.com$/i, 'GitHub', 'src'],
+  [/playground\.ru$/i, 'PG', 'src'],
+  [/megagames\.com$/i, 'MegaGames', 'src'],
+  [/pvzge\.com$/i, 'PVZGE', 'src'],
+];
+
+/** 由 official_url 推出「跳转标签 + 通道配色类 + 主机名」；非 http(s) 或空 ⇒ null */
+function siteOf(u) {
+  const s = String(u || '').trim();
+  if (!/^https?:\/\//i.test(s)) return null;
+  let host = '';
+  try { host = new URL(s).host; } catch (e) { return null; }
+  for (const [re, label, cls] of SITE_MATCH) {
+    if (re.test(host)) return { label, cls, host };
+  }
+  /* 没登记的主机：不编标签，直接用主机名（去掉 www.），配色落到中性的 bd-src */
+  return { label: host.replace(/^www\./, '').split('.')[0].slice(0, 12), cls: 'src', host };
+}
+
 /** 与 data/mobilehub.js 的 normKey 保持同一口径 */
 function normKey(s) {
   return String(s || '').toLowerCase()
@@ -143,6 +188,15 @@ async function fetchSource() {
     seen.add(key);
 
     const sid = steamIdOf(lib && lib.cover);
+
+    /* ★ v10.48：这三个字段原先被丢掉 —— 见 SITE_MATCH 上方那段背景。
+     *   `officialUrl` 是**来源站上这条修改器的落地页**（不是端游库链接）；
+     *   `author` 是原作者（386 个不同作者，MrAntiFun / Fullcodes / 桂Cinnamon …）；
+     *   `toolName` 是工具自己的名字（「物品编辑器」「数据查询修改工具」），
+     *   与 `name`（游戏名）是两回事 —— 之前只有游戏名，卡面看不出这是个什么工具。 */
+    const officialUrl = String(t.official_url || '').trim();
+    const site = siteOf(officialUrl);
+
     items.push({
       k: normKey(en || zh),
       name: en || zh,
@@ -155,8 +209,21 @@ async function fetchSource() {
       libCover: lib ? lib.cover : '',
       libUrl: lib ? lib.url : '',
       steamId: sid,
+      officialUrl,
+      siteLabel: site ? site.label : '',
+      siteCls: site ? site.cls : '',
+      author: String(t.author || '').trim(),
+      toolName: String(t.custom_name_zh || t.custom_name_en || t.custom_name || '').trim(),
     });
   }
+
+  /* ★ v10.48：来源跳转链的覆盖率要**进 stats** ——
+   *   卡面上「第三方修改器没有跳转链接」这种退化必须能被一眼看出来，
+   *   而不是等用户点开每一个才发现。见 ROADMAP 的「来源跳转覆盖」一栏。 */
+  const withUrl = items.filter((x) => x.officialUrl).length;
+  const withAuthor = items.filter((x) => x.author).length;
+  const bySite = {};
+  for (const x of items) if (x.siteLabel) bySite[x.siteLabel] = (bySite[x.siteLabel] || 0) + 1;
 
   const meta = SOURCE_META;
   const stats = {
@@ -168,6 +235,10 @@ async function fetchSource() {
     matchedRate: items.length ? +(matched / items.length * 100).toFixed(1) : 0,
     matchedByZh,
     matchedByEn,
+    withUrl,
+    urlPct: items.length ? +(withUrl / items.length * 100).toFixed(1) : 0,
+    withAuthor,
+    bySite,
     bySource,
     sources: Object.keys(bySource).map((k) => ({
       key: k,
@@ -184,5 +255,10 @@ async function fetchSource() {
   console.log(`  其中：中文名命中 ${matchedByZh} ｜ 英文名命中 ${matchedByEn}`);
   console.log('分源：');
   stats.sources.forEach((s) => console.log(`  ${s.label.padEnd(8)} ${String(s.count).padStart(5)}`));
+  /* ★ v10.48：来源跳转链覆盖率（本轮补回来的 official_url） */
+  console.log(`来源跳转链 ${stats.withUrl} / ${stats.total}（${stats.urlPct}%）｜ 有署名 ${stats.withAuthor}`);
+  console.log('来源站 top10：');
+  Object.entries(stats.bySite).sort((a, b) => b[1] - a[1]).slice(0, 10)
+    .forEach(([k, v]) => console.log(`  ${k.padEnd(14)} ${String(v).padStart(5)}`));
   console.log(`\n✅ 已写出 data/${path.basename(OUT)}（${(fs.statSync(OUT).size / 1024).toFixed(0)}KB）`);
 })();

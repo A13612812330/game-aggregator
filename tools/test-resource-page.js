@@ -7,8 +7,19 @@
  * ★★ v10.47 整段重写（不是小修）——三个分区**统一改形**，旧断言全部失效：
  *   用户口径：「MOD 按游戏做卡片而不是按 MOD」「存档只展示真有存档的而不是存档位置的」
  *            「（修改器）同样按游戏聚合」「卡内列前 3 条 + 展开全部」。
- *   ⇒ 一卡一款游戏（`article.emu-card.grp`），卡内铺前 3 条可下载条目，
- *     超出部分由卡内「展开全部 N 条」原地铺开。三个分区共用同一份渲染器。
+ *   ⇒ 一卡一款游戏（`article.emu-card.grp`），卡内铺前 3 条可下载条目。
+ *
+ * ★★ v10.48 又改了两处**行为**（对应两组新断言）：
+ *   ① 用户口径：「优化，不要展开（在弹窗中 mod 模块显示，可在下载弹窗中搜索）」
+ *      ⇒ 「查看全部 N 条」不再原地铺开（旧的 `grpExpand`，上限 300），改为打开 `#dlPop`
+ *        弹窗列全量（服务端 items 上限已 500 → 1000，覆盖实测最大组 717）+ 弹窗内搜索。
+ *      ⚠️ 断言必须**同时**断「弹窗开了」与「卡内行数没变」——只断前者的话，
+ *         有人把原地铺开加回来照样绿。
+ *   ② 用户口径：「修改器中的第三方修改器来源我也需要你提供跳转链接」
+ *      ⇒ GCM（第三方）条目补 `official_url` 跳转链（实测覆盖 93.7%）。
+ *      ⚠️ 反向断言钉住「**不是**端游库链接」——旧实现的 page 指向 `libUrl`（xdgame），
+ *         这正是用户报的问题；只断「有链接」是拦不住它的。
+ *
  *   ⚠️ 已删的旧卡面元素（本文件全部改成**反向断言**守住，防止有人捡回来）：
  *      `.md-lk` / `.md-go`（MOD 一卡一条）· `.sv-open` / `.paths` / `.cp`（存档位置卡面）
  *      · `.tr-go` / `.tr-note`（修改器导流卡）· `#mdToggleLib` / `#svPhone` / `#trToggleLib`
@@ -208,7 +219,11 @@ async function main() {
       ok('组卡正文点击（本轮无命中样本，跳过）', true, '无 data-lib 卡片');
     }
   }
-  /* ★★ 「展开全部」：这是本轮新形态的**唯一交互**，必须真的把行铺开 */
+  /* ★★ v10.48：「查看全部 N 条」= 打开**弹窗**列全量 + 弹窗内搜索。
+     ⚠️ 这组断言守的是**行为变了**，不是「换个地方还能用」：
+        旧实现是原地铺开（`grpExpand`，上限 300），用户口径「不要展开」。
+        所以必须同时断「弹窗开了」**和**「卡内行数没变」——只断前者的话，
+        有人把原地铺开加回来也照样绿。 */
   {
     const more = qa('#mdGrid .emu-card .grp-more')[0];
     if (more) {
@@ -216,14 +231,48 @@ async function main() {
       const before = card.querySelectorAll('.gl .gl-i').length;
       const errN = e1.length;
       click(more);
-      await sleep(1800);
+      await sleep(2200);
+      const pop = q('#dlPop');
+      ok('★★ 点「查看全部 N 条」→ 打开弹窗（不再原地铺开）', !!pop && !pop.hidden);
       const after = card.querySelectorAll('.gl .gl-i').length;
-      ok('★★ 点「展开全部 N 条」→ 卡内原地铺开更多行（不跳页、不换弹窗）',
-        after > before, `${before} → ${after} 行`);
-      ok('展开过程中不抛异常', e1.length === errN, e1.slice(errN).join(' | '));
-      ok('展开后仍不超出服务端封顶（≤300，避免 717 条撑爆 DOM）', after <= 300, `${after} 行`);
+      ok('★★ 反向：卡内行数**没变**（原地铺开已废弃，卡片不再被撑长）',
+        after === before, `${before} → ${after} 行`);
+      const box = q('#grpAllList');
+      const rows = box ? box.querySelectorAll('.gl-i').length : 0;
+      ok('★ 弹窗内铺出全量条目（多于卡内明文 3 条）', rows > before, `${before} → ${rows} 行`);
+      ok('★ 弹窗内每行都有可点出口（有链给链 / 没链给「源站」兜底）',
+        rows > 0 && [...box.querySelectorAll('.gl-i')].every((r) => r.querySelector('.gl-lk a')));
+      ok('★ 弹窗副标题写明总数（「共 N 条 · 可在下方搜索」）',
+        /共\s*[\d,]+\s*条/.test((q('#dlSub') || {}).textContent || ''), (q('#dlSub') || {}).textContent || '');
+      /* 搜索：本地过滤已取回的数组。正反两条都要 ——
+         只断「搜不到」会被「过滤函数恒返 0」满足，只断「搜得到」会被「恒返全部」满足。 */
+      const qi = q('#grpAllQ');
+      ok('★ 弹窗内有搜索框 #grpAllQ', !!qi);
+      if (qi) {
+        const firstT = (box.querySelector('.gl-i .t') || {}).textContent || '';
+        const cand = firstT.replace(/[^0-9A-Za-z\u4e00-\u9fa5]/g, '').slice(0, 2);
+        const type = async (v) => {
+          qi.value = v;
+          qi.dispatchEvent(new W.Event('input', { bubbles: true }));
+          await sleep(140);
+          return box.querySelectorAll('.gl-i').length;
+        };
+        const hitOk = await type(cand);
+        const hitNo = await type('zzzzq');
+        ok('★★ 弹窗内搜索真的过滤（正：命中原有关键词 / 反：无关键词归零）',
+          cand.length > 1 && hitOk > 0 && hitOk <= rows && hitNo === 0,
+          `关键词「${cand}」→ ${hitOk} 行 ｜ 「zzzzq」→ ${hitNo} 行`);
+        const back = await type('');
+        ok('★ 清空关键词后恢复全量', back === rows, `${rows} → ${back} 行`);
+      }
+      ok('打开弹窗 / 搜索过程中不抛异常', e1.length === errN, e1.slice(errN).join(' | '));
+      if (typeof W.closeDownload === 'function') W.closeDownload();
+      await sleep(220);
+      ok('★ 关弹窗后卡内行数仍是 3（不会把全量留在卡里）',
+        card.querySelectorAll('.gl .gl-i').length === before,
+        `${card.querySelectorAll('.gl .gl-i').length} 行`);
     } else {
-      ok('展开全部（本轮无 overflow 组，跳过）', true, '无 .grp-more');
+      ok('查看全部（本轮无 overflow 组，跳过）', true, '无 .grp-more');
     }
   }
   /* ★ 搜索真的接了后端（来源下拉在本轮数据下多为单源，用搜索验接口更稳） */
@@ -312,8 +361,42 @@ async function main() {
       tr.deadEl === 0, `残留 ${tr.deadEl} 张`);
     ok('修改器卡带来源徽标 .tg.src（卡内可能混源，要能看出条目来自哪）',
       qa('#trGrid .emu-card .tg.src').length > 0, `实际 ${qa('#trGrid .emu-card .tg.src').length} 个`);
-    ok('修改器卡内每行都有可点出口（有链给链，GCM 走「源站」兜底）',
+    ok('修改器卡内每行都有可点出口（有链给链，GCM 走来源站兜底）',
       tr.n > 0 && tr.noOut === 0, `行内无出口的卡 ${tr.noOut} 张`);
+    /* ★★ v10.48：修改器「第三方来源」跳转链（用户口径：
+       「修改器中的第三方修改器来源我也需要你提供跳转链接」）。
+       根因回顾：上游 official_url 一直有（93.7%），是抓取器把它丢了，
+       且 res-groups 原先的 page 指向 libUrl（**端游库**的 xdgame 链接）。
+       ⚠️ 必须通过「查看全部」弹窗取全量来验：卡内只铺 3 条，
+          GCM 条目按 ts 排在 gt 之后，光看卡面会因为样本缺失而恒真。 */
+    {
+      const trMore = qa('#trGrid .emu-card .grp-more')[0];
+      if (trMore) {
+        const errN = e1.length;
+        click(trMore);
+        await sleep(2200);
+        const box = q('#grpAllList');
+        const sel = 'a[class*="bd-fling"],a[class*="bd-cheat"],a[class*="bd-src"]';
+        const srcLinks = box ? [...box.querySelectorAll(sel)] : [];
+        ok('★★ 修改器「查看全部」弹窗里出现第三方来源跳转按钮（bd-fling / bd-cheat / bd-src）',
+          srcLinks.length > 0, `实际 ${srcLinks.length} 个`);
+        const bad = srcLinks.filter((a) => /xdgame\.com|jidiyouxi\.com|gamezonelabs\.com\/products/.test(a.getAttribute('href') || ''));
+        ok('★★ 反向：来源按钮**不是**端游库链接（旧 bug 就是 page 指向 libUrl=xdgame）',
+          srcLinks.length > 0 && bad.length === 0, `误指 ${bad.length} 个`);
+        ok('来源按钮 href 是真外链（http(s) + target=_blank）',
+          srcLinks.length > 0 && srcLinks.every((a) => /^https?:/.test(a.getAttribute('href') || '')
+            && a.getAttribute('target') === '_blank'),
+          (srcLinks[0] || {}).getAttribute ? String(srcLinks[0].getAttribute('href')).slice(0, 60) : '(无)');
+        ok('来源按钮带短标签（≤12 字符，卡面 slice(0,12) 不会被截成半截词）',
+          srcLinks.length > 0 && srcLinks.every((a) => (a.textContent || '').trim().length <= 12),
+          srcLinks.slice(0, 3).map((a) => (a.textContent || '').trim()).join(' / '));
+        ok('打开来源弹窗不抛异常', e1.length === errN, e1.slice(errN).join(' | '));
+        if (typeof W.closeDownload === 'function') W.closeDownload();
+        await sleep(220);
+      } else {
+        ok('修改器「查看全部」（无 overflow 组，跳过）', true, '无 .grp-more');
+      }
+    }
     ok('修改器计数文案是「共 N 款游戏」', /共 [\d,]+ 款游戏/.test(q('#trCount').textContent || ''),
       q('#trCount').textContent || '');
     ok('修改器统计条已回填 4 格', qa('#trStats .st').length === 4, `实际 ${qa('#trStats .st').length}`);

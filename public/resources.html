@@ -62,6 +62,14 @@
     --ch-ed2k:#5E6B7F;      /* eD2K 电驴链（游侠存档的备用通道） */
     --ch-file:#0F766E;      /* 直链附件（FR 的 .CT / 压缩包） */
     --ch-other:#9AA3B5;
+    /* ★ v10.48：修改器「第三方来源」的跳转通道（不是下载链 —— 点过去是来源站）。
+       实测这些来源站共 3,451 条，主机有十几个（thecheatscript / flingtrainer /
+       fearlessrevolution / 3dmgame / xiaoxingjie / mrantifun / nexusmods / bilibili …）。
+       逐个主机配色会变成几十个色值、反而看不出差异 ⇒ 按**三档**收：
+       风灵月影系 / CE 表系 / 其它第三方。前两者占了 78%，值得区分。 */
+    --ch-fling:#4C51BF;     /* 风灵月影（flingtrainer.com + archive.） */
+    --ch-cheat:#0E7490;     /* TheCheatScript（CE 修改表来源站） */
+    --ch-src:#64748B;       /* 其它第三方来源站（3DM / Nexus / B站 / GitHub …） */
   }
   /* ★ v10.23：`hidden` 属性必须真的能藏住元素。
      浏览器给 `[hidden]` 的默认样式是 `display:none`，但它写在 **UA 样式表**里，
@@ -557,7 +565,15 @@
   .emu-card.grp .gl-lk a.bd-ed2k{background:var(--ch-ed2k)}
   .emu-card.grp .gl-lk a.bd-file{background:var(--ch-file)}
   .emu-card.grp .gl-lk a.bd-other{background:var(--ch-other)}
-  /* 「展开全部 N 条」——卡内含 0 条以上时才有；点了在**原地**铺完剩余条目。
+  /* ★ v10.48：修改器「第三方来源」跳转通道（详见 :root 里 --ch-fling/-cheat/-src 的注释） */
+  .emu-card.grp .gl-lk a.bd-fling{background:var(--ch-fling)}
+  .emu-card.grp .gl-lk a.bd-cheat{background:var(--ch-cheat)}
+  .emu-card.grp .gl-lk a.bd-src{background:var(--ch-src)}
+  /* 「展开全部 N 条」——卡内含 0 条以上时才有。
+     ★ v10.48：行为改了 —— 以前点了在**原地**铺完剩余条目（上限 300，会把卡撑到很长
+       且铺开后没法检索）；现在改为打开**弹窗**列出全量，并在弹窗内提供搜索。
+       ⇒ 样式保持「卡内整宽按钮」（不改），但注释里的行为描述必须同步，
+         否则下一个人读到这里会以为它还在原地展开。
      它是卡片**内部**的整宽按钮，圆角比卡片小一号（与 .cfg-btn 同类）⇒
      登记在 check-card-rules.js 的 RAD_EXCEPT。 */
   .emu-card.grp .grp-more{width:100%;margin-top:7px;font-family:var(--font);font-size:11px;font-weight:750;
@@ -566,6 +582,30 @@
   .emu-card.grp .grp-more:hover{background:#EEF2FA;border-color:#C9D4E8}
   .emu-card.grp .grp-more[disabled]{opacity:.55;cursor:default}
   .emu-card.grp .gl-i.more-row .t{color:var(--c-t3)}
+
+  /* ============ 📜 「查看全部 N 条」弹窗内的全量列表（v10.48 新增） ============
+     用户口径：「优化，不要展开（在弹窗中 mod 模块显示，可在下载弹窗中搜索）」。
+     ★ 复用 `.emu-card.grp .gl-*` 那组行样式 —— 所以列表容器直接挂 `emu-card grp`
+       两个类，再用下面第一条**抵消掉卡片语义**（外框 / 悬浮抬升 / 指针 / 内边距）。
+       ⇒ 一条重置，换掉「把 20 多条 .gl-* 与 .bd-* 选择器各抄一遍」。
+     ★ 搜索条用 `position:sticky` 而不是 fixed（本项目禁 fixed）：它要贴在 `.dlpop-b`
+       这个滚动区的顶部，跟着弹窗走，不是贴视口。
+     ⚠️ `.gl-i` 在卡内是紧凑的（gap 4px，标题截 2 行）——在弹窗里必须放开：
+        行与行给间距、标题**不截断**，否则「列全部」和「列 3 条」看起来一样。 */
+  .grp-pop .emu-card.grp{padding:0;background:none;border:0;border-radius:0;box-shadow:none;
+    cursor:auto;overflow:visible;gap:0;margin:0}
+  .grp-pop .emu-card.grp:hover{transform:none;box-shadow:none;border-color:transparent}
+  .grp-pop .emu-card.grp .gl{margin-top:0;border-top:0;padding-top:0}
+  .grp-pop .gl-i{padding:6px 0}
+  .grp-pop .gl-i + .gl-i{border-top:1px dashed var(--c-border)}
+  .grp-pop .gl-i .t{-webkit-line-clamp:unset;display:block}
+  .grp-pop .gl-i .n{line-height:1.7}
+  .grp-pop-s{position:sticky;top:-12px;z-index:2;display:flex;align-items:center;gap:9px;
+    background:#fff;padding:3px 0 9px;border-bottom:1px solid var(--c-border);margin-bottom:9px}
+  .grp-pop-s input{flex:1;min-width:0;font-family:var(--font);font-size:12.5px;color:var(--c-t1);
+    background:#fff;border:1px solid var(--c-border2);border-radius:8px;padding:7px 10px;outline:none}
+  .grp-pop-s input:focus{border-color:var(--c-primary)}
+  .grp-pop-s .n{flex:none;font:700 11px/1.5 var(--font-num);color:var(--c-t3);white-space:nowrap}
   /* 三个分区的组卡主色（与各自 .bar / .emu-intro 同色系） */
   .emu-card.grp .tg.k-mod{background:rgba(46,107,255,.1);color:#2E6BFF}
   .emu-card.grp .tg.k-saves{background:rgba(2,132,199,.1);color:#0284C7}
@@ -695,6 +735,11 @@
   .d-res-it .d-res-lk.bd-ed2k{background:var(--ch-ed2k)}
   .d-res-it .d-res-lk.bd-file{background:var(--ch-file)}
   .d-res-it .d-res-lk.bd-other{background:var(--ch-other)}
+  /* ★ v10.48：修改器「第三方来源」跳转通道 —— 详情页这两块卡也要跟着认这三个 cls，
+     否则同一个链接在资源页是彩色、在详情页是灰的（同一份数据两套观感）。 */
+  .d-res-it .d-res-lk.bd-fling{background:var(--ch-fling)}
+  .d-res-it .d-res-lk.bd-cheat{background:var(--ch-cheat)}
+  .d-res-it .d-res-lk.bd-src{background:var(--ch-src)}
   .d-res-it .d-res-more{flex:none;font:750 10px/1 var(--font-num);color:var(--c-t3)}
   /* v10.47：新增四个来源徽标（gt / fr / yx / mod）。
      旧的五个（fling / cheat_table / community / xiaoxing / gcm）是 **GCM 清单**的来源，
@@ -1987,7 +2032,7 @@
     <span class="ic">🧩</span>
     <div class="tx">
       <b>PC 游戏 MOD，按游戏看，一屏一款</b>——数据来自<b>机地社区 MOD 专区</b>，
-      每条都带<b>网盘直链</b>；卡内先列<b>前 3 条</b>，点「展开全部」原地铺开其余条目。
+      每条都带<b>网盘直链</b>；卡内先列<b>前 3 条</b>，点「查看全部」在<b>弹窗里</b>看全量、可搜索。
       点封面或卡身<b>直接进游戏详情</b>。
       <span style="opacity:.75">本站只做聚合与指路，<b>不转存、不提供文件</b>。装 MOD 前请先备份存档。</span>
       <span id="mdBuilt" style="opacity:.75"></span>
@@ -2015,7 +2060,7 @@
     <div class="tx">
       <b>找存档，直接给能下载的</b>——这一页只列<b>真有存档文件</b>的游戏：
       来自<b>游侠补丁网存档区</b>与 <b>GTrainers</b>，每条都给<b>真实下载链</b>
-      （直链 / 网盘 / eD2K），点开就能取件；卡内先列<b>前 3 条</b>，点「展开全部」原地铺开。
+      （直链 / 网盘 / eD2K），点开就能取件；卡内先列<b>前 3 条</b>，点「查看全部」在<b>弹窗里</b>看全量、可搜索。
       <span style="opacity:.75">想要「存档放在哪个目录」请点进游戏详情 —— 那里有独立的<b>存档位置</b>视图（含注册表项与云同步支持）。</span>
       <span id="svBuilt" style="opacity:.75"></span>
     </div>
@@ -2042,9 +2087,9 @@
     <div class="tx">
       <b>单机游戏修改器，按游戏看</b>——合了三个来源：<b>GTrainers</b> 修改器区、
       <b>FearlessRevolution</b> 的 CE 修改表 / Trainer（这两家都给<b>真实下载链</b>），
-      以及 <b>Game Cheats Manager</b> 的公开清单（只做「有没有 / 什么版本」，
-      它官方走一次性签名链接，本站不代为分发）。
-      卡内先列<b>前 3 条</b>，点「展开全部」原地铺开。
+      以及 <b>Game Cheats Manager</b> 的公开清单（本体走一次性签名链接，本站不代为分发；
+      但每条都配了<b>来源站跳转</b>，点一下直接去原作者页）。
+      卡内先列<b>前 3 条</b>，点「查看全部」在<b>弹窗里</b>看全量、可搜索。
       <span style="opacity:.75">拿到的修改器多为<b>独立 exe / CE 表</b>，<b>不用放进游戏目录</b>，运行后自行挂上进程；用前请先备份存档。</span>
       <span id="trBuilt" style="opacity:.75"></span>
     </div>
@@ -3291,7 +3336,8 @@ $('#navHome').addEventListener('click', (e) => {
  *            「（修改器）同样按游戏聚合」
  *            「卡内列前 3 条 + 展开全部」。
  *   ⇒ 三个分区共用**同一种卡形**：一卡一款游戏，卡内铺前 3 条可下载条目，
- *     超出部分由卡内「展开全部 N 条」原地铺开。渲染器只有一份（`grpCard`），
+ *     超出部分由卡内「**查看全部 N 条**」打开弹窗列出全量（v10.48 改；此前是原地铺开）。
+ *     渲染器只有一份（`grpCard`），
  *     差异全部收在 `GRP_META` 这张表里（标题 / 排序项 / 统计口径）。
  *   ⚠️ 这不是「搬家」而是**改形**：旧的「一卡一条」渲染器（mdCard / svCard / trCard）
  *     已整组删除，同时删掉了配套的 `.md-lk` / `.sv-open` / `.tr-go` 等卡面样式 ——
@@ -3413,9 +3459,12 @@ function grpCard(cat, g) {
     .join('');
 
   const rows = (g.items || []).map((it, i) => glRow(cat, it, i + 1)).join('');
+  /* ★ v10.48：文案从「展开全部 N 条 ▾」改成「查看全部 N 条 ▸」——
+     行为已经不是「在卡内展开」了，箭头也跟着从「向下」改成「向右（进弹窗）」。
+     文案与行为不一致是上一轮踩过的坑（用户明确说「不要展开」）。 */
   const moreBtn = g.more
     ? '<button class="grp-more" type="button" data-grp-more data-cat="' + cat + '" data-key="' + esc(g.key) + '" data-title="'
-      + esc(game) + '">展开全部 ' + Number(g.count).toLocaleString() + ' 条 ▾</button>'
+      + esc(game) + '">查看全部 ' + Number(g.count).toLocaleString() + ' 条 ▸</button>'
     : '';
 
   return '<article class="emu-card grp' + (g.cover ? ' has-cov' : '') + '" data-cat="' + cat + '" data-key="' + esc(g.key) + '"'
@@ -3435,42 +3484,119 @@ function grpCard(cat, g) {
     + '</article>';
 }
 
-/** 「展开全部」：把这个组剩余条目原地铺进卡内（不跳页、不换弹窗） */
-async function grpExpand(btn) {
+/* ============================================================================
+ * 「查看全部 N 条」→ 弹窗列全量 + 弹窗内搜索
+ *
+ * ★★ v10.48 改行为（本轮第二大改动）：
+ *   用户口径：「优化，不要展开（在弹窗中 mod 模块显示，可在下载弹窗中搜索）」。
+ *   原实现（`grpExpand`）是**原地铺开**，上限 300 条。两个问题：
+ *     a) 单组最多 **717** 条（赛博朋克2077），原地铺会把卡撑到几千像素，
+ *        而卡片是网格里的一员 ⇒ 整行都被拉长；铺完还**没法检索**，只能靠 Ctrl+F；
+ *     b) 铺开是破坏性的（`gl.innerHTML` 整块换掉）—— 铺完关不掉、回不到「前 3 条」的形态。
+ *   ⇒ 改为打开 `#dlPop` 弹窗（**复用**，三页共享资产，理由同 openFullPop 上方那段），
+ *     弹窗里列出**该组全部条目**，顶部一个搜索框做**本地过滤**。
+ *
+ * ⚠️ 搜索是本地过滤「已经取回来的数组」，所以必须一次取全 ——
+ *    服务端 `items()` 的上限已从 500 提到 **1000**（实测最大组 717），
+ *    覆盖全部组；万一仍 `truncated`，副标题会**写明只取到了前 N 条**（不静默截断）。
+ * ========================================================================== */
+
+/* 弹窗当前会话（cat + 全量数组 + 关键词）。关弹窗时被 closeDownload 之外的路径
+ * 置空 —— 用 null 判空，避免「没有会话却还在过滤上一次的数组」。 */
+let grpAllState = null;
+
+/** 按当前关键词重绘列表（只重绘列表本身，不动搜索框 —— 否则输入会掉焦点） */
+function grpAllHit() {
+  const st = grpAllState;
+  if (!st) return;
+  const box = document.getElementById('grpAllList');
+  if (!box) return;
+  const kw = String(st.q || '').trim().toLowerCase();
+  const hit = !kw ? st.items : st.items.filter((x) => (String(x.title || '') + ' ' + String(x.game || '')
+    + ' ' + String(x.note || '') + ' ' + String(x.date || '') + ' ' + String(x.size || '')).toLowerCase().includes(kw));
+  box.innerHTML = hit.length
+    ? hit.map((it, i) => glRow(st.cat, it, i + 1)).join('')
+    : '<div class="emu-empty" style="padding:16px 0">没有匹配的条目</div>';
+  const n = document.getElementById('grpAllN');
+  if (n) n.textContent = kw ? ('命中 ' + hit.length + ' / ' + st.items.length) : ('共 ' + st.items.length.toLocaleString() + ' 条');
+}
+
+/** 打开弹窗并渲染（数据已在手上时直接画，避免闪一次 loading） */
+function grpAllPaint(cat, items, game, j) {
+  const meta = GRP_META[cat];
+  const bodyEl = document.getElementById('dlBody');
+  const total = (j && j.total) || items.length;
+  const cut = (j && j.truncated)
+    ? '（接口上限，只取到前 ' + items.length + ' 条）'
+    : '';
+  const sub = document.getElementById('dlSub');
+  if (sub) sub.textContent = '共 ' + total.toLocaleString() + ' 条' + cut + ' · 可在下方搜索';
+  bodyEl.innerHTML = '<div class="grp-pop">'
+    + '<div class="grp-pop-s">'
+    + '<input id="grpAllQ" type="search" autocomplete="off" placeholder="在这 '
+    + total.toLocaleString() + ' 条' + esc(meta.label) + '里搜（标题 / 日期 / 体积）">'
+    + '<span class="n" id="grpAllN"></span></div>'
+    + '<div class="emu-card grp" id="grpAllList"></div>'
+    + '</div>';
+  grpAllState = { cat, items, q: '' };
+  grpAllHit();
+  const q = document.getElementById('grpAllQ');
+  if (q) {
+    q.addEventListener('input', () => { if (grpAllState) grpAllState.q = q.value; grpAllHit(); });
+    q.focus();
+  }
+  const foot = document.getElementById('dlFoot');
+  if (foot) foot.innerHTML = '<b>' + esc(game || '') + '</b> · 点右上角 ✕ 或按 Esc 关闭';
+}
+
+/** 点「查看全部 N 条」的入口：拉全量 → 开弹窗 */
+async function grpAllPop(btn) {
   if (btn.dataset.busy === '1') return;
   btn.dataset.busy = '1';
-  btn.disabled = true;
-  const old = btn.textContent;
-  btn.textContent = '正在展开…';
   const cat = btn.dataset.cat;
   const key = btn.dataset.key;
+  const meta = GRP_META[cat];
+  const game = btn.dataset.title || '';
+  const pop = document.getElementById('dlPop');
+  const bodyEl = document.getElementById('dlBody');
+  if (!pop || !bodyEl) { btn.dataset.busy = ''; return; }
+
+  /* 打开外壳前先把**合并弹窗的会话状态作废**（dlUni / dFullCur）——
+     不清的话，关掉本弹窗后再点详情页的「⬇ 下载与资源」，会看到上一次的分区/排序；
+     模块页签条同样要藏（本弹窗没有模块语境）。 */
+  if (typeof closeSvLoc === 'function') closeSvLoc();
+  dlUni = null;
+  dFullCur = null;
+  const mt = document.getElementById('dlModTabs');
+  if (mt) { mt.hidden = true; mt.innerHTML = ''; }
+  const tEl = document.getElementById('dlTitle');
+  if (tEl) tEl.textContent = (game ? game + ' · ' : '') + '全部' + meta.label;
+  const sEl = document.getElementById('dlSub');
+  if (sEl) sEl.textContent = '读取中…';
+  const fEl = document.getElementById('dlFoot');
+  if (fEl) fEl.innerHTML = '';
+  bodyEl.innerHTML = '<div class="dlpop-load"><i></i><span>正在读取全部条目…</span></div>';
+  pop.hidden = false;
+  requestAnimationFrame(() => pop.classList.add('on'));
+
   try {
-    /* limit 封顶 300：赛博朋克2077 单组 717 条，一次全铺会把 DOM 撑爆、且没人会滚到底。
-       服务端会回 `truncated`，此时按钮**改成说明文案**而不是消失 —— 让用户知道上面还有。 */
-    const j = await fetch(api('/api/res/items?cat=' + encodeURIComponent(cat) + '&key=' + encodeURIComponent(key) + '&limit=300'))
-      .then((r) => r.json());
-    const card = btn.closest('.emu-card');
-    const gl = card && card.querySelector('.gl');
+    const j = await fetch(api('/api/res/items?cat=' + encodeURIComponent(cat)
+      + '&key=' + encodeURIComponent(key) + '&limit=1000')).then((r) => r.json());
     const items = j.items || [];
-    if (!gl || !items.length) throw new Error('空结果');
-    gl.innerHTML = items.map((it, i) => glRow(cat, it, i + 1)).join('');
-    if (j.truncated) {
-      btn.removeAttribute('data-grp-more');
-      btn.disabled = false;
-      btn.dataset.busy = '';
-      btn.textContent = '已铺前 ' + items.length + ' 条（共 ' + Number(j.total).toLocaleString() + ' 条，其余请进游戏详情）';
-    } else {
-      btn.remove();
-    }
+    if (!items.length) throw new Error('该组没有条目');
+    grpAllPaint(cat, items, game, j);
   } catch (e) {
-    btn.disabled = false;
+    grpAllState = null;
+    bodyEl.innerHTML = '<div class="dlpop-empty">读取失败：' + esc(e.message)
+      + '<br><span style="font-size:11.5px">关闭后重试</span></div>';
+    if (sEl) sEl.textContent = '';
+  } finally {
     btn.dataset.busy = '';
-    btn.textContent = old;
-    if (typeof toast === 'function') toast('展开失败，请稍后重试');
+    btn.disabled = false;
   }
 }
 
-/** 网格点击分流（三个分区同一套）：展开全部 / 卡内通道外链 / 封面按钮 / 整卡进详情 */
+/** 网格点击分流（三个分区同一套）：查看全部 / 卡内通道外链 / 封面按钮 / 整卡进详情 */
 function bindGrpGrid(cat) {
   const meta = GRP_META[cat];
   const g = document.getElementById(meta.grid);
@@ -3478,7 +3604,7 @@ function bindGrpGrid(cat) {
   g.dataset.bound = '1';
   g.addEventListener('click', (e) => {
     const more = e.target.closest('[data-grp-more]');
-    if (more) { e.stopPropagation(); grpExpand(more); return; }
+    if (more) { e.stopPropagation(); grpAllPop(more); return; }
     /* 卡内的下载通道是外链，别被整卡的点击吞掉 */
     if (e.target.closest('.gl-lk a')) return;
     const btn = e.target.closest('.cov-btn');

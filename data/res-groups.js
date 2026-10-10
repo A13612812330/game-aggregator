@@ -147,15 +147,33 @@ function fromFr() {
 function fromGcm() {
   const out = [];
   for (const x of gcm.ensure().items || []) {
+    /* ★★ v10.48：补上「第三方修改器来源」的跳转链。
+     *   用户口径：「修改器中的第三方修改器来源我也需要你提供跳转链接」。
+     *   根因不在前端 —— 上游 `official_url` 一直有（实测 3,597/3,875 = 92.8%），
+     *   本地缓存也有，是 tools/fetch-trainers.js 只挑了 11 个字段、把它丢了；
+     *   而这里原先的 `page: x.libUrl` 指向**端游库的 xdgame 链接**（游戏详情），
+     *   所以点过去根本不是修改器的来源站。
+     *   ⚠️ 来源链 ≠ 下载链：显式打 `ch:'src'`，stats 才能把两者分开统计
+     *      （否则「可下载占比」会被这 3,451 条充到 96%）。 */
+    const links = [];
+    if (x.officialUrl) {
+      links.push({ label: x.siteLabel || '来源', url: x.officialUrl, cls: x.siteCls || 'src', ch: 'src' });
+    }
+    /* 行标题：优先**工具自己的名字**（「物品编辑器」「数据查询修改工具」）——
+     * 一卡一游戏之后，卡内再重复游戏名等于每行都一样，22 条修改器分不出区别。
+     * 其次是署名（同游戏的多个作者版本靠它区分），最后才回落游戏名。 */
+    const tool = x.toolName ? (x.toolName + (x.version ? ' v' + x.version : '')) : '';
+    const title = [tool, x.author].filter(Boolean).join(' · ') || (x.zh || x.name || '');
     out.push({
       src: 'gcm', cat: 'trainers', id: String(x.k || x.name || ''),
-      title: x.zh || x.name || '', game: x.zh || x.name || '',
+      title, game: x.zh || x.name || '',
       libId: x.libId || '', libTitle: x.libTitle || '', cover: x.libCover || '',
       size: '', date: '', downloads: 0,
-      /* ★ GCM 刻意不给下载链：官方走一次性 S3 签名 URL（依赖客户端密钥），
-       *   不该也不能离线复现。这里给「获取方式」外链，`links` 故意留空。 */
-      links: [],
-      page: x.libUrl || 'https://gamezonelabs.com/products/gcm/trainers',
+      links,
+      /* 没有 official_url 的那 6.3% **不给假链接**：统一指 GCM 库页，
+       * 用户点过去至少能看到「这是什么、去哪找」。（GCM 官方下载走一次性
+       * S3 签名 URL，依赖客户端密钥，不该也不能离线复现 —— 见 fetch 注释。） */
+      page: x.officialUrl || 'https://gamezonelabs.com/products/gcm/trainers',
       note: x.version ? ('v ' + x.version) : '',
       /* 无下载链的 GCM 条目排在**同游戏内有下载链的条目之后**（note 排序靠 ts/downloads） */
       ts: 0,
@@ -353,7 +371,14 @@ function groups(cat, opts = {}) {
 function items(cat, key, limit = 200) {
   const b = build();
   const all = groupItems(cat, key);
-  const lim = Math.min(parseInt(limit, 10) || 200, 500);
+  /* ★ v10.48：上限 500 → **1000**。
+   *   为什么必须提：弹窗改成「一次取全量 + 弹窗内本地搜索」，
+   *   搜的是**已加载的数组**，取不全就等于搜不全（用户看到「搜不到」会以为库里没有）。
+   *   实测各分区最大单组：mod 717（赛博朋克2077）· saves 653（我的夏季汽车）· trainers 30
+   *   ⇒ 1000 能覆盖全部组，不会再有静默截断。
+   *   ⚠️ 仍是硬上限：真出现 >1000 的组时返回 `truncated:true`，前端**必须显示出来**，
+   *      不能静默只给前 1000 条。 */
+  const lim = Math.min(parseInt(limit, 10) || 200, 1000);
   return {
     ok: true, cat, key, total: all.length,
     truncated: all.length > lim,
@@ -365,12 +390,22 @@ function stats(cat) {
   const b = build();
   const g = b.gByCat[cat] || [];
   const it = b.byCat[cat] || [];
-  const withLink = it.filter((x) => x.links && x.links.length).length;
+  /* ★★ v10.48：「来源跳转链」与「下载链」是两种东西，必须分开统计。
+   *   给 GCM 补上来源链之后，若沿用「links 非空即算有下载链」，
+   *   trainers 的 `linkPct`（卡面写着「可下载占比」）会从 58.9% 跳到 96.4% ——
+   *   那不是数据变好了，是**口径被混掉了**：那 3,451 条点进去是来源站介绍页，
+   *   不是文件。所以来源链显式打 `ch:'src'`，并把两个覆盖率分别暴露。 */
+  const isDl = (x) => (x.links || []).some((l) => l.ch !== 'src');
+  const isSrc = (x) => (x.links || []).some((l) => l.ch === 'src');
+  const withLink = it.filter(isDl).length;
+  const withSrc = it.filter(isSrc).length;
   const bySrc = {};
   for (const x of it) bySrc[x.src] = (bySrc[x.src] || 0) + 1;
   return {
     ok: true, cat, groups: g.length, items: it.length, withLink,
     linkPct: it.length ? +(withLink / it.length * 100).toFixed(1) : 0,
+    withSrc,
+    srcPct: it.length ? +(withSrc / it.length * 100).toFixed(1) : 0,
     bySrc,
     srcLabel: SRC_LABEL,
   };

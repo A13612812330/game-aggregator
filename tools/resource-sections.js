@@ -13,7 +13,8 @@
  *            「（修改器）同样按游戏聚合」
  *            「卡内列前 3 条 + 展开全部」。
  *   ⇒ 三个分区共用**同一种卡形**：一卡一款游戏，卡内铺前 3 条可下载条目，
- *     超出部分由卡内「展开全部 N 条」原地铺开。渲染器只有一份（`grpCard`），
+ *     超出部分由卡内「**查看全部 N 条**」打开弹窗列出全量（v10.48 改；此前是原地铺开）。
+ *     渲染器只有一份（`grpCard`），
  *     差异全部收在 `GRP_META` 这张表里（标题 / 排序项 / 统计口径）。
  *   ⚠️ 这不是「搬家」而是**改形**：旧的「一卡一条」渲染器（mdCard / svCard / trCard）
  *     已整组删除，同时删掉了配套的 `.md-lk` / `.sv-open` / `.tr-go` 等卡面样式 ——
@@ -135,9 +136,12 @@ function grpCard(cat, g) {
     .join('');
 
   const rows = (g.items || []).map((it, i) => glRow(cat, it, i + 1)).join('');
+  /* ★ v10.48：文案从「展开全部 N 条 ▾」改成「查看全部 N 条 ▸」——
+     行为已经不是「在卡内展开」了，箭头也跟着从「向下」改成「向右（进弹窗）」。
+     文案与行为不一致是上一轮踩过的坑（用户明确说「不要展开」）。 */
   const moreBtn = g.more
     ? '<button class="grp-more" type="button" data-grp-more data-cat="' + cat + '" data-key="' + esc(g.key) + '" data-title="'
-      + esc(game) + '">展开全部 ' + Number(g.count).toLocaleString() + ' 条 ▾</button>'
+      + esc(game) + '">查看全部 ' + Number(g.count).toLocaleString() + ' 条 ▸</button>'
     : '';
 
   return '<article class="emu-card grp' + (g.cover ? ' has-cov' : '') + '" data-cat="' + cat + '" data-key="' + esc(g.key) + '"'
@@ -157,42 +161,119 @@ function grpCard(cat, g) {
     + '</article>';
 }
 
-/** 「展开全部」：把这个组剩余条目原地铺进卡内（不跳页、不换弹窗） */
-async function grpExpand(btn) {
+/* ============================================================================
+ * 「查看全部 N 条」→ 弹窗列全量 + 弹窗内搜索
+ *
+ * ★★ v10.48 改行为（本轮第二大改动）：
+ *   用户口径：「优化，不要展开（在弹窗中 mod 模块显示，可在下载弹窗中搜索）」。
+ *   原实现（`grpExpand`）是**原地铺开**，上限 300 条。两个问题：
+ *     a) 单组最多 **717** 条（赛博朋克2077），原地铺会把卡撑到几千像素，
+ *        而卡片是网格里的一员 ⇒ 整行都被拉长；铺完还**没法检索**，只能靠 Ctrl+F；
+ *     b) 铺开是破坏性的（`gl.innerHTML` 整块换掉）—— 铺完关不掉、回不到「前 3 条」的形态。
+ *   ⇒ 改为打开 `#dlPop` 弹窗（**复用**，三页共享资产，理由同 openFullPop 上方那段），
+ *     弹窗里列出**该组全部条目**，顶部一个搜索框做**本地过滤**。
+ *
+ * ⚠️ 搜索是本地过滤「已经取回来的数组」，所以必须一次取全 ——
+ *    服务端 `items()` 的上限已从 500 提到 **1000**（实测最大组 717），
+ *    覆盖全部组；万一仍 `truncated`，副标题会**写明只取到了前 N 条**（不静默截断）。
+ * ========================================================================== */
+
+/* 弹窗当前会话（cat + 全量数组 + 关键词）。关弹窗时被 closeDownload 之外的路径
+ * 置空 —— 用 null 判空，避免「没有会话却还在过滤上一次的数组」。 */
+let grpAllState = null;
+
+/** 按当前关键词重绘列表（只重绘列表本身，不动搜索框 —— 否则输入会掉焦点） */
+function grpAllHit() {
+  const st = grpAllState;
+  if (!st) return;
+  const box = document.getElementById('grpAllList');
+  if (!box) return;
+  const kw = String(st.q || '').trim().toLowerCase();
+  const hit = !kw ? st.items : st.items.filter((x) => (String(x.title || '') + ' ' + String(x.game || '')
+    + ' ' + String(x.note || '') + ' ' + String(x.date || '') + ' ' + String(x.size || '')).toLowerCase().includes(kw));
+  box.innerHTML = hit.length
+    ? hit.map((it, i) => glRow(st.cat, it, i + 1)).join('')
+    : '<div class="emu-empty" style="padding:16px 0">没有匹配的条目</div>';
+  const n = document.getElementById('grpAllN');
+  if (n) n.textContent = kw ? ('命中 ' + hit.length + ' / ' + st.items.length) : ('共 ' + st.items.length.toLocaleString() + ' 条');
+}
+
+/** 打开弹窗并渲染（数据已在手上时直接画，避免闪一次 loading） */
+function grpAllPaint(cat, items, game, j) {
+  const meta = GRP_META[cat];
+  const bodyEl = document.getElementById('dlBody');
+  const total = (j && j.total) || items.length;
+  const cut = (j && j.truncated)
+    ? '（接口上限，只取到前 ' + items.length + ' 条）'
+    : '';
+  const sub = document.getElementById('dlSub');
+  if (sub) sub.textContent = '共 ' + total.toLocaleString() + ' 条' + cut + ' · 可在下方搜索';
+  bodyEl.innerHTML = '<div class="grp-pop">'
+    + '<div class="grp-pop-s">'
+    + '<input id="grpAllQ" type="search" autocomplete="off" placeholder="在这 '
+    + total.toLocaleString() + ' 条' + esc(meta.label) + '里搜（标题 / 日期 / 体积）">'
+    + '<span class="n" id="grpAllN"></span></div>'
+    + '<div class="emu-card grp" id="grpAllList"></div>'
+    + '</div>';
+  grpAllState = { cat, items, q: '' };
+  grpAllHit();
+  const q = document.getElementById('grpAllQ');
+  if (q) {
+    q.addEventListener('input', () => { if (grpAllState) grpAllState.q = q.value; grpAllHit(); });
+    q.focus();
+  }
+  const foot = document.getElementById('dlFoot');
+  if (foot) foot.innerHTML = '<b>' + esc(game || '') + '</b> · 点右上角 ✕ 或按 Esc 关闭';
+}
+
+/** 点「查看全部 N 条」的入口：拉全量 → 开弹窗 */
+async function grpAllPop(btn) {
   if (btn.dataset.busy === '1') return;
   btn.dataset.busy = '1';
-  btn.disabled = true;
-  const old = btn.textContent;
-  btn.textContent = '正在展开…';
   const cat = btn.dataset.cat;
   const key = btn.dataset.key;
+  const meta = GRP_META[cat];
+  const game = btn.dataset.title || '';
+  const pop = document.getElementById('dlPop');
+  const bodyEl = document.getElementById('dlBody');
+  if (!pop || !bodyEl) { btn.dataset.busy = ''; return; }
+
+  /* 打开外壳前先把**合并弹窗的会话状态作废**（dlUni / dFullCur）——
+     不清的话，关掉本弹窗后再点详情页的「⬇ 下载与资源」，会看到上一次的分区/排序；
+     模块页签条同样要藏（本弹窗没有模块语境）。 */
+  if (typeof closeSvLoc === 'function') closeSvLoc();
+  dlUni = null;
+  dFullCur = null;
+  const mt = document.getElementById('dlModTabs');
+  if (mt) { mt.hidden = true; mt.innerHTML = ''; }
+  const tEl = document.getElementById('dlTitle');
+  if (tEl) tEl.textContent = (game ? game + ' · ' : '') + '全部' + meta.label;
+  const sEl = document.getElementById('dlSub');
+  if (sEl) sEl.textContent = '读取中…';
+  const fEl = document.getElementById('dlFoot');
+  if (fEl) fEl.innerHTML = '';
+  bodyEl.innerHTML = '<div class="dlpop-load"><i></i><span>正在读取全部条目…</span></div>';
+  pop.hidden = false;
+  requestAnimationFrame(() => pop.classList.add('on'));
+
   try {
-    /* limit 封顶 300：赛博朋克2077 单组 717 条，一次全铺会把 DOM 撑爆、且没人会滚到底。
-       服务端会回 `truncated`，此时按钮**改成说明文案**而不是消失 —— 让用户知道上面还有。 */
-    const j = await fetch(api('/api/res/items?cat=' + encodeURIComponent(cat) + '&key=' + encodeURIComponent(key) + '&limit=300'))
-      .then((r) => r.json());
-    const card = btn.closest('.emu-card');
-    const gl = card && card.querySelector('.gl');
+    const j = await fetch(api('/api/res/items?cat=' + encodeURIComponent(cat)
+      + '&key=' + encodeURIComponent(key) + '&limit=1000')).then((r) => r.json());
     const items = j.items || [];
-    if (!gl || !items.length) throw new Error('空结果');
-    gl.innerHTML = items.map((it, i) => glRow(cat, it, i + 1)).join('');
-    if (j.truncated) {
-      btn.removeAttribute('data-grp-more');
-      btn.disabled = false;
-      btn.dataset.busy = '';
-      btn.textContent = '已铺前 ' + items.length + ' 条（共 ' + Number(j.total).toLocaleString() + ' 条，其余请进游戏详情）';
-    } else {
-      btn.remove();
-    }
+    if (!items.length) throw new Error('该组没有条目');
+    grpAllPaint(cat, items, game, j);
   } catch (e) {
-    btn.disabled = false;
+    grpAllState = null;
+    bodyEl.innerHTML = '<div class="dlpop-empty">读取失败：' + esc(e.message)
+      + '<br><span style="font-size:11.5px">关闭后重试</span></div>';
+    if (sEl) sEl.textContent = '';
+  } finally {
     btn.dataset.busy = '';
-    btn.textContent = old;
-    if (typeof toast === 'function') toast('展开失败，请稍后重试');
+    btn.disabled = false;
   }
 }
 
-/** 网格点击分流（三个分区同一套）：展开全部 / 卡内通道外链 / 封面按钮 / 整卡进详情 */
+/** 网格点击分流（三个分区同一套）：查看全部 / 卡内通道外链 / 封面按钮 / 整卡进详情 */
 function bindGrpGrid(cat) {
   const meta = GRP_META[cat];
   const g = document.getElementById(meta.grid);
@@ -200,7 +281,7 @@ function bindGrpGrid(cat) {
   g.dataset.bound = '1';
   g.addEventListener('click', (e) => {
     const more = e.target.closest('[data-grp-more]');
-    if (more) { e.stopPropagation(); grpExpand(more); return; }
+    if (more) { e.stopPropagation(); grpAllPop(more); return; }
     /* 卡内的下载通道是外链，别被整卡的点击吞掉 */
     if (e.target.closest('.gl-lk a')) return;
     const btn = e.target.closest('.cov-btn');

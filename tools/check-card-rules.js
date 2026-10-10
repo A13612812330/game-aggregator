@@ -87,11 +87,18 @@ const RAD_EXCEPT = new Set([
    *   与 .cov-btn / .cfg-btn 同类 —— 比卡片小一号才是对的；
    *   走 --cd-r 会跟卡片同圆角，看起来像卡片里嵌了张小卡片。
    *   · .gl-lk a  卡内条目行尾的**通道按钮**（直链 / 夸克 / 迅雷…）
-   *   · .grp-more 「展开全部 N 条」整宽按钮
+   *   · .grp-more 「查看全部 N 条」整宽按钮（v10.48 前叫「展开全部」，行为已改开弹窗）
    *   ⚠️ 这两条只在**主源 index.html** 里（组卡 CSS 与卡片族同处一份），
    *      不像 .md-lk 那条只在派生页 —— 但例外表按选择器登记、不按页面，写法一致。 */
   '.emu-card.grp .gl-lk a',
   '.emu-card.grp .grp-more',
+  /* ★ v10.48 闸门新增：`.grp-pop .emu-card.grp` —— 「查看全部」弹窗里的**全量列表容器**。
+   *   它挂 `emu-card grp` 两个类是为了**复用卡内行样式**（.gl-i / .gl-lk a.bd-* 那 20 多条），
+   *   但它的语义是**列表**不是卡 ⇒ 必须用一条重置把卡片语义抵消掉：
+   *   `padding:0 / background:none / border:0 / border-radius:0`。
+   *   圆角这里就是该是 0（列表没有外框），不能走 --cd-r —— 走后会画出四个圆角
+   *   而容器本身没有边框和底色，看起来像被裁了一角。 */
+  '.grp-pop .emu-card.grp',
   '.row-card .go',            // 行卡尾部箭头钮
   '.sm-row .go2',             // ★ 闸门新增：小行卡尾部箭头钮
   '.rel-row .rel-it .why',    // ★ 闸门新增：「为什么推荐」角标

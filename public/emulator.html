@@ -62,6 +62,14 @@
     --ch-ed2k:#5E6B7F;      /* eD2K 电驴链（游侠存档的备用通道） */
     --ch-file:#0F766E;      /* 直链附件（FR 的 .CT / 压缩包） */
     --ch-other:#9AA3B5;
+    /* ★ v10.48：修改器「第三方来源」的跳转通道（不是下载链 —— 点过去是来源站）。
+       实测这些来源站共 3,451 条，主机有十几个（thecheatscript / flingtrainer /
+       fearlessrevolution / 3dmgame / xiaoxingjie / mrantifun / nexusmods / bilibili …）。
+       逐个主机配色会变成几十个色值、反而看不出差异 ⇒ 按**三档**收：
+       风灵月影系 / CE 表系 / 其它第三方。前两者占了 78%，值得区分。 */
+    --ch-fling:#4C51BF;     /* 风灵月影（flingtrainer.com + archive.） */
+    --ch-cheat:#0E7490;     /* TheCheatScript（CE 修改表来源站） */
+    --ch-src:#64748B;       /* 其它第三方来源站（3DM / Nexus / B站 / GitHub …） */
   }
   /* ★ v10.23：`hidden` 属性必须真的能藏住元素。
      浏览器给 `[hidden]` 的默认样式是 `display:none`，但它写在 **UA 样式表**里，
@@ -557,7 +565,15 @@
   .emu-card.grp .gl-lk a.bd-ed2k{background:var(--ch-ed2k)}
   .emu-card.grp .gl-lk a.bd-file{background:var(--ch-file)}
   .emu-card.grp .gl-lk a.bd-other{background:var(--ch-other)}
-  /* 「展开全部 N 条」——卡内含 0 条以上时才有；点了在**原地**铺完剩余条目。
+  /* ★ v10.48：修改器「第三方来源」跳转通道（详见 :root 里 --ch-fling/-cheat/-src 的注释） */
+  .emu-card.grp .gl-lk a.bd-fling{background:var(--ch-fling)}
+  .emu-card.grp .gl-lk a.bd-cheat{background:var(--ch-cheat)}
+  .emu-card.grp .gl-lk a.bd-src{background:var(--ch-src)}
+  /* 「展开全部 N 条」——卡内含 0 条以上时才有。
+     ★ v10.48：行为改了 —— 以前点了在**原地**铺完剩余条目（上限 300，会把卡撑到很长
+       且铺开后没法检索）；现在改为打开**弹窗**列出全量，并在弹窗内提供搜索。
+       ⇒ 样式保持「卡内整宽按钮」（不改），但注释里的行为描述必须同步，
+         否则下一个人读到这里会以为它还在原地展开。
      它是卡片**内部**的整宽按钮，圆角比卡片小一号（与 .cfg-btn 同类）⇒
      登记在 check-card-rules.js 的 RAD_EXCEPT。 */
   .emu-card.grp .grp-more{width:100%;margin-top:7px;font-family:var(--font);font-size:11px;font-weight:750;
@@ -566,6 +582,30 @@
   .emu-card.grp .grp-more:hover{background:#EEF2FA;border-color:#C9D4E8}
   .emu-card.grp .grp-more[disabled]{opacity:.55;cursor:default}
   .emu-card.grp .gl-i.more-row .t{color:var(--c-t3)}
+
+  /* ============ 📜 「查看全部 N 条」弹窗内的全量列表（v10.48 新增） ============
+     用户口径：「优化，不要展开（在弹窗中 mod 模块显示，可在下载弹窗中搜索）」。
+     ★ 复用 `.emu-card.grp .gl-*` 那组行样式 —— 所以列表容器直接挂 `emu-card grp`
+       两个类，再用下面第一条**抵消掉卡片语义**（外框 / 悬浮抬升 / 指针 / 内边距）。
+       ⇒ 一条重置，换掉「把 20 多条 .gl-* 与 .bd-* 选择器各抄一遍」。
+     ★ 搜索条用 `position:sticky` 而不是 fixed（本项目禁 fixed）：它要贴在 `.dlpop-b`
+       这个滚动区的顶部，跟着弹窗走，不是贴视口。
+     ⚠️ `.gl-i` 在卡内是紧凑的（gap 4px，标题截 2 行）——在弹窗里必须放开：
+        行与行给间距、标题**不截断**，否则「列全部」和「列 3 条」看起来一样。 */
+  .grp-pop .emu-card.grp{padding:0;background:none;border:0;border-radius:0;box-shadow:none;
+    cursor:auto;overflow:visible;gap:0;margin:0}
+  .grp-pop .emu-card.grp:hover{transform:none;box-shadow:none;border-color:transparent}
+  .grp-pop .emu-card.grp .gl{margin-top:0;border-top:0;padding-top:0}
+  .grp-pop .gl-i{padding:6px 0}
+  .grp-pop .gl-i + .gl-i{border-top:1px dashed var(--c-border)}
+  .grp-pop .gl-i .t{-webkit-line-clamp:unset;display:block}
+  .grp-pop .gl-i .n{line-height:1.7}
+  .grp-pop-s{position:sticky;top:-12px;z-index:2;display:flex;align-items:center;gap:9px;
+    background:#fff;padding:3px 0 9px;border-bottom:1px solid var(--c-border);margin-bottom:9px}
+  .grp-pop-s input{flex:1;min-width:0;font-family:var(--font);font-size:12.5px;color:var(--c-t1);
+    background:#fff;border:1px solid var(--c-border2);border-radius:8px;padding:7px 10px;outline:none}
+  .grp-pop-s input:focus{border-color:var(--c-primary)}
+  .grp-pop-s .n{flex:none;font:700 11px/1.5 var(--font-num);color:var(--c-t3);white-space:nowrap}
   /* 三个分区的组卡主色（与各自 .bar / .emu-intro 同色系） */
   .emu-card.grp .tg.k-mod{background:rgba(46,107,255,.1);color:#2E6BFF}
   .emu-card.grp .tg.k-saves{background:rgba(2,132,199,.1);color:#0284C7}
@@ -695,6 +735,11 @@
   .d-res-it .d-res-lk.bd-ed2k{background:var(--ch-ed2k)}
   .d-res-it .d-res-lk.bd-file{background:var(--ch-file)}
   .d-res-it .d-res-lk.bd-other{background:var(--ch-other)}
+  /* ★ v10.48：修改器「第三方来源」跳转通道 —— 详情页这两块卡也要跟着认这三个 cls，
+     否则同一个链接在资源页是彩色、在详情页是灰的（同一份数据两套观感）。 */
+  .d-res-it .d-res-lk.bd-fling{background:var(--ch-fling)}
+  .d-res-it .d-res-lk.bd-cheat{background:var(--ch-cheat)}
+  .d-res-it .d-res-lk.bd-src{background:var(--ch-src)}
   .d-res-it .d-res-more{flex:none;font:750 10px/1 var(--font-num);color:var(--c-t3)}
   /* v10.47：新增四个来源徽标（gt / fr / yx / mod）。
      旧的五个（fling / cheat_table / community / xiaoxing / gcm）是 **GCM 清单**的来源，
