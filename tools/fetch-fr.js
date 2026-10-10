@@ -32,7 +32,19 @@
  *   node tools/fetch-fr.js --conc 1           # 并发（默认 1，别调高：CF 按速率 429）
  *   node tools/fetch-fr.js --gap 400          # 每请求后的间隔 ms（默认 400）
  *   node tools/fetch-fr.js --backoff 3000     # 429 退避基数 ms（3s→6s→12s）
+ *   node tools/fetch-fr.js --eval-timeout 45000  # 单次 evaluate 硬超时 ms（默认 45000）
+ *   node tools/fetch-fr.js --ctx-dead 6       # 连续 N 次恢复失败即熔断（默认 6）
  *   node tools/fetch-fr.js --dry              # 不落盘
+ *
+ * ★★ 会话纪律（2026-10-10 实测，别踩）：
+ *   ① **不要在一轮里反复起停脚本**。三次连续短跑（各 --max 60）之后，第四次
+ *      「过挑战」直接失败 —— `title` 停在「请稍候…」80s 到顶。CF 是按**会话/速率**
+ *      收紧的，重开会话会**重新触发挑战**，profile 里的 cf_clearance 不再够用。
+ *      ⇒ 一次跑够（阶段① 全量实测 528.2s / 433 页 / 失败页 0）。
+ *   ② 挑战失败是**响亮失败**（抛 `Cloudflare 挑战未通过`），不会静默给空数据。
+ *   ③ 阶段① 慢（1.22s/页），阶段② 更慢（1.4k~10k 个主题页）⇒ 阶段① 的缓存
+ *      （`data/_fr-list-raw.json`）**必须留着**，`--offline` 直接复用，
+ *      否则每次重跑都要再付一次 ~9 分钟。
  */
 const fs = require('fs');
 const path = require('path');
@@ -61,7 +73,8 @@ const MAX_PAGES = parseInt(val('--max-pages', '0'), 10) || 0;
  *   并发 3 + gap 150ms → 336 页挂 276 页
  *   并发 2 + gap 260ms → 40 页挂 3 页（失败原因清一色 `CF 挑战（429）`）
  *   ⇒ CF 是按**速率**限流（429），不是按总量。串行 + 更大间隔才稳。
- *   ✅ 并发 1 + gap 400ms（≈0.77 req/s）：全量 433 页约 9min，换「一页不丢」是值的。
+ *   ✅ 并发 1 + gap 400ms：**全量 433 页实测 528.2s（8.8min）· 失败页 0 · CF 命中 0**
+ *      （2026-10-10 实跑，不是估算）—— 换「一页不丢」是值的。
  * ⚠️ 退避也不能太短：429 是带冷却期的，1.2s/2.4s 那种量级恢复不了（实测那 3 页三次全失败）。 */
 const LIST_CONC = parseInt(val('--conc', '1'), 10) || 1;
 const FR_GAP = parseInt(val('--gap', '400'), 10) || 400;
@@ -99,22 +112,53 @@ async function pool(items, n, fn) {
    *   headed 只用 9333，互不干扰。 */
   const h = await connectBrowser({ headless: false, profile: PROFILE, window: '1280,900', port: 9333 });
   const browser = h.browser;
-  const page = await browser.newPage();
-  try {
-    /* 过挑战：CF 通过后 title 不再是「请稍候 / Just a moment」 */
-    await page.goto(fr.BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+  /* ★ 用 `let` 而不是 `const`：见下面 `recyclePage()` —— 实测这个 page 会**死掉**，
+   *   而 `page.goto` **救不回来**，唯一可行的恢复是**换一个新 page**。 */
+  let page = await browser.newPage();
+
+  /** 过挑战：CF 通过后 title 不再是「请稍候 / Just a moment」。返回 title。 */
+  async function passChallenge(pg) {
+    await pg.goto(fr.BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
     let title = '', waited = 0;
     for (let i = 0; i < 20; i++) {
-      title = await page.title().catch(() => '');
+      title = await pg.title().catch(() => '');
       if (!/moment|稍候|Attention/i.test(title)) break;
       await sleep(4000); waited += 4000;
     }
-    console.log('过挑战 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's ｜ title="' + title + '"');
-    if (/moment|稍候|Attention/i.test(title)) throw new Error('Cloudflare 挑战未通过（title 仍是「' + title + '」）');
+    return { title, waited };
+  }
+
+  try {
+    const ch = await passChallenge(page);
+    console.log('过挑战 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's ｜ title="' + ch.title + '"');
+    if (/moment|稍候|Attention/i.test(ch.title)) throw new Error('Cloudflare 挑战未通过（title 仍是「' + ch.title + '」）');
+
+    /* ───────── 硬超时（2026-10-10 实测的坑） ─────────
+     * ★★ 实测事故：一次全量跑到 33 分钟时**彻底卡死** —— 浏览器上下文永久失效后，
+     *   `recoverFrame()` 的 `page.goto` 一直失败但被 `.catch(()=>{})` 吞掉，
+     *   于是 `withRecover` 5 次 → 外层每页 4 次 → **无限循环**：进程 0% CPU、
+     *   无 TCP 连接、无子进程、80 分钟无任何落盘，**却一直"在运行"**。
+     *   ⇒ 从外部看「卡死」与「在跑」完全一样，这是最坏的一种失败形态。
+     * 三道补丁：
+     *   ① `page.evaluate` 加**硬超时**（页面内 `fetch()` 没有超时，CF 挂住就永不返回）；
+     *   ② `recoverFrame()` 返回**是否真的恢复**（判据 = 能否拿到 title），不再吞掉失败；
+     *   ③ **熔断**：连续 N 次恢复失败 ⇒ 直接抛「上下文不可恢复」终止，不再无限重试。
+     *   ⚠️ 只熔断「上下文失效」这一类；CF/HTTP/空页面仍按 status 交调用方判断。 */
+    const EVAL_TIMEOUT = parseInt(val('--eval-timeout', '45000'), 10) || 45000;
+    const CTX_DEAD_MAX = parseInt(val('--ctx-dead', '6'), 10) || 6;
+    let ctxDeadStreak = 0;
+    const withTimeout = (p, label) => {
+      let timer = null;
+      const guard = new Promise((_, rej) => {
+        timer = setTimeout(() => rej(new Error('evaluate 超时（' + EVAL_TIMEOUT + 'ms）: ' + label)), EVAL_TIMEOUT);
+        if (timer.unref) timer.unref();
+      });
+      return Promise.race([p, guard]).finally(() => { if (timer) clearTimeout(timer); });
+    };
 
     /** 页面上下文内 fetch → 只回传**精简片段**（见文件头「传输优化」） */
     /** 列表页：只回传 topictitle 链接片段 + 分页/总数线索 */
-    const pullList = async (url) => page.evaluate(async (u) => {
+    const pullList = async (url) => withTimeout(page.evaluate(async (u) => {
       const r = await fetch(u, { credentials: 'include' });
       const t = await r.text();
       const doc = new DOMParser().parseFromString(t, 'text/html');
@@ -124,16 +168,16 @@ async function pool(items, n, fn) {
       const cf = /Just a moment|cf-chl/i.test(t);
       /* 429 一般带 Retry-After —— 有就按它等，比自己猜的退避更准 */
       return { status: r.status, retryAfter: r.headers.get('retry-after') || '', links, maxStart: starts.length ? Math.max(...starts) : 0, total: tot, cf };
-    }, url);
+    }, url), 'list ' + url);
     /** 主题页：只回传标题块 + 附件块 */
-    const pullTopic = async (url) => page.evaluate(async (u) => {
+    const pullTopic = async (url) => withTimeout(page.evaluate(async (u) => {
       const r = await fetch(u, { credentials: 'include' });
       const t = await r.text();
       const doc = new DOMParser().parseFromString(t, 'text/html');
       const head = doc.querySelector('h2.topic-title');
       const files = [...doc.querySelectorAll('dl.file')].map((d) => d.outerHTML).join('\n');
       return { status: r.status, retryAfter: r.headers.get('retry-after') || '', html: (head ? head.outerHTML : '') + '\n' + files, cf: /Just a moment|cf-chl/i.test(t) };
-    }, url);
+    }, url), 'topic ' + url);
 
     /* ───────── frame 自愈（长跑必踩） ─────────
      * ★★ 实测（2026-10-10 全量）：Tables 板块 336 页跑完、进 Trainers 板块时崩在
@@ -148,20 +192,59 @@ async function pool(items, n, fn) {
      *     （别把业务失败也吞进「重试」里，那会把「没抓到」洗成「抓到了」）。 */
     const isDetached = (e) => /detached Frame|Execution context was destroyed|Target closed|Session closed/i
       .test(String((e && e.message) || e));
+    /** ★★ 页面回收 —— 这是本轮最关键的一条修复（2026-10-10 实测复现）。
+     *  现象：**跑完一个板块、切下一个板块时 page 上下文必死**（`Attempted to use a detached Frame`），
+     *        而且 `page.goto` 回本域名**也救不回来**（本题第一次全量就是这么废掉的：
+     *        Tables 336 页跑完，进 Trainers 时崩，整轮 36 分钟归零）。
+     *  为什么 `goto` 没用：detached Frame 是**浏览器侧那个 frame 已经没了**，
+     *        在死 frame 上做任何操作（包括 goto）都落在同一个死对象上。
+     *  唯一可行：**弃掉旧 page、开一个新 page、重新过挑战**（profile 里已有 cf_clearance，
+     *        实测第二次过挑战只要 ~1s，所以代价很小）。
+     *  ⚠️ 失败与成功都要**如实返回**：调用方靠返回值决定要不要熔断，不能吞。 */
+    async function recyclePage(reason) {
+      const old = page;
+      try { await old.close(); } catch (e) { /* 已经死了，关不掉很正常 */ }
+      try {
+        page = await browser.newPage();
+        const ch = await passChallenge(page);
+        if (/moment|稍候|Attention/i.test(ch.title)) return false;
+        console.log('    ↻ 已换新 page 并重新过挑战（' + (ch.waited / 1000) + 's）｜原因：' + reason);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+    /** ★ 恢复**必须返回是否真恢复了**：判据 = 能拿到 title（拿到就说明 context 活着）。
+     *   原先写成 `await page.goto(...).catch(()=>{})`（吞掉失败、返回 undefined）⇒
+     *   调用方**无法区分**「恢复了」和「浏览器已经死了」，只能继续重试 ⇒ 无限循环。 */
     async function recoverFrame() {
       try {
-        await page.goto(fr.BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
-        await sleep(1200);
-      } catch (e) { /* 恢复失败就让下一轮再试 */ }
+        await page.goto(fr.BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        const t = await page.title();
+        if (typeof t === 'string') return true;
+      } catch (e) { /* goto 救不回来 ⇒ 走回收 */ }
+      return recyclePage('page.goto 无法恢复');
     }
     const withRecover = (fn) => async (url) => {
       let last = null;
       for (let i = 0; i < 5; i++) {
-        try { return await fn(url); } catch (e) {
+        try { const r = await fn(url); ctxDeadStreak = 0; return r; } catch (e) {
           last = e;
           if (isDetached(e)) {
             console.log('    ⚠ frame 失效 ⇒ 恢复页面上下文后重试（第 ' + (i + 1) + ' 次）');
-            await recoverFrame();
+            const ok = await recoverFrame();
+            if (!ok) {
+              ctxDeadStreak++;
+              console.log('    ✗ 恢复失败（连续 ' + ctxDeadStreak + '/' + CTX_DEAD_MAX + '）');
+              /* ★★ 熔断：上下文不可恢复 ⇒ **响亮失败**。
+               *   不熔断的后果实测过：0% CPU、无连接、无子进程地空转 80 分钟，
+               *   而外部看起来与「正在抓」完全一样。宁可当场红，也不要静默挂着。 */
+              if (ctxDeadStreak >= CTX_DEAD_MAX) {
+                throw new Error('浏览器上下文不可恢复（连续 ' + ctxDeadStreak + ' 次 recoverFrame 失败）'
+                  + ' ⇒ 终止本轮。多半是有头 Edge 已退出/被杀；重跑一次即可。原始错误：' + String((e && e.message) || e));
+              }
+            }
+            await sleep(1200);
           } else await sleep(backoffWait(i));
         }
       }
@@ -206,6 +289,16 @@ async function pool(items, n, fn) {
         console.log('  ' + fr.FORUM[fid].name + '：' + (total || '?') + ' 主题 → ' + pages
           + ' 页' + (MAX_PAGES ? '（取前 ' + use + ' 页）' : ''));
         const starts = Array.from({ length: use }, (_, i) => i * PER_PAGE);
+        /* ★ 页级进度（2026-10-10 补）：原先只有「板块开始 / 板块结束」两行，
+         *   于是进程卡死时**日志与「正在跑」长得一模一样**，只能靠 0% CPU + 无 TCP 连接
+         *   这类外部迹象反推。现在每页一行「已完/总数 + 帖数 + 用时」，卡在哪一页一眼可见。 */
+        const pgT0 = Date.now();
+        let donePages = 0;
+        const tickPage = (extra) => {
+          donePages++;
+          console.log('    [' + fr.FORUM[fid].key + '] ' + donePages + '/' + use + ' 页 · ' + extra
+            + ' · ' + ((Date.now() - pgT0) / 1000).toFixed(0) + 's');
+        };
         /* ★ 并发/限速：实测（2026-10-10）并发 3 + 150ms 时，只有前 ~60 页成功，
          *   之后整批失败（336 页里 276 页挂）⇒ CF 会按**请求速率**收紧。
          *   改成并发 2 + 每请求 260ms（≈7.7 req/s），并对失败做 2 次退避重试。
@@ -221,7 +314,9 @@ async function pool(items, n, fn) {
               if (r.status !== 200) { lastErr = Object.assign(new Error('HTTP ' + r.status), { retryAfter: r.retryAfter }); throw lastErr; }
               if (!r.links) { lastErr = new Error('页面无 topictitle（可能是 CF 无提示页）'); throw lastErr; }
               await sleep(FR_GAP);
-              return fr.parseForumList(r.links).map((x) => Object.assign(x, { forum: fid, forumKey: fr.FORUM[fid].key }));
+              const parsed = fr.parseForumList(r.links).map((x) => Object.assign(x, { forum: fid, forumKey: fr.FORUM[fid].key }));
+              tickPage(parsed.length + ' 帖');
+              return parsed;
             } catch (e) {
               lastErr = e;
               /* 服务端给了 Retry-After 就听它的（取两者较大值） */
@@ -231,6 +326,7 @@ async function pool(items, n, fn) {
             }
           }
           noteFail(fid + ':' + s, lastErr);
+          tickPage('✗ ' + String((lastErr && lastErr.message) || lastErr).slice(0, 60));
           return [];
         });
         fetchedPages += use;
