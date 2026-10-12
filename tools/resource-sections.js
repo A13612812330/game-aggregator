@@ -118,13 +118,16 @@ function glRow(cat, it, n) {
     : '';
   const lkHtml = '<span class="gl-lk">' + postBtn + two + more + fallback + '</span>';
   const sizeTxt = it.size ? '<span class="sz">' + esc(String(it.size).slice(0, 12)) + '</span>' : '';
-  const title = it.title || it.game || '?';
+  /* ★ v10.59：显示用 `dtitle`（机地帖的清洗短名），悬浮仍给**原始标题** ——
+     原始标题是用户去源站搜同一条帖的凭据（数据里也没动，见 data/name-normalize.js#cleanModTitle）。 */
+  const full = it.title || it.game || '?';
+  const title = it.dtitle || full;
   const mute = links.length ? '' : ' mute';
   return '<div class="gl-i' + (canPost ? ' has-post' : '') + '" data-src="' + esc(it.src || '') + '"'
     + (canPost ? ' data-id="' + esc(it.id || '') + '" data-post-row="1"' : '')
     + '>'
     + '<span class="n">' + n + '</span>'
-    + '<span class="t' + mute + '" title="' + esc(title) + '">' + esc(title) + '</span>'
+    + '<span class="t' + mute + '" title="' + esc(full) + '">' + esc(title) + '</span>'
     + sizeTxt
     + lkHtml
     + '</div>';

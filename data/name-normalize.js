@@ -92,4 +92,66 @@ function numMismatchByTitle(query, libItem) {
   return !qn.some((x) => tn.includes(x));
 }
 
-module.exports = { normKey, SYMBOLS, tailNums, titleNums, genNums, numMismatchByTitle };
+/* ────────────────────────────────────────────────────────────────────────────
+ * ★ v10.59 新增：**模组标题的显示层清洗**（cleanModTitle）
+ *
+ * 【为什么需要】
+ *   `tools/fetch-mods.js` 落盘的 `title` 是**源站帖标题原样**（零清洗，第 103 行
+ *   `title: s.title`），而机地帖标题是玩家写给搜索引擎看的。实测脏点（全库 8,943 条）：
+ *     含年份（2024-2026）746 条 · 【】/[] 分类前缀 1,600 条 · 整合包/合集 174 条 ·
+ *     含「最新」24 条 · 含「附…教程/安装」6 条。
+ *   最糟的一条：「潜水员戴夫2026最新全DLC 附修改器安装mod新手教程」
+ *     = 游戏名重复（卡片行首已有游戏名）+ 年份 + DLC + 「附教程」四层尾巴。
+ *
+ * 【为什么只洗显示层、不改数据】
+ *   原始标题是对得上源站的**凭据**（用户拿它去机地能搜到同一条帖）。
+ *   ⇒ 数据里的 `title` 一个字不动；只在返回层派生 `dtitle` 供界面显示，
+ *     原始标题继续挂在悬浮提示（`title=""`）与原贴弹窗里。
+ *   ⚠️ 这是一条**新加的输出通道**，不是「两份标题」—— `title` 仍是唯一事实，
+ *      `dtitle` 是它的派生视图（同 `displayName`/`enName` 与 `title` 的关系）。
+ *
+ * 【为什么是「保守档」】
+ *   只砍**确定性高**的四类，绝不碰任何可能是模组本名的字：
+ *     ① 开头的【…】/[…] 分类前缀（`【前置文件】BepInEx` → `BepInEx`）
+ *     ② 重复的游戏名（标题以 game 任一段开头时剥掉 —— game 可能是 `辐射4/Fallout 4` 拼接串）
+ *     ③ 尾部营销话术（最新 / 整合包 / 解压即玩 / 免安装 / 附…教程）
+ *     ④ 洗完之后残留的多余空白与首尾分隔符
+ *   ★ 洗空了就**回退原值** —— 宁可显示脏标题，也不显示空白
+ *     （`s.replace(非文字,'').length < 2` 即判空 ⇒ 覆盖 `【前置文件】` 这种整条都是前缀的极端情况）。
+ *   ★★ v10.59 修：**只有「长度护栏」不够，还要「信息量护栏」** ——
+ *     实测踩到的现场：`潜水员戴夫2026最新全DLC 附修改器安装mod新手教程`（29 字）
+ *     被洗成 **`mod`**（3 字）。它不是空串，长度护栏放行，但用户看到「mod」完全不知道是什么，
+ *     **比原样的脏标题更糟**。⇒ 加「剩余长度 < 原文 35%」即回退。
+ *     同为干净结果的对照：`1.01 Mod整合包` → `1.01 Mod`（8/11 = 73%，保留版本+类型，合理）。
+ *   ★ 只削开头的**孤立括号**（去括号留内容）：`潜水员戴夫(风灵月影) 2026-06-19版本` 剥掉游戏名后
+ *     剩 `(风灵月影) 2026-06-19版本` —— 那对括号原本是修饰游戏名的，游戏名没了它就失去依托。
+ *     ⇒ 变成 `风灵月影 2026-06-19版本`。**只在真的剥过游戏名时才做**（否则会动到
+ *     `(新) 某某Mod` 这类本来就以括号开头的正常标题）。
+ *   ★ 不动「修改器 / (风灵月影) / v1.0」这类**版本与作者信息** —— 那是选哪个包的依据。
+ * ──────────────────────────────────────────────────────────────────────────── */
+const MT_PREFIX = /^[【\[（(][^】\]）)]{1,14}[】\]）)]\s*/;
+const MT_NOISE = /(?:20\d{2}\s*年?)?最新(?:全)?(?:版|DLC|整合|完整版)?|解压即玩|一键安装|免安装版?|附[^，。；;]{0,16}?(?:教程|说明|安装)|安装(?:教程|方法|说明)|新手教程|整合包|合集包?/g;
+
+function cleanModTitle(title, game) {
+  const raw = String(title == null ? '' : title).trim();
+  if (!raw) return '';
+  let s = raw.replace(MT_PREFIX, '').replace(MT_NOISE, ' ');
+  /* 游戏名去重：game 可能是 `/` 拼接串，**长段优先**（`Fallout 4` 比 `辐射4` 更可能出现在英文标题里） */
+  const segs = String(game == null ? '' : game).split('/')
+    .map((x) => x.trim()).filter((x) => x.length >= 2)
+    .sort((a, b) => b.length - a.length);
+  let stripped = false;
+  for (const g of segs) {
+    if (s.startsWith(g)) { s = s.slice(g.length); stripped = true; break; }
+  }
+  if (stripped) s = s.replace(/^[\s:：\-–—_·]+/, '').replace(/^[（(]\s*([^）)]{1,20}?)\s*[）)](?=\s|$)/, '$1 ');
+  s = s.replace(/[\s\u3000]{2,}/g, ' ')
+    .replace(/^[\s:：\-–—_·|｜/／]+/, '')
+    .replace(/[\s:：\-–—_·|｜/／]+$/, '')
+    .trim();
+  if (s.replace(/[\s\-–—_·|｜/／]+/g, '').length < 2) return raw;   // 洗空
+  if (s.length < raw.length * 0.35) return raw;                    // 洗到没信息量
+  return s;
+}
+
+module.exports = { normKey, SYMBOLS, tailNums, titleNums, genNums, numMismatchByTitle, cleanModTitle };

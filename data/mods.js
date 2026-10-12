@@ -12,10 +12,26 @@
  */
 const fs = require('fs');
 const path = require('path');
+/* ★ v10.59：显示用短名（dtitle）的规则本体在 name-normalize（**单一真源**）——
+ *   前端不重算，只消费返回的 dtitle。见 cleanModTitle 的文件头说明。 */
+const { cleanModTitle } = require('./name-normalize');
 
 const FILE = path.join(__dirname, 'mods.json');
 let cache = null;
 let mtime = 0;
+
+/** ★ v10.59：给条目派生 `dtitle`（界面显示用的清洗后短名）。
+ *
+ *  · 为什么在**返回层**：原始 `title` 是对得上源站的凭据，落盘数据一个字节不改；
+ *    派生视图只在出接口时生成，随时可换规则、不用重跑抓取（重跑一次 ≈ 数分钟 + 论坛压力）。
+ *  · 为什么**浅拷贝**：`ensure()` 返回的是带缓存的同一批对象，原地赋值会让第二次调用
+ *    带着上次的字段（本项目在别处踩过「缓存对象被下游改写」的同类坑）。
+ *  · 为什么**不是所有条目都变**：实测 7,825 条 Mod 里只有 751 条会被清洗改写，
+ *    其余 7,074 条 `dtitle === title`（保守档只砍确定性高的尾巴）。 */
+function deco(x) {
+  if (!x) return x;
+  return { ...x, dtitle: cleanModTitle(x.title, x.game) };
+}
 
 function ensure() {
   try {
@@ -71,7 +87,8 @@ function list(opts = {}) {
   else arr.sort((a, b) => (b.ut || b.ct || 0) - (a.ut || a.ct || 0));
 
   const total = arr.length;
-  return { ok: true, total, offset, limit, sort, q, kind, matchedOnly, items: arr.slice(offset, offset + limit) };
+  return { ok: true, total, offset, limit, sort, q, kind, matchedOnly,
+    items: arr.slice(offset, offset + limit).map(deco) };
 }
 
 function stats() {
@@ -95,11 +112,12 @@ function stats() {
   };
 }
 
-/** 某款游戏的全部 MOD/修改器（详情抽屉用；按端游库 id 精确命中） */
+/** 某款游戏的全部 MOD/修改器（详情抽屉用；按端游库 id 精确命中）
+ *  ★ v10.59：出接口前经 `deco()` 补 `dtitle`（见其说明） */
 function byLib(libId, kind) {
   const d = ensure();
   if (!libId) return [];
-  return (d.items || []).filter((x) => x.libId === libId && (!kind || x.kind === kind));
+  return (d.items || []).filter((x) => x.libId === libId && (!kind || x.kind === kind)).map(deco);
 }
 
 /** 按游戏名反查（详情抽屉在没有 libId 时兜底） */
@@ -107,13 +125,14 @@ function byGame(game) {
   const d = ensure();
   const k = normKey(game);
   if (!k) return [];
-  return (d.items || []).filter((x) => normKey(x.game) === k);
+  return (d.items || []).filter((x) => normKey(x.game) === k).map(deco);
 }
 
 /** 单条（详情页/预览用） */
 function get(id) {
   const d = ensure();
-  return (d.items || []).find((x) => String(x.id) === String(id)) || null;
+  const it = (d.items || []).find((x) => String(x.id) === String(id)) || null;
+  return it ? deco(it) : null;
 }
 
 /** 顶部游戏榜：条目数最多的游戏（前端「最热游戏」用） */

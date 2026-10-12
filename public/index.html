@@ -4585,7 +4585,10 @@ function dResRow(it) {
       : '');
   const moreLk = links.length > 1 ? '<span class="d-res-more">+' + (links.length - 1) + '</span>' : '';
   const meta = it.size || (it.note && !links.length ? '' : (it.note || ''));
-  const title = it.title || it.game || '?';
+  /* ★ v10.59：显示用 `dtitle`（机地帖的清洗短名），悬浮仍给**原始标题** ——
+     原始标题是用户去源站搜同一条帖的凭据，一个字不能丢（数据里也没动）。 */
+  const full = it.title || it.game || '?';
+  const title = it.dtitle || full;
   /* ★ v10.50：来源有正文时给「原贴」入口（存档块的游侠条目、以及「全部 N 条」里都有）。
      ★ 这里故意**不做整行可点** —— 详情页的行很挤，整行吞点击会让「点空处想关抽屉」落空。
        资源页的整行可点另说（那边一行就是一条帖子的主要入口）。 */
@@ -4594,7 +4597,7 @@ function dResRow(it) {
       + '" data-id="' + esc(it.id || '') + '" title="查看原贴内容（标题 / 正文 / 截图）">原贴</button>'
     : '';
   return '<div class="d-res-it"><span class="d-tg ' + esc(it.src || '') + '">' + esc(it.srcLabel || it.src || '') + '</span>'
-    + '<span class="nm" title="' + esc(title) + '">' + esc(title) + '</span>'
+    + '<span class="nm" title="' + esc(full) + '">' + esc(title) + '</span>'
     + (meta ? '<span class="ver">' + esc(String(meta).slice(0, 14)) + '</span>' : '')
     + postLk + btn + moreLk + '</div>';
 }
@@ -5180,14 +5183,46 @@ function dlUniPaintBody(d) {
  *         而不是给一个点开说「没有正文」的空壳 —— 那等于把「没数据」当成「有功能」。
  *   ★ 为什么 src 写死 `mod`：这些帖子全来自机地 `mods.json`（`kind` 只区分 Mod / 修改器），
  *     `/api/res/post?src=mod&id=` 就是从同一份文件按 id 取正文 —— 与列表同源，不会两处口径。 */
+/** ★ v10.59：机地帖的**下载通道按钮**（Mod / 修改器两页签共用一处 —— 铁律 17）。
+ *
+ *  【为什么必须补】
+ *    用户报障：「MOD 为什么获取不到对应的下载链接，如潜水员戴夫的」。
+ *    实测（2026-10-12）—— **界面缺字段，不是数据缺失**（本项目第 6 次同类现场）：
+ *      · 数据：8,943 条里 8,934 条带链（99.9%），合计 **13,373 条网盘直链**
+ *      · 接口：`/api/mods/match?id=xd-4897` 返回 1 条 MOD（2 链）+ 5 条修改器，各自带 links
+ *      · 界面：本函数之前**只**渲染 `meta` 里那句「2 个直链」，行尾只有「源站 ↗」
+ *        ⇒ 实拍「外链总数 1 · 网盘直链数 0」，用户看得见数字却一个都点不了。
+ *
+ *  【为什么复用 `.d-dl-it .dl-res-lk` 这套样式】
+ *    它与 GTrainers 段（`dlResRowsHtml`）是**同一个容器同一种行**，再写一套只会漂移。
+ *    位置也一致：放 `.bd` 的**第三行**而不是行尾 —— `.go` 是 `flex:none`，
+ *    一条最多 12 个通道，塞行尾窄屏会把标题直接挤没（该结论 v10.53 已实测过）。
+ *
+ *  【为什么标签要去掉「网盘 / 云盘」后缀】
+ *    `.dl-res-lk a` 是固定内边距的胶囊，`迅雷网盘` 四个字在 306px 最窄两列下会折行。
+ *    「其他链接」**保留原名** —— 它可能是 Discord / Nexus / ko-fi，不是网盘，不能改写成「其他」。
+ */
+function dlModLinkBtns(links) {
+  const ks = (links || []).map((l, i) => {
+    const nm = String(l.kind || '下载').replace(/(网盘|云盘)$/, '');
+    return '<a' + (i === 0 ? ' class="pri"' : '') + ' href="' + esc(l.url) + '"'
+      + ' target="_blank" rel="noopener noreferrer" title="' + esc(l.kind || '下载') + '">'
+      + (i === 0 ? '⬇ ' : '') + esc(nm) + ' ↗</a>';
+  });
+  return ks.length ? '<span class="dl-res-lk">' + ks.join('') + '</span>' : '';
+}
+
 function dlModRowsHtml(items, kind) {
   const M = D_MOD_META[kind];
   return items.map((it) => {
-    const nets = [...new Set((it.links || []).map((l) => l.kind).filter(Boolean))].slice(0, 3).join(' / ');
-    const cn = (it.links || []).length;
+    const links = it.links || [];
+    const nets = [...new Set(links.map((l) => l.kind).filter(Boolean))].slice(0, 3).join(' / ');
+    const cn = links.length;
     const when = it.ut ? new Date(it.ut * 1000).toISOString().slice(0, 10) : '';
     const canPost = !!String(it.content || '').trim();
     const meta = [nets || '', cn ? cn + ' 个直链' : '未见直链', when].filter(Boolean).join(' · ');
+    /* ★ v10.59：把 links **真的渲染成按钮**（见 dlModLinkBtns 的说明） */
+    const lkRow = dlModLinkBtns(links);
     const poBtn = canPost
       ? '<button class="po-btn" type="button" data-post-open data-src="mod" data-id="' + esc(it.id || '') +
         '" title="查看原贴内容（标题 / 正文 / 截图）">原贴</button>'
@@ -5196,8 +5231,8 @@ function dlModRowsHtml(items, kind) {
       + (canPost ? ' data-post-open data-src="mod" data-id="' + esc(it.id || '') + '" role="button" tabindex="0"' : '')
       + '>'
       + '<span class="k' + (kind === 'modifier' ? ' mf' : '') + '">' + esc(M.nm) + '</span>'
-      + '<span class="bd"><span class="t" title="' + esc(it.title || '') + '">' + esc(it.title || '') + '</span>'
-      + '<span class="m">' + esc(meta) + '</span></span>'
+      + '<span class="bd"><span class="t" title="' + esc(it.title || '') + '">' + esc(it.dtitle || it.title || '') + '</span>'
+      + '<span class="m">' + esc(meta) + '</span>' + lkRow + '</span>'
       + poBtn
       + '<a class="go" href="' + esc(it.url || D_JIDI_MODS) + '" target="_blank" rel="noopener noreferrer">源站 ↗</a>'
       + '</div>';

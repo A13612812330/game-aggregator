@@ -41,7 +41,7 @@ const gt = require('./gtrainers');
 /* ★ v10.58：`require('./fr')` 已摘除（见文件头四路来源说明 + docs/sop/FR-fearlessrevolution-抓取SOP.md） */
 const gcm = require('./trainers');
 const gamesDb = require('./gamesDb');
-const { normKey } = require('./name-normalize');
+const { normKey, cleanModTitle } = require('./name-normalize');
 const { displayName, enName } = require('./game-name');
 const { cleanPostText } = require('../shared');
 
@@ -75,6 +75,10 @@ function fromMods() {
     out.push({
       src: 'mod', cat: 'mod', id: String(x.id),
       title: x.title || '', game: x.game || '',
+      /* ★ v10.59：显示用短名。**只机地帖需要**（标题是玩家写给搜索引擎看的），
+         游侠/GT/GCM 三路的标题本来就是规范名，没有这一层 —— 规则本体见
+         data/name-normalize.js#cleanModTitle（与 /api/mods/match 同一份，不各写一套）。 */
+      dtitle: cleanModTitle(x.title, x.game) || undefined,
       libId: x.libId || '', libTitle: x.libTitle || '', cover: x.cover || '',
       size: '', date: '', downloads: x.pv || 0, links,
       page: x.url || ('https://52jidi.com/post/detail/' + x.id),

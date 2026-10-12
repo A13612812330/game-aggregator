@@ -243,6 +243,103 @@ ok(/\.dl-grp \.l\{display:flex;flex-direction:column/.test(IDX),
 ok(/\.dl-it \.bd-baidu,\.dl-it \.lk\.bd-baidu/.test(IDX),
   '盘口配色一份两用（缩略徽标与盘口按钮共用，避免两套色值漂移）');
 
+/* ============================================================
+ *  ★ v10.58 追加②：MOD 弹窗行必须给出**可点的下载通道**
+ *  ============================================================
+ *  用户报障：「MOD 为什么获取不到对应的下载链接，如潜水员戴夫的」。
+ *  实测根因 —— **界面缺字段，不是数据缺失**（本项目第 6 次同类现场）：
+ *    · 数据：8,943 条里 8,934 条带链（99.9%），合计 **13,373 条网盘直链**
+ *    · 接口：`/api/mods/match?id=xd-4897` 返回 1 条 MOD（2 链）+ 5 条修改器，各自带 links
+ *    · 界面：`dlModRowsHtml` 只把通道数写进 meta（「2 个直链」），行尾**只有「源站 ↗」**
+ *      ⇒ 实拍「外链总数 1 · 网盘直链数 0」，用户看得见数字却一个都点不了。
+ *  ⚠️ 下面全部打在**求值出来的真函数**上，不是源码字符串 ——
+ *     否则「注释里出现过这个类名」会被算成通过（本项目栽过多次）。 */
+console.log('\n=== ★ v10.58 追加②：MOD 行拿得到下载链 + 显示名清洗 ===');
+let FL = null;
+try {
+  FL = new Function([pickDef('esc'), pickDef('dlModLinkBtns'),
+    'return { esc, dlModLinkBtns };'].join('\n'))();
+  ok(true, '能从主源取出并求值 dlModLinkBtns');
+} catch (e) {
+  ok(false, 'v10.58② 求值 dlModLinkBtns 失败', e.message);
+}
+if (FL) {
+  const L = [
+    { kind: '迅雷网盘', url: 'https://pan.xunlei.com/s/aaa' },
+    { kind: '夸克网盘', url: 'https://pan.quark.cn/s/bbb' },
+    { kind: '其他链接', url: 'https://www.nexusmods.com/x/mods/1' },
+  ];
+  const lk = FL.dlModLinkBtns(L);
+  eq((lk.match(/<a /g) || []).length, 3, '★★ 3 个通道渲染成 3 个 <a>（改前这条路径**一个都不渲染**）');
+  ok(lk.includes('pan.xunlei.com') && lk.includes('pan.quark.cn') && lk.includes('nexusmods.com'),
+    '★★ 三个 URL 全在（只渲染第一个是最容易犯的次生错误 —— 用户点得到≠拿得到全部）');
+  ok(/class="pri"/.test(lk), '第一个通道标 pri（主按钮：一屏多行时用户先点哪个）');
+  /* ⚠️ 判据要连**箭头**一起匹配：渲染出来是 `>⬇ 迅雷 ↗</a>`，
+     只写 `>迅雷<` 会永远匹配不到（第一版就这么写出两条假红）。
+     判「去掉了网盘后缀」也只能比**链接文字**，不能比整串 —— `title="迅雷网盘"` 里也有这四个字。 */
+  ok(/迅雷 ↗<\/a>/.test(lk) && !/迅雷网盘 ↗<\/a>/.test(lk),
+    '★ 标签去掉「网盘」后缀（`.dl-res-lk a` 是定宽胶囊，4 个字在 306px 最窄两列下折行）');
+  ok(/其他链接 ↗<\/a>/.test(lk),
+    '★★「其他链接」**保留原名** —— 它可能是 Nexus / Discord / ko-fi，不是网盘，统一改写成「其他」就是丢信息');
+  ok(/rel="noopener noreferrer"/.test(lk), '外链带 rel=noopener（与同项目其它外链同一规格）');
+  eq(FL.dlModLinkBtns([]), '', '没有通道时返回空串（不产出空容器占位）');
+  ok(!/undefined/.test(FL.dlModLinkBtns([{ url: 'https://a.b/c' }])),
+    'kind 缺失时不渲染出字面量 undefined');
+}
+
+/* 端到端：整行里真的落到网盘域名（不是只测零件） */
+let FR = null;
+try {
+  FR = new Function([pickDef('esc'), pickDef('D_MOD_META'), pickDef('D_JIDI_MODS'),
+    pickDef('dlModLinkBtns'), pickDef('dlModRowsHtml'),
+    'return { dlModRowsHtml };'].join('\n'))();
+} catch (e) {
+  ok(false, 'v10.58② 求值 dlModRowsHtml 失败', e.message);
+}
+if (FR) {
+  const row = FR.dlModRowsHtml([{
+    id: '9', kind: 'mod', title: '潜水员戴夫2026最新全DLC 附修改器安装mod新手教程',
+    dtitle: '潜水员戴夫2026最新全DLC 附修改器安装mod新手教程', content: '正文', ut: 1789000000,
+    links: [{ kind: '迅雷网盘', url: 'https://pan.xunlei.com/s/x' }],
+    url: 'https://jidiyouxi.com/post/detail/9',
+  }], 'mod');
+  /* ★ 判据必须**剥掉注释**再看 —— 本文件的注释里就写着 pan.xunlei.com 这个字面量，
+     不剥会把「解释为什么这么改」的文字算成「页面里有这个链接」（本项目反复栽的恒真型假红）。 */
+  const rowCode = row.replace(/<!--[\s\S]*?-->/g, '');
+  ok(/pan\.xunlei\.com/.test(rowCode), '★★ dlModRowsHtml 整行里真的落到网盘直链（端到端，不是只测零件）');
+  ok(/源站 ↗/.test(rowCode), '★「源站 ↗」仍在 —— 新出口是**增量**，原出口一个都没少');
+}
+
+/* 显示名清洗：规则在 data/name-normalize.js（单一真源），这里只验**语义**不验实现 */
+const { cleanModTitle } = require('../data/name-normalize');
+ok(cleanModTitle('1.01 Mod整合包', '幻兽帕鲁') === '1.01 Mod',
+  '★ 去尾部「整合包」，保留版本 + 类型（`1.01 Mod` 是这条帖的本名）');
+ok(cleanModTitle('【前置文件】BepInEx', '幻兽帕鲁') === 'BepInEx', '去开头的【】分类前缀');
+ok(cleanModTitle('扩展快捷栏', '幻兽帕鲁') === '扩展快捷栏',
+  '★ 本来就干净的标题**一个字不动**（实测 7,825 条 Mod 里 7,074 条属于此列）');
+ok(cleanModTitle('潜水员戴夫2026最新全DLC 附修改器安装mod新手教程', '潜水员戴夫')
+  === '潜水员戴夫2026最新全DLC 附修改器安装mod新手教程',
+  '★★ 洗到没信息量时**回退原值** —— 实测这条会被洗成「mod」3 个字，比脏标题更难懂（信息量护栏 35%）');
+ok(cleanModTitle('潜水员戴夫(风灵月影) 2026-06-19版本', '潜水员戴夫') === '风灵月影 2026-06-19版本',
+  '★ 剥掉重复游戏名后，那对**孤立括号**也去掉（它原本是修饰游戏名的，游戏名没了就失去依托）');
+ok(cleanModTitle('', 'x') === '' && cleanModTitle(null) === '', '空输入不炸');
+
+console.log('\n=== ★ v10.58 追加②：显示名 dtitle 的接线（后端派生 → 前端消费）===');
+ok(/const \{ cleanModTitle \} = require\('\.\/name-normalize'\)/.test(read('data/mods.js')),
+  '★ data/mods.js 从**唯一真源** name-normalize 取清洗规则（不再自带字符类 —— 铁律 17）');
+ok(/function deco\(x\)/.test(read('data/mods.js')) && /\.map\(deco\)/.test(read('data/mods.js')),
+  '返回层用 deco() 派生 dtitle（浅拷贝：原地赋值会污染 ensure() 的缓存对象）');
+ok(/dtitle: cleanModTitle\(x\.title, x\.game\) \|\| undefined/.test(read('data/res-groups.js')),
+  '★ 聚合层（资源页 MOD 卡片）走**同一个函数**，不各写一套');
+ok(/\?\s*it\.dtitle \|\| it\.title/.test(IDX) || /it\.dtitle \|\| it\.title/.test(IDX),
+  '★ 前端 MOD 行优先用 dtitle');
+ok(/const title = it\.dtitle \|\| full;/.test(IDX),
+  '★ dResRow 显示 dtitle、悬浮仍给原始标题（原始标题是去源站搜同一条的凭据）');
+for (const p of ['public/emulator.html', 'public/resources.html', 'public/unpack.html']) {
+  ok(/function dlModLinkBtns\(links\)/.test(read(p)),
+    '★ ' + p + ' 已重建并带上直链渲染（改主源不重建派生页，那边就没有且不报错）');
+}
+
 for (const page of ['public/emulator.html', 'public/unpack.html']) {
   let t = '';
   try { t = read(page); } catch (e) { /* 缺文件时下面断言会红 */ }
