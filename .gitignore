@@ -28,6 +28,9 @@ data/*.bak-*
 #   data/_mod-raw.json  (~18MB)  fetch-mods.js --offline 用
 #   data/_gcm-raw.json  (~0.8MB) 修改器采集原始缓存
 data/_*-raw.json
+#   v10.57：本体下载通道逐款实测结果（tools/_probe-core-dl.js 产出，可重跑、含源站直链）
+#   ⚠️ 单独点名而不是并进上面那条：它的名字不含 `-raw`，漏掉就会连带**直链**一起入库。
+data/_core-dl-probe.json
 data/*.progress.json
 #   data/_mm-raw/     (~0.4MB)  MobileModels 的原始 brands/*.md 缓存
 #   data/_kalvo-raw/  (~0.1MB)  kalvo 设备页 HTML 样本（解析器回归用，缺了不影响）
