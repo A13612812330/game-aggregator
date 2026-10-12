@@ -3159,14 +3159,27 @@ function smScoreCls(v) { return v >= 9 ? 's-hi' : (v >= 7.5 ? 's-mid' : 's-lo');
  *  `/game/3668.html`（标准版）与 `/game/4156.html`（支持网络联机）两条独立条目，
  *  加上机地主源那条，搜「艾尔登」6 行里「艾尔登法环」就占了 3 行 —— 看着像 bug。
  *
- *  归并键 = `splitName(title).zh`，即标题**第一个「/」之前**那段，完全相等才归并：
+ *  归并键 = 标题**第一个「/」之前**那段（zh 段）做窄类归一化，键相等才归并：
  *    「艾尔登法环/ELDEN RING」与「艾尔登法环/ELDEN RING/支持网络联机」→ 同键 ✓
  *    「艾尔登法环 黑夜君临/ELDEN RING NIGHTREIGN」        → 不同键 ✓（那是另一款，不能并）
  *  ⚠️ 刻意**不用子串匹配** —— 子串会把上面两者并成一条（跨源名称匹配的老坑）。
  *
+ *  ★★ v10.60：键改由**服务端下发**（接口字段 `nkey`，服务端由 `twin.groupKey()` 算，
+ *     真源是 `data/name-normalize.js` 的**窄类** `GROUP_DECOR`）。
+ *     为什么要动：本文件原先**自写了一份归一化**（只 `replace(/\s+/g,'')`，不剥任何符号），
+ *     而真源早在 v10.36 就把 `™®©` 收进了 `SYMBOLS` —— 于是库内「古惑狼™ 4：时机已到」
+ *     （机地）与「古惑狼4：时机已到」（XDGAME）键不相等，**同一款被拆成两行**
+ *     （用户 2026-10-12 截图报的现场）。与 `tools/test-twin.js` 那条
+ *     「★ 前端不再自带 sameGame（同一语义只留后端一份）」同一条规矩。
+ *
  *  归并只影响**展示**：每个条目都还在，其余收进主行下方的 chip，点了同样进详情。
  *  主行 = 该键**首次出现**的那条（接口已按「标题↔关键词」贴合度排好序，这里不重排）。 */
-function smKeyOf(it) { return splitName(it.title).zh.toLowerCase().replace(/\s+/g, ''); }
+function smKeyOf(it) {
+  /* 服务端下发的键（正常路径）。取不到时退回旧键并加 `~` 前缀（避免与真键撞车）：
+     宁可**少并**，也不能错并 —— 但**不许**在这里补一份符号类，那就是第五份归一化了。 */
+  if (it && it.nkey) return it.nkey;
+  return '~' + splitName(it.title).zh.toLowerCase().replace(/\s+/g, '');
+}
 function smGroup(list) {
   const map = new Map();
   for (const it of (list || [])) {

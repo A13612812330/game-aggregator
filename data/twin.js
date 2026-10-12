@@ -39,6 +39,7 @@
  */
 const gamesDb = require('./gamesDb');
 const jiditopics = require('./jiditopics');
+const { decorKey } = require('./name-normalize');
 const { ts2label } = require('../shared');
 
 /* ── 标题归一化 ─────────────────────────────────────────────── */
@@ -49,6 +50,24 @@ function splitName(title) {
   const i = s.indexOf('/');
   if (i > 0) return { zh: s.slice(0, i).trim(), en: s.slice(i + 1).trim() };
   return { zh: s, en: '' };
+}
+
+/** ★ v10.60：**展示归并键** —— 「同一款游戏被拆成多行」时归并成一行用的键。
+ *
+ *  语义 = 标题**中文段**（`splitName().zh`，与 `sameGame` 同一口径）的窄类归一化
+ *  （只剥商标号 / 书名号 / 中点，见 `name-normalize.js` 的 `GROUP_DECOR`）。
+ *
+ *  ★ 为什么键由**服务端**下发（`/api/library` 等接口的 `nkey` 字段）：
+ *    归一化只允许有一份实现。前端此前**自写了一份** `smKeyOf()`（只去空白、不剥符号），
+ *    正是它把库内「古惑狼™ 4：时机已到」与 XDGAME「古惑狼4：时机已到」拆成了两行
+ *    —— 用户 2026-10-12 报的现场。与 `tools/test-twin.js` 那条
+ *    「★ 前端不再自带 sameGame（同一语义只留后端一份）」同一条规矩。
+ *
+ *  ⚠️ 本键**只用于展示归并**，不可拿去当匹配判据：它没有第二道闸门，
+ *     `：`/`！` 这类实义分隔符被刻意保留（详见 `GROUP_DECOR` 的实测账）。
+ */
+function groupKey(title) {
+  return decorKey(splitName(title).zh);
 }
 
 /** 反过来拼：{ zh, en } → `中文名/English Name`（前端 splitName 的逆） */
@@ -329,4 +348,4 @@ function twinOf({ id = '', title = '', src = '' } = {}) {
   return (best && bestScore >= TWIN_MIN_SCORE) ? fromLibItem(best, 'name') : null;
 }
 
-module.exports = { twinOf, sameGame, matchScore, normTitle, splitName, joinTitle, tidOf, TWIN_MIN_SCORE };
+module.exports = { twinOf, sameGame, matchScore, normTitle, splitName, joinTitle, tidOf, TWIN_MIN_SCORE, groupKey };

@@ -277,10 +277,10 @@ app.get('/api/search', async (req, res) => {
           },
           sources: {
             xdgamer: xdR.status === 'fulfilled'
-              ? { ok: true, count: xdR.value.length, items: xdR.value }
+              ? { ok: true, count: xdR.value.length, items: xdR.value.map(withNKey) }
               : { ok: false, error: String(xdR.reason && xdR.reason.message || xdR.reason), items: [] },
             jidi: jiR.status === 'fulfilled'
-              ? { ok: true, count: jiR.value.length, mode: 'real', items: jiR.value }
+              ? { ok: true, count: jiR.value.length, mode: 'real', items: jiR.value.map(withNKey) }
               : { ok: false, error: String(jiR.reason && jiR.reason.message || jiR.reason), items: [] },
           },
         };
@@ -304,10 +304,10 @@ app.get('/api/search', async (req, res) => {
         },
         sources: {
           xdgamer: xdR.status === 'fulfilled'
-            ? { ok: true, count: xdR.value.length, items: xdR.value }
+            ? { ok: true, count: xdR.value.length, items: xdR.value.map(withNKey) }
             : { ok: false, error: String(xdR.reason && xdR.reason.message || xdR.reason), items: [] },
           jidi: jidiR.status === 'fulfilled'
-            ? { ok: true, count: jidiR.value.matched.length, indexed: jidiR.value.indexed, items: jidiR.value.matched }
+            ? { ok: true, count: jidiR.value.matched.length, indexed: jidiR.value.indexed, items: jidiR.value.matched.map(withNKey) }
             : { ok: false, error: String(jidiR.reason && jidiR.reason.message || jidiR.reason), items: [] },
         },
       };
@@ -459,6 +459,28 @@ function libOpts(req) {
 function withBh(g) {
   const a = bannerhub.attach(g);
   return phonecfg.attach(a);
+}
+
+/** ★ v10.60：给「要按同款归并展示」的条目挂**归并键** `nkey`。
+ *
+ *  用户报的现场（2026-10-12 截图）：搜索联想里「古惑狼™ 4：时机已到」（机地）
+ *  与「古惑狼4：时机已到」（XDGAME）各占一行 —— 同一款被拆成两款，
+ *  只差一个商标号 `™` 与一个空格。
+ *
+ *  根因：归并键长在前端的 `smKeyOf()` 里，那份是**自写的第四份归一化**
+ *  （`toLowerCase().replace(/\s+/g,'')` —— 只去空白、**不剥任何符号**），
+ *  而 `data/name-normalize.js` 早在 v10.36 就把 `™®©` 收进了 `SYMBOLS`。
+ *  ⇒ 与 `tools/test-twin.js` 那条「★ 前端不再自带 sameGame（同一语义只留后端一份）」
+ *     同一条规矩：**归一化只允许一份实现**，键由服务端下发，前端只消费。
+ *
+ *  ⚠️ 键的宽度由 `twin.groupKey` 决定（**窄类**，只剥商标号/书名号/中点）——
+ *     不能拿 `normKey` 的宽类来当归并键：归并没有第二道闸门兜假阳性，
+ *     实测宽类会多出 2 组**假并**（续作被并进前作）。详见 `GROUP_DECOR` 注释。
+ *  ⚠️ 键为空时**不挂字段** —— 空键会让所有条目并成一行（比不并更糟）；
+ *     前端取不到 `nkey` 时退回旧键，宁可少并。 */
+function withNKey(g) {
+  const k = twin.groupKey(g && g.title);
+  return k ? Object.assign({}, g, { nkey: k }) : g;
 }
 
 /** ★ v10.52：给**搜索命中**的端游条目挂「按游戏聚合的资源计数」（MOD / 存档 / 修改器）。
@@ -1544,7 +1566,7 @@ app.get('/api/library', (req, res) => {
   const exp = expandAlias(raw);
   const aliasNote = exp.alias ? { alias: exp.alias, to: exp.q } : null;
   const r = gamesDb.search(exp.q, limit, libOpts(req));
-  res.json({ ok: true, q: raw, aliasNote, count: r.count, total: gamesDb.stats().total, items: r.items.map(withBh) });
+  res.json({ ok: true, q: raw, aliasNote, count: r.count, total: gamesDb.stats().total, items: r.items.map((x) => withNKey(withBh(x))) });
 });
 
 // GET /api/library/recent?limit=20 — 最近收录(供空态展示)
@@ -1744,7 +1766,7 @@ app.get('/api/search/all', (req, res) => {
   let pc = { count: 0, items: [] };
   try {
     const r = gamesDb.search(exp.q, limit, libOpts(req));
-    pc = { count: r.count, items: r.items.map(withRes), fit: searchRank.fitOf(r.topScore) };
+    pc = { count: r.count, items: r.items.map((x) => withNKey(withRes(x))), fit: searchRank.fitOf(r.topScore) };
   } catch (e) { pc = { count: 0, items: [], error: e.message }; }
 
   /* ② 手游中心（合并索引，含社区库英文名与实测库中文名的别名展开） */
