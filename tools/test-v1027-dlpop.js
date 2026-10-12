@@ -131,6 +131,31 @@ const nullRow = F.dlRow(F.dlGroupByPost([{ postId: 'p9', postTitle: null, server
 ok(/（无标题资源帖）/.test(nullRow) && !/null/.test(nullRow),
   '★ 无标题帖显示占位文案而不是字面量 null');
 
+/* ---- ★★ v10.58：XDGAME 官方盘口条目**不是帖子**，不许套「（无标题资源帖）」----
+ * 上游 `download.xd()` 每条只有 `{server, serverUrl, name, real, pwd, kind}` ——
+ * **没有 postId / postUrl / postTitle**。套用「帖子」的兜底文案，会让一款游戏 9~10 行
+ * 全显示「（无标题资源帖）」，看着像数据坏了（用户 2026-10-12 的原话就是这句）。
+ * ⇒ 按来源分文案：机地帖（有机地帖标识）仍用兜底文案，XD 官方盘口写明来源。 */
+const xdOnly = F.dlGroupByPost([{ server: '百度网盘', real: 'https://pan.baidu.com/s/1x', postTitle: null }]);
+eq(xdOnly[0].src, 'xd', '★ 归帖时按 postId/postUrl 判来源：两个都没有 ⇒ src=xd');
+const xdRow = F.dlRow(xdOnly[0]);
+ok(!/（无标题资源帖）/.test(xdRow) && /XDGAME 官方盘口/.test(xdRow),
+  '★★ XD 官方盘口条目显示「XDGAME 官方盘口」，不是「（无标题资源帖）」');
+eq(F.dlGroupByPost([{ postId: 'p9', server: '百度网盘', real: 'https://pan.baidu.com/s/1z' }])[0].src, 'ji',
+  '★ 有机地帖标识 ⇒ src=ji（机地支路的兜底文案因此仍然生效，见上一条断言）');
+/* 元断言：同一处口径错位的**第二个现场** —— 顶部计数把两个来源合成一个数 */
+ok(/const nJi = gp\.filter\(\(g\) => g\.src === 'ji'\)\.length;/.test(IDX)
+  && /const nXd = gp\.length - nJi;/.test(IDX),
+  '★★ 顶部「N 个地址（来自 …）」分开数机地帖与 XD 盘口（合着数会把 10 个按钮说成 10 篇帖子）');
+ok(!/dlGroupByPost\(v\.items\)\.length/.test(IDX),
+  '★ 旧的「来自 N 个资源帖」写法已不存在（否则两个来源又被合回一个数）');
+/* ★ 四页同步：派生页是**同步**出来的，主源改了这边没改 ⇒ 静默不一致 */
+for (const p of ['public/emulator.html', 'public/resources.html', 'public/unpack.html']) {
+  const t = read(p);
+  ok(/g\.src === 'xd'/.test(t) && /XDGAME 官方盘口/.test(t),
+    '★ ' + p + ' 已带上 XD 标题修复（改主源不重建派生页，那边就还是旧文案）');
+}
+
 /* ---- 多盘口时提取码要分清是哪个盘口的 ---- */
 const pwRow = F.dlRow(groups[0]);
 ok(/提取码 百度 ab12/.test(pwRow),

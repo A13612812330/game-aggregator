@@ -6940,6 +6940,14 @@ function dlGroupByPost(items) {
         key: k, title: it.postTitle || null, postUrl: it.postUrl || null,
         author: it.author || null, ct: it.ct || null, ut: it.ut || null, dpv: Number(it.dpv) || 0,
         section: it.section || null, links: [],
+        /* ★ v10.58：**这条是「机地社区帖」还是「XD 官方盘口条目」**。
+           上游 `download.xd()` 给的每条只有 `{server, serverUrl, name, real, pwd, kind}` ——
+           **没有 postId / postUrl / postTitle**，因为它压根不是帖子，是源站详情页上的下载按钮。
+           ⇒ 组标题取不到 title，下面渲染就会兜底成「（无标题资源帖）」，
+             一款游戏 9~10 行全是这句，看着像数据坏了（用户 2026-10-12 的原话：
+             「为什么部分本体是（无标题资源帖）」）。
+           判据只看两个字段：有机地帖标识 ⇒ 'ji'，否则 ⇒ 'xd'。 */
+        src: (it.postId || it.postUrl) ? 'ji' : 'xd',
       };
       m.set(k, g);
     }
@@ -6993,10 +7001,14 @@ function dlRow(g) {
     ? '<button class="act" type="button" data-dl-copy="' + esc(first.real) + '" title="复制' +
       esc(first.server || '首个') + '链接">复制</button>' : '';
 
+  /* ★ v10.58：XD 官方盘口条目**不是帖子**，不套「（无标题资源帖）」——
+     那是「这帖没名字」的意思，而它压根没有「帖」这个概念（见 dlGroupByPost 的 src 说明）。
+     盘口名本来就在同一行的链接 chip 上（`.acts` 里），标题只说明**来源**，不重复盘口名。 */
+  const gTxt = g.title || (g.src === 'xd' ? 'XDGAME 官方盘口' : '（无标题资源帖）');
   return '<div class="dl-it">' +
     '<span class="bd bd-' + (first ? dlBrand(first.server).cls : 'other') + '">' +
       esc(first ? dlBrand(first.server).ab : '?') + '</span>' +
-    '<div class="tx"><b title="' + esc(g.title || '') + '">' + esc(g.title || '（无标题资源帖）') + '</b>' +
+    '<div class="tx"><b title="' + esc(gTxt) + '">' + esc(gTxt) + '</b>' +
     '<div class="mt">' + mt.join('') + '</div></div>' +
     '<div class="acts">' + links + copy + '</div></div>';
 }
@@ -7168,8 +7180,15 @@ function paintDownload() {
   });
 
   const usable = items.length;
-  const note = '<div class="dl-note">共 <b>' + v.items.length + '</b> 个可直接打开的网盘地址（来自 <b>' +
-    dlGroupByPost(v.items).length + '</b> 个资源帖）' +
+  /* ★ v10.58：两个来源**分开数**。XD 官方盘口的那 9~10 条是源站的下载按钮，
+     不是机地社区帖 —— 合成一句「来自 N 个资源帖」会把 10 个按钮说成 10 篇帖子，
+     与「（无标题资源帖）」是同一处口径错位（见 dlGroupByPost 的 `src`）。 */
+  const gp = dlGroupByPost(v.items);
+  const nJi = gp.filter((g) => g.src === 'ji').length;
+  const nXd = gp.length - nJi;
+  const srcTxt = '来自 <b>' + nJi + '</b> 个机地资源帖'
+    + (nXd ? ' + <b>' + nXd + '</b> 个 XDGAME 官方盘口' : '');
+  const note = '<div class="dl-note">共 <b>' + v.items.length + '</b> 个可直接打开的网盘地址（' + srcTxt + '）' +
     (v.filt ? '，筛选 <b>' + esc(DL_BRAND_NAME[v.filt] || v.filt) + '</b> 后本分区剩 <b>' + usable + '</b> 帖' : '') +
     ' · 链接均为源站实时解析</div>';
   body.innerHTML = dlBarHtml() + note +
