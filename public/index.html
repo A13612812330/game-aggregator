@@ -4585,7 +4585,7 @@ function dResRow(it) {
       : '');
   const moreLk = links.length > 1 ? '<span class="d-res-more">+' + (links.length - 1) + '</span>' : '';
   const meta = it.size || (it.note && !links.length ? '' : (it.note || ''));
-  /* ★ v10.59：显示用 `dtitle`（机地帖的清洗短名），悬浮仍给**原始标题** ——
+  /* ★ v10.58：显示用 `dtitle`（机地帖的清洗短名），悬浮仍给**原始标题** ——
      原始标题是用户去源站搜同一条帖的凭据，一个字不能丢（数据里也没动）。 */
   const full = it.title || it.game || '?';
   const title = it.dtitle || full;
@@ -5183,7 +5183,7 @@ function dlUniPaintBody(d) {
  *         而不是给一个点开说「没有正文」的空壳 —— 那等于把「没数据」当成「有功能」。
  *   ★ 为什么 src 写死 `mod`：这些帖子全来自机地 `mods.json`（`kind` 只区分 Mod / 修改器），
  *     `/api/res/post?src=mod&id=` 就是从同一份文件按 id 取正文 —— 与列表同源，不会两处口径。 */
-/** ★ v10.59：机地帖的**下载通道按钮**（Mod / 修改器两页签共用一处 —— 铁律 17）。
+/** ★ v10.58：机地帖的**下载通道按钮**（Mod / 修改器两页签共用一处 —— 铁律 17）。
  *
  *  【为什么必须补】
  *    用户报障：「MOD 为什么获取不到对应的下载链接，如潜水员戴夫的」。
@@ -5221,7 +5221,7 @@ function dlModRowsHtml(items, kind) {
     const when = it.ut ? new Date(it.ut * 1000).toISOString().slice(0, 10) : '';
     const canPost = !!String(it.content || '').trim();
     const meta = [nets || '', cn ? cn + ' 个直链' : '未见直链', when].filter(Boolean).join(' · ');
-    /* ★ v10.59：把 links **真的渲染成按钮**（见 dlModLinkBtns 的说明） */
+    /* ★ v10.58：把 links **真的渲染成按钮**（见 dlModLinkBtns 的说明） */
     const lkRow = dlModLinkBtns(links);
     const poBtn = canPost
       ? '<button class="po-btn" type="button" data-post-open data-src="mod" data-id="' + esc(it.id || '') +

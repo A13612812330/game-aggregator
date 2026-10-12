@@ -118,7 +118,7 @@ function glRow(cat, it, n) {
     : '';
   const lkHtml = '<span class="gl-lk">' + postBtn + two + more + fallback + '</span>';
   const sizeTxt = it.size ? '<span class="sz">' + esc(String(it.size).slice(0, 12)) + '</span>' : '';
-  /* ★ v10.59：显示用 `dtitle`（机地帖的清洗短名），悬浮仍给**原始标题** ——
+  /* ★ v10.58：显示用 `dtitle`（机地帖的清洗短名），悬浮仍给**原始标题** ——
      原始标题是用户去源站搜同一条帖的凭据（数据里也没动，见 data/name-normalize.js#cleanModTitle）。 */
   const full = it.title || it.game || '?';
   const title = it.dtitle || full;

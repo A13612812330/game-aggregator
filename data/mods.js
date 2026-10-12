@@ -12,7 +12,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-/* ★ v10.59：显示用短名（dtitle）的规则本体在 name-normalize（**单一真源**）——
+/* ★ v10.58：显示用短名（dtitle）的规则本体在 name-normalize（**单一真源**）——
  *   前端不重算，只消费返回的 dtitle。见 cleanModTitle 的文件头说明。 */
 const { cleanModTitle } = require('./name-normalize');
 
@@ -20,7 +20,7 @@ const FILE = path.join(__dirname, 'mods.json');
 let cache = null;
 let mtime = 0;
 
-/** ★ v10.59：给条目派生 `dtitle`（界面显示用的清洗后短名）。
+/** ★ v10.58：给条目派生 `dtitle`（界面显示用的清洗后短名）。
  *
  *  · 为什么在**返回层**：原始 `title` 是对得上源站的凭据，落盘数据一个字节不改；
  *    派生视图只在出接口时生成，随时可换规则、不用重跑抓取（重跑一次 ≈ 数分钟 + 论坛压力）。
@@ -113,7 +113,7 @@ function stats() {
 }
 
 /** 某款游戏的全部 MOD/修改器（详情抽屉用；按端游库 id 精确命中）
- *  ★ v10.59：出接口前经 `deco()` 补 `dtitle`（见其说明） */
+ *  ★ v10.58：出接口前经 `deco()` 补 `dtitle`（见其说明） */
 function byLib(libId, kind) {
   const d = ensure();
   if (!libId) return [];
