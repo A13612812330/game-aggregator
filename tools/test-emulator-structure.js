@@ -185,11 +185,11 @@ t('goEmuPage 在派生页既有定义又有调用（原为孤儿调用，点底�
  * ★ 同时修掉一个真 bug：.pc-badge 单类优先于 .bh-toggle.on，把「🎮 有实测记录」
  *   的活跃态盖成浅紫底紫字，与「📱 社区有配置」的实心红形成一套开关两种活跃态。
  */
-t('筛选条拆成三行 .filter-row（排序 / 容量 / 筛选各一行，v10.5 开关独立成行）',
-  count(idx, /class="filter-row"/g) === 3, `实际 ${count(idx, /class="filter-row"/g)}`);
-t('三行各有行首标签 .filter-lb（排序 / 容量 / 筛选）',
+t('筛选条拆成四行 .filter-row（排序 / 容量 / 库 / 筛选各一行；★ v10.58 新增「库」行）',
+  count(idx, /class="filter-row"/g) === 4, `实际 ${count(idx, /class="filter-row"/g)}`);
+t('四行各有行首标签 .filter-lb（排序 / 容量 / 库 / 筛选）',
   idx.includes('<span class="filter-lb">排序</span>') && idx.includes('<span class="filter-lb">容量</span>')
-  && idx.includes('<span class="filter-lb">筛选</span>'));
+  && idx.includes('<span class="filter-lb">库</span>') && idx.includes('<span class="filter-lb">筛选</span>'));
 t('排序组与容量组共用同一套分段控件规格',
   /.sort-pills,.size-pills\{/.test(idx) && /.sort-pill,.size-pill\{/.test(idx));
 t('排序组已不再用「蓝色实心胶囊」那套选中语言',
@@ -772,7 +772,7 @@ const GN = require(path.join(root, 'data', 'game-name'));
  * 用户原话：「搜索功能以及搜索后的内容」。
  * 根因**不是没有数据**，而是搜索链路没收：`/api/search/all` 只查 4 个桶，
  * 而 v10.47 建的 `data/res-groups.js` 早就把 5 路来源（机地社区帖 MOD / 游侠存档 /
- * GTrainers / FearlessRevolution / GCM 元数据）按游戏聚好了。
+ * GTrainers / GCM 元数据）按游戏聚好了。
  * 实测搜「赛博朋克2077」→ pc 2 / 手游 1 / 修改器 3 / 云存档 1，
  * 而这款实际有 **717 个 MOD** —— 结果里一个字都没出现。
  *
@@ -907,8 +907,17 @@ const GN = require(path.join(root, 'data', 'game-name'));
     /return \(cache\.libIds && cache\.libIds\[cat\]\) \|\| EMPTY_SET;/.test(rgSrc));
 
   /* ② 服务端：三个筛选统一口径 */
+  /* ★ v10.58：判据从「整行字面量」改成**锚在意图上** —— browse 路由体里确实用
+     `gamesDb.browse` 且挂 `withRes`。v10.54 已经吃过一次这个亏（同一条断言因为多了一个
+     `fit` 字段就假红，当时也是改成放宽），这轮又因为多了 `scope` 字段假红一次。
+     ⇒ 尾巴不再钉（`ok: true, ...r,` 后面接什么都会变），钉「在哪个函数里做了什么」。
+     ⚠️ 最后一条 `length > 200` 是**边界自检**：`indexOf` 找不到时会返回 -1，
+     切片结果同样是空串 ⇒ 上面两条会双双为假、看起来像真红。 */
+  const browseBody = srvSrc.slice(srvSrc.indexOf("app.get('/api/library/browse'"),
+    srvSrc.indexOf("app.get('/api/search/all'"));
   t('★★ v10.53：`/api/library/browse` 改挂 `withRes`（首页卡片从此带 res / resId）',
-    /res\.json\(\{ ok: true, \.\.\.r, items: r\.items\.map\(withRes\) \}\);/.test(srvSrc));
+    browseBody.length > 200 && /gamesDb\.browse\(/.test(browseBody)
+    && /items: r\.items\.map\(withRes\)/.test(browseBody));
   t('★★ v10.53：`mod` / `tr` / `sv` 三个筛选都走 `resGroups.libIdsFor`（与卡面同源）',
     /const modOnly = String\(req\.query\.mod \|\| ''\) === '1';/.test(srvSrc)
     && /if \(modOnly\) \{ const set = resGroups\.libIdsFor\('mod'\); filters\.push\(\(g\) => set\.has\(g\.id\)\); \}/.test(srvSrc)

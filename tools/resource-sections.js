@@ -23,7 +23,7 @@
  * 数据来源（一个分区一套数据，互不替代）：
  *   · MOD     #mods      → data/res-groups.js cat=mod      机地社区帖（网盘直链）
  *   · 存档    #resSaves  → cat=saves                       游侠存档文件 + GTrainers 存档
- *   · 修改器  #resTrainers → cat=trainers                  GCM 清单 + GTrainers + FearlessRevolution
+ *   · 修改器  #resTrainers → cat=trainers                  GCM 清单 + GTrainers ★ v10.58 起 FR 已摘除
  *
  * ⚠️ 本文件是**被整段注入到页面主脚本块里**的（同 emulator-sections.js），
  *    所以不能出现 require / module.exports；只能依赖主源共享脚本的
@@ -78,7 +78,7 @@ const grpState = {
 /* 来源展示名。★ 与 data/res-groups.js 的 SRC_LABEL 是同一份口径，
  *   但这里是浏览器端、拿不到那个模块 —— 所以**由服务端随 stats 一起下发**
  *   （见 initGrp 里的 s.srcLabel），本常量只作接口失败时的兜底。 */
-const GRP_SRC_FALLBACK = { mod: '机地 MOD', yx: '游侠存档', gt: 'GTrainers', fr: 'FearlessRevolution', gcm: 'GCM 清单' };
+const GRP_SRC_FALLBACK = { mod: '机地 MOD', yx: '游侠存档', gt: 'GTrainers', gcm: 'GCM 清单' };
 let grpSrcLabel = Object.assign({}, GRP_SRC_FALLBACK);
 
 const grpSrcName = (k) => grpSrcLabel[k] || GRP_SRC_FALLBACK[k] || k;

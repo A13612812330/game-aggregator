@@ -398,6 +398,10 @@
   .bh-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:750;padding:1.5px 6px;border-radius:5px;background:linear-gradient(135deg,rgba(230,65,93,.14),rgba(249,115,22,.14));color:#C2410C;white-space:nowrap;flex:none}
   .bh-badge b{font-family:var(--font-num)}
   .pc-badge{background:linear-gradient(135deg,rgba(124,58,237,.14),rgba(79,70,229,.14));color:#6D28D9}
+  /* ★ v10.58 手游独有：端游库没有这款 ⇒ 虚线框徽标 + 出口箭头换色，
+     让「点它会去手机专区而不是开详情抽屉」这件事在看之前就有预期。 */
+  .bh-badge.mol-badge{background:#EEF2FF;color:#4F46E5;border:1px dashed #C7D2FE}
+  .row-card.is-mol .go{color:#4F46E5}
 
   /* ============ 📱 手机可玩 分区（BannerHub 社区模拟器配置） ============ */
   #emulator{margin-top:40px}
@@ -548,6 +552,9 @@
      ★ v10.47 口径已变：本区不再只有 GCM 清单，而是 **GCM + GTrainers + FearlessRevolution**
      三源合并 —— 后两家给**真实下载链**，GCM 仍刻意不给（官方走一次性 S3 签名 URL）。
      ⇒ 卡内按钮按来源各自决定（有链给链，没链给「源站」出口），不再一律导流。
+     ★ v10.58：**FR（FearlessRevolution）已摘除 ⇒ 本区现为 GCM + GTrainers 两源**。
+       上面那行「三源合并」是 v10.47 当时的记录；理由与复活手册见
+       docs/sop/FR-fearlessrevolution-抓取SOP.md（`fr.json` 从未产出 ⇒ 摘除零用户可见损失）。
      ⚠️ 旧「一卡一条」形态的下面五条 GCM 细分来源徽标（fling / cheat_table / community /
         xiaoxing / gcm）、`.pill.ver`、`.tr-note`、`.tr-go` **已整组删除**（v10.47 改形后零用法：
         精确 grep `tg src fling` 等全库 0 命中；`pill ver2` 才是活的，见搜索弹窗那条）。
@@ -2568,7 +2575,7 @@ const okScoreV = (v) => v != null && v > 0 && v <= 10;
 let toastTimer;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2400); }
 const api = (p) => p;
-const SRC = { xdgamer: { nm: 'XDGAME', cls: 'xd' }, xdgamer2: { nm: 'XDGAME', cls: 'xd' }, jidi: { nm: '机地', cls: 'jidi' } };
+const SRC = { xdgamer: { nm: 'XDGAME', cls: 'xd' }, xdgamer2: { nm: 'XDGAME', cls: 'xd' }, jidi: { nm: '机地', cls: 'jidi' }, mh: { nm: '手机中心', cls: 'mh' } };
 
 function splitName(title) {
   const s = String(title || '').trim();
@@ -2615,6 +2622,17 @@ const SIZES = [
   { k: 'xl', nm: '30-60GB', lb: 'L', min: 30, max: 60 },
   { k: 'xxl', nm: '60GB 以上', lb: 'XL', min: 60, max: null },
 ];
+/* ★ v10.58「库范围」—— 首页列表的三个视图。顺序＝覆盖面从小到大。
+ *  · pc  端游库（端游库 19,465）
+ *  · mob 手游中心（手机端有数据的 3,330，含与端游库重合的那 1,685）
+ *  · all 合并（端游库 ∪ **手游独有** = 21,110）
+ *  ★ 为什么合并只并「独有」：重合的 1,685 款**本来就在端游库里**（实测 0 例外），
+ *    并进来就是同一条出现两次。完整口径见服务端 `/api/library/browse?scope=` 的注释。 */
+const SCOPES = [
+  { k: 'pc', lb: 'PC', nm: '端游库', ti: '只看端游库（19,465 款）' },
+  { k: 'mob', lb: 'MOB', nm: '手游中心', ti: '只看手机端有数据的游戏（3,330 款；其中 1,685 款端游库里也有）' },
+  { k: 'all', lb: 'ALL', nm: '合并', ti: '端游库 + 手游独有 = 21,110 款（手游独有的卡标「仅手机端」，点击去手机专区）' },
+];
 let curCat = '全部';
 let curSort = 'updated';
 let curSize = 'all';    // SIZES[].k
@@ -2623,6 +2641,9 @@ let curPc = false;      // 仅看本站实测库里有记录的游戏（phonecfg
 let curMod = false;     // ★ v10.53 仅看机地社区 MOD 收录到的游戏（端游资源聚合层）
 let curTr = false;      // ★ v10.5 仅看有修改器的游戏（★ v10.53 起口径见 filterQuery 注释）
 let curSv = false;      // ★ v10.5 仅看有存档的游戏（★ v10.53 起口径见 filterQuery 注释）
+/* ★ v10.58「库范围」：pc 端游库（19,465）/ mob 手游中心（3,330）/ all 合并（21,110）。
+   见 `filterBarHtml` 的「库」行与服务端 `/api/library/browse?scope=` 的整段注释。 */
+let curScope = 'pc';
 let offset = 0, total = 0, listEl = null, loading = false;
 
 /** 当前筛选 → 附加查询串（容量区间 + 五个只看开关）
@@ -2645,6 +2666,9 @@ function filterQuery() {
   if (curMod) q += '&mod=1';
   if (curTr) q += '&tr=1';
   if (curSv) q += '&sv=1';
+  /* ★ v10.58：库范围（pc / mob / all）。**始终显式带上** —— 服务端缺省也是 pc，
+     但显式写出来，读日志时能一眼看出这一屏是哪个库。 */
+  q += '&scope=' + curScope;
   return q;
 }
 /** 筛选条：三行「标签 + 分段控件」—— 排序 / 容量 / 筛选
@@ -2668,6 +2692,11 @@ function filterBarHtml() {
       <div class="size-pills" id="sizePills">${SIZES.map(s => `<button class="size-pill ${curSize === s.k ? 'on' : ''}" data-z="${s.k}"><span class="lb">${s.lb}</span>${s.nm}</button>`).join('')}</div>
     </div>
     <div class="filter-row">
+      <span class="filter-lb">库</span>
+      <div class="size-pills" id="scopePills">${SCOPES.map(s => `<button class="size-pill ${curScope === s.k ? 'on' : ''}" data-sc="${s.k}" title="${esc(s.ti)}"><span class="lb">${s.lb}</span>${s.nm}</button>`).join('')}</div>
+      <span class="fx-sp"></span>
+    </div>
+    <div class="filter-row">
       <span class="filter-lb">筛选</span>
       <button class="bh-toggle ${curBh ? 'on' : ''}" id="bhToggle" type="button" title="只看有 BannerHub 社区模拟器配置的游戏">📱 社区有配置</button>
       <button class="bh-toggle pc-badge ${curPc ? 'on' : ''}" id="pcToggle" type="button" title="只看本站实测库里有记录的 PC 游戏">🎮 有实测记录</button>
@@ -2682,6 +2711,8 @@ function filterBarHtml() {
 /** 筛选结果计数文案 */
 function filterCountText(n) {
   const bits = [];
+  const sc = SCOPES.find((x) => x.k === curScope);
+  if (sc && sc.k !== 'pc') bits.push(sc.nm);   // 端游是缺省视图，不拿它占字数
   const s = SIZES.find((x) => x.k === curSize);
   if (s && s.k !== 'all') bits.push(s.nm);
   if (curBh) bits.push('📱 社区有配置');
@@ -2692,7 +2723,18 @@ function filterCountText(n) {
   return (bits.length ? bits.join(' · ') + ' · ' : '') + `命中 ${n.toLocaleString()} 款`;
 }
 
-function renderCats() {  $('#catRow').innerHTML = `<span class="cat-title">分类</span>` +
+function renderCats() {
+  /* ★ v10.58：**手游视图下不渲染分类按钮** —— 手游中心的条目没有分类字段
+     （`projectMobile` 里 `genres:[]`），分类对它无效，服务端也刻意不拿分类去滤它。
+     按钮留在那里点了却没反应，就是「骗人的交互」；宁可说清楚。
+     ★ 合并视图仍保留分类：它对端游侧有效（手游独有不参与过滤，服务端已注明）。 */
+  if (curScope === 'mob') {
+    $('#catRow').innerHTML = `<span class="cat-title">分类</span>` +
+      `<span class="statline" style="opacity:.62">手游中心不做分类（社区/实测记录里没有类型字段）</span>` +
+      `<span class="grow"></span><span class="statline" id="statline"></span>`;
+    return;
+  }
+  $('#catRow').innerHTML = `<span class="cat-title">分类</span>` +
     CATS.map(c => `<button class="cat ${c === curCat ? 'on' : ''}" data-c="${esc(c)}">${esc(c)}</button>`).join('') +
     `<span class="grow"></span><span class="statline" id="statline"></span>`;
   $$('#catRow .cat').forEach(b => b.addEventListener('click', () => {
@@ -2718,15 +2760,24 @@ function rowCard(it) {
   if ((it.genres || []).length) meta.push(`<span class="pill type">${esc(it.genres.slice(0, 2).join(' / '))}</span>`);
   if (it.size) meta.push(`<span class="pill size">${esc(it.size)}</span>`);
   meta.push(`<span class="pill time">${esc(normTime(it.dateLabel))}</span>`);
-  if (it.bh) meta.push(`<span class="bh-badge" title="BannerHub 社区已上传 ${it.bh.c} 份手机模拟器配置">📱 可玩 <b>${it.bh.c}</b></span>`);
-  if (it.pc) meta.push(`<span class="bh-badge pc-badge" title="本站实测库有 ${it.pc.c} 条记录，最佳帧率 ${it.pc.best || '未标'}">🎮 实测 <b>${it.pc.c}</b></span>`);
+  /* ★ v10.58：手游视图（`scope=mob|all`）的条目带 `mob` —— 用**手游侧口径**渲染，
+     不再走 bh/pc attach：同一款游戏两套源都有，两边都画会出现两枚重复徽标。
+     `mol`（mobile-only）另有含义：端游库没有这款 ⇒ 卡上标出来、点击去手机专区。 */
+  if (it.mob) {
+    if (it.mob.configs) meta.push(`<span class="bh-badge" title="社区已上传 ${it.mob.configs} 份手机模拟器配置">📱 配置 <b>${it.mob.configs}</b></span>`);
+    if (it.mob.records) meta.push(`<span class="bh-badge pc-badge" title="本站实测 ${it.mob.records} 条记录${it.mob.best ? '，最佳帧率 ' + esc(it.mob.best) : ''}">🎮 实测 <b>${it.mob.records}</b></span>`);
+    if (it.mol) meta.push(`<span class="bh-badge mol-badge" title="端游库没有这款，只有手机端的记录">📱 仅手机端</span>`);
+  } else {
+    if (it.bh) meta.push(`<span class="bh-badge" title="BannerHub 社区已上传 ${it.bh.c} 份手机模拟器配置">📱 可玩 <b>${it.bh.c}</b></span>`);
+    if (it.pc) meta.push(`<span class="bh-badge pc-badge" title="本站实测库有 ${it.pc.c} 条记录，最佳帧率 ${it.pc.best || '未标'}">🎮 实测 <b>${it.pc.c}</b></span>`);
+  }
   // 库内兜底字段(data-fb)：详情源站解析缺字段时用库内值补全
   /* ★ v10.22 加 jidiUrl：详情页「⬇ 网盘下载」要能**一次把两源的链接都取回来**。
      库内 XD 条目若已合并进机地同款（13,448 条），就带上机地详情页 URL ——
      弹窗里分成「XD 官方盘口」「机地社区分享」两组展示，比只给一边完整。 */
   const fb = { id: it.id || '', title: it.title || '', cover: it.cover || '', score: okScore ? it.score : null, size: it.size || '', genres: (it.genres || []).slice(0, 4), dateLabel: it.dateLabel || '', jidiUrl: it.jidiUrl || '' };
   const fbJson = encodeURIComponent(JSON.stringify(fb));
-  return `<article class="row-card" data-url="${esc(it.url)}" data-fb="${fbJson}">
+  return `<article class="row-card${it.mol ? ' is-mol' : ''}" data-url="${esc(it.url)}" data-mol="${it.mol ? '1' : ''}" data-mq="${it.mol ? esc(it.title) : ''}" data-fb="${fbJson}">
     <div class="th">${coverHtml({ ...it, zh: n.zh })}</div>
     <div class="bd">
       <div class="tt"><h3>${esc(n.zh)}</h3><span class="src-badge ${SRC[it.source] ? SRC[it.source].cls : 'xd'}">${SRC[it.source] ? SRC[it.source].nm : 'XDGAME'}</span></div>
@@ -2791,6 +2842,12 @@ async function renderList(reset) {
     });
     const st = $('#svToggle'); if (st) st.addEventListener('click', () => {
       curSv = !curSv; offset = 0; renderList(true);
+    });
+    /* ★ v10.58「库范围」切换：手游 / 端游 / 合并（口径见 filterBarHtml 的「库」行注释）
+        ★ 必须连带 `renderCats()` —— 手游视图下分类行要整块换掉（见 renderCats 注释）。 */
+    const sc = $('#scopePills'); if (sc) sc.addEventListener('click', (e) => {
+      const b = e.target.closest('.size-pill'); if (!b || curScope === b.dataset.sc) return;
+      curScope = b.dataset.sc; offset = 0; renderCats(); renderList(true);
     });
   }
   try {
@@ -3573,7 +3630,18 @@ function bindRowCards(root) {
     e.stopPropagation();
     gotoResTab(b.dataset.resId, b.dataset.resTitle, b.dataset.resTab);
   }));
-  $$('.row-card', root || document).forEach(c => c.addEventListener('click', () => openDetail(c.dataset.url, c.dataset.fb)));
+  $$('.row-card', root || document).forEach(c => c.addEventListener('click', () => {
+    /* ★ v10.58：手游独有的卡没有端游详情（端游库根本没这款）——
+       照原样把空 data-url 交给 openDetail 会开出一个空抽屉，所以改去手机专区。
+       ★ 带上 `?q=<游戏名>` —— 手机专区已支持这个参数（会自动关掉「仅看匹配端游」），
+         否则跳到 3,330 款的列表头，等于把人送过去又没送到。 */
+    if (c.dataset.mol === '1') {
+      const mq = c.dataset.mq || '';
+      location.href = 'emulator.html' + (mq ? '?q=' + encodeURIComponent(mq) : '');
+      return;
+    }
+    openDetail(c.dataset.url, c.dataset.fb);
+  }));
 }
 
 /* ============ 键盘 ←/→ 切换详情 / Esc 关闭 ============ */
@@ -3965,6 +4033,17 @@ async function initEmu() {
       loadEmu(false);
     });
   };
+  /* ★ v10.58：支持 `/emulator.html?q=<游戏名>` —— 首页「合并」视图点**手游独有**的卡会带过来。
+   *   ★ 必须**同时把 `matched` 关掉**：手机专区默认「仅看匹配端游」（见下方 bindToggle 注释），
+   *     而手游独有**恰恰就是没匹配上的那 1,645 款** ⇒ 只填 q 不关这个开关，搜出来 0 条，
+   *     等于把人送过来再告诉他「没有这款」。
+   *   ★ 位置必须在 `bindToggle('emuToggleLib','matched')` **之前**：那一步会按 emuState 画开关态。 */
+  const uq = new URLSearchParams(location.search).get('q');
+  if (uq) {
+    emuState.q = uq;
+    emuState.matched = false;
+    const si0 = document.getElementById('emuSearch'); if (si0) si0.value = uq;
+  }
   /* 「仅看匹配端游」**默认开**（用户诉求：手游默认显示跟端游匹配的游戏） */
   bindToggle('emuToggleLib', 'matched');
   /* 「只看双料」：社区配置库(bh) 与 机型实测库(pc) 都有记录 —— 全量 3161 条里只有 88 条。
@@ -5754,7 +5833,7 @@ async function loadTrBlock(d, title) {
       <div class="d-rows">${rows}</div>
       <div class="d-hint2">拿到的多为独立 exe / CE 表，<b>不用放进游戏目录</b>。<br>
         启动后它会自行挂上游戏进程；用前请先备份存档。<br>
-        来源：GTrainers · FearlessRevolution · GCM 清单。</div></div>`;
+        来源：GTrainers · GCM 清单。</div></div>`;
   } catch (e) {} finally { syncPair(); }
 }
 
@@ -7182,7 +7261,7 @@ function closeDownload() {
  * ★ 数据**不是新抓的**，是取回被列表投影筛掉的字段（`界面缺字段 ≠ 数据源没有` 的第二次现场）：
  *     机地 MOD 帖 → mods.json 的 `content`（实测 8,942/8,943 = 100%，含介绍 / 安装步骤 / 使用说明）
  *     游侠存档帖  → saves-youxia.json 的 `desc` + `steps` + `shots`（desc 100% / 有图 57.4%）
- *   GTrainers / FearlessRevolution / GCM 是纯链接源，本来就没有正文 ⇒ `/api/res/post` 回
+ *   GTrainers / GCM 是纯链接源，本来就没有正文 ⇒ `/api/res/post` 回
  *   `has:false`，前端**不给入口**（宁可少一个按钮，也不给一个点开是空的按钮）。
  *
  * ★ 「按照原贴的布局放置」= 正文容器 `white-space:pre-wrap`（见 .po-body 的注释）：
@@ -7444,7 +7523,7 @@ const D_FULL_RENDER = {
     const items = p.items || [];
     const canDl = items.filter((x) => (x.links || []).length).length;
     return dResFullHtml('共 <b>' + items.length + '</b> 条修改器 · 其中 <b>' + canDl + '</b> 条带真实下载链。' +
-      'GTrainers / FearlessRevolution 点按钮即取件；GCM 清单**不提供文件**（官方走一次性签名链接），' +
+      'GTrainers 点按钮即取件；GCM 清单**不提供文件**（官方走一次性签名链接），' +
       '可点「源站」到官方渠道。', items);
   },
   /* 💾 存档 · 全部条目（可下载的存档包） */

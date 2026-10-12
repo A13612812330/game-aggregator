@@ -199,21 +199,22 @@ const SAVES_HTML = `
   <button class="load-more" id="svMore" style="display:none">加载更多</button>
 </main>`;
 
-/* ③ 修改器（#resTrainers）：GCM 清单 + GTrainers + FearlessRevolution
+/* ③ 修改器（#resTrainers）：GCM 清单 + GTrainers
  * ★ v10.47：**这一区新增了两个「有真下载链」的来源**（用户口径「都需要，帮我分类补充」）：
  *   · GTrainers 修改器区 —— 真实文件直链
  *   · FearlessRevolution —— CE 表 / Trainer 附件直链
  *   原先这一区只有 GCM 清单（**刻意不给下载链**：官方走一次性 S3 签名 URL），
  *   所以旧版整区没有下载按钮。现在卡内条目的按钮是**按来源各自决定**的：
- *   有链就给链，没有就给「源站」出口 —— 不再一律导流。 */
+ *   有链就给链，没有就给「源站」出口 —— 不再一律导流。
+ * ★ v10.58：**FR 已摘除 ⇒ 本区现为 GCM + GTrainers 两源**
+ *   （`fr.json` 从未产出 ⇒ 零用户可见损失；理由与复活手册见 docs/sop/FR-fearlessrevolution-抓取SOP.md）。 */
 const TRAINERS_HTML = `
 <main class="wrap et-hide" id="resTrainers" data-et="tr">
   <div class="sec-h"><span class="bar tr"></span><h2>修改器</h2><span class="en">TRAINERS</span><span class="more" id="trCount"></span></div>
   <div class="emu-intro tr">
     <span class="ic">🛠</span>
     <div class="tx">
-      <b>单机游戏修改器，按游戏看</b>——合了三个来源：<b>GTrainers</b> 修改器区、
-      <b>FearlessRevolution</b> 的 CE 修改表 / Trainer（这两家都给<b>真实下载链</b>），
+      <b>单机游戏修改器，按游戏看</b>——合了两个来源：<b>GTrainers</b> 修改器区（给<b>真实下载链</b>），
       以及 <b>Game Cheats Manager</b> 的公开清单（本体走一次性签名链接，本站不代为分发；
       但每条都配了<b>来源站跳转</b>，点一下直接去原作者页）。
       卡内先列<b>前 3 条</b>，点「查看全部」在<b>弹窗里</b>看全量、可搜索。

@@ -157,7 +157,7 @@ function matchWithBasis(game, byName) {
   return { it: null, basis: '' };
 }
 
-/** 兼容入口：只要条目（`tools/fetch-fr.js` 等在用） */
+/** 兼容入口：只要条目（`tools/fetch-gtrainers.js` 等在用） */
 function matchLib(game, byName) {
   return matchWithBasis(game, byName).it;
 }

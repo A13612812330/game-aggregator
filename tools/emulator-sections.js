@@ -223,6 +223,17 @@ async function initEmu() {
       loadEmu(false);
     });
   };
+  /* ★ v10.58：支持 `/emulator.html?q=<游戏名>` —— 首页「合并」视图点**手游独有**的卡会带过来。
+   *   ★ 必须**同时把 `matched` 关掉**：手机专区默认「仅看匹配端游」（见下方 bindToggle 注释），
+   *     而手游独有**恰恰就是没匹配上的那 1,645 款** ⇒ 只填 q 不关这个开关，搜出来 0 条，
+   *     等于把人送过来再告诉他「没有这款」。
+   *   ★ 位置必须在 `bindToggle('emuToggleLib','matched')` **之前**：那一步会按 emuState 画开关态。 */
+  const uq = new URLSearchParams(location.search).get('q');
+  if (uq) {
+    emuState.q = uq;
+    emuState.matched = false;
+    const si0 = document.getElementById('emuSearch'); if (si0) si0.value = uq;
+  }
   /* 「仅看匹配端游」**默认开**（用户诉求：手游默认显示跟端游匹配的游戏） */
   bindToggle('emuToggleLib', 'matched');
   /* 「只看双料」：社区配置库(bh) 与 机型实测库(pc) 都有记录 —— 全量 3161 条里只有 88 条。

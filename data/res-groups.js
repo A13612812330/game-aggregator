@@ -8,12 +8,17 @@
  * 实测 MOD 7,825 条只对应 362 款游戏，最大一组 717 条（赛博朋克2077）——
  * 用户「按游戏做卡片」的判断被数据证实。本模块把 5 路来源**按游戏**收成一组一组。
  *
- * ── 五路来源（互不替代，各自答不同问题）──────────────────────────────────
+ * ── 四路来源（互不替代，各自答不同问题）──────────────────────────────────
  *   src=mod  机地社区帖 MOD          有网盘直链            → cat 'mod'
  *   src=yx   游侠补丁网存档文件      直链 + 网盘 + eD2K    → cat 'saves'
  *   src=gt   GTrainers 存档/修改器   **真实文件直链**      → cat 'saves' | 'trainers'
- *   src=fr   FearlessRevolution      CE 表附件直链         → cat 'trainers'
  *   src=gcm  GCM 元数据目录          **无下载链**（刻意）  → cat 'trainers'
+ *
+ * ★ v10.58：**五路已降为四路** —— `src=fr`（FearlessRevolution，原第 5 路、cat 'trainers'）**已摘除**。
+ *   理由：整站在 CF managed challenge 后（只能有头浏览器 + 页面上下文 fetch）+ 阶段② 须一次跑完 ≈3.5h，
+ *   而 **`data/fr.json` 从未产出 ⇒ 它一直贡献 0 条** ⇒ 摘掉零用户可见损失。
+ *   完整 SOP（含参数标定、会话纪律、复活手册）：docs/sop/FR-fearlessrevolution-抓取SOP.md
+ *   ⚠️ 历史注释里仍可能见到「三源合并（GCM + GTrainers + FR）」的旧口径 —— 那是当时记录，**不要据此再加回来**。
  *
  * ── 统一条目形状（前端只认这一种，不必知道来源差异）──────────────────────
  *   { src, cat, id, title, game, libId, libTitle, size, date, downloads,
@@ -33,7 +38,7 @@
 const mods = require('./mods');
 const savesYx = require('./savesYx');
 const gt = require('./gtrainers');
-const fr = require('./fr');
+/* ★ v10.58：`require('./fr')` 已摘除（见文件头四路来源说明 + docs/sop/FR-fearlessrevolution-抓取SOP.md） */
 const gcm = require('./trainers');
 const gamesDb = require('./gamesDb');
 const { normKey } = require('./name-normalize');
@@ -50,10 +55,11 @@ const PAN_CLS = {
 };
 const panCls = (k) => PAN_CLS[k] || 'other';
 
-/* 来源展示名（前端徽标用；一处定义，避免前端再抄一份） */
-const SRC_LABEL = { mod: '机地 MOD', yx: '游侠存档', gt: 'GTrainers', fr: 'FearlessRevolution', gcm: 'GCM 清单' };
+/* 来源展示名（前端徽标用；一处定义，避免前端再抄一份）
+   ★ v10.58：`fr: 'FearlessRevolution'` 已摘除（连同 SRC_KEY.fr），见文件头说明。 */
+const SRC_LABEL = { mod: '机地 MOD', yx: '游侠存档', gt: 'GTrainers', gcm: 'GCM 清单' };
 /** 来源徽标配色类后缀（配合前端 .tg.src.<key>） */
-const SRC_KEY = { mod: 'mod', yx: 'yx', gt: 'gt', fr: 'fr', gcm: 'gcm' };
+const SRC_KEY = { mod: 'mod', yx: 'yx', gt: 'gt', gcm: 'gcm' };
 
 const MOUNT = { mod: '#mods', saves: '#resSaves', trainers: '#resTrainers' };
 
@@ -134,26 +140,10 @@ function fromGt() {
   return out;
 }
 
-function fromFr() {
-  const out = [];
-  for (const x of fr.ensure().items || []) {
-    const links = (x.attachments || []).map((a) => ({
-      label: (a.name || '附件') + (a.version ? ' ' + a.version : ''),
-      url: a.url, cls: 'file', size: a.size || '', downloads: a.downloads || 0,
-    }));
-    out.push({
-      src: 'fr', cat: 'trainers', id: String(x.t),
-      title: x.title || '', game: x.game || '',
-      libId: x.libId || '', libTitle: x.libTitle || '', cover: '',
-      size: links.length ? (links[0].size || '') : '', date: '',
-      downloads: links.reduce((n, l) => n + (l.downloads || 0), 0), links,
-      page: x.sourceUrl || '',
-      note: (fr.FORUM_LABEL[x.forum] || '') + (links.length > 1 ? '（' + links.length + ' 个附件）' : ''),
-      ts: 0,
-    });
-  }
-  return out;
-}
+/* ★ v10.58：`fromFr()` 已摘除（FR 遗弃）。
+   原实现：遍历 fr.ensure().items，把每个主题帖的 attachments 摊成 links（cls 'file'），
+   一条 = 一个主题帖、note 标板块（CE 表 / Trainer）与附件数。
+   ⇒ 将来要重做，照 docs/sop/FR-fearlessrevolution-抓取SOP.md 的「复活手册」恢复，别凭记忆重写。 */
 
 function fromGcm() {
   const out = [];
@@ -202,7 +192,7 @@ function filesSig() {
   const fs = require('fs');
   const path = require('path');
   const d = __dirname;
-  return ['mods.json', 'saves-youxia.json', 'gtrainers.json', 'fr.json', 'trainers.json', 'games.json']
+  return ['mods.json', 'saves-youxia.json', 'gtrainers.json', 'trainers.json', 'games.json']
     .map((f) => {
       try { return f + ':' + fs.statSync(path.join(d, f)).mtimeMs; } catch (e) { return f + ':x'; }
     }).join('|');
@@ -212,7 +202,7 @@ function build() {
   const s = filesSig();
   if (cache && s === sig) return cache;
 
-  const all = [].concat(fromMods(), fromYx(), fromGt(), fromFr(), fromGcm());
+  const all = [].concat(fromMods(), fromYx(), fromGt(), fromGcm());
 
   /* 端游库 id → 展示名 / 封面（条目自带 libCover 优先，其次这里兜底） */
   let lib = new Map();
@@ -311,7 +301,7 @@ function groupItems(cat, key) {
  * 分页取「游戏组」。
  *   cat    'mod' | 'saves' | 'trainers'
  *   q      关键词（匹配组名 / 库名 / 组内任意条目标题）
- *   src    只看「含有该来源条目」的组（gt / fr / yx / gcm / mod）
+ *   src    只看「含有该来源条目」的组（gt / yx / gcm / mod）★ v10.58 起 fr 已摘除
  *   sort   'count'(默认,条目多的在前) | 'game'(按名) | 'new'(组内最新)
  *   limit / offset
  */
@@ -481,7 +471,7 @@ function slimItem(x) {
  * 返回形状（前端只认这一种）：
  *   { ok, src, id, has, source, title, game, name, author, ct, ut, pv, date,
  *     url, content, steps:[{head,text}], shots:[url] }
- *   has=false 表示该来源本来就没有正文（GT / FR / GCM 是纯链接源）—— 不是错误。
+ *   has=false 表示该来源本来就没有正文（GT / GCM 是纯链接源）—— 不是错误。
  * ========================================================================== */
 function post(src, id) {
   const s = String(src || '').trim();
@@ -526,7 +516,7 @@ function post(src, id) {
     };
   }
 
-  /* GT / FR / GCM：只有链接与元数据，没有正文 —— 明确回 has:false，前端不显示入口 */
+  /* GT / GCM：只有链接与元数据，没有正文 —— 明确回 has:false，前端不显示入口 */
   return {
     ok: true, src: s, id: k, has: false, source: srcLabel,
     title: '', game: '', name: '', author: '', ct: 0, ut: 0, pv: 0, date: '',

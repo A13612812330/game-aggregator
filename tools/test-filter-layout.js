@@ -107,7 +107,9 @@ function loadPuppeteer() {
     });
 
     t(m.docScroll <= m.vw + 1, `[${tag}] 无横向溢出（scrollWidth ${m.docScroll} ≤ ${m.vw}）`);
-    t(m.rowCount === 3, `[${tag}] 三行标签为「排序 / 容量 / 筛选」`, m.labels.join(' / '));
+    /* ★ v10.58：筛选条 3 行 → 4 行（新增「库」行：手游 / 端游 / 合并）。
+       判据仍**恰好等于**行数 —— 不是放宽成「>= 3」，否则以后多塞一行也没人管。 */
+    t(m.rowCount === 4, `[${tag}] 四行标签为「排序 / 容量 / 库 / 筛选」`, m.labels.join(' / '));
     /* ★ v10.53：开关数 4 → 5（新增「🧩 有 MOD」）。这条是**布局**判据：
        五个开关在宽屏仍必须同行 —— 加开关最容易的翻车方式就是让它把行挤爆。 */
     t(m.switchCount === 5, `[${tag}] 五个只看开关都在（社区有配置 / 有实测记录 / 有 MOD / 有修改器 / 有存档）`, String(m.switchCount));

@@ -55,7 +55,7 @@ function findBrowser() { return CANDIDATES.find((p) => fs.existsSync(p)) || null
  *   headless  ★ v10.47 新增，默认 **true**（保持既有调用方行为不变）。
  *             false ⇒ 走**有头**模式。为什么需要它：Cloudflare 的 managed challenge
  *             对 headless 特征敏感，实测 fearlessrevolution 在 headless 下
- *             24s 仍停在挑战页，换有头后 ~20s 放行（见 tools/fetch-fr.js 文件头）。
+ *             24s 仍停在挑战页，换有头后 ~20s 放行。
  *   profile   ★ v10.47 新增，自定义 user-data-dir。默认沿用 `.cache/chrome-preview`。
  *             需要它是因为 **cf_clearance 存在 profile 里** —— 固定一个专用目录，
  *             第二次起就秒过挑战（实测 20s → 0.8s）。

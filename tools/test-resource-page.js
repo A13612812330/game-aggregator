@@ -585,7 +585,7 @@ async function main() {
       qa('#trGrid .emu-card .tg.src').length > 0, `实际 ${qa('#trGrid .emu-card .tg.src').length} 个`);
     ok('修改器卡内每行都有可点出口（有链给链，GCM 走来源站兜底）',
       tr.n > 0 && tr.noOut === 0, `行内无出口的卡 ${tr.noOut} 张`);
-    /* ★★ v10.50 反向：修改器三源（GTrainers / FearlessRevolution / GCM）都是**纯链接源**，
+    /* ★★ v10.50 反向：修改器两源（GTrainers / GCM；★ v10.58 起 FR 已摘除）都是**纯链接源**，
        没有原贴正文 ⇒ 不给「点开是空的」入口（宁可少一个按钮，也不给一个空弹窗）。
        ⚠️ 配正向锚点：本区确实渲染出了条目行 —— 否则「零入口」会因整区空白而假绿。
        ⚠️ 若哪天修改器源开始带正文，这条会红：那时应改成「入口数 == 接口 has:true 的条数」，

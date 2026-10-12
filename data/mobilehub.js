@@ -311,4 +311,9 @@ function lookup(title, opts = {}) {
   return null;
 }
 
-module.exports = { list, stats, lookup, ensure, normKey, splitTitle, cleanGpuOne, cleanGpus };
+/** ★ v10.58：**全量条目**（走 `itemsView` 的 GPU 清洗），供首页「手游 / 合并」视图投影。
+ *  与 `list()` 的区别：list 是「手机专区」的列表口径（只有 configs/fps 排序 + 分页），
+ *  这里要的是**原始全量**让 server 侧按端游库那套 sort 重新排 —— 所以别直接复用 list。 */
+function all() { return itemsView(ensure()); }
+
+module.exports = { list, stats, lookup, ensure, all, normKey, splitTitle, cleanGpuOne, cleanGpus };

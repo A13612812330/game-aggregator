@@ -400,7 +400,10 @@ const saves = require('./data/saves');
 const savesYx = require('./data/savesYx');
 /* ★ v10.47：两个「有真实下载链」的新来源 + 按游戏聚合层 */
 const gt = require('./data/gtrainers');
-const fr = require('./data/fr');
+/* ★ v10.58：FR（FearlessRevolution）已摘除。理由：整站在 CF managed challenge 后面（只能有头浏览器
+   + 页面上下文 fetch）、阶段② 须一次跑完 ≈3.5h，而 GTrainers 已覆盖同类需求且纯 HTTP 直连。
+   ★ 摘除前实测：data/fr.json **从未产出** ⇒ fromFr() 贡献 0 条 ⇒ 零用户可见损失。
+   完整 SOP（含参数标定与复活手册）：docs/sop/FR-fearlessrevolution-抓取SOP.md */
 const resGroups = require('./data/res-groups');
 const searchRank = require('./data/search-rank');
 const pcreq = require('./data/pcreq');
@@ -465,8 +468,8 @@ function withBh(g) {
  *  搜索返回 pc=2 / mob=1 / tr=3 / sv=1，而同一条游戏在 `/api/res/game` 上是
  *  `{mod:717, saves:48, trainers:7}` —— 717 个 MOD 一个字都没出现。
  *
- *  数据**早就有**：v10.47 建的 `data/res-groups.js` 已经把 5 路来源按游戏收成一组
- *  （机地社区帖 MOD / 游侠存档文件 / GTrainers / FearlessRevolution / GCM 元数据），
+ *  数据**早就有**：v10.47 建的 `data/res-groups.js` 已经把 4 路来源按游戏收成一组
+ *  （机地社区帖 MOD / 游侠存档文件 / GTrainers / GCM 元数据；★ v10.58 起 FR 已摘除），
  *  还导出了 `countsFor(libId)`，注释里写的就是「详情页挂『本游戏有 N 条 MOD / 存档 / 修改器』」。
  *  ⇒ 这里**只是把已有数字带出来**，不重做任何匹配（铁律 17：匹配口径只有一处）。
  *
@@ -916,10 +919,10 @@ app.get('/api/saves-yx/match', (req, res) => {
  * 用户口径：「MOD 按游戏做卡片而不是按 MOD」「存档只展示真有存档的而不是存档位置的」
  * 「（修改器）同样按游戏聚合」。
  *
- * 这一组接口把**五路来源**按游戏收成一组一组，前端三个页签共用同一套形状：
+ * 这一组接口把**四路来源**按游戏收成一组一组，前端三个页签共用同一套形状：
  *   cat=mod       机地社区帖 MOD（网盘直链）
  *   cat=saves     游侠存档文件 + GTrainers 存档   ← 「真有存档」
- *   cat=trainers  GCM 清单 + GTrainers 修改器 + FearlessRevolution CE 表
+ *   cat=trainers  GCM 清单 + GTrainers 修改器     ← ★ v10.58 起 FR 已摘除（原第 4 路）
  *
  * ★ 与既有的 /api/{mods,saves,trainers}/{list,match} **并存不替代**：
  *     - 那些是「按条」的接口，详情页弹窗 / 其它页面还在用，口径不能动；
@@ -1012,15 +1015,10 @@ app.get('/api/gt/match', (req, res) => {
   res.json(Object.assign({ ok: true, t, id, cat }, gt.matchSlim({ t, id, cat })));
 });
 
-// GET /api/fr/stats — FearlessRevolution（只有修改器；整站在 CF 后面，见 data/fr.js）
-app.get('/api/fr/stats', (_req, res) => res.json(fr.stats()));
-
-// GET /api/fr/match?t=&id= — 某款游戏的 FR CE 表 / Trainer
-app.get('/api/fr/match', (req, res) => {
-  const t = String(req.query.t || '').trim();
-  const id = String(req.query.id || '').trim();
-  res.json(Object.assign({ ok: true, t, id }, fr.matchSlim({ t, id })));
-});
+/* ★ v10.58：`GET /api/fr/stats` 与 `GET /api/fr/match` 已随 FR 摘除
+   （require 处的说明 + docs/sop/FR-fearlessrevolution-抓取SOP.md）。
+   ★ 旧版这三条新路由曾是「判线上是不是新版」的区分器之一 —— 摘除后**不能再拿 `/api/fr/stats` 判版**，
+     判服务端版本改用 `/api/gt/stats`（v10.47 起）与 `/api/res/stats`（见 tools/_probe-doc-numbers.js）。 */
 
 /* ================= 🖥 PC 配置要求（最低 / 推荐） =================
  *
@@ -1579,7 +1577,78 @@ app.get('/api/library/related', (req, res) => {
   }
 });
 
+/* ================= ★ v10.58 首页「库范围」：手游 / 端游 / 合并 =================
+ *
+ * `GET /api/library/browse?scope=pc|mob|all`（缺省 `pc`，即原行为不变）：
+ *   · pc  端游库（gamesDb）        **19,465** 款
+ *   · mob 手游中心（mobilehub）     **3,330** 款
+ *   · all 端游库 ∪ 手游**独有**     **21,110** 款
+ *
+ * ★★ 为什么 `all` 只并「手游独有」而不是全部手游（2026-10-12 实测）：
+ *   手游侧 3,330 款 =「已挂 libId」**1,685** +「手游独有」**1,645**；
+ *   而那 1,685 款**逐条都在端游库里**（实测 1,685/1,685，0 例外 —— 挂上 libId 本就
+ *   意味着它匹配到了端游条目）⇒ 并进来就是同一条游戏出现两次。
+ *   用户口径（2026-10-12 拍板）：「手游全部并入」，**手游独有的卡标「仅手机端」、
+ *   点击去手机专区**（不开端游抽屉 —— 它没有端游详情，开了就是空抽屉）。
+ *
+ * ★ 与既有筛选的**口径**（保持与端游侧一致，否则两个视图的同一个开关含义不同）：
+ *   · `bh=1` / `pc=1`  → 手游侧按 `sources`（社区库 / 实测库）判，语义天然一致；
+ *   · `mod=1` / `tr=1` / `sv=1` → 都要求挂 `libId`（资源条目按端游库 id 关联）
+ *     ⇒ **手游独有一律不满足**，勾上后它们会被正确滤掉，不是被漏掉；
+ *   · `sizeMin/sizeMax` → 手游侧用 `libSize`（独有恒为空 ⇒ 设了区间就被滤掉）；
+ *   · **分类 `g`** → 手游条目**没有分类数据**。所以 `scope=all` 且选了具体分类时，
+ *     手游侧**整体不参与**（`gAll` 为假）—— 硬掺进来等于按没有的字段瞎分类。
+ *
+ * ★ 实现取舍：`all` 不做「全量拼接再排序」——端游侧本来就是全量有序的
+ *   （`gamesDb.browse` 每次都全量排好再切片），手游侧也就 3,330 条，
+ *   所以两边各排一次、用 `mergePick` **归并取页**，复杂度只和 `offset+limit` 有关。
+ */
+const dayOf = (ms) => { const d = new Date(ms); return Number.isFinite(d.getTime()) && ms > 0 ? d.toISOString().slice(0, 10) : ''; };
+
+/** 手游条目 → 与端游条目**同形状**（前端 `rowCard` 一套渲染吃两种，不写第二个卡模板）。
+ *  ⚠️ `mol`（mobile-only）与 `mob`（手机端数据）是两个不同的东西：
+ *     · `mol=true`  ⇒ 端游库没有它，卡上标「仅手机端」、点击去手机专区；
+ *     · `mob`       ⇒ 手机端有多少配置 / 实测记录（有 libId 的条目也有）。 */
+function projectMobile(x) {
+  const ts = Number(x.recent) || 0;                    // unix **秒**
+  return {
+    id: x.libId || ('mh-' + mobilehub.normKey(x.name)),
+    title: x.libTitle || x.name,
+    cover: x.libCover || '',
+    url: x.libUrl || '',
+    source: 'mh',
+    score: (typeof x.libScore === 'number' && x.libScore > 0 && x.libScore <= 10) ? x.libScore : null,
+    size: x.libSize || '',
+    genres: [],
+    dateLabel: ts ? dayOf(ts * 1000) : '',
+    _sortTs: ts * 1000,
+    mol: !x.libId,
+    mob: {
+      configs: x.configs || 0, records: x.records || 0,
+      best: x.bestLabel || '', tier: x.tier || '',
+      devices: (x.devices || []).length, gpus: (x.gpus || []).length,
+    },
+  };
+}
+
+/** 两个**已按同一键降序**排好的数组，归并取出 `[offset, offset+limit)`。
+ *  不拼接全量（端游 19,465 + 手游 1,645 每次请求都拼一遍太亏）。 */
+function mergePick(A, B, keyOf, offset, limit) {
+  const out = [];
+  let i = 0, j = 0, k = 0;
+  while ((i < A.length || j < B.length) && out.length < limit) {
+    let take;
+    if (i >= A.length) take = B[j++];
+    else if (j >= B.length) take = A[i++];
+    else take = keyOf(A[i]) >= keyOf(B[j]) ? A[i++] : B[j++];
+    if (k >= offset) out.push(take);
+    k++;
+  }
+  return out;
+}
+
 // GET /api/library/browse?g=动作冒险&limit=50&offset=0&sort=updated|score|size&sizeMin=&sizeMax=&bh=1
+//   ★ v10.58 新增 `scope=pc|mob|all`（见上方「库范围」整段注释）
 //
 // ★ v10.53：改用 `withRes` —— 首页「最新收录 / 分类浏览」的卡片从此也带
 //   `res`（本款有多少 MOD / 修改器 / 存档）+ `resId`（计数归属的库内 id）。
@@ -1593,8 +1662,64 @@ app.get('/api/library/browse', (req, res) => {
   const sort = ['score', 'size'].includes(String(req.query.sort || '')) ? String(req.query.sort) : 'updated';
   const limit = Math.min(parseInt(req.query.limit || '50', 10) || 50, 100);
   const offset = Math.max(0, parseInt(req.query.offset || '0', 10) || 0);
-  const r = gamesDb.browse(g, limit, offset, sort, libOpts(req));
-  res.json({ ok: true, ...r, items: r.items.map(withRes) });
+  const scopeRaw = String(req.query.scope || '');
+  const scope = ['mob', 'all'].includes(scopeRaw) ? scopeRaw : 'pc';
+  const o = libOpts(req);
+
+  if (scope === 'pc') {
+    const r = gamesDb.browse(g, limit, offset, sort, o);
+    return res.json({ ok: true, scope, ...r, items: r.items.map(withRes) });
+  }
+
+  /** ★ 排序键：与端游侧 `gamesDb.browse` 用的是同一套口径（★ 一份实现，别各写一套）。 */
+  const keyOf = (it) => (sort === 'score' ? (it.score || 0)
+    : sort === 'size' ? (gamesDb.sizeGb(it.size) || 0)
+      : (it._sortTs || 0));
+  const gAll = !g || g === '全部' || g === 'all';
+  const bhOn = String(req.query.bh || '') === '1';
+  const pcOn = String(req.query.pc || '') === '1';
+  const needMod = String(req.query.mod || '') === '1';
+  const needTr = String(req.query.tr || '') === '1';
+  const needSv = String(req.query.sv || '') === '1';
+  const minG = o.sizeMin != null && o.sizeMin !== '' ? Number(o.sizeMin) : null;
+  const maxG = o.sizeMax != null && o.sizeMax !== '' ? Number(o.sizeMax) : null;
+  const setMod = needMod ? resGroups.libIdsFor('mod') : null;
+  const setTr = needTr ? resGroups.libIdsFor('trainers') : null;
+  const setSv = needSv ? resGroups.libIdsFor('saves') : null;
+
+  const mobPool = mobilehub.all()
+    .filter((x) => {
+      const srcs = x.sources || [];
+      if (bhOn && !srcs.includes('bh')) return false;
+      if (pcOn && !srcs.includes('pc')) return false;
+      if (setMod && !(x.libId && setMod.has(x.libId))) return false;
+      if (setTr && !(x.libId && setTr.has(x.libId))) return false;
+      if (setSv && !(x.libId && setSv.has(x.libId))) return false;
+      if (minG != null || maxG != null) {
+        const gb = gamesDb.sizeGb(x.libSize);
+        if (gb == null) return false;
+        if (minG != null && gb < minG) return false;
+        if (maxG != null && gb >= maxG) return false;
+      }
+      return true;
+    })
+    .map(projectMobile)
+    .sort((a, b) => keyOf(b) - keyOf(a));
+
+  if (scope === 'mob') {
+    return res.json({
+      ok: true, scope, sort, total: mobPool.length, offset, limit,
+      items: mobPool.slice(offset, offset + limit).map(withRes),
+    });
+  }
+
+  /* scope === 'all'：端游全量（browse 内部已按 sort 排好） ∪ 手游独有 */
+  const pcAll = gamesDb.browse(gAll ? '' : g, 1e9, 0, sort, o).items;
+  const mol = gAll ? mobPool.filter((x) => x.mol) : [];
+  return res.json({
+    ok: true, scope, sort, total: pcAll.length + mol.length, offset, limit,
+    items: mergePick(pcAll, mol, keyOf, offset, limit).map(withRes),
+  });
 });
 
 // GET /api/search/all?q=&limit= — ★ 统一全站搜索（端游库 + 手游中心 + 修改器 + 云存档）

@@ -14,7 +14,8 @@
  * ── 与其它来源的关系（互不替代，资源页按游戏聚合时并列）────────────────────
  *   saves-youxia.json  游侠存档文件（真直链 + 网盘 + eD2K）
  *   gtrainers.json     本文件（真直链，**按游戏名对到端游库**）
- *   fr.json            FearlessRevolution CE 表 / Trainer（真附件链，只有修改器）
+ *   ★ v10.58：`fr.json`（FearlessRevolution CE 表）**已摘除** —— 它从未产出过、贡献 0 条，
+ *     理由与复活手册见 docs/sop/FR-fearlessrevolution-抓取SOP.md。
  *
  * ── 落盘字段（来自抓取脚本，两阶段 + 铁律 26：全失败不落盘）──────────────
  *   cat        'saves' | 'trainers'
