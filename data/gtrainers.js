@@ -33,12 +33,35 @@ const FILE = path.join(__dirname, 'gtrainers.json');
 let cache = null;
 let mtime = 0;
 
+/* ★ v10.56：源站**只给文本日期**（`date: "2014-Jan-11"`），没有时间戳 ⇒ 按 `ts` 排序时
+ *   GT 条目恒为 0、**永远沉底**。实测影响面（2026-10-12）：
+ *     GT 覆盖 3,083 款里 **2,301 款（74.6%）只有 GT 资源**（MOD 只得 781 款 / 游侠存档 535 款），
+ *     这批在 `res-groups.js` 的 `sort='new'` 分支里（`(it.ts||0)`）全部落到最后。
+ *   `date` 实测 **96.9% 可解析**（9,052 / 9,346）；不可解析的 294 条是**源站字段错位**
+ *   （`date` 位置填的是 `"Cheats [159]"`）⇒ 那些**保持 0，不猜**。
+ *   ★ 本模块**每次读都会补**（`ensure()` 里，惰性 + mtime 缓存）⇒ 落盘侧
+ *     `tools/fetch-gtrainers.js` 补不补**完全等价**，因此没去动它。
+ *     若将来要让磁盘产物**自带** `ts`，请复用它 `require('../data/gtrainers').tsOf`
+ *     —— 不要在抓取脚本里另写一份解析（铁律 61：同一语义只允许一份实现）。 */
+const MON = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+function tsOf(dateStr) {
+  const m = /^(\d{4})-([A-Za-z]{3})-(\d{1,2})$/.exec(String(dateStr == null ? '' : dateStr).trim());
+  if (!m || MON[m[2]] == null) return 0;
+  const t = Date.UTC(Number(m[1]), MON[m[2]], Number(m[3]));
+  return Number.isFinite(t) ? t : 0;
+}
+
 function ensure() {
   try {
     const st = fs.statSync(FILE);
     if (cache && st.mtimeMs === mtime) return cache;
     cache = JSON.parse(fs.readFileSync(FILE, 'utf8'));
     mtime = st.mtimeMs;
+    /* 补 `ts`（**只在内存里补**，不改磁盘产物 —— 落盘由 fetcher 负责）。
+       已有非 0 ts 的不动，避免覆盖更精确的来源。 */
+    if (cache && Array.isArray(cache.items)) {
+      for (const it of cache.items) if (!it.ts) it.ts = tsOf(it.date);
+    }
     return cache;
   } catch (e) {
     /* ★ 不静默：把「文件缺失」这件事本身当作可读状态返回（`missing`），
@@ -128,4 +151,4 @@ function matchSlim({ t = '', id = '', cat = '' } = {}) {
   return { count: list.length, items: list.map(slim) };
 }
 
-module.exports = { ensure, stats, index, byLib, lookup, slim, matchSlim, normKey, CAT_LABEL };
+module.exports = { ensure, stats, index, byLib, lookup, slim, matchSlim, normKey, CAT_LABEL, tsOf };

@@ -575,6 +575,38 @@ async function stepSteamreq(ctx) {
 /* ============================ 主流程 ============================ */
 
 /**
+ * ★ v10.56 新增：**外部源主动巡检**。
+ *
+ * 为什么要有这一步：本步之前的 10 步只验「**我们自己的**接口通不通」，
+ * **完全不验上游还认不认我们**。而 9 个外部源改版会**静默失效** ——
+ * 抓取器不抛异常、只把空结果落盘，外部看与「在跑」一样。
+ * 已经吃过一次：**机地搜索连续 6 日不可用，无人发现**，是用户先察觉的。
+ *
+ * 判据（`tools/check-sources.js`）：不只判 HTTP 200，还判**内容特征** ——
+ * `degraded`（200 但内容改版）才是这种失效的典型形态。
+ *
+ * 定位：**非关键**（源挂了不该阻断我们自己的数据管线），但**失败必须看得见**——
+ * 所以不静默降级成 ok，照实报 fail 并写进摘要。
+ */
+async function stepSources(ctx) {
+  const r = await runProc(process.execPath, [path.join('tools', 'check-sources.js'), '--json'],
+    { timeoutMs: ctx.t.script });
+  const out = String(r.stdout || '');
+  let j = null;
+  try { j = JSON.parse(out); } catch (e) {}
+  if (!j || !Array.isArray(j.rows)) {
+    return { status: 'fail', detail: '巡检未输出可解析 JSON（EXIT ' + r.code + '）' };
+  }
+  const bad = j.rows.filter((x) => x.state !== 'ok');
+  if (!bad.length) return { status: 'ok', detail: j.total + ' 个源全部正常' };
+  return {
+    status: 'fail',
+    detail: bad.length + '/' + j.total + ' 异常：' +
+      bad.map((b) => b.name + '(' + b.state + ')').join('、'),
+  };
+}
+
+/**
  * ★ write:true 表示该步**有写副作用**（改库 / 改产物）。
  * `--dry` 的拦截**统一走这张表**，不在各步内层各写一份 if ——
  * 实测教训：内层手写 if 时漏了 3 步（XD / BannerHub / 机地），
@@ -582,6 +614,9 @@ async function stepSteamreq(ctx) {
  */
 const STEP_DEFS = [
   { key: 'health', label: '服务体检', fn: stepHealth, critical: true },
+  /* ★ v10.56：紧跟服务体检 —— 先知道「上游还在不在」，再去跑一堆写库步骤。
+     只读（无 write 声明）⇒ `--dry` 下照跑。 */
+  { key: 'sources', label: '外部源巡检', fn: stepSources },
   { key: 'xd', label: 'XD 增量', fn: stepXd, write: true },
   { key: 'bh', label: 'BannerHub 刷新', fn: stepBh, write: true },
   { key: 'phonecfg', label: '实测配置库', fn: stepPhonecfg, write: true },

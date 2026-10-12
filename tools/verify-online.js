@@ -37,6 +37,12 @@ const OUT = path.join(__dirname, '..', '_preview');
 /* 抽样游戏：用户截图那款（机型最多、踩过全部三个 bug：6 台上限 / 残缺代号 / 误导文案）
  * 其中 `HONOR MTN-NX3` 本地查不到芯片、要靠 kalvo 联网补 → 正好验 ③ */
 const GAME = { id: 'xd-2044', name: '终极漫画英雄vs卡普空3' };
+/* ★ 2026-10-12（v10.55 现场）：旧断言把「展示台数」**写死成 `>= 9`**，而这些断言的本意
+ * 一直是「我们展示的是**并集全量**，不是上游摘要那个 6 台上限」—— 6 才是那个**语义上的界**，
+ * 9 只是当年某次实测的偶然值。实测台数掉到 8（数据源本身在变）后，4 条断言就**永远红了**，
+ * 但四条的**本意全都仍然成立** ⇒ 判据要跟着本意写，不能跟着当年的数字写。
+ * 所以收口成这个常量：判「严格多于上游摘要」（`> 6`），而不是判某个魔数。 */
+const UPSTREAM_SUMMARY_MAX = 6;
 /* 这一版必须出现在页面上的特征串（漏一个就说明线上是旧包）
  * ⚠️ 只写「**首页 index.html** 上能看到的串」——派生页（emulator / unpack）的串（如 dmCard）
  *    不在首页里，写进来必然失败。
@@ -82,7 +88,13 @@ const MUST = [
    * ★ **别写 `文件放到<b>游戏安装根目录</b>`**：v10.31 已有 1 次；要判 v10.32 的文案改动，
    *   得用**新文案独有的那半句**（下面两条分别对应修改器 / 云存档两块）。 */
   "{ k: 'trsv'", 'const cover = raw >= heroH', 'raw - cover - gap',
-  '启动前先运行 Cheat Engine', '是占位符。<br>',
+  /* ---- ★ 2026-10-12（v10.55 现场）修两条**早已失效**的特征串 ----
+   * 原为 `'启动前先运行 Cheat Engine'` + `'是占位符。<br>'`，两条在**本地首页都是 0 次**，
+   * 等于下面 `LOCAL_MISSING` 自检必然报警、这两条**永远是红的**（第三层防线直接失去区分力）。
+   * 查明：前者被 v10.47（三区按游戏聚合 + 接 GTrainers/FR 真链源）删掉，本地已无 "Cheat Engine" 字样；
+   * 后者文案已改写为「是占位符，按自己的账号替换；<b>存档前请先退出游戏</b>」。
+   * 采信前先核：改完必须过 `LOCAL_MISSING` 自检（本地 0 次的串一律不许留在表里）。 */
+  '是占位符，按自己的账号替换',
 ];
 
 /* ★ MUST 自检：本地首页都没有的串不可能区分新旧版本，只会制造假红 */
@@ -113,7 +125,8 @@ function chk(ok, name, extra) {
   chk(mkt.s === 200 && mkt.j && mkt.j.ok, '[接口] 机型库已上线', mkt.j ? mkt.j.codes + ' 个内部编号' : 'status ' + mkt.s);
   const mh = await api('/api/mobilehub/match?t=' + encodeURIComponent(GAME.name));
   const devs = (mh.j && mh.j.hit && mh.j.hit.devices) || [];
-  chk(devs.length >= 9, '[接口] 机型清单已合并到 ≥ 9 台（不是上游摘要的 6 台上限）', devs.length + ' 台');
+  chk(devs.length > UPSTREAM_SUMMARY_MAX,
+    `[接口] 机型清单已合并到 > 上游摘要 ${UPSTREAM_SUMMARY_MAX} 台上限`, devs.length + ' 台');
   const hw = await api('/api/device/hardware?m=' + encodeURIComponent('Xiaomi POCO F7'));
   const nRows = hw.j && hw.j.groups ? hw.j.groups.reduce((n, g) => n + (g.items || []).length, 0) : 0;
   chk(hw.s === 200 && hw.j && hw.j.ok && nRows > 30, '[接口] kalvo 硬件参数从沙箱可达', nRows + ' 行 / ' + ((hw.j && hw.j.groups || []).length) + ' 组');
@@ -124,8 +137,13 @@ function chk(ok, name, extra) {
   const spMap = (sp.j && sp.j.specs) || {};
   const spKeys = Object.keys(spMap);
   const needFill = spKeys.filter((k) => spMap[k].needFill);
-  chk(sp.s === 200 && spKeys.length >= 9 && spKeys.every((k) => 'chip' in spMap[k]),
-    '[接口] /api/device/specs 逐台带回 chip 字段', spKeys.length + ' 台');
+  /* ★ 这条的名字是「**逐台**带回 chip 字段」⇒ 判据就该是「逐台」：
+   *   查到的台数 == 机型清单台数，且每台都带 chip。
+   *   旧写法 `spKeys.length >= 9` 把「数量够」当成「逐台齐」，既漏判（少几台也过）
+   *   又会因为魔数失效而**永远红**（实测 8 台）。 */
+  chk(sp.s === 200 && spKeys.length === devs.length && spKeys.every((k) => 'chip' in spMap[k]),
+    '[接口] /api/device/specs 逐台带回 chip 字段（台数与机型清单一致）',
+    spKeys.length + ' / ' + devs.length + ' 台');
   chk(needFill.length >= 1, '[接口] 本款确有本地查不到的机型（③ 的入口）', needFill.join(' / ') || '(无 → 这游戏验不到③)');
 
   /* ---- ★ v10.32 第 ③ 条：配置要求的「双语名称搜索」只在 `data/pcreq.js` 里，
@@ -248,13 +266,17 @@ function chk(ok, name, extra) {
      （`DL_DEV_SHOW = 5`），全量搬进「查看全部 N 台机型」弹窗。
      ⇒ 旧断言「首屏 ≥ 9 台」已失效。但它守的**意图**必须保留：
        「展示的是并集全量，不是上游摘要那个 6 台上限」。
-     改法：① 首屏 == 5 台 ② 入口文案标出的总数 ≥ 9 ③ **真点开弹窗**数里面的行 ≥ 9。
+     改法：① 首屏 == 5 台 ② 入口文案标出的总数 > 上游摘要 6 台
+           ③ **真点开弹窗**数里面的行，并核「弹窗行数 == 入口声明数」（跨层自洽）。
        ★ 只有 ③ 等价于旧断言的口径（用户确实看得到全量）；①② 只是「入口还活着」。
+       ★ 2026-10-12（v10.55）把 ②③ 的 `>= 9` 改成 `> UPSTREAM_SUMMARY_MAX`：
+         9 是当年实测的偶然值，本意一直是「严格多于上游摘要的 6 台」。
      ⚠️ 判据先过本地自检：同口径的本地版在 `tools/preview-v1028.js`（打 127.0.0.1:8123）。
         线上红了先跑本地那条 —— 本地也红就是代码坏了，不是线上旧版（假红）。 */
   chk(r.n === 5, '[线上] 首屏机型 = 5 台（v10.28 默认展示数）', r.n + ' 台');
   const moreTotal = Number((r.moreTxt.match(/查看全部\s*(\d+)\s*台/) || [])[1] || 0);
-  chk(moreTotal >= 9, '[线上] ★ 存在「查看全部 N 台机型」入口且 N ≥ 9（不是上游摘要 6 台上限）',
+  chk(moreTotal > UPSTREAM_SUMMARY_MAX,
+    `[线上] ★ 存在「查看全部 N 台机型」入口且 N > 上游摘要 ${UPSTREAM_SUMMARY_MAX} 台`,
     r.moreTxt.trim().replace(/\s+/g, ' ') || '(没有入口)');
   const honor = r.rows.find((x) => /MTN/i.test(x.main + x.code + x.hw));
   chk(honor && honor.main === 'Honor Magic8 Lite', '[线上] 残缺代号已换成「品牌+型号」', honor ? honor.main : '(未找到 MTN 那台)');
@@ -323,7 +345,11 @@ function chk(ok, name, extra) {
     { timeout: 90000 },
   ).then(() => true).catch(() => false);
   const popN = await p.evaluate(() => document.querySelectorAll('#dlBody .df-row').length);
-  chk(popOk && popN >= 9, '[线上] ★ 弹窗里能一次看到全部 ≥ 9 台机型（旧「≥ 9 台」的真口径）', popN + ' 台');
+  /* ★ 加「弹窗行数 == 入口声明数」：这才是弹窗这条的真判据 ——
+   *   只看 `> 6` 会漏掉「入口写 8 台、弹窗只画了 6 行」这种**截断**（旧魔数 `>= 9` 同样会漏）。 */
+  chk(popOk && popN > UPSTREAM_SUMMARY_MAX && popN === moreTotal,
+    `[线上] ★ 弹窗里能一次看到全部机型（> 上游摘要 ${UPSTREAM_SUMMARY_MAX} 台，且与入口声明数一致）`,
+    popN + ' 台 / 入口声明 ' + moreTotal + ' 台');
   await p.screenshot({ path: path.join(OUT, 'live-fullpop.png') });
 
   for (const pg of await b.pages()) { try { await pg.close(); } catch (x) {} }
