@@ -6347,6 +6347,11 @@ const DL_BRAND_NAME = {
   baidu: '百度', xunlei: '迅雷', quark: '夸克', '189': '天翼', '139': '移动', ali: '阿里',
   '123': '123', lanzou: '蓝奏', pikpak: 'PikPak', steam: 'Steam', other: '其他',
 };
+/* ★ v10.59 曾想在这里加一张「盘口全名」表给 XD 行标题用，**实测后删掉了**：
+   `items[].server` 本身就是全名（xdgame 实测 10 条：百度网盘 / 天翼网盘 / 迅雷网盘 /
+   阿里网盘 / 夸克网盘 / 移动网盘 / 123网盘 / UC网盘 / 磁力下载 / 正版购买），
+   而 `dlBrand()` 的唯一输入也是这个串 —— server 为空时品牌同样推不出来，
+   那张表 100% 是死代码。⇒ 直接取 `server` 原值，见 dlRow。 */
 /** 展开态默认铺几行，其余靠「展开全部」（数据已在手上，不再发请求） */
 const DL_CAP = 12;
 /** 「最热 / 最近发布」—— 与源站话题页右上角那两个排序同名同义 */
@@ -6421,6 +6426,25 @@ function dlGroupByPost(items) {
 }
 
 /**
+ * ★ v10.59：**当前正在看的那款游戏叫什么**（给「XD 行标题兜底」用，见 dlRow）。
+ *
+ * 两条入口指向同一件事，取**先有值的那个**：
+ *   · `dlUni.ctx.title` —— 合并弹窗（对话框）里的那款；
+ *   · `dlSecTitle`      —— 详情页「下载资源」三专区块（见 `loadDlBlock`），
+ *                          它那条路径**不走 dlUni**（`dlsec` 弹窗复用 `dlRow`）。
+ * ⚠️ 两处都要覆盖：`dlRow` 是三个渲染出口**共用**的一行函数
+ *   （弹窗 / 详情页预览 / dlsec 全部），只认其中一个会让另一处标题退回旧文案。
+ * ⚠️ 名字取 `splitName` 的中文段：库里标题是 `潜水员戴夫/DAVE THE DIVER` 这种
+ *   「中文/英文」形态，整串拼进「游戏名-百度网盘」会变成一长条认不出。
+ */
+function dlGameName() {
+  const a = String((dlUni && dlUni.ctx && dlUni.ctx.title) || '').trim();
+  const t = a || String(dlSecTitle || '').trim();
+  if (!t) return '';
+  return splitName(t).zh || t;
+}
+
+/**
  * 单帖行：标题 + 副信息（作者 / 时间 / 浏览 / 提取码 / 源帖）+ 右侧盘口按钮组。
  * ★ 提取码按盘口分别写（同一帖不同盘口的码可能不同，混着写会让人抄错码）。
  */
@@ -6461,8 +6485,28 @@ function dlRow(g) {
 
   /* ★ v10.58：XD 官方盘口条目**不是帖子**，不套「（无标题资源帖）」——
      那是「这帖没名字」的意思，而它压根没有「帖」这个概念（见 dlGroupByPost 的 src 说明）。
-     盘口名本来就在同一行的链接 chip 上（`.acts` 里），标题只说明**来源**，不重复盘口名。 */
-  const gTxt = g.title || (g.src === 'xd' ? 'XDGAME 官方盘口' : '（无标题资源帖）');
+   ★ v10.59（用户口径 2026-10-12）：「如果是没有 XD 官方盘口标题则（游戏名称-盘）」
+     —— XD 条目按数据结构**永远**取不到标题（`download.xd()` 每条只给
+        `{server, serverUrl, name, real, pwd, kind}`，没有 postTitle），
+        所以一款游戏 9~10 行全叫「XDGAME 官方盘口」，压根分不出哪行是哪个盘
+        （用户 2026-10-12 的原话就是冲这句来的）。
+      ⇒ 标题退成「游戏名-盘口全名」，逐行可分辨：`潜水员戴夫-百度网盘`。
+   ⚠️ 盘口名取 `links[].server` **原值**（它本身就是全名），不用 `DL_BRAND_NAME`
+      —— 那张表是筛选 chip 用的**短名**（「百度」），拼进标题会与用户口径不符。
+   ⚠️ 逐级降级，保证「不会比改之前更差」：
+      有游戏名 + 有盘口 ⇒ `游戏名-盘口`；只有盘口 ⇒ `盘口`；
+      只有游戏名 ⇒ `游戏名`；两者都没有 ⇒ 保留旧文案 `XDGAME 官方盘口`。
+   ⚠️ 只取**一个**盘口名，不写「等 N 个」：XD 的组恒为 1 条链接 ——
+      归帖键是 `it.postId || it.postUrl || ('u:' + it.real)`，而 XD 条目既无 postId
+      也无 postUrl ⇒ 键就是它自己的地址（见 dlGroupByPost），不同盘口必然是不同组。
+      第一版按「同组可能多盘口」写了 `slice(0,2).join('/')` + 一条断言，
+      实测发现那条分支**构造不出来**（想造多链接只能让两个盘口的地址相同），
+      与上面删掉的全名表同一类问题 ⇒ 简化掉，不留不可达分支。 */
+  const disk = g.links.map((l) => l.server).find(Boolean) || '';
+  const gn = g.src === 'xd' ? dlGameName() : '';
+  const gTxt = g.title || (g.src === 'xd'
+    ? ((gn && disk) ? gn + '-' + disk : (disk || gn || 'XDGAME 官方盘口'))
+    : '（无标题资源帖）');
   return '<div class="dl-it">' +
     '<span class="bd bd-' + (first ? dlBrand(first.server).cls : 'other') + '">' +
       esc(first ? dlBrand(first.server).ab : '?') + '</span>' +

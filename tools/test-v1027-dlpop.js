@@ -88,10 +88,24 @@ const pickDef = (name) => {
 let F = null;
 try {
   F = new Function([
+    /* ★ v10.59：`dlRow` 现在会调 `dlGameName()`（XD 行标题 = 「游戏名-盘口」），
+       而它要读 `dlUni.ctx.title` / `dlSecTitle` 并调 `splitName` ——
+       这三样在 `new Function` 的沙盒里**都不存在**，不补就会
+       `ReferenceError: dlUni is not defined`（实测：求值成功、一调 dlRow 就崩，
+       报错栈指向 dlRow 内部，指不到「求值环境缺绑定」这个真因）。
+       ⇒ 两个状态变量按原样注入（`let`，可被下面 setGame() 改写），splitName 走 pickDef。 */
+    'let dlUni = null; let dlSecTitle = "";',
+    pickDef('splitName'),
     pickDef('DL_BRAND'), pickDef('DL_BRAND_NAME'), pickDef('DL_CAP'), pickDef('DL_SORTS'),
     pickDef('esc'), pickDef('dlBrand'), pickDef('dlWhen'), pickDef('dlNum'),
-    pickDef('dlGroupByPost'), pickDef('dlSorted'), pickDef('dlFiltered'), pickDef('dlPosts'), pickDef('dlRow'),
-    'return { DL_BRAND, DL_BRAND_NAME, DL_CAP, DL_SORTS, esc, dlBrand, dlWhen, dlNum, dlGroupByPost, dlSorted, dlFiltered, dlPosts, dlRow };',
+    pickDef('dlGameName'), pickDef('dlGroupByPost'), pickDef('dlSorted'), pickDef('dlFiltered'),
+    pickDef('dlPosts'), pickDef('dlRow'),
+    /* `setGame` 给断言用：模拟「弹窗里正在看哪款游戏」（走 dlSecTitle 这条入口，
+       与详情页 loadDlBlock 同一条路）。`setGameVia(ctx)` 走 dlUni 那条入口。 */
+    'const setGame = (t) => { dlSecTitle = String(t == null ? "" : t); };',
+    'const setGameVia = (t) => { dlUni = t == null ? null : { ctx: { title: String(t) } }; };',
+    'return { DL_BRAND, DL_BRAND_NAME, DL_CAP, DL_SORTS, esc, dlBrand, dlWhen, dlNum, dlGameName, ' +
+    'dlGroupByPost, dlSorted, dlFiltered, dlPosts, dlRow, splitName, setGame, setGameVia };',
   ].join('\n'))();
   ok(true, '能从主源取出并求值这些纯函数（渲染层不碰 DOM，可直接单测）');
 } catch (e) {
@@ -131,16 +145,63 @@ const nullRow = F.dlRow(F.dlGroupByPost([{ postId: 'p9', postTitle: null, server
 ok(/（无标题资源帖）/.test(nullRow) && !/null/.test(nullRow),
   '★ 无标题帖显示占位文案而不是字面量 null');
 
-/* ---- ★★ v10.58：XDGAME 官方盘口条目**不是帖子**，不许套「（无标题资源帖）」----
- * 上游 `download.xd()` 每条只有 `{server, serverUrl, name, real, pwd, kind}` ——
- * **没有 postId / postUrl / postTitle**。套用「帖子」的兜底文案，会让一款游戏 9~10 行
- * 全显示「（无标题资源帖）」，看着像数据坏了（用户 2026-10-12 的原话就是这句）。
- * ⇒ 按来源分文案：机地帖（有机地帖标识）仍用兜底文案，XD 官方盘口写明来源。 */
+/* ---- ★★ v10.58 + v10.59：XDGAME 官方盘口条目的行标题 ----
+ * v10.58：XD 条目**不是帖子**，不许套「（无标题资源帖）」（那 9~10 行会全写着同一句，
+ *         看着像数据坏了 —— 用户 2026-10-12 的原话）。
+ * v10.59（用户口径 2026-10-12）：「如果是没有 XD 官方盘口标题则（游戏名称-盘）」
+ *         —— XD 条目按数据结构**永远**取不到标题，所以要退成「游戏名-盘口全名」，
+ *            否则一款游戏 9~10 行全叫「XDGAME 官方盘口」，分不出哪行是哪个盘。
+ * ⇒ 这一组断言钉住三件事：① 不套帖子文案 ② 退化成「游戏名-盘口」③ 逐级降级不倒退。 */
 const xdOnly = F.dlGroupByPost([{ server: '百度网盘', real: 'https://pan.baidu.com/s/1x', postTitle: null }]);
 eq(xdOnly[0].src, 'xd', '★ 归帖时按 postId/postUrl 判来源：两个都没有 ⇒ src=xd');
+
+/* ① 有游戏名（详情页那条入口：dlSecTitle）⇒ 「游戏名-盘口全名」 */
+F.setGame('潜水员戴夫/DAVE THE DIVER');
 const xdRow = F.dlRow(xdOnly[0]);
-ok(!/（无标题资源帖）/.test(xdRow) && /XDGAME 官方盘口/.test(xdRow),
-  '★★ XD 官方盘口条目显示「XDGAME 官方盘口」，不是「（无标题资源帖）」');
+ok(!/（无标题资源帖）/.test(xdRow),
+  '★★ XD 官方盘口条目不套「（无标题资源帖）」（v10.58 口径，仍然成立）');
+ok(/<b title="潜水员戴夫-百度网盘">潜水员戴夫-百度网盘<\/b>/.test(xdRow),
+  '★★ XD 行标题 =「游戏名-盘口全名」（v10.59 用户口径；整个 <b> 连 title 一起比，避免误命中行内其它文字）',
+  (xdRow.match(/<b title="[^"]*"/) || [''])[0]);
+ok(F.dlGameName() === '潜水员戴夫',
+  '★ 游戏名取 splitName 的**中文段**（库里是「潜水员戴夫/DAVE THE DIVER」这种形态，整串拼进去认不出）',
+  F.dlGameName());
+ok(!/潜水员戴夫-百度</.test(xdRow),
+  '★ 盘口名用 `server` **原值全名**，不是 DL_BRAND_NAME 那套筛选短名（否则会拼出「-百度」）');
+
+/* ② 换弹窗那条入口（dlUni.ctx.title）也要生效 —— dlRow 是三个渲染出口共用的 */
+F.setGame('');
+F.setGameVia('赛博朋克2077/Cyberpunk 2077');
+ok(/<b title="赛博朋克2077-百度网盘">/.test(F.dlRow(xdOnly[0])),
+  '★ 走 dlUni.ctx.title 这条入口同样生效（只认其中一条会让另一处退回旧文案）');
+F.setGameVia(null);
+
+/* ③ 逐级降级：取不到游戏名 ⇒ 只写盘口名（仍比旧文案有信息量），不写「未知」、不留断尾巴 */
+const noNameRow = F.dlRow(xdOnly[0]);
+ok(/<b title="百度网盘">百度网盘<\/b>/.test(noNameRow) && !/未知|undefined|-<\/b>/.test(noNameRow),
+  '★ 取不到游戏名时退成「盘口名」，不退成「未知」也不留「-」断尾巴', (noNameRow.match(/<b title="[^"]*"/) || [''])[0]);
+/* ④ 游戏名与盘口都取不到 ⇒ 保留旧文案（保证「不会比改之前更差」） */
+const bareRow = F.dlRow(F.dlGroupByPost([{ real: 'https://pan.baidu.com/s/1b', postTitle: null }])[0]);
+ok(/XDGAME 官方盘口/.test(bareRow),
+  '★ 游戏名与盘口都没有时保留旧文案「XDGAME 官方盘口」（降级链的最后一档，不许变空白）');
+/* ⑤ ★ 机制断言：XD 的组**恒为 1 条链接** ⇒ 标题只取一个盘口名，不写「等 N 个」。
+ *    第一版按「同组可能多盘口」写了 `slice(0,2).join('/')`，实测**构造不出来**：
+ *    归帖键是 `'u:' + real`，三个不同地址就是三个组（下面第一段就是在钉这个机制）。
+ *    想造多链接只能让两个盘口共用同一个地址 —— 那不是真实数据形态 ⇒ 分支已删。 */
+const threeGroups = F.dlGroupByPost([
+  { real: 'https://pan.baidu.com/s/1m', server: '百度网盘', postTitle: null },
+  { real: 'https://pan.quark.cn/s/1m', server: '夸克网盘', postTitle: null },
+  { real: 'https://pan.xunlei.com/s/1m', server: '迅雷网盘', postTitle: null },
+]);
+eq(threeGroups.length, 3, '★ 三个不同地址 ⇒ 三个 XD 组（键是 ' + "'u:' + real" + '，所以一组只有一条链接）');
+eq(threeGroups.every((g) => g.links.length === 1), true, '★ 每个 XD 组恰好 1 条链接（标题因此只取一个盘口名）');
+F.setGame('剑星');
+const singleRow = F.dlRow(threeGroups[1]);
+ok(/<b title="剑星-夸克网盘">/.test(singleRow) && !/等\s*\d/.test(singleRow),
+  '★ 每行标题 =「游戏名-该行自己的盘口」，不含「等 N 个」这类数词',
+  (singleRow.match(/<b title="[^"]*"/) || [''])[0]);
+F.setGame('');
+
 eq(F.dlGroupByPost([{ postId: 'p9', server: '百度网盘', real: 'https://pan.baidu.com/s/1z' }])[0].src, 'ji',
   '★ 有机地帖标识 ⇒ src=ji（机地支路的兜底文案因此仍然生效，见上一条断言）');
 /* 元断言：同一处口径错位的**第二个现场** —— 顶部计数把两个来源合成一个数 */
@@ -152,8 +213,8 @@ ok(!/dlGroupByPost\(v\.items\)\.length/.test(IDX),
 /* ★ 四页同步：派生页是**同步**出来的，主源改了这边没改 ⇒ 静默不一致 */
 for (const p of ['public/emulator.html', 'public/resources.html', 'public/unpack.html']) {
   const t = read(p);
-  ok(/g\.src === 'xd'/.test(t) && /XDGAME 官方盘口/.test(t),
-    '★ ' + p + ' 已带上 XD 标题修复（改主源不重建派生页，那边就还是旧文案）');
+  ok(/g\.src === 'xd'/.test(t) && /function dlGameName\(\)/.test(t) && /gn \+ '-' \+ disk/.test(t),
+    '★ ' + p + ' 已重建并带上「游戏名-盘口」行标题（改主源不重建派生页，那边就还是旧文案）');
 }
 
 /* ---- 多盘口时提取码要分清是哪个盘口的 ---- */
