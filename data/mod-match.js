@@ -33,6 +33,7 @@
  *   ⚠️ 是 `tools/test-shared-destructure.js` 的第 ⑤ 段（自动发现共享模块 + 比对解构完整性）
  *     把这处漏网点抓出来的 —— 上一轮 v10.36 收口 SYMBOLS 时漏了本文件。 */
 const { normKey } = require('./name-normalize');
+const { genNums } = require('./name-normalize');
 
 const CJK_RE = /[\u3400-\u4dbf\u4e00-\u9fff]/;
 
@@ -55,17 +56,110 @@ function buildLibIndex(all, extraKeyOf) {
   return { byName };
 }
 
-/** 条目侧游戏名 → 端游库条目：按 `/` 分段逐个试，命中即返回 */
-function matchLib(game, byName) {
+/* ────────────────────────────────────────────────────────────────────────────
+ * ★ v10.55 子串回退（subMatch）—— 修「端游资源页整批无关联」
+ *
+ * 【为什么必须加】
+ *   匹配键一直只有「精确命中」一条路（`byName.get(k)`）。而 MOD 源的 `game` 是**泛称**，
+ *   端游库的 title 是**具体版本名**，两边常差一个版本后缀 —— 精确键必然全漏。
+ *   实测（2026-10-10）：mods 8,943 条里 **1,867 条（20.9%）libId 为空**；
+ *   而 `data/mods.js` 默认 `matchedOnly = true` ⇒ 这些条目在端游资源页**一条都不显示**。
+ *   大头：`Grand Theft Auto V 传承版` **536 条** · `荒野大镖客2` 148 · `街头霸王6` 137 ·
+ *        `黑神话:悟空` 127 · `巫师3：狂猎` **94**（用户报障样本）· `明末：渊虚之羽` 56 …
+ *
+ * 【为什么不能只做正向】
+ *   第一版探针只查「库键 ⊃ 查询键」，结果 GTA V **候选为「无」**。
+ *   真相是反向：条目键 `grandtheftautov传承版` ⊃ 库键 `grandtheftautov`（库键更**短**）。
+ *   ⇒ 必须**双向**子串，否则最大的一头（536 条）直接漏掉。
+ *
+ * 【为什么不用长度比例当主判据】
+ *   第一版用「短/长 ≥ 0.6」，把 `巫师3：狂猎`(5) 挂到了 `巫师3狂猎重制版`(8) ——
+ *   因为正确的 `巫师3狂猎次世代版`(9) 比例 5/9=0.556 被挡在门外。
+ *   ⇒ 比例只能是**粗筛**，真正的护栏是**数字一致**（见 G2）。
+ *
+ * 【五道护栏】缺一不可，宁可少救不可错配：
+ *   G1 短键可用     —— 这里比索引键更严：CJK ≥ 3 / 纯 ASCII ≥ 4（索引层是 CJK ≥ 2）
+ *   G2 数字一致     —— 查询带数字 ⇒ 候选键必须含（`genNums`，与项目既有代际护栏同源）
+ *                      实测挡掉：`HELLDIVERS 2` → `Hell Dive`、`侏罗纪世界进化3` → `侏罗纪世界进化`
+ *   G3 比例粗筛     —— 短/长 ≥ 0.5（只用于砍掉明显无关的长尾）
+ *   G4 变体降级     —— 候选键含 虚拟机版/HYPERVISOR/Demo/试玩… ⇒ **不自动挂**
+ *                      （见过 5 个 game 名被挂到「-虚拟机版」，那是另一种内容）
+ *   G5 唯一/仲裁    —— 剩余多候选时取 **id 序号最小**者（= 更早收录的主条目），
+ *                      并把 basis 标成 `substring-ambiguous` 供审计
+ *                      实测仲裁正确：`巫师3：狂猎` → **xd-120**（MOD 标题写「巫师3次世代」，
+ *                      且手游中心/修改器两侧也都指向 xd-120）；`剑与魔法` → xd-8221（VR 原版）
+ * ──────────────────────────────────────────────────────────────────────────── */
+const SUB_RATIO = 0.5;
+const VARIANT_DOWN = /(虚拟机版|hypervisor|demo|试玩|序章|体验版|先行版|抢先体验)/i;
+const SUB_CACHE = new WeakMap();
+
+function subKeyUsable(k) { return !!k && k.length >= (CJK_RE.test(k) ? 3 : 4); }
+
+/** 子串回退用的候选键清单（按 byName 缓存，避免每次重建） */
+function subKeys(byName) {
+  let c = SUB_CACHE.get(byName);
+  if (!c) { c = { keys: [...byName.keys()] }; SUB_CACHE.set(byName, c); }
+  return c.keys;
+}
+
+/** 取 id 末段数字用于仲裁（`xd-120` → 120 / `jidi-573742718` → 573742718；取不到给 Infinity） */
+function idSeq(id) {
+  const m = String(id || '').match(/(\d+)\s*$/);
+  return m ? Number(m[1]) : Infinity;
+}
+
+/** 子串回退：返回 { it, k, basis, n } 或 null */
+function subMatch(k, byName) {
+  if (!subKeyUsable(k)) return null;
+  const qNums = genNums(k);
+  const cands = new Map();          // libId -> { k, it, down }
+  for (const lk of subKeys(byName)) {
+    if (lk === k) continue;
+    const isLibLong = lk.length > k.length;
+    const short = isLibLong ? k : lk;
+    const long = isLibLong ? lk : k;
+    if (!long.includes(short)) continue;
+    if (short.length / long.length < SUB_RATIO) continue;   // G3
+    if (!subKeyUsable(short)) continue;
+    const it = byName.get(lk);
+    if (!it || cands.has(it.id)) continue;
+    if (qNums.length && !qNums.some((x) => genNums(lk).includes(x))) continue;   // G2
+    cands.set(it.id, { k: lk, it, down: VARIANT_DOWN.test(lk) });               // G4
+  }
+  if (!cands.size) return null;
+  const pool = [...cands.values()].filter((c) => !c.down);
+  if (!pool.length) return null;                     // 只剩降级变体 ⇒ 不猜
+  if (pool.length === 1) return { ...pool[0], basis: 'substring', n: cands.size };
+  pool.sort((a, b) => idSeq(a.it.id) - idSeq(b.it.id));                          // G5
+  return { ...pool[0], basis: 'substring-ambiguous', n: cands.size };
+}
+
+/** 条目侧游戏名 → 端游库条目：按 `/` 分段逐个试，命中即返回
+ *  ① 精确键（原路径，结果不变）；② 精确未中才走子串回退（v10.55）
+ *  ★ 顺序保证「已匹配的不会因为加回退而改变结果」——回退只填空白。
+ *  ★ 需要知道「怎么匹配上的」用 `matchWithBasis`（产物里落 `matchBasis` 字段供审计）。 */
+function matchWithBasis(game, byName) {
   const g = String(game || '').trim();
-  if (!g) return null;
-  for (const seg of g.split('/')) {
+  if (!g) return { it: null, basis: '' };
+  const segs = g.split('/');
+  for (const seg of segs) {
     const k = normKey(seg);
     if (!keyUsable(k)) continue;
     const hit = byName.get(k);
-    if (hit) return hit;
+    if (hit) return { it: hit, basis: 'exact' };
   }
-  return byName.get(normKey(g)) || null;
+  const whole = byName.get(normKey(g));
+  if (whole) return { it: whole, basis: 'exact' };
+  for (const seg of segs) {
+    const r = subMatch(normKey(seg), byName);
+    if (r) return { it: r.it, basis: r.basis };
+  }
+  return { it: null, basis: '' };
+}
+
+/** 兼容入口：只要条目（`tools/fetch-fr.js` 等在用） */
+function matchLib(game, byName) {
+  return matchWithBasis(game, byName).it;
 }
 
 /* ★ v10.46：本模块**不再导出 `normKey`**。
@@ -74,4 +168,4 @@ function matchLib(game, byName) {
  *   继续从两个地方取键。要用键请直接 `require('../data/name-normalize')`。
  *   （`tools/test-shared-destructure.js` 的规则是「用了某模块的导出名就必须从该模块解构」，
  *     所以「转发导出」在这里不是无害的兼容层，而是会持续产生告警的错位。） */
-module.exports = { keyUsable, buildLibIndex, matchLib, CJK_RE };
+module.exports = { keyUsable, buildLibIndex, matchLib, matchWithBasis, subMatch, subKeyUsable, CJK_RE, SUB_RATIO };

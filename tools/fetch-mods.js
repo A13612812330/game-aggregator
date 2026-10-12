@@ -35,7 +35,7 @@ const MAX = parseInt(val('--max', '0'), 10) || 0;
 /* 匹配逻辑抽在 data/mod-match.js（「键怎么用」：切段 / 护栏 / 索引）；
  * ★ v10.46：`normKey` 从**唯一真源** name-normalize 取 —— mod-match 不再转发它，
  *   因为两份字符类曾经不等价（1.245% 的名称键不同）。 */
-const { buildLibIndex, matchLib } = require('../data/mod-match');
+const { buildLibIndex, matchWithBasis } = require('../data/mod-match');
 const { normKey } = require('../data/name-normalize');
 
 void normKey;
@@ -82,6 +82,8 @@ void normKey;
   let matched = 0, withLinks = 0, linkTotal = 0;
   const byKind = {};
   const byKindMatched = {};
+  /* ★ v10.55：回退命中的分档计数（exact 不计），用于「只审这批」 */
+  const byBasis = {};
 
   for (const [arr, kind] of [[rawMod, 'mod'], [rawModifier, 'modifier']]) {
     for (const raw of arr) {
@@ -91,16 +93,21 @@ void normKey;
       seen.add(s.id);
 
       byKind[kind] = (byKind[kind] || 0) + 1;
-      const lib = matchLib(s.game, byName);
-      if (lib) { matched++; byKindMatched[kind] = (byKindMatched[kind] || 0) + 1; }
+      const lib = matchWithBasis(s.game, byName);
+      const hit = lib.it;
+      if (hit) { matched++; byKindMatched[kind] = (byKindMatched[kind] || 0) + 1; }
+      if (lib.basis && lib.basis !== 'exact') byBasis[lib.basis] = (byBasis[lib.basis] || 0) + 1;
       if (s.links.length) { withLinks++; linkTotal += s.links.length; }
 
       items.push({
         id: s.id, kind, title: s.title, game: s.game,
-        cover: (lib && lib.cover) ? lib.cover : s.cover,   // 有端游库封面优先（更清晰统一）
+        cover: (hit && hit.cover) ? hit.cover : s.cover,   // 有端游库封面优先（更清晰统一）
         author: s.author, ct: s.ct, ut: s.ut, pv: s.pv, favors: s.favors,
         content: s.content, links: s.links,
-        libId: lib ? lib.id : '', libTitle: lib ? lib.title : '', libUrl: lib ? lib.url : '',
+        libId: hit ? hit.id : '', libTitle: hit ? hit.title : '', libUrl: hit ? hit.url : '',
+        /* ★ v10.55：记「怎么匹配上的」。exact 不写（保持产物瘦），
+           回退命中写 substring / substring-ambiguous ⇒ 下轮能**只审这批**，不用全量重算。 */
+        matchBasis: lib.basis === 'exact' ? '' : lib.basis,
         url: s.url,
       });
     }
@@ -113,6 +120,7 @@ void normKey;
     matched,
     matchedRate: items.length ? +(matched / items.length * 100).toFixed(1) : 0,
     byKindMatched,
+    byBasis,
     withLinks,
     linkRate: items.length ? +(withLinks / items.length * 100).toFixed(1) : 0,
     linkTotal,
