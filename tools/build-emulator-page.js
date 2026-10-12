@@ -363,7 +363,7 @@ const SECTIONS = `
       <button class="emu-refresh em-tg" id="emuToggleLib" type="button" title="只显示能对上端游库（有封面与详情页）的游戏">仅看匹配端游</button>
       <button class="emu-refresh both em-tg" id="emuToggleBoth" type="button" title="只看既有社区配置、又有本站实测记录的游戏（全量 3161 条里仅 88 条，最能体现两库合并价值）">只看双料</button>
       <button class="emu-refresh tr em-tg" id="emuToggleTr" type="button" title="只看「修改器」库里收录到的游戏（按端游库 id 关联）">🛠 有修改器</button>
-      <button class="emu-refresh sv em-tg" id="emuToggleSv" type="button" title="只看「云存档」库里查到存档位置/云同步的游戏（按端游库 id 关联）">💾 有云存档</button>
+      <button class="emu-refresh sv em-tg" id="emuToggleSv" type="button" title="只看存档库里查到存档路径/云同步的游戏（Ludusavi 存档位置库 · 按端游库 id 关联）">💾 有存档</button>
       <span class="emu-bar-sp"></span>
       <button class="emu-refresh" id="emuRefresh" type="button" title="从 BannerHub 仓库拉取最新配置快照（约 12-60 秒）">↻ 刷新配置库</button>
     </div>

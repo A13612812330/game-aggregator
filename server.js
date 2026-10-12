@@ -644,7 +644,8 @@ app.get('/api/mobilehub/stats', (_req, res) => res.json(mobilehub.stats()));
 // GET /api/mobilehub/list?q=&sort=configs|recent|name|fps&gpu=&tier=&stats=all|matched&only=both&tr=1&sv=1&limit=&offset=
 //   stats=matched（默认）→ 只返回命中端游库的条目
 //   only=both           → 只看双料（社区配置库 + 机型实测库都有），与 stats 是 AND 关系
-//   tr=1 / sv=1         → 只看「修改器」/「云存档」库收录到的（v10.5，按端游库 id 关联）
+//   tr=1 / sv=1         → 只看「修改器」/「存档」库收录到的（v10.5，按端游库 id 关联）
+//                         ★ v10.57 起术语统一为「存档」（原名「云存档」，见 data/xref.js 头）
 app.get('/api/mobilehub/list', (req, res) => {
   const r = mobilehub.list({
     q: req.query.q, sort: req.query.sort, gpu: req.query.gpu,
@@ -657,7 +658,7 @@ app.get('/api/mobilehub/list', (req, res) => {
   res.json(r);
 });
 
-// GET /api/xref/stats — 「有修改器 / 有云存档」两个横切集合的规模（前端空态与校验用）
+// GET /api/xref/stats — 「有修改器 / 有存档」两个横切集合的规模（前端空态与校验用）
 app.get('/api/xref/stats', (_req, res) => res.json(xref.stats()));
 
 // GET /api/mobilehub/match?t=<游戏名>&id=<端游库id>&alts=<另一源的标题,英文名…>

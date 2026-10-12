@@ -298,7 +298,7 @@ function makeDom() {
   t(/夸克|百度|迅雷/.test(dl), '展示网盘类型（让用户知道点进去是什么网盘）');
   t((dl.match(/target="_blank"/g) || []).length >= 2, '每条都是新窗口跳转（打开帖子）', `target=_blank ×${(dl.match(/target="_blank"/g) || []).length}`);
   t(/源帖 ↗/.test(dl) && /jidiyouxi\.com\/post\/detail\/1/.test(dl), '跳转指向源站帖子详情页，而非本站转存');
-  t(/云存档位置/.test(dl) && /#sv/.test(dl), '同屏给出「云存档位置」入口（用户提到的云存档那一档）');
+  t(/存档位置/.test(dl) && /#sv/.test(dl), '同屏给出「存档位置」入口（用户提到的存档那一档；v10.57 起「云存档」统一称「存档」）');
   t(/个资源帖/.test(dl) && /个网盘地址/.test(dl),
     '★ 写明「N 个资源帖 · M 个网盘地址」两个口径（帖数与地址数是两回事，混用会读起来自相矛盾）',
     (dl.match(/共 <b>\d+<\/b> 个资源帖/) || [''])[0]);

@@ -717,7 +717,7 @@
      ⚠️ 本注释**故意不写完整选择器**（不写「.emu-card」+「.tg.」连写），
         否则将来加「已删」反向断言时会被这段注释自己命中，判成「还在」。
      ⚠️ 紧跟着的 `.emu-refresh.sv` / `.emu-refresh.tr` **不能一起删**：
-        emulator.html（手游中心）的「🛠 有修改器」「💾 有云存档」开关仍在用，
+        emulator.html（手游中心）的「🛠 有修改器」「💾 有存档」开关仍在用，
         见 tools/build-emulator-page.js 的两个按钮。 */
   .emu-refresh.sv{color:#0369A1;border-color:#7DD3FC;background:rgba(255,255,255,.85)}
   .emu-refresh.sv:hover{background:#0369A1;color:#fff;border-color:transparent}
@@ -2283,7 +2283,7 @@
       <button class="emu-refresh em-tg" id="emuToggleLib" type="button" title="只显示能对上端游库（有封面与详情页）的游戏">仅看匹配端游</button>
       <button class="emu-refresh both em-tg" id="emuToggleBoth" type="button" title="只看既有社区配置、又有本站实测记录的游戏（全量 3161 条里仅 88 条，最能体现两库合并价值）">只看双料</button>
       <button class="emu-refresh tr em-tg" id="emuToggleTr" type="button" title="只看「修改器」库里收录到的游戏（按端游库 id 关联）">🛠 有修改器</button>
-      <button class="emu-refresh sv em-tg" id="emuToggleSv" type="button" title="只看「云存档」库里查到存档位置/云同步的游戏（按端游库 id 关联）">💾 有云存档</button>
+      <button class="emu-refresh sv em-tg" id="emuToggleSv" type="button" title="只看存档库里查到存档路径/云同步的游戏（Ludusavi 存档位置库 · 按端游库 id 关联）">💾 有存档</button>
       <span class="emu-bar-sp"></span>
       <button class="emu-refresh" id="emuRefresh" type="button" title="从 BannerHub 仓库拉取最新配置快照（约 12-60 秒）">↻ 刷新配置库</button>
     </div>
@@ -2415,7 +2415,7 @@
   </div>
   <div class="sm-hint">
     <span class="dot"></span>本地库秒搜<span class="sep"></span>
-    <span>端游 · 手游 · 修改器 · 云存档 一次搜完</span>
+    <span>端游 · 手游 · 修改器 · 存档 一次搜完</span>
     <span class="live">库内未收录 → 实时查源站 ↗</span>
   </div>
   <div class="sm-body" id="smBody"></div>
@@ -3175,7 +3175,7 @@ async function loadSmStats() {
       { cls: 'pc', n: pc.total, lb: '端游库', id: 'smTotal' },
       { cls: 'mob', n: mob.total, lb: '手游中心' },
       { cls: 'tr', n: tr.total, lb: '修改器' },
-      { cls: 'sv', n: sv.total, lb: '云存档' },
+      { cls: 'sv', n: sv.total, lb: '存档' },
     ];
     return smStatCache;
   } catch (e) { return null; }
@@ -3188,7 +3188,7 @@ function paintSearchHome() {
     <div class="sm-quick">${q}</div>
     <div class="sm-sec">库内速览<span class="cnt">本地秒搜 · 不走网络</span></div>
     <div class="sm-stat" id="smStat">${skeleton}</div>
-    <div class="sm-tip">四个库一起搜：<b>端游库</b>点得进完整详情，<b>手游中心</b>给手机配置与实测，<b>修改器 / 云存档</b>直接给下载与存档路径。</div>
+    <div class="sm-tip">四个库一起搜：<b>端游库</b>点得进完整详情，<b>手游中心</b>给手机配置与实测，<b>修改器 / 存档</b>直接给下载与存档路径。</div>
   </div>`;
   loadSmStats().then((rows) => {
     const el = $('#smStat');
@@ -3361,7 +3361,7 @@ function bindSmRows() {
     closeSearch();
     const lid = r.dataset.svlib, t = r.dataset.svtitle;
     if (lid && typeof openDetailById === 'function') openDetailById(lid, t);
-    else toast('到手机专区「云存档」页可看这款的完整存档路径');
+    else toast('到手机专区「🎮 手游中心」可看这款的完整存档路径');
   }));
 }
 
@@ -3398,7 +3398,7 @@ function smSaveRow(it) {
     <div class="bd"><div class="t">${esc(title)}</div>${en ? `<div class="en">${esc(en)}</div>` : ''}
       <div class="m">${meta.join('')}</div>
       ${p0 ? `<div class="pth" title="${esc(p0)}">${esc(p0)}</div>` : ''}</div>
-    <span class="src-badge sv">💾 云存档</span>
+    <span class="src-badge sv">💾 存档</span>
     <span class="go2">${lid ? '查看详情 →' : '仅存档数据'}</span>
   </div>`;
 }
@@ -3408,7 +3408,7 @@ async function doSearch() {
   if (q.length > 40) { toast('关键词过长（限 40 字）'); return; }
   lastQ = q; sugIdx = -1;
   const body = $('#smBody');
-  body.innerHTML = `<div class="sm-sec">正在搜索全站（端游库 + 手游中心 + 修改器 + 云存档） “${esc(q)}”…</div>${smSkeleton(4)}`;
+  body.innerHTML = `<div class="sm-sec">正在搜索全站（端游库 + 手游中心 + 修改器 + 存档） “${esc(q)}”…</div>${smSkeleton(4)}`;
   try {
     /* ★ 统一搜全站：一个端点同时返回**四个库**的结果，分组渲染。
      *   这样在手机专区点顶栏搜索也能搜到手游玩法与资源，而不是只搜端游库。 */
@@ -3454,7 +3454,7 @@ function paintSearchResult(q, j) {
   if (!pcHit.length && !mobHit.length && !trHit.length && !svHit.length) {
     const total = (pc.total || 15000).toLocaleString();
     body.innerHTML = `<div class="sm-sec">全站命中<span class="cnt">0 款</span></div>
-      <div class="sm-empty"><div class="big">🕳️</div>四个库（端游 <b>${total}</b> 款 / 手游 / 修改器 / 云存档）都未收录「<b>${esc(q)}</b>」<br><span style="font-size:11.5px">每日 09:30 自动增量同步，可稍后再搜；也可直接实时查源站</span></div>
+      <div class="sm-empty"><div class="big">🕳️</div>四个库（端游 <b>${total}</b> 款 / 手游 / 修改器 / 存档）都未收录「<b>${esc(q)}</b>」<br><span style="font-size:11.5px">每日 09:30 自动增量同步，可稍后再搜；也可直接实时查源站</span></div>
       <div class="sm-acts"><button class="mini-btn" style="flex:1" type="button" data-q="${esc(q)}" onclick="searchLive(this.dataset.q)">↗ 仍要实时搜源站（XDGAME / 机地）</button></div>
       <div style="padding:0 11px 6px"><label class="auto-live" style="margin:0"><input type="checkbox" ${localStorage.getItem('ghAutoLive') === '1' ? 'checked' : ''} onchange="toggleAutoLive(this)"> 以后本地搜不到时自动查源站（免点击）</label></div>`;
     return;
@@ -3494,6 +3494,11 @@ function paintSearchResult(q, j) {
    *   下面这段代码就是从「自算」改成「消费服务端 fit」的落点。
    *   端游库的「本体提权」保留 v10.7 原语义：本名命中（fit >= 2）再 +1。 */
   const pcFit = pc.fit || 0;
+  /* ★ v10.57 术语统一：这组数据原先在界面上叫「云存档」，自 v10.57 起**一律称「存档」**
+     （用户口径「云存档就是存档，更新下」）。数据源与口径都没动，只改称呼；
+     本文件历史注释里残留的「云存档」均指同一物，**不逐条回改**（那是历史记录，
+     改了反而看不出当时的口径）。同期改的还有：手机专区开关（tools/build-emulator-page.js）、
+     卡面 chip title（tools/emulator-sections.js）、以及 data/xref.js 的集合注释。 */
   const groups = [
     { i: 0, icon: '📱', name: '手游中心 · 手机能玩吗', tag: 'MOBILE', tagCls: 'match', cnt: mob.count, unit: '款',
       fit: mob.fit || 0,
@@ -3501,9 +3506,9 @@ function paintSearchResult(q, j) {
     { i: 1, icon: '🛠', name: '修改器 · 有没有修改器', tag: 'TRAINER', tagCls: 'match', cnt: tr.count, unit: '条',
       fit: tr.fit || 0,
       rows: trHit.length ? trHit.map(smTrainerRow).join('') : `<div class="sm-empty" style="padding:14px">修改器库无命中</div>` },
-    { i: 2, icon: '💾', name: '云存档 · 存档放在哪', tag: 'SAVE', tagCls: 'match', cnt: sv.count, unit: '款',
+    { i: 2, icon: '💾', name: '存档 · 放在哪', tag: 'SAVE', tagCls: 'match', cnt: sv.count, unit: '款',
       fit: sv.fit || 0,
-      rows: svHit.length ? svHit.map(smSaveRow).join('') : `<div class="sm-empty" style="padding:14px">云存档库无命中</div>` },
+      rows: svHit.length ? svHit.map(smSaveRow).join('') : `<div class="sm-empty" style="padding:14px">存档库无命中</div>` },
     { i: 3, icon: '🖥️', name: '端游库 · 全站收录', tag: 'LOCAL', tagCls: 'local', cnt: pc.count, unit: '款',
       fit: pcFit + (pcFit >= 2 ? 1 : 0),
       rows: pcHit.length ? smRows(pcHit) : `<div class="sm-empty" style="padding:14px">端游库无命中</div>` },
@@ -3802,7 +3807,7 @@ function emuCard(it) {
   /* ★ v10.5：把「有修改器 / 有云存档」这层交叉信息露在卡面上 ——
    *   否则用户点了筛选、却说不出这些卡为什么被留下。 */
   const xrefTag = (it.hasTr ? '<span class="tg has-tr" title="修改器库收录了这款">🛠 有修改器</span>' : '')
-    + (it.hasSv ? '<span class="tg has-sv" title="云存档库有这款的存档位置">💾 有存档</span>' : '');
+    + (it.hasSv ? '<span class="tg has-sv" title="存档库（Ludusavi）收录了这款的存档位置">💾 有存档</span>' : '');
 
   /* 别名提示：社区库是英文名、实测库是中文名，让用户看到两面 */
   const alt = (it.alt || []).filter((a) => a && a !== title)[0] || '';
@@ -6732,7 +6737,7 @@ async function loadDlBlock(d, fb, title) {
     ${dlSecs.map(dlPrevBlock).join('')}
     <div class="d-dl-links">
       <a href="${esc(u)}" target="_blank" rel="noopener">源站帖子 ↗</a>
-      <a href="/resources.html#sv">云存档位置库</a>
+      <a href="/resources.html#sv">存档位置库</a>
       <a href="${D_JIDI_MODS}" target="_blank" rel="noopener">机地 MOD / 修改器区 ↗</a>
     </div></div>`;
 }
@@ -7627,7 +7632,7 @@ const D_MOD_META = {
 const D_MOD_CAP = 60;
 function dModLinks() {
   return '<a href="' + D_JIDI_MODS + '" target="_blank" rel="noopener">机地 MOD / 修改器区 ↗</a>' +
-    '<a href="/resources.html#tr">修改器库</a><a href="/resources.html#sv">云存档位置</a>';
+    '<a href="/resources.html#tr">修改器库</a><a href="/resources.html#sv">存档位置</a>';
 }
 /* 绑定一次（弹层与 Toggle 都是共享资产的常驻节点）。
    ★ 用**事件委托**而不是给每个按钮绑：解包匹配页的卡片是动态重绘的，
@@ -7787,7 +7792,7 @@ const D_RAIL = [
      视觉上那是「同时选中两项」，读起来像坏了；点哪一个也都跳到同一行。
      ⚠️ v10.29 曾特意保留两项（理由写在上一条注释里），那条理由已被用户口径否定：
         两块内容不同 ≠ 需要两个入口 —— 定位条是按**屏幕位置**切的，不是按内容切的。 */
-  { k: 'trsv', nm: '修改器/云存档', sel: ['#trSvSlot'] },
+  { k: 'trsv', nm: '修改器/存档', sel: ['#trSvSlot'] },
   { k: 'rel', nm: '同分类', sel: ['#relSlot'] },
   /* ★ v10.28：优先指向正文里的三专区区块（`#dlSlot`）—— 它在文档流里，滚动定位准确；
      `#dlStrip` 现在躺在 sticky 的 `.d-dock` 里（视觉位置恒在视口底部），

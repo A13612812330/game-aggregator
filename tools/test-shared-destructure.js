@@ -73,9 +73,12 @@ for (const f of sharedUsers) {
   const body = stripComments(raw);
 
   /* 解构形态：const { a, b } = require('...shared')   （允许跨行）
-     整体命名空间形态：const shared = require(...) 或 require(...).xxx —— 这两种不算遗漏 */
-  const nsForm = /(?:const|let|var)\s+(\w+)\s*=\s*require\(\s*['"][^'"]*\/?shared['"]\s*\)/.test(body)
-    || /require\(\s*['"][^'"]*\/?shared['"]\s*\)\s*\./.test(body);
+     整体命名空间形态：const shared = require(...) 或 require(...).xxx —— 这两种不算遗漏
+     ★ v10.57：允许 `.js` 后缀 —— `require('../shared.js')` 是完全合法的 Node 写法，
+       原先的正则要求 `shared` 后紧跟引号，遇到 `.js` 会**读不出解构内容** ⇒ 报假红
+       （实测踩到：新建探针用 `require('../data/name-normalize.js')` 被误判「用了没解构」）。 */
+  const nsForm = /(?:const|let|var)\s+(\w+)\s*=\s*require\(\s*['"][^'"]*\/?shared(?:\.js)?['"]\s*\)/.test(body)
+    || /require\(\s*['"][^'"]*\/?shared(?:\.js)?['"]\s*\)\s*\./.test(body);
 
   const allDestructured = [];
   let m;
@@ -84,7 +87,7 @@ for (const f of sharedUsers) {
    *   「缺 dateTs」（它的 `{ dateTs }` 被并进了上一条 `require('./cover-url')` 的匹配里），
    *   `fetchers/jidiModify.js` 更把函数参数解构也混进了列表。
    *   解构列表里不会出现 `}`，所以 `[^}]*` 既准确又允许跨行写法。 */
-  const reD = /(?:const|let|var)\s*\{([^}]*)\}\s*=\s*require\(\s*['"][^'"]*\/?shared['"]\s*\)/g;
+  const reD = /(?:const|let|var)\s*\{([^}]*)\}\s*=\s*require\(\s*['"][^'"]*\/?shared(?:\.js)?['"]\s*\)/g;
   while ((m = reD.exec(body))) {
     m[1].split(',').forEach((x) => {
       const n = x.split(':').pop().replace(/\/\*[\s\S]*?\*\//g, '').trim();
@@ -192,6 +195,16 @@ chk('自动发现到 ≥2 个共享模块（0 个说明扫描塌了，本段是�
 /* ★ 定点回归：v10.36 新建的这个模块必须在检查范围内 —— 否则本段等于没修 */
 chk('★ data/name-normalize.js 已被自动纳入检查（v10.36 的漏网点）',
   SHARED_TARGETS.some((t) => t.mod.endsWith('name-normalize.js')));
+/* ★ v10.57 自检：解构正则必须容忍 `.js` 后缀 —— 用**构造样本**钉住，
+   不指望仓里恰好存在这种写法（否则这条判据本身就是空转）。
+   误报现场：`require('../data/name-normalize.js')` 是合法写法，原先读不出解构内容 ⇒ 假红。 */
+{
+  const sample = "const { normKey } = require('../data/name-normalize.js');";
+  const mm = new RegExp('(?:const|let|var)\\s*\\{([^}]*)\\}\\s*=\\s*require\\(\\s*[\'"][^\'"]*'
+    + 'name-normalize' + '(?:\\.js)?[\'"]\\s*\\)', 'g').exec(sample);
+  chk('★ 解构正则容忍 `.js` 后缀（防「解构了却读不出来」的假红）', !!(mm && /normKey/.test(mm[1])),
+    mm ? '解构内容「' + mm[1].trim() + '」' : '未命中');
+}
 
 let missing2 = 0;
 for (const { mod, users } of SHARED_TARGETS) {
@@ -210,11 +223,15 @@ for (const { mod, users } of SHARED_TARGETS) {
   for (const f of users) {
     const rel = path.relative(ROOT, f).replace(/\\/g, '/');
     const body = stripComments(fs.readFileSync(f, 'utf8'));
+    /* ★ v10.57：`(?:\.js)?` —— 容忍合法的 `require('…/name-normalize.js')` 写法。
+       原先要求模块名后紧跟引号，遇到 `.js` 就读不出解构内容，把「已解构」误报成「没解构」
+       （实测：新建探针的 `require('../data/name-normalize.js')` 被误判，防线假红）。 */
+    const modBase = relMod.split('/').pop().replace(/\.js$/, '');
     const nsForm = new RegExp('(?:const|let|var)\\s+\\w+\\s*=\\s*require\\(\\s*[\'"][^\'"]*'
-      + relMod.split('/').pop().replace('.js', '') + '[\'"]\\s*\\)').test(body);
+      + modBase + '(?:\\.js)?[\'"]\\s*\\)').test(body);
     const got = [];
     const reD = new RegExp('(?:const|let|var)\\s*\\{([^}]*)\\}\\s*=\\s*require\\(\\s*[\'"][^\'"]*'
-      + relMod.split('/').pop().replace('.js', '') + '[\'"]\\s*\\)', 'g');
+      + modBase + '(?:\\.js)?[\'"]\\s*\\)', 'g');
     let m5;
     while ((m5 = reD.exec(body))) {
       m5[1].split(',').forEach((x) => {

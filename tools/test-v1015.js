@@ -108,14 +108,14 @@ console.log('\n=== ③ 搜索弹窗版式重构 ===');
   const hintBlock = (IDX.match(/<div class="sm-hint">[\s\S]*?<\/div>/) || [''])[0];
   ok('状态条不再夹键盘按键', hintBlock.length > 0 && !/<kbd>/.test(hintBlock),
     hintBlock.replace(/\s+/g, ' ').slice(0, 80));
-  ok('状态条写明「四个库一次搜完」', /端游 · 手游 · 修改器 · 云存档 一次搜完/.test(IDX));
+  ok('状态条写明「四个库一次搜完」', /端游 · 手游 · 修改器 · 存档 一次搜完/.test(IDX));
   ok('新增底部按键条 .sm-foot', /\.sm-foot\{display:flex/.test(IDX) && /<div class="sm-foot">/.test(IDX));
   ok('底部按键条含 ↑↓ / Enter / Esc 三组', /<kbd>↑<\/kbd><kbd>↓<\/kbd>选择/.test(IDX)
     && /<kbd>Enter<\/kbd>打开 \/ 搜索/.test(IDX) && /<kbd>Esc<\/kbd>关闭/.test(IDX));
   ok('“看完详情自动回到这里”移到脚注', /<span class="rt">看完详情自动回到这里<\/span>/.test(IDX));
   ok('新增四库速览容器 .sm-stat（4 块）', /\.sm-stat\{display:grid;grid-template-columns:repeat\(4/.test(IDX));
   ok('速览数字有四个库的口径标签', /lb: '端游库'/.test(IDX) && /lb: '手游中心'/.test(IDX)
-    && /lb: '修改器'/.test(IDX) && /lb: '云存档'/.test(IDX));
+    && /lb: '修改器'/.test(IDX) && /lb: '存档'/.test(IDX));
   ok('paintSearchHome 不再用「放大镜占位」空态', !/sm-empty"><div class="big">🔍<\/div>输入关键词搜索本地合并库/.test(IDX));
   ok('loadSmStats 取四个库的统计端点',
     ['/api/library/stats', '/api/mobilehub/stats', '/api/trainers/stats', '/api/saves/stats']

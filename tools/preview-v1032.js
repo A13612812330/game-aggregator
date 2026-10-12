@@ -39,7 +39,7 @@ const MAP = {
   '游戏预览': ['.gal'],
   '配置要求': ['#reqSlot'],
   '手机配置': ['#bhSlot'],
-  '修改器/云存档': ['#trSvSlot'],
+  '修改器/存档': ['#trSvSlot'],
   '同分类': ['#relSlot'],
   '下载': ['#dlSlot', '#dlStrip'],
 };
@@ -78,7 +78,7 @@ const R1 = (n) => Math.round(n * 10) / 10;
     const names = await p.evaluate(() =>
       [...document.querySelectorAll('#dRail .dr-it .dr-t')].map((x) => x.textContent.trim()));
     console.log('  条上项名(' + names.length + '): ' + names.join(' · '));
-    chk('① 条上仍是**一项**「修改器/云存档」', names.includes('修改器/云存档'), '项名含『修改器/云存档』');
+    chk('① 条上仍是**一项**「修改器/存档」（★ v10.57 改名：原名「修改器/云存档」）', names.includes('修改器/存档'), '项名含『修改器/存档』');
     chk('① 不再有单独的「修改器」项', !names.includes('修改器'), '精确匹配，不是子串');
     chk('① 不再有单独的「云存档」项', !names.includes('云存档'), '精确匹配，不是子串');
     chk('① 合并项的目标节点真的解析到了（不是整项消失）',

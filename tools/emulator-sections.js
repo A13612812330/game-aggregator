@@ -65,7 +65,7 @@ function emuCard(it) {
   /* ★ v10.5：把「有修改器 / 有云存档」这层交叉信息露在卡面上 ——
    *   否则用户点了筛选、却说不出这些卡为什么被留下。 */
   const xrefTag = (it.hasTr ? '<span class="tg has-tr" title="修改器库收录了这款">🛠 有修改器</span>' : '')
-    + (it.hasSv ? '<span class="tg has-sv" title="云存档库有这款的存档位置">💾 有存档</span>' : '');
+    + (it.hasSv ? '<span class="tg has-sv" title="存档库（Ludusavi）收录了这款的存档位置">💾 有存档</span>' : '');
 
   /* 别名提示：社区库是英文名、实测库是中文名，让用户看到两面 */
   const alt = (it.alt || []).filter((a) => a && a !== title)[0] || '';

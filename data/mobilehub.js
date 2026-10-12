@@ -115,7 +115,7 @@ const TIER_ORDER = { '流畅': 4, '可玩': 3, '勉强': 2, '卡顿': 1 };
  *  stats: 'matched'(默认，只显示能对上端游库的) | 'all'
  *  only:  'both' → 只看双料（sources 同时含 bh 社区配置库 与 pc 机型实测库）
  *  tr:    '1' → 只看「修改器」库收录到的（与 sv 是 AND 关系，v10.5）
- *  sv:    '1' → 只看「云存档」库收录到的（v10.5）
+ *  sv:    '1' → 只看「存档」库收录到的（v10.5；★ v10.57 起称「存档」，原名「云存档」，见 data/xref.js 头口径说明）
  *  sort:  'both'(默认) | 'configs' | 'recent' | 'name' | 'fps'
  *  gpu:   GPU 关键词（如 'adreno 830'）
  *  tier:  实测帧率档 '流畅'|'可玩'|'勉强'|'卡顿'
