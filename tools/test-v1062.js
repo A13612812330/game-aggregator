@@ -139,5 +139,5 @@ t(/items: withNKeys\(r\.items\.map\(withRes\)\)/.test("  items: withNKeys(r.item
 t(!/r\.items\.map\(withBh\)/.test('  items: withNKeys(r.items.map(withRes)) });'),
   'F1 元：A1 的反向断言在同一样本上**不**假红');
 
-console.log(`\n── v10.62：${pass} 通过 / ${fail} 失败 ──`);
+console.log(`\n── v10.62：${pass} / ${pass + fail} 通过${fail ? `（失败 ${fail}）` : ''} ──`);
 process.exit(fail ? 1 : 0);

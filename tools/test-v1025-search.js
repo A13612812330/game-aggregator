@@ -293,7 +293,12 @@ const j = (o) => JSON.stringify(o);
   chk('D ★★ v10.52 mod 页签**真渲染出条目**（页签对了但列表空 = resId 没传对）',
     d2.modRows > 0, 'modRows=' + d2.modRows);
 
-  console.log('\n\u2500\u2500 ① 搜索弹窗：' + pass + ' 通过 / ' + fail + ' 失败 \u2500\u2500');
+  /* ★ 2026-10-13：末行汇总必须是「n / m 通过」形态。
+     原写法「N 通过 / M 失败」把「通过」夹在两个数字中间 ⇒ run-all.js 的
+     SUMMARY 正则取不到成绩，汇总里显示 n/a（且它会因 warnFmt 直接让防线变红）。
+     同一处坑 test-v1062.js 也踩过，一次改齐。 */
+  console.log('\n\u2500\u2500 ① 搜索弹窗：' + pass + ' / ' + (pass + fail) + ' 通过'
+    + (fail ? '（失败 ' + fail + '）' : '') + ' \u2500\u2500');
   await h.browser.close();
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error('FATAL', e); process.exit(2); });
