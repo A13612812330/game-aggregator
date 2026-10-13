@@ -19,6 +19,40 @@ const emu = fs.readFileSync(path.join(root, 'public/emulator.html'), 'utf8');
  *   —— 守卫由 IS_EMU_PAGE 放宽为 IS_SUB_PAGE
  *   —— tr/sv 的分区骨架与卡片断言整体搬到「端游资源页」小节 */
 const res = fs.readFileSync(path.join(root, 'public/resources.html'), 'utf8');
+
+/* ★★ v10.68 新增：按**块体**取媒体的作用域，取代「后面 N 个字符」这种写法。
+ *
+ * 为什么必须换（实测踩到，不是预防性重构）：
+ *   下面那条「移动端 KV 单列 / 画廊收窄 / 定位条隐藏」原本写成
+ *   `@media(max-width:760px)[\s\S]{0,4000}?\.d-rail\{display:none\}` —— 用**字符距离**
+ *   代替「在不在这个断点里」。v10.68 在该断点内新增了两条规则（`.cat-row .statline` /
+ *   `.sec-sub`），把 `.d-rail{display:none}` 推到 4000 字符之外 ⇒ 断言**假红**。
+ *   实锤：同一正则对 v10.67 的 index.html 返回 true、对新版返回 false，而
+ *   `.d-rail{display:none}` 本身**一直在 760 断点里没动过**。
+ *   ⇒ 窗口大小是**与内容无关的脆弱依赖**：任何人往这个断点里加东西它就会红，
+ *     而它红了并不代表功能坏 —— 这正是「断言作用域会假红也会假绿」那一类。
+ *
+ * 取法：从查询串起做**大括号配平**，拿到完整块体（含所有嵌套规则）。
+ * 一个文件里可能有多个同名断点（本文件就有：`≤760px` 出现两次），所以返回数组。 */
+function mediaBlocks(src, query) {
+  const out = [];
+  let from = 0;
+  for (;;) {
+    const i = src.indexOf(query, from);
+    if (i < 0) break;
+    const open = src.indexOf('{', i);
+    if (open < 0) break;
+    let depth = 0, end = -1;
+    for (let j = open; j < src.length; j++) {
+      if (src[j] === '{') depth++;
+      else if (src[j] === '}') { depth--; if (depth === 0) { end = j; break; } }
+    }
+    if (end < 0) break;
+    out.push(src.slice(open + 1, end));
+    from = end + 1;
+  }
+  return out;
+}
 /* ★ v10.50：原贴弹窗落在 OVERLAY 段（共享资产）⇒ 三张派生页都会带上。
  *   这里把第 4 张产物也读进来，四页一起验「共享资产真的同步了」。 */
 const upk = fs.readFileSync(path.join(root, 'public/unpack.html'), 'utf8');
@@ -378,10 +412,23 @@ t('抽屉加宽配套：桌面 KV 三列 / 游戏预览吃满宽度的 16:9 画�
   && /\.gal-vp\{[^}]*aspect-ratio:16\/9/.test(idx));
 /* ★ v10.25：移动端预览控件同样要收窄（缩略图 64→52、翻页钮 30→26），
  *   并新增「窄屏不显示定位条」—— 抽屉占满整屏时没有横向空间给它。 */
-t('移动端（≤760px）KV 仍单列、画廊控件收窄、定位条隐藏',
-  /\.drawer\{width:100vw\}[\s\S]{0,220}?\.kv\{grid-template-columns:1fr\}[\s\S]{0,160}?\.gal-th\{flex:0 0 52px\}[\s\S]{0,80}?\.gal-nav\{width:26px;height:26px\}/
-    .test(idx)
-  && /@media\(max-width:760px\)[\s\S]{0,4000}?\.d-rail\{display:none\}/.test(idx));
+/* ★ v10.68：判据作用域从「`@media(max-width:760px)` 之后 4000 字符」改为
+   「在 **≤760 断点的块体里**」（见文件头 mediaBlocks 的注释）。
+   ★ 顺带保留原来的「先后顺序」语义：这四条是同一轮改造的配套改动，
+     顺序变了通常意味着有人只改了一半。*/
+{
+  const m760 = mediaBlocks(idx, '@media(max-width:760px)');
+  const sameBlock = m760.some((b) => {
+    const a = b.indexOf('.drawer{width:100vw}');
+    const k = b.indexOf('.kv{grid-template-columns:1fr}');
+    const g = b.indexOf('.gal-th{flex:0 0 52px}');
+    const n = b.indexOf('.gal-nav{width:26px;height:26px}');
+    return a >= 0 && k > a && g > k && n > g;
+  });
+  t('移动端（≤760px）KV 仍单列、画廊控件收窄、定位条隐藏',
+    sameBlock && m760.some((b) => /\.d-rail\{display:none\}/.test(b)),
+    `≤760 断点块 ${m760.length} 个`);
+}
 
 /* ② 「同分类更多」不再抢在游戏本体信息之前 —— DOM 源码里 relSlot 必须排在 shotsHtml 之后
  *  ⚠️ 不能按「第一个 <div class="d-body">」去切模板：页面里有两处 d-body，

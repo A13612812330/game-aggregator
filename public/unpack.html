@@ -122,13 +122,18 @@
   .top-search .kbd{margin-left:auto;font-family:var(--font-num);font-size:10.5px;background:#fff;border:1px solid var(--c-border);border-radius:5px;padding:1px 5px;color:var(--c-t3)}
 
   /* ============ 🔥 首页热榜舞台（页面主体） ============ */
+  /* ★★ v10.68 首屏压缩（用户拍板，实测驱动）：
+     改前 1440×1000 实测 —— 顶栏 61 + hero **570** + 区块头 27 + 筛选面板 76 ⇒
+     列表容器起于 **y=985**，视口只有 1000 ⇒ **首屏一条游戏都看不到**（移动端 hero 1289，要滚 2.2 屏）。
+     参照站 designeer.xyz 同视口内容起于 230px。⇒ 本轮把 hero 压到 ~270–300px。
+     压缩原则：**只改尺寸、不删信息** —— 榜单仍显示 #1-6（改前 #1-10，网格 3 列 3 行 → 5 列 1 行）。 */
   .stage{position:relative;background:linear-gradient(125deg,#0E1B3A 0%,#16275C 52%,#24337A 100%);overflow:hidden}
   .stage::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:36px 36px;mask-image:radial-gradient(80% 100% at 50% 0%,#000 30%,transparent);pointer-events:none}
-  .stage .in{position:relative;z-index:1;padding:28px 22px 32px}
-  .stage-h{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:18px}
-  .stage-h h1{color:#fff;font-size:clamp(20px,2.4vw,27px);font-weight:800;letter-spacing:.3px;display:flex;align-items:center;gap:10px;line-height:1.2}
-  .stage-h h1 .fire{font-size:23px;filter:drop-shadow(0 3px 10px rgba(249,115,22,.5))}
-  .stage-h .sub{color:rgba(255,255,255,.55);font-size:12px;font-weight:500;margin-top:6px;letter-spacing:.2px}
+  .stage .in{position:relative;z-index:1;padding:16px 22px 18px}
+  .stage-h{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+  .stage-h h1{color:#fff;font-size:clamp(17px,1.7vw,20px);font-weight:800;letter-spacing:.3px;display:flex;align-items:center;gap:8px;line-height:1.2}
+  .stage-h h1 .fire{font-size:18px;filter:drop-shadow(0 3px 10px rgba(249,115,22,.5))}
+  .stage-h .sub{color:rgba(255,255,255,.55);font-size:11.5px;font-weight:500;margin-top:4px;letter-spacing:.2px}
   .stage-h .sp{flex:1;min-width:0}
   .stage-pills{display:flex;gap:4px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.13);padding:4px;border-radius:12px;flex:none}
   .stage-pill{font-size:12.5px;font-weight:700;color:rgba(255,255,255,.72);padding:6px 15px;border-radius:9px;transition:.16s;white-space:nowrap}
@@ -139,42 +144,47 @@
   .stage-refresh:hover{background:rgba(255,255,255,.14);color:#fff}
   .stage-refresh.busy{opacity:.5;pointer-events:none}
   .stage-refresh svg{width:12px;height:12px}
-  .rk-list{min-height:120px}
-  /* 冠军大卡 */
-  .rk-champ{position:relative;display:flex;align-items:center;gap:20px;padding:16px 20px;border-radius:18px;margin-bottom:14px;cursor:pointer;overflow:hidden;background:linear-gradient(120deg,#FFF3DC,#FFE2B8 55%,#FFD09B);border:1px solid #F3D6A6;box-shadow:0 18px 46px rgba(0,0,0,.32);transition:.18s}
-  .rk-champ:hover{transform:translateY(-2px);box-shadow:0 22px 56px rgba(0,0,0,.38)}
+  .rk-list{min-height:96px}
+  /* 冠军大卡（v10.68：整卡 174 → 131px：padding 16/20→12/16、缩略图 228×128→172×97） */
+  .rk-champ{position:relative;display:flex;align-items:center;gap:16px;padding:12px 16px;border-radius:var(--cd-r);margin-bottom:10px;cursor:pointer;overflow:hidden;background:linear-gradient(120deg,#FFF3DC,#FFE2B8 55%,#FFD09B);border:1px solid #F3D6A6;box-shadow:0 14px 34px rgba(0,0,0,.3);transition:.18s}
+  .rk-champ:hover{transform:translateY(-2px);box-shadow:0 18px 44px rgba(0,0,0,.36)}
   .rk-champ.on{outline:3px solid rgba(46,107,255,.8);outline-offset:-3px}
-  .rk-champ .no1{position:absolute;right:12px;top:-34px;font:900 128px/1 var(--font-num);opacity:.13;color:#8A5400;pointer-events:none;user-select:none}
-  .rk-champ .th{width:228px;height:128px;border-radius:12px;overflow:hidden;flex:none;background:#fff;box-shadow:0 8px 24px rgba(138,84,0,.28);position:relative;z-index:1}
+  .rk-champ .no1{position:absolute;right:12px;top:-26px;font:900 92px/1 var(--font-num);opacity:.13;color:#8A5400;pointer-events:none;user-select:none}
+  .rk-champ .th{width:172px;height:97px;border-radius:var(--cd-th-r);overflow:hidden;flex:none;background:#fff;box-shadow:0 6px 18px rgba(138,84,0,.28);position:relative;z-index:1}
   .rk-champ .th img{width:100%;height:100%;object-fit:cover}
-  .rk-champ .th .ph{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-weight:800;font-size:30px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
-  .rk-champ .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;position:relative;z-index:1}
-  .rk-champ .bd .up{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .rk-champ .bd .tag1{font:800 11px/1 var(--font-num);color:#fff;background:linear-gradient(135deg,#F97316,#E11D48);padding:3px 9px;border-radius:6px;letter-spacing:.5px}
-  .rk-champ .bd .t{font-size:clamp(17px,2vw,22px);font-weight:800;color:#4A2C00;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .rk-champ .bd .en{font-size:12px;color:#9A6A20;font-family:var(--font-num);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .rk-champ .bd .meta2{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:11.5px;font-weight:650;color:#8A5400}
-  .rk-champ .bd .meta2 .it{background:rgba(255,255,255,.62);border-radius:99px;padding:2px 10px}
-  .rk-champ .sc2{font:800 32px/1 var(--font-num);color:#C2410C;flex:none;position:relative;z-index:1;text-align:center}
-  .rk-champ .sc2 small{display:block;font-size:10px;font-weight:600;color:#9A6A20;margin-top:4px;font-family:var(--font)}
-  /* #2-10 榜单大卡网格 */
-  .rk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-  .rk-card{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.6);border-radius:var(--cd-r);padding:10px 13px;cursor:pointer;transition:.16s;min-width:0}
-  .rk-card:hover{transform:translateY(-2px);box-shadow:0 14px 32px rgba(0,0,0,.3)}
+  .rk-champ .th .ph{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-weight:800;font-size:26px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
+  .rk-champ .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;position:relative;z-index:1}
+  .rk-champ .bd .up{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .rk-champ .bd .tag1{font:800 10.5px/1 var(--font-num);color:#fff;background:linear-gradient(135deg,#F97316,#E11D48);padding:3px 8px;border-radius:6px;letter-spacing:.5px}
+  .rk-champ .bd .t{font-size:clamp(15px,1.5vw,18px);font-weight:800;color:#4A2C00;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rk-champ .bd .en{font-size:11.5px;color:#9A6A20;font-family:var(--font-num);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rk-champ .bd .meta2{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;font-weight:650;color:#8A5400}
+  .rk-champ .bd .meta2 .it{background:rgba(255,255,255,.62);border-radius:99px;padding:1.5px 9px}
+  .rk-champ .sc2{font:800 24px/1 var(--font-num);color:#C2410C;flex:none;position:relative;z-index:1;text-align:center}
+  .rk-champ .sc2 small{display:block;font-size:9.5px;font-weight:600;color:#9A6A20;margin-top:3px;font-family:var(--font)}
+  /* #2-6 榜单小卡（v10.68：3 列 × 3 行 → **5 列 × 1 行**，整块 244 → 47px） */
+  .rk-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+  .rk-card{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.6);border-radius:var(--cd-r);padding:7px 10px;cursor:pointer;transition:.16s;min-width:0;min-height:0}
+  .rk-card:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(0,0,0,.3)}
   .rk-card.on{outline:2px solid var(--c-primary);outline-offset:-2px}
-  .rk-card .no{flex:none;width:24px;text-align:center;font:800 16px/1 var(--font-num);color:#B9C0D2}
+  .rk-card .no{flex:none;width:18px;text-align:center;font:800 13px/1 var(--font-num);color:#B9C0D2}
   .rk-card .no.r2{color:#F59E0B}
   .rk-card .no.r3{color:#2E6BFF}
-  .rk-card .th{width:74px;height:auto;aspect-ratio:var(--th-ar);border-radius:var(--cd-th-r);overflow:hidden;flex:none;background:#EDF0F6}
+  .rk-card .th{width:46px;height:auto;aspect-ratio:var(--th-ar);border-radius:var(--cd-th-r);overflow:hidden;flex:none;background:#EDF0F6}
   .rk-card .th img{width:100%;height:100%;object-fit:cover}
-  .rk-card .th .ph{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-weight:800;font-size:17px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
-  .rk-card .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-  /* ★ v10.30 卡片统一：标题从「单行 nowrap 截断」改「固定预留两行」（完本仍在 title 属性里） */
-  .rk-card .bd .t{font-size:13px;font-weight:700;line-height:var(--cd-lh);min-height:var(--cd-t2);
-    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
-  .rk-card .bd .s{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--c-t3);min-width:0}
+  .rk-card .th .ph{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-weight:800;font-size:14px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
+  .rk-card .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  /* ★ v10.68：小卡标题从「固定预留两行」（--cd-t2 = 2.8em，是 v10.30 的统一规范）
+     收成**单行**。理由：单行卡高 47px 才够把 hero 压到 ~300px，而 v10.30 的两行预留
+     在 231px 宽的 5 列网格里会让每张卡高 73px ⇒ 一行就吃掉 73px，与目标冲突。
+     ★ 这是**有意的口径变更**，不是回归 —— 完整标题仍在本行 `title` 属性里
+     （见 rankCard 的 title），悬停可看全；且 v10.30 当时防的「标题高度不齐」在这里
+     由 `min-height` 归零 + 单行 ellipsis 同样解决（所有卡恒 1 行，不会参差）。 */
+  .rk-card .bd .t{font-size:12px;font-weight:700;line-height:1.3;min-height:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rk-card .bd .s{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--c-t3);min-width:0}
   .rk-card .bd .s .g{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .rk-card .sc{flex:none;font-size:11px;font-weight:750;color:var(--c-score);font-family:var(--font-num)}
+  .rk-card .sc{flex:none;font-size:10.5px;font-weight:750;color:var(--c-score);font-family:var(--font-num)}
   .bdg{font-size:9px;font-weight:750;padding:1px 5px;border-radius:4px;flex:none}
   .bdg.xd{background:rgba(11,123,255,.12);color:#0B7BFF}
   .bdg.jidi{background:rgba(230,65,93,.12);color:#E6415D}
@@ -346,7 +356,11 @@
   /* ============ 📏 排序 / 容量 筛选条 ============
      面板规格与 .cat-panel 一致 → 「分类 / 排序 / 容量」三行形成统一操作台。
      每组 = 行首标签 + 分段控件；选中态沿用顶栏 .main-nav 的「灰轨 + 白块」语言。 */
-  .filter-bar{background:var(--c-surface);border:1px solid var(--c-border);border-radius:14px;box-shadow:var(--shadow);padding:11px 14px;margin-bottom:16px;display:flex;flex-direction:column;gap:9px}
+  /* ★ v10.68：筛选面板 padding 11→8、行间距 9→7（省 12px）。
+     ★ 只压**容器留白**，不压 `.filter-row{min-height:31px}` 与按钮内边距 ——
+       那些是点击目标，v10.65 起就已挂在待办里的「移动端点击目标 25–33px 偏小」问题，
+       再压会加重它。这是有意的取舍，写在这里免得下轮有人顺手把它也压了。 */
+  .filter-bar{background:var(--c-surface);border:1px solid var(--c-border);border-radius:14px;box-shadow:var(--shadow);padding:8px 14px;margin-bottom:16px;display:flex;flex-direction:column;gap:7px}
   .filter-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:31px}
   .filter-lb{font-size:12px;font-weight:700;color:var(--c-t3);letter-spacing:.5px;flex:none;min-width:24px}
   .fx-sp{flex:1 1 auto;min-width:0}
@@ -1257,9 +1271,13 @@
 
   /* ============ 分类标签行（最新收录分区内） ============ */
   .cat-panel{background:var(--c-surface);border:1px solid var(--c-border);border-radius:14px;box-shadow:var(--shadow);padding:11px 14px}
-  .cat-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .cat-row{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
   .cat-title{font-size:12px;font-weight:700;color:var(--c-t3);letter-spacing:.5px;margin-right:4px;flex:none}
-  .cat{font-size:12.5px;font-weight:650;color:var(--c-t2);background:#F3F5F9;border:1px solid transparent;border-radius:9px;padding:5px 13px;transition:.14s}
+  /* ★ v10.68：`.cat` 收 2px（5px 13px → 4px 11px）、`.cat-row` gap 6 → 5。
+     目的：13 个分类 + 标题 + 统计行的总宽从**刚好超 1196** 降到放得下，
+     分类行从**两行（52px）收成一行（34px）** —— 首屏正好多让出一条游戏。
+     ★ 只动内边距，**不动字号**（12.5px 是既有基线，改了会牵动 .cat 的既有断点断言）。 */
+  .cat{font-size:12.5px;font-weight:650;color:var(--c-t2);background:#F3F5F9;border:1px solid transparent;border-radius:9px;padding:4px 11px;transition:.14s}
   .cat:hover{border-color:var(--c-primary);color:var(--c-primary)}
   .cat.on{background:var(--c-primary);color:#fff;box-shadow:0 3px 10px rgba(46,107,255,.28)}
   .cat-row .grow{flex:1}
@@ -1274,30 +1292,53 @@
 
   /* ============ 内容库行式列表（参考 XD 行卡：封面+中英文名+评分/大小/日期） ============ */
   .sec-h{display:flex;align-items:center;gap:10px;margin:6px 0 14px}
-  .sec-h h2{font-size:17px;font-weight:800;letter-spacing:.2px;display:flex;align-items:center;gap:9px}
-  .sec-h .bar{width:4px;height:16px;border-radius:3px;background:linear-gradient(180deg,#2E6BFF,#6366F1)}
+  .sec-h h2{font-size:15px;font-weight:600;letter-spacing:.2px;display:flex;align-items:center;gap:9px}
+  .sec-h .bar{width:3px;height:14px;border-radius:3px;background:linear-gradient(180deg,#2E6BFF,#6366F1)}
   .sec-h .en{font-size:11px;color:var(--c-t3);font-family:var(--font-num);letter-spacing:.5px}
   .sec-h .more{margin-left:auto;font-size:12px;color:var(--c-t3)}
+  /* ★ v10.68 秩序语言（参考 designeer.xyz 的分节头）：编号 + 一句说明 + 虚线收尾。
+     编号用与标题同宽度的固定槽位（不是 `::before` 拼字符串）—— 文案要在 HTML 里可改。 */
+  .sec-no{font:600 11px/1 var(--font-num);color:var(--c-t3);letter-spacing:.5px;flex:none}
+  .stage-h .sec-no{color:rgba(255,255,255,.42)}
+  .sec-sub{font-size:12px;color:var(--c-t2);margin:-10px 0 12px 13px}
+  /* ★ v10.68「虚线秩序」：参考站的分隔语言是 dashed 而不是实线。
+     落地两处 —— ① 主区/侧栏之间的竖虚线 ② 日期分组条的横虚线。
+     ★ 只换线的样式，不动任何信息、结构与间距语义。 */
+  .grid2{position:relative}
+  @media(min-width:1061px){
+    .grid2::after{content:"";position:absolute;top:0;bottom:0;right:calc(340px + 10px);
+      border-left:1px dashed var(--c-border2);pointer-events:none}
+  }
+  .date-sep::after{content:"";flex:1;border-top:1px dashed var(--c-border2)}
   .src-badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:1.5px 7px;border-radius:6px;letter-spacing:.2px;flex:none}
   .src-badge.xd{color:var(--c-xd);background:rgba(11,123,255,.1)}
   .src-badge.jidi{color:var(--c-jidi);background:rgba(230,65,93,.1)}
 
-  .lib{display:flex;flex-direction:column;gap:10px}
-  .row-card{display:flex;gap:13px;background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--cd-r);padding:10px 12px;cursor:pointer;transition:.16s;align-items:center}
+  /* ============ 内容库行式列表 ============
+     ★★ v10.68 行密度 112 → 76px（用户拍板 B 档，实测驱动）：
+     改前实测 —— 缩略图 158px 宽（16:9 ⇒ 89px 高）+ 标题**固定预留两行**（--cd-t2 = 2.8em ≈ 41px）
+     ⇒ 行高 = 20(padding) + max(89, 标题41 + 英文16 + 元信息20 + gap10) ≈ **112px**，一屏只 9 条。
+     改后 —— 缩略图 158→**96px**（16:9 ⇒ 54px 高）、标题收成**单行**、英文名**并入标题行**
+     ⇒ 行高 = 18 + max(54, 单行18 + 元信息19 + gap3) = **74–76px**，一屏 12 条。
+     ★ 信息项一个没删：封面 / 中文名 / 源徽标 / 英文名 / 评分 / 分类 / 容量 / 日期 / 查看按钮 全在。
+     ★ 有意偏离 v10.30 的「标题固定预留两行」规范：那套在 158px 缩略图时代是对的
+     （让卡片高度一致），现在行高由缩略图主导（54px > 文字块 40px），两行预留只会白白撑高。 */
+  .lib{display:flex;flex-direction:column;gap:8px}
+  .row-card{display:flex;gap:12px;background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--cd-r);padding:9px 12px;cursor:pointer;transition:.16s;align-items:center}
   .row-card:hover{border-color:#B9C7E8;box-shadow:0 8px 22px rgba(18,26,51,.09);transform:translateY(-1px)}
-  .row-card .th{width:158px;height:auto;aspect-ratio:var(--th-ar);border-radius:var(--cd-th-r);overflow:hidden;flex:none;background:#EDF0F6;position:relative}
+  .row-card .th{width:96px;height:auto;aspect-ratio:var(--th-ar);border-radius:var(--cd-th-r);overflow:hidden;flex:none;background:#EDF0F6;position:relative}
   .row-card .th img{width:100%;height:100%;object-fit:cover;transition:transform .35s}
   .row-card:hover .th img{transform:scale(1.06)}
-  .row-card .ph{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-weight:800;font-size:22px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
-  .row-card .bd{flex:1;min-width:0;align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:5px}
-  .row-card .bd .tt{display:flex;align-items:center;gap:8px;min-width:0}
-  /* ★ v10.30 卡片统一：搜索结果标题改「固定预留两行」。
-     `min-width:0` 是必须的 —— 它作为 `-webkit-box` 的 flex item，
-     不归零 min-width 就不会收缩换行（`auto` 下会溢出容器、clamp 永不生效）。 */
-  .row-card h3{font-size:14.5px;font-weight:750;line-height:var(--cd-lh);min-height:var(--cd-t2);min-width:0;
-    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
-  .row-card .en{font-size:11.5px;color:var(--c-t3);font-family:var(--font-num);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:1px}
+  .row-card .ph{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-weight:800;font-size:18px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
+  .row-card .bd{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:3px}
+  .row-card .bd .tt{display:flex;align-items:center;gap:7px;min-width:0}
+  /* 单行截断（改前是 -webkit-box + line-clamp:2 + min-height:2.8em 的两行预留）。
+     `min-width:0` 仍然必须：flex item 默认 min-width:auto，不归零就不会收缩、ellipsis 不生效。 */
+  .row-card h3{font-size:13.5px;font-weight:750;line-height:1.35;min-width:0;flex:0 1 auto;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row-card .en{font-size:11.5px;color:var(--c-t3);font-family:var(--font-num);flex:0 1 auto;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:0}
   .pill{font-size:11px;color:var(--c-t2);background:#F1F3F8;padding:1px 8px;border-radius:99px;white-space:nowrap}
   .pill.score{background:var(--c-score-bg);color:var(--c-score);font-weight:750;font-family:var(--font-num)}
   .pill.size{color:#7C5BD6;background:rgba(124,91,214,.09)}
@@ -1319,13 +1360,15 @@
   .date-sep .ds-bar{width:3px;height:13px;border-radius:2px;background:linear-gradient(180deg,#E6415D,#F59E0B)}
   .date-sep .ds-en{font-size:10.5px;color:var(--c-t3);font-weight:500;font-family:var(--font-num)}
 
-  .skeleton{display:flex;gap:13px;background:#fff;border:1px solid var(--c-border);border-radius:var(--cd-r);padding:10px 12px;align-items:center}
+  /* ★ v10.68：骨架必须跟着真卡一起缩（padding/gap/缩略图宽度），
+     否则「骨架 → 真卡」那一瞬卡片会跳一截 —— 这是 v10.30 就立过的规矩。 */
+  .skeleton{display:flex;gap:12px;background:#fff;border:1px solid var(--c-border);border-radius:var(--cd-r);padding:9px 12px;align-items:center}
   .sk{background:linear-gradient(90deg,#E8EBF3 25%,#F5F6FA 50%,#E8EBF3 75%);background-size:200% 100%;animation:shimmer 1.2s infinite;border-radius:8px}
   @keyframes shimmer{to{background-position:-200% 0}}
-  .skeleton .sk-th{width:158px;height:auto;aspect-ratio:var(--th-ar);border-radius:var(--cd-th-r);flex:none}
+  .skeleton .sk-th{width:96px;height:auto;aspect-ratio:var(--th-ar);border-radius:var(--cd-th-r);flex:none}
   .skeleton .sk-l1{height:14px;width:46%;border-radius:6px}
-  .skeleton .sk-l2{height:11px;width:66%;margin-top:9px}
-  .skeleton .sk-l3{height:10px;width:34%;margin-top:8px}
+  .skeleton .sk-l2{height:11px;width:66%;margin-top:6px}
+  .skeleton .sk-l3{height:10px;width:34%;margin-top:6px}
 
   .empty{background:#fff;border:1px dashed var(--c-border2);border-radius:14px;padding:38px 14px;text-align:center;color:var(--c-t3);font-size:13px}
   .empty .big{font-size:30px;margin-bottom:8px}
@@ -1691,22 +1734,30 @@
   }
 
   @media(max-width:760px){
-    .row-card .th{width:112px;height:auto;aspect-ratio:var(--th-ar)}
+    .row-card .th{width:84px;height:auto;aspect-ratio:var(--th-ar)}
     .row-card .go{display:none}
-    .skeleton .sk-th{width:112px;height:auto;aspect-ratio:var(--th-ar)}
+    .skeleton .sk-th{width:84px;height:auto;aspect-ratio:var(--th-ar)}
     .grid2{grid-template-columns:1fr}
-    /* 热榜舞台：单列 + 冠军卡竖排 */
-    .stage .in{padding:20px 18px 24px}
-    .stage-h{gap:12px;align-items:flex-start}
+    /* 热榜舞台（★ v10.68：移动端 hero 实测 **1289px** ⇒ 列表容器被推到 y=1877，
+       在 844 高的屏上要滚 **2.2 屏**才见到第一条游戏。压到 ~300px：
+       冠军卡改回横条（改前是竖排 + 158px 大图，是 1289 的主因）、
+       榜单从「单列 9 张堆叠」改「横向滚动单行」。 */
+    .stage .in{padding:14px 16px 16px}
+    .stage-h{gap:10px;align-items:flex-start;margin-bottom:10px}
+    .stage-h h1{font-size:17px}
     .stage-h .sp{display:none}
     .stage-pills{order:3;width:100%;overflow-x:auto;scrollbar-width:none}
     .stage-pills::-webkit-scrollbar{display:none}
-    .stage-pill{flex:1;text-align:center;padding:6px 8px}
+    .stage-pill{flex:1;text-align:center;padding:5px 8px;font-size:12px}
     .stage-meta{order:2;margin-left:auto}
-    .rk-champ{flex-direction:column;align-items:stretch;gap:12px;padding:14px}
-    .rk-champ .th{width:100%;height:158px}
-    .rk-champ .sc2{text-align:left}
-    .rk-grid{grid-template-columns:1fr}
+    .rk-champ{gap:10px;padding:10px 12px;margin-bottom:8px}
+    .rk-champ .th{width:104px;height:59px;border-radius:var(--cd-th-r)}
+    .rk-champ .bd .t{font-size:15px}
+    .rk-champ .bd .en{display:none}
+    .rk-champ .sc2{font-size:20px}
+    .rk-grid{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+    .rk-grid::-webkit-scrollbar{display:none}
+    .rk-grid .rk-card{flex:0 0 74%;min-width:0}
     /* 顶栏搜索按钮：只留图标 */
     .top-search{min-width:0;padding:8px 10px}
     .top-search .lb,.top-search .kbd{display:none}
@@ -1726,6 +1777,16 @@
     .tabbar a.on{color:var(--c-primary)}
     .tabbar a:active{background:#F2F5FC}
     .cat-row{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+    /* ★★ v10.68 修一个**实测到的真缺陷**：`.cat-row` 在移动端虽然是 nowrap，
+       但里面的 `.statline`（`display:flex` + `flex-wrap:wrap`）作为 flex item
+       默认 `flex-shrink:1` ⇒ 被压到很窄 ⇒ **它自己内部换行**，把 `.cat-row`
+       从应有的 34px 撑到 **181px**（实测 390×844），首屏被白吃 147px。
+       ⇒ 让它「不收缩 + 不换行」，跟着分类一起横滑。
+       ★ 这条的教训与 v10.30 的 `.rel-it` 一模一样：**父级 nowrap 挡不住子级 wrap**。 */
+    .cat-row .statline{flex:none;flex-wrap:nowrap;white-space:nowrap}
+    /* ★ v10.68：说明行（.sec-sub）是「有空间时讲清楚」用的；移动端首屏寸土寸金 ⇒ 隐藏。
+       桌面保留 —— 它是「秩序语言」的一部分（用户拍板全采纳）。 */
+    .sec-sub{display:none}
     .cat-row::-webkit-scrollbar{display:none}
     /* 筛选条：先修栅格子项的「自动最小尺寸」——否则 #colMain 的 min-content
        会被 nowrap 的分段控件撑到 531px，375 宽的屏上整页横向溢出（实测）。 */
@@ -1772,16 +1833,18 @@
     .load-more{width:100%}
   }
   @media(max-width:420px){
-    .row-card .th{width:96px;height:auto;aspect-ratio:var(--th-ar)}
-    .skeleton .sk-th{width:96px;height:auto;aspect-ratio:var(--th-ar)}
+    .row-card .th{width:76px;height:auto;aspect-ratio:var(--th-ar)}
+    .skeleton .sk-th{width:76px;height:auto;aspect-ratio:var(--th-ar)}
     .row-card{padding:8px 10px}
-    .row-card h3{font-size:13.5px}
+    .row-card h3{font-size:13px}
     .pill.time{display:none}
-    .stage-h h1{font-size:18px}
+    /* ★ v10.68：这三条原是为「冠军卡竖排 + 全宽大图」写的（height 132 / sc2 26 / h1 18），
+       760 断点已改成横条小图 ⇒ 这里必须同步收小，否则窄屏又被顶回 132px 大图。 */
+    .stage-h h1{font-size:16px}
     .stage-h .sub{font-size:11px}
     .stage-meta{font-size:11px}
-    .rk-champ .th{height:132px}
-    .rk-champ .sc2{font-size:26px}
+    .rk-champ .th{width:92px;height:52px}
+    .rk-champ .sc2{font-size:18px}
     .sm-row .en{display:none}
     .sm-quick button{font-size:12px;padding:4px 11px}
     /* v10.15：窄屏下四库速览改两列、底部按键条收起「自动回到这里」（窄屏本就靠手势返回） */
@@ -2728,8 +2791,7 @@ function rowCard(it) {
   return `<article class="row-card${it.mol ? ' is-mol' : ''}" data-url="${esc(it.url)}" data-mol="${it.mol ? '1' : ''}" data-mq="${it.mol ? esc(it.title) : ''}" data-fb="${fbJson}">
     <div class="th">${coverHtml({ ...it, zh: n.zh })}</div>
     <div class="bd">
-      <div class="tt"><h3>${esc(n.zh)}</h3><span class="src-badge ${SRC[it.source] ? SRC[it.source].cls : 'xd'}">${SRC[it.source] ? SRC[it.source].nm : 'XDGAME'}</span></div>
-      ${n.en ? `<div class="en">${esc(n.en)}</div>` : ''}
+      <div class="tt"><h3 title="${esc(n.zh)}">${esc(n.zh)}</h3><span class="src-badge ${SRC[it.source] ? SRC[it.source].cls : 'xd'}">${SRC[it.source] ? SRC[it.source].nm : 'XDGAME'}</span>${n.en ? `<span class="en" title="${esc(n.en)}">${esc(n.en)}</span>` : ''}</div>
       <div class="meta">${meta.join('')}</div>
       ${resChips(it)}
     </div>
@@ -2887,7 +2949,10 @@ function champHtml(it) {
     ${okScoreV(it.score) ? `<div class="sc2">${it.score}<small>玩家评分</small></div>` : ''}
   </div>`;
 }
-/* 榜单 #2-10：网格大卡（排名 + 封面 + 中文名 + 源徽标 + 类型/容量 + 评分） */
+/* 榜单 #2-6：网格小卡（排名 + 封面 + 中文名 + 源徽标 + 类型/容量 + 评分）
+ * ★ v10.68：从 #2-10 收成 #2-6 —— 配合 `.rk-grid` 改 5 列 × 1 行（原 3 列 × 3 行）。
+ *   这是首屏压缩的**代价项**，写在这里免得下轮有人以为数据被截断了：
+ *   榜单本身在服务端仍是完整抓取，只是首页舞台只展示前 6 位。 */
 function rankCard(it) {
   const n = splitName(it.title);
   const bdg = it.source === 'jidi' ? '<span class="bdg jidi">机地</span>' : '<span class="bdg xd">XD</span>';
@@ -2904,14 +2969,17 @@ function rankMark(url) {
   const el = $('#rankList'); if (!el || !url) return;
   $$('#rankList [data-url]').forEach(o => o.classList.toggle('on', o.dataset.url === url));
 }
+/* 采样高度跟着改后的真实尺寸走：冠军卡 121 + 小卡 47，
+ * ★ 不要写死旧值 —— v10.68 前这里写的是 162 / 66，与 `.rk-champ`/`.rk-card` 的实际高度
+ *   差 1px 就会在骨架→真卡的切换里抖一下（v10.30 起就是这么定的：骨架高 = 真卡高）。 */
 function rankSkeleton() {
-  return `<div class="rk-skel" style="height:162px;margin-bottom:14px"></div><div class="rk-grid">${'<div class="rk-skel" style="height:66px"></div>'.repeat(9)}</div>`;
+  return `<div class="rk-skel" style="height:121px;margin-bottom:10px"></div><div class="rk-grid">${'<div class="rk-skel" style="height:47px"></div>'.repeat(5)}</div>`;
 }
 function paintRank() {
   const el = $('#rankList'); if (!el) return;
   const list = rankCache[rankPeriod] || [];
   el.innerHTML = list.length
-    ? champHtml(list[0]) + `<div class="rk-grid">${list.slice(1).map(rankCard).join('')}</div>`
+    ? champHtml(list[0]) + `<div class="rk-grid">${list.slice(1, 6).map(rankCard).join('')}</div>`
     : `<div class="sm-empty" style="color:rgba(255,255,255,.6)"><div class="big">📭</div>该档榜单暂无数据</div>`;
   const meta = $('#rankMeta');
   if (meta) {

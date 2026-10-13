@@ -59,9 +59,16 @@ console.log('\n=== ① 卡片统一规范（:root 变量） ===');
   ok(!!root && /--cd-s\s*:\s*106px/.test(root[1]), '同类游戏小卡固定 106px');
   /* ★ 变量必须真的被 *用* 上：只定义不引用 = 规范写了但没生效 */
   const uses = (k) => (IDX.match(new RegExp('var\\(' + k + '\\)', 'g')) || []).length;
-  for (const v of ['--cd-r', '--cd-th-r', '--th-ar', '--cd-t2']) {
+  for (const v of ['--cd-r', '--cd-th-r', '--th-ar']) {
     ok(uses(v) >= 3, '★ ' + v + ' 被引用 ≥3 处（只定义不用 = 规范没生效）', '实际 ' + uses(v) + ' 处');
   }
+  /* ★ v10.68：`--cd-t2` 的下限从 3 收到 **2**。
+     原因：`.row-card h3`（首页/搜索结果行卡）改**单行**后不再引用它 —— 详见 ④ 段那组的注释。
+     它剩下的使用者是 `.rel-row .rel-it .t`（同类游戏卡）与 `.x-src .x-it .bd .t`（跨源链接卡），
+     那条「预留两行」的规范在这两族**仍然有效**。
+     ★ 本条的意图是「变量必须真的被用上」，不是「必须恰好 3 处」；
+       下限 2 依然挡得住「定义完就没人用」这种退化。 */
+  ok(uses('--cd-t2') >= 2, '★ --cd-t2 被引用 ≥2 处（v10.68 起 .row-card h3 不再使用它）', '实际 ' + uses('--cd-t2') + ' 处');
 }
 
 /* ============================================================
@@ -137,10 +144,40 @@ console.log('\n=== ④ 其余卡片族一致性 ===');
   ok(/aspect-ratio:var\(--th-ar\)/.test(ruleOf(IDX, '.sm-row .ph2')),
     '★ 搜索行占位块 .ph2 与图片同步（只改 img 不改 ph2 ⇒ 有图/无图两行高度不同）');
 
+  /* ★★ v10.68 口径变更：`.row-card`（首页内容库行卡 / 搜索结果行卡）与
+     `.rk-card`（首页排行小卡）的标题，从「固定预留两行」改成**单行截断**。
+     ★ 为什么要改（实测驱动，不是审美）：缩略图 158→96px 后，**行高由缩略图主导**
+       （54px > 文本块 40px）；此时再保留 2.8em（≈41px）的两行预留，会把行高顶回
+       112px ⇒ 与「首页一屏 12 条」的目标直接冲突（用户拍板 B 档 76px 行高）。
+     ★ 原断言真正守的是「**卡片等高**」。新口径下等高由**缩略图固定宽度**保证
+       （下面单独钉死 96px / 16:9 ⇒ 恒 54px 高），所以这组改成
+       「单行 + 必须 ellipsis + 反向断言不许回到两行」。
+     ★ `.sm-row .t`（搜索行）**不在本次变更内**，仍按原口径守 2 行。 */
+  {
+    const rc = ruleOf(IDX, '.row-card h3');
+    ok(rc.length > 0, '能取到 .row-card h3 规则体');
+    ok(/white-space:nowrap/.test(rc) && /text-overflow:ellipsis/.test(rc),
+      '★ v10.68：搜索结果标题 **单行 + ellipsis**（完整名在同元素的 title 属性里）');
+    ok(!/-webkit-line-clamp/.test(rc),
+      '★★ 反向断言：不许再回到两行 clamp（回去 = 行高回 112px，首屏又看不到游戏）');
+    ok(!/min-height:var\(--cd-t2\)/.test(rc),
+      '★★ 反向断言：不许再预留两行高度（同上，且会让卡片高度参差）');
+
+    /* 新口径下「卡片等高」的实际保证：缩略图宽度定死 ⇒ 16:9 推出恒定高度 */
+    const rcth = ruleOf(IDX, '.row-card .th');
+    ok(/width:96px/.test(rcth),
+      '★ v10.68：行卡缩略图固定 96px（16:9 ⇒ 54px 高）—— 这是行高 ≈76px 的决定因素，改它就等于改行高');
+
+    const rt = ruleOf(IDX, '.rk-card .bd .t');
+    ok(rt.length > 0, '能取到 .rk-card .bd .t 规则体');
+    ok(/white-space:nowrap/.test(rt) && /text-overflow:ellipsis/.test(rt),
+      '★ v10.68：排行小卡标题 **单行 + ellipsis**（配合 5 列 × 1 行网格，整块 244 → 47px）');
+    ok(!/-webkit-line-clamp/.test(rt),
+      '★★ 反向断言：排行标题不许回到两行 clamp（回去 = 每张卡 73px，一行就吃掉 73px）');
+  }
+
   for (const [sel, label] of [
-    ['.row-card h3', '搜索结果标题'],
     ['.sm-row .t', '搜索行标题'],
-    ['.rk-card .bd .t', '排行标题'],
   ]) {
     const b = ruleOf(IDX, sel);
     ok(b.length > 0, '能取到 ' + sel + ' 规则体');
