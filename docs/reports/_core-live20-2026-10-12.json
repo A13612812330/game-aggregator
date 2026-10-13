@@ -1,0 +1,5249 @@
+{
+ "builtAt": 1791799469343,
+ "builtAtText": "2026-10-12T10:04:29.343Z",
+ "stamp": "2026-10-12",
+ "criteria": {
+  "pool": 168,
+  "scanned": 30,
+  "picked": 20,
+  "topn": 20
+ },
+ "picked": [
+  {
+   "id": "xd-4897",
+   "hot": 80910,
+   "score": 9.5,
+   "name": "潜水员戴夫",
+   "nameEn": "DAVE THE DIVER",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/4897.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/36849837",
+   "jidiId": "jidi-36849837",
+   "counts": {
+    "mod": 1,
+    "saves": 3,
+    "trainers": 5
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "36849837",
+    "n": 185,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791799119000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/5833b7b837db",
+      "title": "【亲测可用】解压即撸|v1.0.6.2113|潜水员戴夫豪华中文全DLC+丛林DLC+原声原画集",
+      "portUrl": "https://jidiyouxi.com/post/detail/2886865288"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799119000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VP1Zk_f7ZU-Y1V7GBqZW8BuIA1?pwd=nzhm",
+      "title": "【亲测可用】解压即撸|v1.0.6.2113|潜水员戴夫豪华中文全DLC+丛林DLC+原声原画集",
+      "portUrl": "https://jidiyouxi.com/post/detail/2886865288"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799119000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1AsmGVtdS_bEGdK1THYEDUA?pwd=8888",
+      "title": "【亲测可用】解压即撸|v1.0.6.2113|潜水员戴夫豪华中文全DLC+丛林DLC+原声原画集",
+      "portUrl": "https://jidiyouxi.com/post/detail/2886865288"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799064000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1O8LYtzry2e1EbPkvJRB4Ow?pwd=b9xw",
+      "title": "【亲测】解压即撸| V1.0.6.2113 |中文-全DLC《潜水员戴夫》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2886923507"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799064000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/625fc4a4e3db",
+      "title": "【亲测】解压即撸| V1.0.6.2113 |中文-全DLC《潜水员戴夫》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2886923507"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799064000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VP1itof36dBwB7CmY3q37QOfA1?pwd=52je#",
+      "title": "【亲测】解压即撸| V1.0.6.2113 |中文-全DLC《潜水员戴夫》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2886923507"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791799119000,
+    "server": "夸克网盘",
+    "url": "https://pan.quark.cn/s/5833b7b837db",
+    "title": "【亲测可用】解压即撸|v1.0.6.2113|潜水员戴夫豪华中文全DLC+丛林DLC+原声原画集",
+    "portUrl": "https://jidiyouxi.com/post/detail/2886865288",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 1,
+    "cands": [
+     {
+      "date": "2026-09-15",
+      "ts": 1789433389000,
+      "title": "潜水员戴夫2026最新全DLC 附修改器安装mod新手教程",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOw2oEjFCB2gyCqPOCfRNZFSA1",
+      "page": "https://jidiyouxi.com/post/detail/2584934622"
+     }
+    ],
+    "date": "2026-09-15",
+    "ts": 1789433389000,
+    "title": "潜水员戴夫2026最新全DLC 附修改器安装mod新手教程",
+    "server": "迅雷网盘",
+    "url": "https://pan.xunlei.com/s/VOw2oEjFCB2gyCqPOCfRNZFSA1",
+    "page": "https://jidiyouxi.com/post/detail/2584934622",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 3,
+    "cands": [
+     {
+      "date": "2023-10-15",
+      "ts": 1697328000000,
+      "title": "Dave the Diver: Trainer +11 v1.01.1119 V2 {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/trainers/102023/d/davethediver/Dave_the_Diver_promo.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/dave_the_diver_trainer_11_v1_01_1119_v2_cheathappens_com/28-1-0-11359"
+     },
+     {
+      "date": "2023-07-14",
+      "ts": 1689292800000,
+      "title": "Dave The Diver: Trainer +18 v1.0 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://poeti-liriki.narod.ru/trainers/072023/d/davethediver/Dave_the_Diver_v1.0_Trainer.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/dave_the_diver_trainer_18_v1_0_fling/28-1-0-11006"
+     },
+     {
+      "date": "2023-07-10",
+      "ts": 1688947200000,
+      "title": "Dave The Diver: Trainer +13 v07.07.2023 {GreenHouse / WeMod}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/072023/d/davethediver/DAVE_THE_DIVER-Steam-Trainer_Setup.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/dave_the_diver_trainer_13_v07_11_2022_greenhouse_wemod/28-1-0-10667"
+     }
+    ],
+    "date": "2023-10-15",
+    "ts": 1697328000000,
+    "title": "Dave the Diver: Trainer +11 v1.01.1119 V2 {CheatHappens.com}",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/trainers/102023/d/davethediver/Dave_the_Diver_promo.zip",
+    "page": "https://gtrainers.com/load/categories/trainers/dave_the_diver_trainer_11_v1_01_1119_v2_cheathappens_com/28-1-0-11359",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2026-10-09",
+    "ts": 1791504000000,
+    "title": "潜水员戴夫分支商店解锁存档下载-分支商店解锁存档下载_游侠网",
+    "server": "直链",
+    "url": "https://patch1.ventacorius.com/2024/ALI213-CallmeEnhon_Filesave-9-1-0-1728289454-271529.zip",
+    "page": "https://patch.ali213.net/showpatch/271529.html",
+    "src": "游侠补丁网",
+    "n": 3,
+    "cands": [
+     {
+      "date": "2026-10-09",
+      "ts": 1791504000000,
+      "title": "潜水员戴夫分支商店解锁存档下载-分支商店解锁存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-CallmeEnhon_Filesave-9-1-0-1728289454-271529.zip",
+      "page": "https://patch.ali213.net/showpatch/271529.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2024-07-30",
+      "ts": 1722297600000,
+      "title": "潜水员戴夫全部任务完成存档下载-潜水员戴夫存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-file-5-file-1721830243.zip",
+      "page": "https://patch.ali213.net/showpatch/251133.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2024-07-16",
+      "ts": 1721088000000,
+      "title": "潜水员戴夫全收集完美存档下载-全收集完美存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-daifu.rar",
+      "page": "https://patch.ali213.net/showpatch/249249.html",
+      "src": "游侠补丁网"
+     }
+    ],
+    "chk": {
+     "code": 206
+    }
+   }
+  },
+  {
+   "id": "xd-136",
+   "hot": 78684,
+   "score": 9.5,
+   "name": "只狼：影逝二度",
+   "nameEn": "Sekiro: Shadows Die Twice",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/136.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/3285146",
+   "jidiId": "jidi-3285146",
+   "counts": {
+    "mod": 121,
+    "saves": 22,
+    "trainers": 8
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "3285146",
+    "n": 6,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791799261000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOp_yToiB2DV9IqL79oRTpuyA1?pwd=jdry",
+      "title": "【亲测可用】解压即撸|只狼：影逝二度|官方简体中文|赠多项修改器+原声BGM",
+      "portUrl": "https://jidiyouxi.com/post/detail/2182223795"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799129000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/24ebe651af69",
+      "title": "【亲测】解压即撸| v1.06年度版 |官中|全DLC-赠存档+懒人MOD整合包+修改器+4首BGM《只狼：影…",
+      "portUrl": "https://jidiyouxi.com/post/detail/1746033100"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799129000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOhhL6CAfL3Q2fbyNziKl23CA1?pwd=jg67#",
+      "title": "【亲测】解压即撸| v1.06年度版 |官中|全DLC-赠存档+懒人MOD整合包+修改器+4首BGM《只狼：影…",
+      "portUrl": "https://jidiyouxi.com/post/detail/1746033100"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799015000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1NjkSQ6vfE0UaAej-6BsNKw?pwd=gtmi",
+      "title": "【下载】只狼 v1.06+年度游戏版+奖励内容｜亲测可用",
+      "portUrl": "https://jidiyouxi.com/post/detail/1125316570"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799015000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VONOXv_EEUyAvbg9jWdGRBrPA1?pwd=kprt#",
+      "title": "【下载】只狼 v1.06+年度游戏版+奖励内容｜亲测可用",
+      "portUrl": "https://jidiyouxi.com/post/detail/1125316570"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799015000,
+      "server": "其他链接",
+      "url": "http://retracker.local/announce",
+      "title": "【下载】只狼 v1.06+年度游戏版+奖励内容｜亲测可用",
+      "portUrl": "https://jidiyouxi.com/post/detail/1125316570"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791799261000,
+    "server": "迅雷网盘",
+    "url": "https://pan.xunlei.com/s/VOp_yToiB2DV9IqL79oRTpuyA1?pwd=jdry",
+    "title": "【亲测可用】解压即撸|只狼：影逝二度|官方简体中文|赠多项修改器+原声BGM",
+    "portUrl": "https://jidiyouxi.com/post/detail/2182223795",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 121,
+    "cands": [
+     {
+      "date": "2026-09-15",
+      "ts": 1789435846000,
+      "title": "白影忍者",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOlC-_9BrXIwibPyOrTb7LSNA1?pwd=nvmo",
+      "page": "https://jidiyouxi.com/post/detail/1913809440"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789429339000,
+      "title": "只狼：容易模式",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOlBZacIedmhebcQBCQDPa9xA1?pwd=pdpp",
+      "page": "https://jidiyouxi.com/post/detail/1897063033"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789413913000,
+      "title": "艾尔登_ring_中的“被玷污者（狂暴之狼）”",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOlAw00ALa6uXuKsJrlc5CEcA1?pwd=yhy7",
+      "page": "https://jidiyouxi.com/post/detail/1897045625"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789413895000,
+      "title": "刺人拔刀斋模组（浪人剑心动漫模组）",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOlB80y8oMOiN7VBdyAj0R8BA1?pwd=vegd",
+      "page": "https://jidiyouxi.com/post/detail/1897050378"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789405435000,
+      "title": "只狼MOD",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1wzsVmencz8Q1S0LZaSd4kQ",
+      "page": "https://jidiyouxi.com/post/detail/1746032794"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789403624000,
+      "title": "惊流",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOnyPx4Mq8NBKmgcIiAYqd1HA1?pwd=wn86",
+      "page": "https://jidiyouxi.com/post/detail/2081578038"
+     }
+    ],
+    "date": "2026-09-15",
+    "ts": 1789435846000,
+    "title": "白影忍者",
+    "server": "迅雷网盘",
+    "url": "https://pan.xunlei.com/s/VOlC-_9BrXIwibPyOrTb7LSNA1?pwd=nvmo",
+    "page": "https://jidiyouxi.com/post/detail/1913809440",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 5,
+    "cands": [
+     {
+      "date": "2020-10-29",
+      "ts": 1603929600000,
+      "title": "Sekiro: Shadows Die Twice - Trainer +24 v1.02-v1.05 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://vrn-stomatolog.narod.ru/trainer1020203/s/sekiro/Sekiro.Shadows.Die.Twice.v1.02-v1.05.Plus.24.Train.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/sekiro_shadows_die_twice_trainer_18_v1_02_fling/28-1-0-7008"
+     },
+     {
+      "date": "2019-05-01",
+      "ts": 1556668800000,
+      "title": "Sekiro: Shadows Die Twice - Trainer +24 v1.02-v1.04 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://vrn-stomatolog.narod.ru/trainer0420193/s/sekiro/Sekiro_Shadows_Die_Twice_v1.02-v1.04_Plus_24_Train.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/sekiro_shadows_die_twice_trainer_22_v1_02_fling/28-1-0-7022"
+     },
+     {
+      "date": "2019-04-25",
+      "ts": 1556150400000,
+      "title": "Sekiro: Shadows Die Twice - Trainer +16 v1.03 {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://divan-vrn.narod.ru/trainers0420193/s/sekiro/sekiro103promo-ch.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/sekiro_shadows_die_twice_trainer_9_v1_02_cheathappens_com/28-1-0-7005"
+     },
+     {
+      "date": "2019-04-23",
+      "ts": 1555977600000,
+      "title": "Sekiro: Shadows Die Twice - Trainer +24 v1.02-v1.03 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://vrn-stomatolog.narod.ru/trainer0420193/s/sekiro/Sekiro_Shadows_Die_Twice_v1.02-v1.03_Plus_24_Train.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/sekiro_shadows_die_twice_trainer_21_v1_02_fling/28-1-0-7010"
+     },
+     {
+      "date": "2019-03-23",
+      "ts": 1553299200000,
+      "title": "Sekiro: Shadows Die Twice - Trainer +11 {MrAntiFun}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/trainers0320193/s/sekiro/Sekiro_Shadows_Die_Twice-Steam-Trainer_Setup.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/sekiro_shadows_die_twice_trainer_8_v1_0_mrantifun/28-1-0-7011"
+     }
+    ],
+    "date": "2020-10-29",
+    "ts": 1603929600000,
+    "title": "Sekiro: Shadows Die Twice - Trainer +24 v1.02-v1.05 {FLiNG}",
+    "server": "GTrainers 直链",
+    "url": "https://vrn-stomatolog.narod.ru/trainer1020203/s/sekiro/Sekiro.Shadows.Die.Twice.v1.02-v1.05.Plus.24.Train.zips",
+    "page": "https://gtrainers.com/load/categories/trainers/sekiro_shadows_die_twice_trainer_18_v1_02_fling/28-1-0-7008",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2026-08-21",
+    "ts": 1787270400000,
+    "title": "只狼影逝二度100%完成度存档下载_游侠网",
+    "server": "直链",
+    "url": "https://patch1.ventacorius.com/2025/ALI213-save%20file-2093-latest-1737266379-280673.zip",
+    "page": "https://patch.ali213.net/showpatch/280673.html",
+    "src": "游侠补丁网",
+    "n": 22,
+    "cands": [
+     {
+      "date": "2026-08-21",
+      "ts": 1787270400000,
+      "title": "只狼影逝二度100%完成度存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2025/ALI213-save%20file-2093-latest-1737266379-280673.zip",
+      "page": "https://patch.ali213.net/showpatch/280673.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2026-07-24",
+      "ts": 1784851200000,
+      "title": "只狼影逝二度存档文件下载-只狼影逝二度存档文件v1.06下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2026/ali213-Sekiro%20Save%20File-309339.rar",
+      "page": "https://patch.ali213.net/showpatch/309339.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2026-07-22",
+      "ts": 1784678400000,
+      "title": "只狼影逝二度苇名城终局存档下载-苇名城终局存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2025/ali213-Truba%20Save-295799.rar",
+      "page": "https://patch.ali213.net/showpatch/295799.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2025-07-01",
+      "ts": 1751328000000,
+      "title": "Sekiro: Shadows Die Twice - Save Game (All bosses killed, max health and flasks, NG+4 available)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves/s/sekiro/76561199086243480.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/sekiro_shadows_die_twice_save_game_all_bosses_killed_max_health_and_flasks_ng_4_available/30-1-0-14075",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-01-18",
+      "ts": 1737158400000,
+      "title": "只狼影逝二度七周目全结局存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2025/ALI213-Sekiro%20NG7%20all%20Endings-2087-SSDT-1-6-0-0-1736685978-279445.7z",
+      "page": "https://patch.ali213.net/showpatch/279445.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2024-08-15",
+      "ts": 1723680000000,
+      "title": "只狼影逝二度二周目完美存档下载-二周目完美存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-Perfect%20Save-1945-1-06-1720969309-253519.zip",
+      "page": "https://patch.ali213.net/showpatch/253519.html",
+      "src": "游侠补丁网"
+     }
+    ],
+    "chk": {
+     "code": 206
+    }
+   }
+  },
+  {
+   "id": "xd-419",
+   "hot": 74305,
+   "score": 9.6,
+   "name": "博德之门3",
+   "nameEn": "Baldur's Gate 3",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/419.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/3278296",
+   "jidiId": "jidi-3278296",
+   "counts": {
+    "mod": 86,
+    "saves": 17,
+    "trainers": 12
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "3278296",
+    "n": 53,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791798466000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VP1UjjDsFG7vgTcMmGCUe0hJA1?pwd=rje4#",
+      "title": "【亲测可联机】博德之门3 | 内置联机教程&免费联机工具| 官方中文| 实测可联机、可与正版联机| 解压即玩",
+      "portUrl": "https://jidiyouxi.com/post/detail/2870135899"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791798466000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1zESSAhN7rm9jTUKa2X0JPQ?pwd=wnry",
+      "title": "【亲测可联机】博德之门3 | 内置联机教程&免费联机工具| 官方中文| 实测可联机、可与正版联机| 解压即玩",
+      "portUrl": "https://jidiyouxi.com/post/detail/2870135899"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791798466000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/0f73c17ea794?pwd=tFQK",
+      "title": "【亲测可联机】博德之门3 | 内置联机教程&免费联机工具| 官方中文| 实测可联机、可与正版联机| 解压即玩",
+      "portUrl": "https://jidiyouxi.com/post/detail/2870135899"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791798405000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1pstOEtiVFEC3LB19TWQIkQ?pwd=6a97",
+      "title": "【亲测可用】解压即撸|博德之门3/Baldur's Gate 3|官方中文|赠多项修改器",
+      "portUrl": "https://jidiyouxi.com/post/detail/2987552801"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791798405000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VP345nWR_JlqbnaHmcHN4ISsA1?pwd=qs6x",
+      "title": "【亲测可用】解压即撸|博德之门3/Baldur's Gate 3|官方中文|赠多项修改器",
+      "portUrl": "https://jidiyouxi.com/post/detail/2987552801"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791795930000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1XE4rlXh1GcHqnDQn_T_UhA?pwd=2k2u",
+      "title": "【亲测】解压即撸| V4.1.1.7631656 |豪华中文-全DLC+预购奖励《博德之门3》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2970799491"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791798466000,
+    "server": "迅雷网盘",
+    "url": "https://pan.xunlei.com/s/VP1UjjDsFG7vgTcMmGCUe0hJA1?pwd=rje4#",
+    "title": "【亲测可联机】博德之门3 | 内置联机教程&免费联机工具| 官方中文| 实测可联机、可与正版联机| 解压即玩",
+    "portUrl": "https://jidiyouxi.com/post/detail/2870135899",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 86,
+    "cands": [
+     {
+      "date": "2026-09-15",
+      "ts": 1789431942000,
+      "title": "【mod】游戏最高下载量mod-ui优化",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1MrqVn4kADJ3-4tBv7PCxZA?pwd=ktid",
+      "page": "https://jidiyouxi.com/post/detail/1242723117"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789412508000,
+      "title": "【博德之门3】超全Mod整合包【含实验室】",
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/0b2705bf87db",
+      "page": "https://jidiyouxi.com/post/detail/2769455920"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789407590000,
+      "title": "更好的字体 汉仪旗黑 简体中文和英文",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOn088lYcUerBybPs-4S_H4DA1?pwd=iwhi",
+      "page": "https://jidiyouxi.com/post/detail/2014476433"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789407244000,
+      "title": "【博德之门3】最新版本大型MOD整合包+纯小白安装教学一键排序（美化、功能、新职业、新法术、新种族、优化、UI美化）",
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/547da8f52596?pwd=vFgJ",
+      "page": "https://jidiyouxi.com/post/detail/2584907124"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789407180000,
+      "title": "【mod】新增职业-魅魔（又涩又好玩）",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1A3JxYQYoX6EJxkogUQrGAw?pwd=dx3h",
+      "page": "https://jidiyouxi.com/post/detail/1242722923"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789405527000,
+      "title": "可重复游玩的浪漫场景-简体中文",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOobrZsvpT6x1PCNGbLmR0bDA1?pwd=1ikd",
+      "page": "https://jidiyouxi.com/post/detail/2115167255"
+     }
+    ],
+    "date": "2026-09-15",
+    "ts": 1789431942000,
+    "title": "【mod】游戏最高下载量mod-ui优化",
+    "server": "百度网盘",
+    "url": "https://pan.baidu.com/s/1MrqVn4kADJ3-4tBv7PCxZA?pwd=ktid",
+    "page": "https://jidiyouxi.com/post/detail/1242723117",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 9,
+    "cands": [
+     {
+      "date": "2024-02-21",
+      "ts": 1708473600000,
+      "title": "Baldur's Gate 3: Trainer +59 {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/trainers/022024/b/baldursgate3/BG3_promo.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/baldur_39_s_gate_3_trainer_59_cheathappens_com/28-1-0-11892"
+     },
+     {
+      "date": "2023-09-23",
+      "ts": 1695427200000,
+      "title": "Baldur's Gate 3: Trainer +60 v4.1.1.3732833 {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/trainers/092023/b/baldursgate3/BG3_promo.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/baldur_39_s_gate_3_trainer_60_v4_1_1_3732833_cheathappens_com/28-1-0-11237"
+     },
+     {
+      "date": "2023-08-18",
+      "ts": 1692316800000,
+      "title": "Baldur's Gate 3: Trainer +59 v4.1.1.3648072 {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/trainers/082023/bg3/BG3_promo_trainer.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/baldur_39_s_gate_3_trainer_59_v4_1_1_3648072_cheathappens_com/28-1-0-11085"
+     },
+     {
+      "date": "2023-08-09",
+      "ts": 1691539200000,
+      "title": "Baldur's Gate 3: Trainer +58 v4.1.1.3630146 {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/trainers/082023/bg3/BG3_promo.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/baldur_39_s_gate_3_trainer_15_v4_1_99_8615_steam_gog_cheathappens_com/28-1-0-11041"
+     },
+     {
+      "date": "2023-08-04",
+      "ts": 1691107200000,
+      "title": "Baldur's Gate 3: Trainer +14 v4.1.1 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://poeti-liriki.narod.ru/trainers/082023/b/baldursgate3/Baldurs_Gate_3_v4.1.1_Trainer.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/baldur_39_s_gate_3_trainer_8_v2020_10_08_fling/28-1-0-8937"
+     },
+     {
+      "date": "2022-12-21",
+      "ts": 1671580800000,
+      "title": "Baldur's Gate 3: Trainer +14 v2022.12.21 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://poeti-liriki.narod.ru/trainers/122022/b/baldursgate/Baldurs_Gate_3_Early_Access_Plus_14_Trainer.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/baldur_39_s_gate_3_trainer_14_fling/28-1-0-8912"
+     }
+    ],
+    "date": "2024-02-21",
+    "ts": 1708473600000,
+    "title": "Baldur's Gate 3: Trainer +59 {CheatHappens.com}",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/trainers/022024/b/baldursgate3/BG3_promo.zips",
+    "page": "https://gtrainers.com/load/categories/trainers/baldur_39_s_gate_3_trainer_59_cheathappens_com/28-1-0-11892",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2026-01-08",
+    "ts": 1767830400000,
+    "title": "Baldur's Gate 3: SaveGame (Dark Temptation, 100%)",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/saves2026/b/baldursgate3/bg3_save_custom.zips",
+    "page": "https://gtrainers.com/load/categories/savegames/baldur_39_s_gate_3_savegame_dark_temptation_100/30-1-0-14858",
+    "src": "GTrainers",
+    "n": 17,
+    "cands": [
+     {
+      "date": "2026-01-08",
+      "ts": 1767830400000,
+      "title": "Baldur's Gate 3: SaveGame (Dark Temptation, 100%)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves2026/b/baldursgate3/bg3_save_custom.zips",
+      "page": "https://gtrainers.com/load/categories/savegames/baldur_39_s_gate_3_savegame_dark_temptation_100/30-1-0-14858",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-12-08",
+      "ts": 1765152000000,
+      "title": "Baldur's Gate 3: SaveGame (Death Knight)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves_2025/b/baldursgate3/Story.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/baldur_39_s_gate_3_savegame_death_knight/30-1-0-14740",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-11-28",
+      "ts": 1764288000000,
+      "title": "Baldur's Gate 3: SaveGame (The Beginning, House Dagoth)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves_2025/b/baldursgate3/saves2.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/baldur_39_s_gate_3_savegame_the_beginning_house_dagoth/30-1-0-14692",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-11-18",
+      "ts": 1763424000000,
+      "title": "Baldur's Gate 3: SaveGame (Dark Seduction, Ending)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves_2025/b/baldursgate3/Roj-3324125211057.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/baldur_39_s_gate_3_savegame_dark_seduction_ending/30-1-0-14656",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2024-12-12",
+      "ts": 1733961600000,
+      "title": "博德之门3卓尔族12级武僧起始存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-The%20Dark%20Urge%20Lolth-Sworn%20Drow%20Level%2012%20Monk-14232-1-1-1733948147-274833.zip",
+      "page": "https://patch.ali213.net/showpatch/274833.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2024-10-27",
+      "ts": 1729987200000,
+      "title": "博德之门3思维爆炸成就存档下载-思维爆炸成就存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-Mind%20Blown%20-%20Achievement%20Save-13309-1-1729696753-266459.zip",
+      "page": "https://patch.ali213.net/showpatch/266459.html",
+      "src": "游侠补丁网"
+     }
+    ],
+    "chk": {
+     "code": 206
+    }
+   }
+  },
+  {
+   "id": "xd-89",
+   "hot": 43092,
+   "score": 9.2,
+   "name": "生化危机2：重制版",
+   "nameEn": "Resident Evil 2:Remake",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/89.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/3327525",
+   "jidiId": "jidi-3327525",
+   "counts": {
+    "mod": 20,
+    "saves": 16,
+    "trainers": 6
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "3327525",
+    "n": 9,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791799271000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/9f4e82cd44eb",
+      "title": "【实机亲测】解压即玩 |《生化危机 2：重制版》最新 V1.05 | 豪华版+全 DLC",
+      "portUrl": "https://jidiyouxi.com/post/detail/3021113679"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799271000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1fu2-bh3TWfRrvHoGMiO8EA?pwd=9uby",
+      "title": "【实机亲测】解压即玩 |《生化危机 2：重制版》最新 V1.05 | 豪华版+全 DLC",
+      "portUrl": "https://jidiyouxi.com/post/detail/3021113679"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799215000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/11n9WPhiRoVyR5T-h0VaGow?pwd=5t9x",
+      "title": "【亲测】解压即撸|生化危机2：重制版|官方中文|赠多项修改器+全武器全收集存档",
+      "portUrl": "https://jidiyouxi.com/post/detail/1527908584"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799215000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VO_uIuTBIhSMe19LQF0fCE_VA1?pwd=69yf#",
+      "title": "【亲测】解压即撸|生化危机2：重制版|官方中文|赠多项修改器+全武器全收集存档",
+      "portUrl": "https://jidiyouxi.com/post/detail/1527908584"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799197000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOhYptRJpWZrAxnO7U3OJZz4A1?pwd=nfni#",
+      "title": "【自用珍藏】中文|集成全DLC|整合护士哈蒂+jk学生服+兔女郎+服装合集|含克莱尔+艾达服装MOD《生化危机2重制版》",
+      "portUrl": "https://jidiyouxi.com/post/detail/1746011598"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799197000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/fc922997ecac",
+      "title": "【自用珍藏】中文|集成全DLC|整合护士哈蒂+jk学生服+兔女郎+服装合集|含克莱尔+艾达服装MOD《生化危机2重制版》",
+      "portUrl": "https://jidiyouxi.com/post/detail/1746011598"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791799271000,
+    "server": "夸克网盘",
+    "url": "https://pan.quark.cn/s/9f4e82cd44eb",
+    "title": "【实机亲测】解压即玩 |《生化危机 2：重制版》最新 V1.05 | 豪华版+全 DLC",
+    "portUrl": "https://jidiyouxi.com/post/detail/3021113679",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 20,
+    "cands": [
+     {
+      "date": "2026-09-14",
+      "ts": 1789430025000,
+      "title": "无处安全",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOmX-nZSsOPpa-G6ze4cIq-RA1?pwd=5ta5",
+      "page": "https://jidiyouxi.com/post/detail/1980923366"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789429917000,
+      "title": "校准 ReShade",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOl9Q0HvSu2pFNwvUolulEl2A1?pwd=ijmy",
+      "page": "https://jidiyouxi.com/post/detail/1880293058"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789429903000,
+      "title": "噩梦 V1.01",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOmRr9-g7wapHpkfz-MeF5wQA1?pwd=8mjr",
+      "page": "https://jidiyouxi.com/post/detail/1964176800"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789429893000,
+      "title": "克莱尔风格克莉尔面部模型 RT",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOoD55Prd0avC-80FIDRJWsuA1?pwd=jl2b",
+      "page": "https://jidiyouxi.com/post/detail/2098367216"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789425033000,
+      "title": "RE 引擎终极模组管理器 RE2R",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOp_kFiHaY0Uxnd-0Pn-jshCA1?pwd=wjsw",
+      "page": "https://jidiyouxi.com/post/detail/2182222827"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789425005000,
+      "title": "生化2绅士MOD",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1iB7G-BYPPZpUvfllKD6jzA",
+      "page": "https://jidiyouxi.com/post/detail/1762835404"
+     }
+    ],
+    "date": "2026-09-14",
+    "ts": 1789430025000,
+    "title": "无处安全",
+    "server": "迅雷网盘",
+    "url": "https://pan.xunlei.com/s/VOmX-nZSsOPpa-G6ze4cIq-RA1?pwd=5ta5",
+    "page": "https://jidiyouxi.com/post/detail/1980923366",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 5,
+    "cands": [
+     {
+      "date": "2020-01-24",
+      "ts": 1579824000000,
+      "title": "Resident Evil 2 Remake: Trainer +23 (FULL GAME 01.23.2020) {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://divan-vrn.narod.ru/trainers0120203/r/residentevil2/re2r0123promo-ch.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/resident_evil_2_remake_trainer_12_full_game_cheathappens_com/28-1-0-6846"
+     },
+     {
+      "date": "2019-12-18",
+      "ts": 1576627200000,
+      "title": "Resident Evil 2 Remake: Trainer +20 v1.0 Update 17.12.2019 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://vrn-stomatolog.narod.ru/trainer1220192/r/residentevil2/Resident_Evil_2_v1.0-v20191217_Plus_20_Trainer.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/resident_evil_2_remake_trainer_8_v1_0_fling/28-1-0-6844"
+     },
+     {
+      "date": "2019-07-01",
+      "ts": 1561939200000,
+      "title": "Resident Evil 2 Remake: Trainer +11 v29.06.2019 {MrAntiFun}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/trainers0720191/r/residentevil2/Resident_Evil_2_Biohazard_RE_2_V29.06.2019_Trainer.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/resident_evil_2_remake_trainer_5_v25_01_2019_mrantifun/28-1-0-6848"
+     },
+     {
+      "date": "2019-05-03",
+      "ts": 1556841600000,
+      "title": "Resident Evil 2 Remake: Trainer +20 v1.0-v20190424 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://vrn-stomatolog.narod.ru/trainer0520191/r/residentevil2/Resident_Evil_2_v1.0-v20190424_Plus_20_Trainer.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/resident_evil_2_remake_trainer_13_v1_0_fling/28-1-0-6851"
+     },
+     {
+      "date": "2019-02-01",
+      "ts": 1548979200000,
+      "title": "Resident Evil 2 Remake: Trainer +9 v1.0 {dR.oLLe}",
+      "server": "GTrainers 直链",
+      "url": "https://vrn-stomatolog.narod.ru/load/0-0-0-781-20",
+      "page": "https://gtrainers.com/load/categories/trainers/resident_evil_2_remake_trainer_9_v1_0_dr_olle/28-1-0-6866"
+     }
+    ],
+    "date": "2020-01-24",
+    "ts": 1579824000000,
+    "title": "Resident Evil 2 Remake: Trainer +23 (FULL GAME 01.23.2020) {CheatHappens.com}",
+    "server": "GTrainers 直链",
+    "url": "https://divan-vrn.narod.ru/trainers0120203/r/residentevil2/re2r0123promo-ch.zips",
+    "page": "https://gtrainers.com/load/categories/trainers/resident_evil_2_remake_trainer_12_full_game_cheathappens_com/28-1-0-6846",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2026-08-21",
+    "ts": 1787270400000,
+    "title": "生化危机2：重制版 全成就全道具存档_生化危机2：重制版存档_游侠网",
+    "server": "直链",
+    "url": "https://patch1.ventacorius.com/2019/ALI213-RE2R.Full.AchieveFull.Projects.Archived.rar",
+    "page": "https://patch.ali213.net/showpatch/110643.html",
+    "src": "游侠补丁网",
+    "n": 16,
+    "cands": [
+     {
+      "date": "2026-08-21",
+      "ts": 1787270400000,
+      "title": "生化危机2：重制版 全成就全道具存档_生化危机2：重制版存档_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2019/ALI213-RE2R.Full.AchieveFull.Projects.Archived.rar",
+      "page": "https://patch.ali213.net/showpatch/110643.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2026-08-14",
+      "ts": 1786665600000,
+      "title": "生化危机2重制版可用完美存档下载_生化危机2重制版存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2019/ALI213-Resident.Evil.2.Remake.win64.save.rar",
+      "page": "https://patch.ali213.net/showpatch/118817.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2022-05-25",
+      "ts": 1653436800000,
+      "title": "生化危机2重制版100%完整S级解锁存档下载_生化危机2重制版存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2022/ALI213-RE2R.100.Complete.S.Rank.Save.v1.04.rar",
+      "page": "https://patch.ali213.net/showpatch/193491.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2021-12-08",
+      "ts": 1638921600000,
+      "title": "生化危机2重制版全网最完美全解锁存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2021/ALI213-RE2R.Ada.savedata.rar",
+      "page": "https://patch.ali213.net/showpatch/180065.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2019-03-13",
+      "ts": 1552435200000,
+      "title": "Resident Evil 2 Remake: Save Game (Everything is collected and open)",
+      "server": "GTrainers 直链",
+      "url": "https://zhbi-v.narod.ru/saves/r/residentevil2/allopen100.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/resident_evil_2_remake_save_game_everything_is_collected_and_open_codex/30-1-0-6975",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2019-02-18",
+      "ts": 1550448000000,
+      "title": "生化危机2：重制版 全武器通关完美存档_生化危机2：重制版存档_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2019/ALI213-Resident.Evil.2.Remake.Super.Archive.zip",
+      "page": "https://patch.ali213.net/showpatch/111003.html",
+      "src": "游侠补丁网"
+     }
+    ],
+    "chk": {
+     "code": 206
+    }
+   }
+  },
+  {
+   "id": "xd-120",
+   "hot": 40345,
+   "score": 10,
+   "name": "巫师3：狂猎次世代版",
+   "nameEn": "The Witcher 3: Wild Hunt",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/120.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/3280085",
+   "jidiId": "jidi-3280085",
+   "counts": {
+    "mod": 92,
+    "saves": 51,
+    "trainers": 10
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "3280085",
+    "n": 110,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791799420000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/fb5331bce1bc",
+      "title": "【亲测】解压即撸| V5.01 |小白单独本体-豪华中文-全DLC+预购特典《巫师3 狂猎 重制版》",
+      "portUrl": "https://jidiyouxi.com/post/detail/3021125628"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799420000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VP3isyWnQo4WX_DJX56gLqjYA1?pwd=kt3z#",
+      "title": "【亲测】解压即撸| V5.01 |小白单独本体-豪华中文-全DLC+预购特典《巫师3 狂猎 重制版》",
+      "portUrl": "https://jidiyouxi.com/post/detail/3021125628"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799325000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VP2h5dFHj7QU7cAsrJXiR2LyA1?pwd=nsm7#",
+      "title": "【老狼亲测】解压即撸| V5.01 |升级档-豪华重制版+国语补丁-全DLC+预购特典《巫师3：狂猎 — 重制版》",
+      "portUrl": "https://jidiyouxi.com/post/detail/3004364519"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799325000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/014ab22db729",
+      "title": "【老狼亲测】解压即撸| V5.01 |升级档-豪华重制版+国语补丁-全DLC+预购特典《巫师3：狂猎 — 重制版》",
+      "portUrl": "https://jidiyouxi.com/post/detail/3004364519"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799325000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1i4M7A1l5iUsGfBXpTopmYw?pwd=s4e4",
+      "title": "【老狼亲测】解压即撸| V5.01 |升级档-豪华重制版+国语补丁-全DLC+预购特典《巫师3：狂猎 — 重制版》",
+      "portUrl": "https://jidiyouxi.com/post/detail/3004364519"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799255000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/ea78b6001c9e",
+      "title": "【亲测】国语配音|v5.01 |巫师3：狂猎 重制版 豪华中文全DLC+单独升级补丁+原声原画集",
+      "portUrl": "https://jidiyouxi.com/post/detail/3004340396"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791799420000,
+    "server": "夸克网盘",
+    "url": "https://pan.quark.cn/s/fb5331bce1bc",
+    "title": "【亲测】解压即撸| V5.01 |小白单独本体-豪华中文-全DLC+预购特典《巫师3 狂猎 重制版》",
+    "portUrl": "https://jidiyouxi.com/post/detail/3021125628",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 92,
+    "cands": [
+     {
+      "date": "2026-09-15",
+      "ts": 1789434766000,
+      "title": "【mod】蝙蝠侠套装（数值基于大师级狮鹫套装）",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1tTzhh0FLEokK0ETV1Hp0iA?pwd=b3rx",
+      "page": "https://jidiyouxi.com/post/detail/1276262291"
+     },
+     {
+      "date": "2026-09-15",
+      "ts": 1789432274000,
+      "title": "【mod】所有女性角色4k+纹理翻新（更清晰的xx）",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1mhp5UfoiNNtiHOSGiXCP-A?pwd=sw8x",
+      "page": "https://jidiyouxi.com/post/detail/1276262154"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789407380000,
+      "title": "【mod】女性角色清凉+美化老司机整合",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1AR04MogaeG_q1EXzsYsjfQ?pwd=gsya",
+      "page": "https://jidiyouxi.com/post/detail/1276262304"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789405779000,
+      "title": "【mod】NSFW成人昆特牌（N网火爆）",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1N48sBEXegCSxU0GfqdQhNg?pwd=yr5g",
+      "page": "https://jidiyouxi.com/post/detail/1276262208"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789404466000,
+      "title": "巫师3次世代】大型MOD整合包一键安装——伙伴系统、新装备、新法术、战斗大改-",
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/7e32cf6f7a13?pwd=zHMS",
+      "page": "https://jidiyouxi.com/post/detail/2584899224"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789398806000,
+      "title": "【mod】叶奈法维度更大+动态抖动",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1wpdChiJy-zD2DpO9fALAyw?pwd=w9aq",
+      "page": "https://jidiyouxi.com/post/detail/1276262139"
+     }
+    ],
+    "date": "2026-09-15",
+    "ts": 1789434766000,
+    "title": "【mod】蝙蝠侠套装（数值基于大师级狮鹫套装）",
+    "server": "百度网盘",
+    "url": "https://pan.baidu.com/s/1tTzhh0FLEokK0ETV1Hp0iA?pwd=b3rx",
+    "page": "https://jidiyouxi.com/post/detail/1276262291",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 9,
+    "cands": [
+     {
+      "date": "2023-08-10",
+      "ts": 1691625600000,
+      "title": "The Witcher 3: Wild Hunt - Trainer +13 v4.04 {iNvIcTUs oRCuS / HoG}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/trainers082023/w/witcher3/witcher3v40413tr.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/the_witcher_3_wild_hunt_trainer_13_hog/28-1-0-5231"
+     },
+     {
+      "date": "2023-06-14",
+      "ts": 1686700800000,
+      "title": "The Witcher 3: Wild Hunt: Trainer +22 v1.0-v4.03 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://poeti-liriki.narod.ru/trainers/062023/w/witcher3/The_Witcher_3_Wild_Hunt_v1.0-v4.03_Trainer.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/the_witcher_3_wild_hunt_trainer_22_v1_0_v1_32_fling/28-1-0-9397"
+     },
+     {
+      "date": "2023-01-29",
+      "ts": 1674950400000,
+      "title": "The Witcher 3: Wild Hunt - SaveGame (The game done 100%) [4.02]",
+      "server": "GTrainers 直链",
+      "url": "https://zhbi-v.narod.ru/saves/w/witcher3/witcher3_4_02.rar",
+      "page": "https://gtrainers.com/load/categories/trainers/the_witcher_3_wild_hunt_savegame_100_4_02/28-1-0-816"
+     },
+     {
+      "date": "2022-12-20",
+      "ts": 1671494400000,
+      "title": "The Witcher 3: Wild Hunt - GOTY Edition - Trainer +25 v20.12.2022 {MrAntiFun / WeMod}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/122022/w/witcher3/The_Witcher_3_Wild_Hunt-GOTY_Edition_Trainer.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/the_witcher_3_wild_hunt_trainer_24_1_22_mrantifun_updated_version/28-1-0-825"
+     },
+     {
+      "date": "2019-01-06",
+      "ts": 1546732800000,
+      "title": "The Witcher 3: Wild Hunt - Trainer +24 v1.32 {MrAntiFun}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/load/0-0-0-3156-20",
+      "page": "https://gtrainers.com/load/categories/trainers/the_witcher_3_wild_hunt_trainer_24_1_21_mrantifun_updated_version/28-1-0-673"
+     },
+     {
+      "date": "2016-09-13",
+      "ts": 1473724800000,
+      "title": "The Witcher 3: Wild Hunt - Trainer +24 {MrAntiFun}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/trainers0920192/w/witcher/The_Witcher_3_Wild_Hunt-Game_of_the_Year_Edition-G.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/the_witcher_3_wild_hunt_trainer_24_1_31_mrantifun/28-1-0-1610"
+     }
+    ],
+    "date": "2023-08-10",
+    "ts": 1691625600000,
+    "title": "The Witcher 3: Wild Hunt - Trainer +13 v4.04 {iNvIcTUs oRCuS / HoG}",
+    "server": "GTrainers 直链",
+    "url": "https://ochki-v.narod.ru/trainers082023/w/witcher3/witcher3v40413tr.zips",
+    "page": "https://gtrainers.com/load/categories/trainers/the_witcher_3_wild_hunt_trainer_13_hog/28-1-0-5231",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2026-10-04",
+    "ts": 1791072000000,
+    "title": "The Witcher 3: Wild Hunt Remastered - SaveGame 100%",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/saves2026/w/witcher3/gamesaves.rar",
+    "page": "https://gtrainers.com/load/categories/savegames/the_witcher_3_wild_hunt_remastered_savegame_100/30-1-0-15857",
+    "src": "GTrainers",
+    "n": 51,
+    "cands": [
+     {
+      "date": "2026-10-04",
+      "ts": 1791072000000,
+      "title": "The Witcher 3: Wild Hunt Remastered - SaveGame 100%",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves2026/w/witcher3/gamesaves.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/the_witcher_3_wild_hunt_remastered_savegame_100/30-1-0-15857",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2026-07-27",
+      "ts": 1785110400000,
+      "title": "The Witcher 3: Wild Hunt - SaveGame 100% [Next Gen 4.04]",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves2026/w/witcher3/save_TW3.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/the_witcher_3_wild_hunt_savegame_100_next_gen_4_04/30-1-0-15576",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2026-07-09",
+      "ts": 1783555200000,
+      "title": "The Witcher 3: Wild Hunt: SaveGame (NG+)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves2026/w/witcher3/W3_NG.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/the_witcher_3_wild_hunt_savegame_ng/30-1-0-15519",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2026-04-22",
+      "ts": 1776816000000,
+      "title": "The Witcher 3: Wild Hunt: SaveGame (Before meeting Yennefer, NG+, To the death) [4.04]",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves2026/w/witcher3/White_Garden_saves.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/the_witcher_3_wild_hunt_savegame_before_meeting_yennefer_ng_to_the_death_4_04/30-1-0-15243",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-12-30",
+      "ts": 1767052800000,
+      "title": "The Witcher 3: Wild Hunt - NEXT GEN - SaveGame (before the quests in Novigrad)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves2026/w/witcher3/AutoSave_4dceb_7e95f000_54b0f0.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/the_witcher_3_wild_hunt_next_gen_savegame_before_the_quests_in_novigrad/30-1-0-14803",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-10-22",
+      "ts": 1761091200000,
+      "title": "The Witcher 3: Wild Hunt: SaveGame (Complete walkthrough of the trilogy)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves_2025/w/witcher3/Witcher_Trilogy.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/the_witcher_3_wild_hunt_goty_edition_savegame_complete_trilogy/30-1-0-1609",
+      "src": "GTrainers"
+     }
+    ],
+    "chk": {
+     "code": 206
+    }
+   }
+  },
+  {
+   "id": "xd-3507",
+   "hot": 37034,
+   "score": 8.5,
+   "name": "模拟人生4",
+   "nameEn": "The Sims 4",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/3507.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/3309225",
+   "jidiId": "jidi-3309225",
+   "counts": {
+    "mod": 394,
+    "saves": 6,
+    "trainers": 3
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "3309225",
+    "n": 79,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791798783000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/f591184997a7",
+      "title": "【亲测】解压即撸| V1.128.90.1030 |豪华中文-全DLC+全季票《模拟人生4》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2937244719"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791798783000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VP2Q0miw_wld3Es-NPVzuh8pA1?pwd=mzpg#",
+      "title": "【亲测】解压即撸| V1.128.90.1030 |豪华中文-全DLC+全季票《模拟人生4》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2937244719"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791785907000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1VEKDU-tXILCIucx2uVpCXA?pwd=6f49",
+      "title": "【亲测可用】解压即撸|模拟人生4/The Sims 4|官方中文|整合全DLC",
+      "portUrl": "https://jidiyouxi.com/post/detail/2668773905"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791785907000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOyhhXX1qNEEOYeq-dY2hGEEA1?pwd=tkhk",
+      "title": "【亲测可用】解压即撸|模拟人生4/The Sims 4|官方中文|整合全DLC",
+      "portUrl": "https://jidiyouxi.com/post/detail/2668773905"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791785907000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/6d7c7c3cbba8?pwd=jidi",
+      "title": "【亲测可用】解压即撸|模拟人生4/The Sims 4|官方中文|整合全DLC",
+      "portUrl": "https://jidiyouxi.com/post/detail/2668773905"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791785863000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1_EtrP8kDw6J-lD5mRZC3Iw?pwd=bw6d",
+      "title": "【亲测】解压即撸| V1.126.73.1030 |官方中文《模拟人生4》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2668810308"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791798783000,
+    "server": "夸克网盘",
+    "url": "https://pan.quark.cn/s/f591184997a7",
+    "title": "【亲测】解压即撸| V1.128.90.1030 |豪华中文-全DLC+全季票《模拟人生4》",
+    "portUrl": "https://jidiyouxi.com/post/detail/2937244719",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 394,
+    "cands": [
+     {
+      "date": "2026-09-15",
+      "ts": 1789436509000,
+      "title": "【模拟人生4】绅士魔改Mod整合包",
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/d60ee61c3be7",
+      "page": "https://jidiyouxi.com/post/detail/2769456221"
+     },
+     {
+      "date": "2026-09-15",
+      "ts": 1789436482000,
+      "title": "情侣生活",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOmqPGTjfOMc2Isni_KuJoDOA1?pwd=drii",
+      "page": "https://jidiyouxi.com/post/detail/1997707339"
+     },
+     {
+      "date": "2026-09-15",
+      "ts": 1789434149000,
+      "title": "【mod】成人模组动画/动作包",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1CLFG7lp8uhURDIuLvObFZg?pwd=v3i8",
+      "page": "https://jidiyouxi.com/post/detail/1242747798"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789413343000,
+      "title": "Just Poses 32",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOnyqW1iTny1H2OP-_6lBh3SA1?pwd=pcfl",
+      "page": "https://jidiyouxi.com/post/detail/2081584484"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789409676000,
+      "title": "【mod】极端暴力模组",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1TKnpNVm7XsK6gqZqcfYWPg?pwd=2nj4",
+      "page": "https://jidiyouxi.com/post/detail/1242747971"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789403350000,
+      "title": "电光迷情刺青",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOlsnB9YedmhebcQBCQadZvyA1?pwd=vpwx",
+      "page": "https://jidiyouxi.com/post/detail/1930622865"
+     }
+    ],
+    "date": "2026-09-15",
+    "ts": 1789436509000,
+    "title": "【模拟人生4】绅士魔改Mod整合包",
+    "server": "夸克网盘",
+    "url": "https://pan.quark.cn/s/d60ee61c3be7",
+    "page": "https://jidiyouxi.com/post/detail/2769456221",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 3,
+    "cands": [
+     {
+      "date": "2023-03-16",
+      "ts": 1678924800000,
+      "title": "The Sims 4: Trainer +2 v16.03.2023 {MrAntiFun / WeMod}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/032023/s/sims4/The_Sims_4_Trainer_Setup.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/the_sims_4_trainer_2_1_24_112_1010_mrantifun/28-1-0-2179"
+     },
+     {
+      "date": "2019-11-13",
+      "ts": 1573603200000,
+      "title": "The Sims 4: Trainer +2 {MrAntiFun}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/trainers122019/s/sims4/The_Sims_4_Trainer_Setup.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/the_sims_4_trainer_2_1_36_102_1020_mrantifun/28-1-0-4805"
+     },
+     {
+      "date": "2019-03-11",
+      "ts": 1552262400000,
+      "title": "The Sims 4: Trainer +2 v1.50.67.1020 {MrAntiFun}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/trainers032019/s/sims4/The_Sims_4_64bit_V1.50.67.1020_Trainer_2_MrAntiFun.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/the_sims_4_trainer_2_1_21_37_1020_mrantifun/28-1-0-1206"
+     }
+    ],
+    "date": "2023-03-16",
+    "ts": 1678924800000,
+    "title": "The Sims 4: Trainer +2 v16.03.2023 {MrAntiFun / WeMod}",
+    "server": "GTrainers 直链",
+    "url": "https://ochki-v.narod.ru/032023/s/sims4/The_Sims_4_Trainer_Setup.zip",
+    "page": "https://gtrainers.com/load/categories/trainers/the_sims_4_trainer_2_1_24_112_1010_mrantifun/28-1-0-2179",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2026-03-03",
+    "ts": 1772496000000,
+    "title": "The Sims 4: Get to Work - SaveGame (Beginning of the Skywalker Dynasty)",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/saves2026/s/sims4/Slot_00000002.zip",
+    "page": "https://gtrainers.com/load/categories/savegames/the_sims_4_get_to_work_savegame_beginning_of_the_skywalker_dynasty/30-1-0-15068",
+    "src": "GTrainers",
+    "n": 6,
+    "cands": [
+     {
+      "date": "2026-03-03",
+      "ts": 1772496000000,
+      "title": "The Sims 4: Get to Work - SaveGame (Beginning of the Skywalker Dynasty)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves2026/s/sims4/Slot_00000002.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/the_sims_4_get_to_work_savegame_beginning_of_the_skywalker_dynasty/30-1-0-15068",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-03-09",
+      "ts": 1741478400000,
+      "title": "模拟人生4生活阶段前存档下载_游侠网",
+      "server": "xunlei",
+      "url": "https://pan.xunlei.com/s/VOdDZXF9w4HI8GWDzDI7e4gkA1?pwd=jy9i#",
+      "page": "https://patch.ali213.net/showpatch/287807.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2025-01-19",
+      "ts": 1737244800000,
+      "title": "The Sims 4: SaveGame (the dynasty of the city's founders)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves/s/sims4/The_Sims_4.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/the_sims_4_savegame_the_dynasty_of_the_city_39_s_founders/30-1-0-13343",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2024-02-02",
+      "ts": 1706832000000,
+      "title": "The Sims 4: SaveGame (Spanner - Robot Werewolf) [1.0]",
+      "server": "GTrainers 直链",
+      "url": "https://zhbi-v.narod.ru/saves/s/sims4/saves.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/the_sims_4_savegame_robot_werewolf/30-1-0-3690",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2019-09-01",
+      "ts": 1567296000000,
+      "title": "The Sims 4: Save Game (All character traits, all skills, a lot of money)",
+      "server": "GTrainers 直链",
+      "url": "https://zhbi-v.narod.ru/saves/s/sims4/the_sims_4.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/the_sims_4_save_game_all_character_traits_all_skills_a_lot_of_money/30-1-0-7550",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2016-12-26",
+      "ts": 1482710400000,
+      "title": "The Sims 4: Save Game (Budget - $ 1,000,000)",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/load/0-0-0-1373-20",
+      "page": "https://gtrainers.com/load/categories/savegames/the_sims_4_save_game_budget_1_000_000/30-1-0-2560",
+      "src": "GTrainers"
+     }
+    ],
+    "chk": {
+     "code": 206
+    }
+   }
+  },
+  {
+   "id": "xd-197",
+   "hot": 35588,
+   "score": 8.9,
+   "name": "城市：天际线",
+   "nameEn": "Cities: Skylines",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/197.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/20074324",
+   "jidiId": "jidi-20074324",
+   "counts": {
+    "mod": 4,
+    "saves": 2,
+    "trainers": 7
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "20074324",
+    "n": 24,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791799081000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/8b6b53c8b0b2",
+      "title": "【亲测可玩】解压即撸| v1.21.1-f8 |全DLC+季票-赠MOD+存档+修改器-全新扩展包《城市：天际线》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2199030221"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799081000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1Xe3m9kNvdKu-gyCYSWFscw?pwd=4rbw",
+      "title": "【亲测可玩】解压即撸| v1.21.1-f8 |全DLC+季票-赠MOD+存档+修改器-全新扩展包《城市：天际线》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2199030221"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799081000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VO_zBmmEdBtjF1UQ5t4xsQrWA1?pwd=czmp#",
+      "title": "【亲测可玩】解压即撸| v1.21.1-f8 |全DLC+季票-赠MOD+存档+修改器-全新扩展包《城市：天际线》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2199030221"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791798960000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/b037b05ed058",
+      "title": "【亲测】解压即撸| V1.21.1-f9 |官方中文+整合全DLC《城市：天际线》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2702336716"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791798960000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOzU3hFtbgKegme_Reob7VAwA1?pwd=4ykq#",
+      "title": "【亲测】解压即撸| V1.21.1-f9 |官方中文+整合全DLC《城市：天际线》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2702336716"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791796090000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/8b6b53c8b0b2",
+      "title": "【亲测可玩】解压即撸| V1.21.1.f5 |全DLC+赠全MOD+存档+修改器-全新扩展包-竞速日《城市：天际线》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2048057052"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791799081000,
+    "server": "夸克网盘",
+    "url": "https://pan.quark.cn/s/8b6b53c8b0b2",
+    "title": "【亲测可玩】解压即撸| v1.21.1-f8 |全DLC+季票-赠MOD+存档+修改器-全新扩展包《城市：天际线》",
+    "portUrl": "https://jidiyouxi.com/post/detail/2199030221",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 4,
+    "cands": [
+     {
+      "date": "2026-09-14",
+      "ts": 1789391550000,
+      "title": "统一界面 UUI 1.17.1-f4",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOo7wJdPK-o22tmkbPbaW9xcA1?pwd=yfzq",
+      "page": "https://jidiyouxi.com/post/detail/2098348818"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789391530000,
+      "title": "《和谐》",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOlJwzxm9lZjFpoV7D3MRBCXA1?pwd=xrir",
+      "page": "https://jidiyouxi.com/post/detail/1897067875"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789391504000,
+      "title": "直升机容量调整器",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOlOf7UcuNyWGoD8c6fbXmsrA1?pwd=ajuo",
+      "page": "https://jidiyouxi.com/post/detail/1913826440"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789391494000,
+      "title": "节点控制器更新",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOmHz4nyRXvxhkgQDPu_9EbhA1?pwd=sch0",
+      "page": "https://jidiyouxi.com/post/detail/1964140283"
+     }
+    ],
+    "date": "2026-09-14",
+    "ts": 1789391550000,
+    "title": "统一界面 UUI 1.17.1-f4",
+    "server": "迅雷网盘",
+    "url": "https://pan.xunlei.com/s/VOo7wJdPK-o22tmkbPbaW9xcA1?pwd=yfzq",
+    "page": "https://jidiyouxi.com/post/detail/2098348818",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 6,
+    "cands": [
+     {
+      "date": "2022-09-20",
+      "ts": 1663632000000,
+      "title": "Cities: Skylines - Trainer +5 v19.09.2022 {MrAntiFun / WeMod}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/092022/c/citiesskylines/Cities_Skylines_Trainer.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/cities_skylines_trainer_5_1_7_0_mrantifun/28-1-0-3684"
+     },
+     {
+      "date": "2018-11-03",
+      "ts": 1541203200000,
+      "title": "Cities: Skylines - Trainer +5 v1.11.0 {MrAntiFun}",
+      "server": "GTrainers 直链",
+      "url": "http://ochki-v.narod.ru/load/0-0-0-2986-20",
+      "page": "https://gtrainers.com/load/categories/trainers/cities_skylines_trainer_5_1_5_0_mrantifun/28-1-0-1416"
+     },
+     {
+      "date": "2017-12-02",
+      "ts": 1512172800000,
+      "title": "Cities: Skylines - Trainer +1 Money [1.9.0] {iNvIcTUs oRCuS / HoG}",
+      "server": "GTrainers 直链",
+      "url": "http://zhbi-v.narod.ru/load/0-0-0-2024-20",
+      "page": "https://gtrainers.com/load/categories/trainers/cities_skylines_trainer_1_money_1_9_0_invictus_orcus_hog/28-1-0-4913"
+     },
+     {
+      "date": "2017-10-24",
+      "ts": 1508803200000,
+      "title": "Cities: Skylines: Trainer (+5) [1.9.0] {MrAntiFun}",
+      "server": "GTrainers 直链",
+      "url": "http://zhbi-v.narod.ru/load/0-0-0-1975-20",
+      "page": "https://gtrainers.com/load/categories/trainers/cities_skylines_trainer_5_1_9_0_mrantifun/28-1-0-4658"
+     },
+     {
+      "date": "2017-05-22",
+      "ts": 1495411200000,
+      "title": "Cities: Skylines - Trainer +3 v1.0.1.0 (WINDOWS STORE) {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://divan-vrn.narod.ru/trainers2/c/citiesskylines/cswinstore1010promo-ch.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/cities_skylines_trainer_3_v1_0_1_0_windows_store_cheathappens_com/28-1-0-3688"
+     },
+     {
+      "date": "—",
+      "ts": 0,
+      "title": "Cities: Skylines - Trainer +5 v1.12.1-f2 {MrAntiFun}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/trainers0620192/c/citiesskylines/Cities_Skylines_V1.12.1-f2_Trainer_5_MrAntiFun.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/cities_skylines_trainer_5_1_6_0_mrantifun/28-1-0-2269"
+     }
+    ],
+    "date": "2022-09-20",
+    "ts": 1663632000000,
+    "title": "Cities: Skylines - Trainer +5 v19.09.2022 {MrAntiFun / WeMod}",
+    "server": "GTrainers 直链",
+    "url": "https://ochki-v.narod.ru/092022/c/citiesskylines/Cities_Skylines_Trainer.zip",
+    "page": "https://gtrainers.com/load/categories/trainers/cities_skylines_trainer_5_1_7_0_mrantifun/28-1-0-3684",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2017-05-25",
+    "ts": 1495670400000,
+    "title": "城市：天际线 v1.7.1-f1升级档+免DVD补丁CODEX版_城市：天际线存档_游侠网",
+    "server": "直链",
+    "url": "https://patch1.ventacorius.com/2017/Cities.Skylines.Mass.Transit.Update.v1.7.1-f1-CODEX.ALI213.rar",
+    "page": "https://patch.ali213.net/showpatch/70973.html",
+    "src": "游侠补丁网",
+    "n": 2,
+    "cands": [
+     {
+      "date": "2017-05-25",
+      "ts": 1495670400000,
+      "title": "城市：天际线 v1.7.1-f1升级档+免DVD补丁CODEX版_城市：天际线存档_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2017/Cities.Skylines.Mass.Transit.Update.v1.7.1-f1-CODEX.ALI213.rar",
+      "page": "https://patch.ali213.net/showpatch/70973.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2015-03-16",
+      "ts": 1426464000000,
+      "title": "城市：天际线 12万人口零堵车海滨城市存档_城市：天际线存档_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2014/ALI213-Cities.Skylines.Super.City.Save.rar",
+      "page": "https://patch.ali213.net/showpatch/39223.html",
+      "src": "游侠补丁网"
+     }
+    ],
+    "chk": {
+     "code": 206
+    }
+   }
+  },
+  {
+   "id": "xd-8687",
+   "hot": 35231,
+   "score": 8.3,
+   "name": "战锤40K：星际战士2",
+   "nameEn": "Warhammer 40,000: Space Marine 2",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/8687.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/3290591",
+   "jidiId": "jidi-3290591",
+   "counts": {
+    "mod": 7,
+    "saves": 3,
+    "trainers": 3
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "3290591",
+    "n": 75,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791799390000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1xagrr8fCchS9AQYRrX2Smw?pwd=d2e2",
+      "title": "【亲测可用】解压即撸|战锤40K：星际战士2|官方中文|v15.1.0.1|赠多项修改器",
+      "portUrl": "https://jidiyouxi.com/post/detail/3021088140"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799390000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VP3_DDu38_AxJDl0_75d1FQjA1?pwd=vgm2",
+      "title": "【亲测可用】解压即撸|战锤40K：星际战士2|官方中文|v15.1.0.1|赠多项修改器",
+      "portUrl": "https://jidiyouxi.com/post/detail/3021088140"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791797404000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/a53004e4e191",
+      "title": "【亲测可玩】解压即撸| V12.1.0.1 |中文-全DLC-预购特典-升级档-修改器等《战锤40K：星际战士2》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2014494203"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791797404000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1ljAZTaayXclHKzHiQN7KFQ?pwd=q2d9",
+      "title": "【亲测可玩】解压即撸| V12.1.0.1 |中文-全DLC-预购特典-升级档-修改器等《战锤40K：星际战士2》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2014494203"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791797404000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOZSdZl4z6XxfIzoDe6GBkTJA1?pwd=d423#",
+      "title": "【亲测可玩】解压即撸| V12.1.0.1 |中文-全DLC-预购特典-升级档-修改器等《战锤40K：星际战士2》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2014494203"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791796767000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/dcf5da37f981",
+      "title": "【亲测】解压即玩|v15.0.0.1|战锤40K：星际战士2豪华版官方中文全DLC+4K材质纹理包+原声原画集",
+      "portUrl": "https://jidiyouxi.com/post/detail/2987579701"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791799390000,
+    "server": "百度网盘",
+    "url": "https://pan.baidu.com/s/1xagrr8fCchS9AQYRrX2Smw?pwd=d2e2",
+    "title": "【亲测可用】解压即撸|战锤40K：星际战士2|官方中文|v15.1.0.1|赠多项修改器",
+    "portUrl": "https://jidiyouxi.com/post/detail/3021088140",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 7,
+    "cands": [
+     {
+      "date": "2026-09-14",
+      "ts": 1789430175000,
+      "title": "太空陆战队员2 欲望模组",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOoNOfJiL1qRZpEhyTshs4CNA1?pwd=xwom",
+      "page": "https://jidiyouxi.com/post/detail/2098392930"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789430151000,
+      "title": "相机动态模糊关闭",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOlZBQ1h_X_wV4ds5bFGhiwIA1?pwd=idmq",
+      "page": "https://jidiyouxi.com/post/detail/1930571497"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789430117000,
+      "title": "传说精准白痕",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOoXuXeYpT6x1PCNGbLj7FNLA1?pwd=voe3",
+      "page": "https://jidiyouxi.com/post/detail/2115152761"
+     },
+     {
+      "date": "2026-09-12",
+      "ts": 1789201515000,
+      "title": "pakcacher",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOm7T1DVTtCVqPWRm_Cm-4WPA1?pwd=lsuv",
+      "page": "https://jidiyouxi.com/post/detail/1947387306"
+     },
+     {
+      "date": "2026-09-12",
+      "ts": 1789201217000,
+      "title": "隐藏模组检测 PAK版本",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOmgJDDfjURRasqZGVPCWf32A1?pwd=pvnz",
+      "page": "https://jidiyouxi.com/post/detail/1997672063"
+     },
+     {
+      "date": "2026-09-09",
+      "ts": 1788964031000,
+      "title": "禁用开场动画",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOoh0DOy8V91gzp1Y12urm1tA1?pwd=bbfv",
+      "page": "https://jidiyouxi.com/post/detail/2131903394"
+     }
+    ],
+    "date": "2026-09-14",
+    "ts": 1789430175000,
+    "title": "太空陆战队员2 欲望模组",
+    "server": "迅雷网盘",
+    "url": "https://pan.xunlei.com/s/VOoNOfJiL1qRZpEhyTshs4CNA1?pwd=xwom",
+    "page": "https://jidiyouxi.com/post/detail/2098392930",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 2,
+    "cands": [
+     {
+      "date": "2024-09-12",
+      "ts": 1726099200000,
+      "title": "Warhammer 40,000: Space Marine 2 - Trainer +38 {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/trainers/092024/w/warhammer/W40000SM2_38_promo.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/warhammer_40_000_space_marine_2_trainer_38_cheathappens_com/28-1-0-12754"
+     },
+     {
+      "date": "2024-09-06",
+      "ts": 1725580800000,
+      "title": "Warhammer 40,000: Space Marine 2 - Trainer +6 {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/trainers/092024/w/warhammer/W40000SM2_promo.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/warhammer_40_000_space_marine_2_trainer_6_cheathappens_com/28-1-0-12740"
+     }
+    ],
+    "date": "2024-09-12",
+    "ts": 1726099200000,
+    "title": "Warhammer 40,000: Space Marine 2 - Trainer +38 {CheatHappens.com}",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/trainers/092024/w/warhammer/W40000SM2_38_promo.zip",
+    "page": "https://gtrainers.com/load/categories/trainers/warhammer_40_000_space_marine_2_trainer_38_cheathappens_com/28-1-0-12754",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2024-11-06",
+    "ts": 1730851200000,
+    "title": "Warhammer 40,000: Space Marine 2 - SaveGame (The final battle)",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/saves/w/warhammer/Space_Marine_2_saves.7z",
+    "page": "https://gtrainers.com/load/categories/savegames/warhammer_40_000_space_marine_2_savegame_the_final_battle/30-1-0-12976",
+    "src": "GTrainers",
+    "n": 3,
+    "cands": [
+     {
+      "date": "2026-08-13",
+      "ts": 1786579200000,
+      "title": "战锤40K星际战士2角色和武器全解锁存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-%E5%85%A8%E8%A7%A3%E9%94%81%E5%AD%98%E6%A1%A3-258453.zip",
+      "page": "https://patch.ali213.net/showpatch/258453.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2024-11-06",
+      "ts": 1730851200000,
+      "title": "Warhammer 40,000: Space Marine 2 - SaveGame (The final battle)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves/w/warhammer/Space_Marine_2_saves.7z",
+      "page": "https://gtrainers.com/load/categories/savegames/warhammer_40_000_space_marine_2_savegame_the_final_battle/30-1-0-12976",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2024-09-19",
+      "ts": 1726704000000,
+      "title": "战锤40K星际战士2皮肤解锁存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/259319-pifujiesuo-ALI213.zip",
+      "page": "https://patch.ali213.net/showpatch/259319.html",
+      "src": "游侠补丁网"
+     }
+    ],
+    "chk": {
+     "code": 206
+    },
+    "rolledFrom": "https://patch1.ventacorius.com/2024/ALI213-%E5%85%A8%E8%A7%A3%E9%94%81%E5%AD%98%E6%A1%A3-258453.zip",
+    "rolledFromDate": "2026-08-13"
+   }
+  },
+  {
+   "id": "xd-4520",
+   "hot": 34797,
+   "score": 9,
+   "name": "漫威蜘蛛侠：重制版",
+   "nameEn": "Marvel’s Spider-Man Remastered",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/4520.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/53658949",
+   "jidiId": "jidi-53658949",
+   "counts": {
+    "mod": 17,
+    "saves": 12,
+    "trainers": 3
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "53658949",
+    "n": 13,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791799445000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1ZtyD1EptKSMXfCzULttoqA?pwd=5039",
+      "title": "【亲测可用】解压即撸|漫威蜘蛛侠：重制版|官方中文|不夜城DLC|光线追踪+DLSS|赠修改器+全收集存档",
+      "portUrl": "https://jidiyouxi.com/post/detail/2601711954"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799445000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOxAkTZA2zREw7pkB8aV8nUsA1?pwd=ivds",
+      "title": "【亲测可用】解压即撸|漫威蜘蛛侠：重制版|官方中文|不夜城DLC|光线追踪+DLSS|赠修改器+全收集存档",
+      "portUrl": "https://jidiyouxi.com/post/detail/2601711954"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799445000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/54ecfc872971?pwd=jidi",
+      "title": "【亲测可用】解压即撸|漫威蜘蛛侠：重制版|官方中文|不夜城DLC|光线追踪+DLSS|赠修改器+全收集存档",
+      "portUrl": "https://jidiyouxi.com/post/detail/2601711954"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791797454000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/f9194e0333e7",
+      "title": "【亲测可用】解压即撸|v4.630.0.0|漫威蜘蛛侠：重制版官方中文全DLC 支持最新FSR帧生成",
+      "portUrl": "https://jidiyouxi.com/post/detail/2601705494"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791797454000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOx6h4J-Qu1Ce1T_-Fp00wifA1?pwd=effu#",
+      "title": "【亲测可用】解压即撸|v4.630.0.0|漫威蜘蛛侠：重制版官方中文全DLC 支持最新FSR帧生成",
+      "portUrl": "https://jidiyouxi.com/post/detail/2601705494"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791797454000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1L5aPdAomJBEpstwjf_hY7g?pwd=8888",
+      "title": "【亲测可用】解压即撸|v4.630.0.0|漫威蜘蛛侠：重制版官方中文全DLC 支持最新FSR帧生成",
+      "portUrl": "https://jidiyouxi.com/post/detail/2601705494"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791799445000,
+    "server": "百度网盘",
+    "url": "https://pan.baidu.com/s/1ZtyD1EptKSMXfCzULttoqA?pwd=5039",
+    "title": "【亲测可用】解压即撸|漫威蜘蛛侠：重制版|官方中文|不夜城DLC|光线追踪+DLSS|赠修改器+全收集存档",
+    "portUrl": "https://jidiyouxi.com/post/detail/2601711954",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 17,
+    "cands": [
+     {
+      "date": "2026-09-15",
+      "ts": 1789434401000,
+      "title": "蜘蛛侠清凉MOD",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/14WE1XOEuFN-h1ieY-7rGag",
+      "page": "https://jidiyouxi.com/post/detail/2232601402"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789399957000,
+      "title": "突击行动",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOpk32dDYKM_3kkcfO4zbUuUA1?pwd=7uiu",
+      "page": "https://jidiyouxi.com/post/detail/2182260035"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789399950000,
+      "title": "MSM2 黄昏",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOoNOgWNp0r6zv55i6vsCoZ5A1?pwd=zkwm",
+      "page": "https://jidiyouxi.com/post/detail/2098390868"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789399940000,
+      "title": "现实黑猫 网络阴影 WOS 替换",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOq8aaA7KiNt3E9BJorcvy2eA1?pwd=sayv",
+      "page": "https://jidiyouxi.com/post/detail/2199039828"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789389237000,
+      "title": "超级毒液 蜘蛛侠无限 安卓版 委托",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOlDVTj9_X_wr8bzmV6BUShJA1?pwd=gjdp",
+      "page": "https://jidiyouxi.com/post/detail/1880290989"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789386055000,
+      "title": "蜘蛛侠 PC 脚本钩子",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOlxj154_X_wV4ds5bFVE2BKA1?pwd=3sew",
+      "page": "https://jidiyouxi.com/post/detail/1947352505"
+     }
+    ],
+    "date": "2026-09-15",
+    "ts": 1789434401000,
+    "title": "蜘蛛侠清凉MOD",
+    "server": "百度网盘",
+    "url": "https://pan.baidu.com/s/14WE1XOEuFN-h1ieY-7rGag",
+    "page": "https://jidiyouxi.com/post/detail/2232601402",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 2,
+    "cands": [
+     {
+      "date": "2023-06-23",
+      "ts": 1687478400000,
+      "title": "Marvel's Spider-Man Remastered: Trainer +30 v1.812-v2.616 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://poeti-liriki.narod.ru/trainers/062023/m/marvels/Marvels_Spider_Man_Remastered_v1.812-v2.616_Traine.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/marvel_39_s_spider_man_remastered_trainer_27_v1_812_fling/28-1-0-10500"
+     },
+     {
+      "date": "2023-05-28",
+      "ts": 1685232000000,
+      "title": "Marvel's Spider-Man Remastered: Trainer +30 v26.05.2023 {FLiNG / WeMod}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/052023/m/marvel/Marvel-s_Spider-Man_Remastered_Trainer.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/marvel_39_s_spider_man_remastered_trainer_30_fling/28-1-0-2511"
+     }
+    ],
+    "date": "2023-06-23",
+    "ts": 1687478400000,
+    "title": "Marvel's Spider-Man Remastered: Trainer +30 v1.812-v2.616 {FLiNG}",
+    "server": "GTrainers 直链",
+    "url": "https://poeti-liriki.narod.ru/trainers/062023/m/marvels/Marvels_Spider_Man_Remastered_v1.812-v2.616_Traine.zip",
+    "page": "https://gtrainers.com/load/categories/trainers/marvel_39_s_spider_man_remastered_trainer_27_v1_812_fling/28-1-0-10500",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2026-08-30",
+    "ts": 1788048000000,
+    "title": "漫威蜘蛛侠重制版100%通关存档下载_漫威蜘蛛侠重制版存档下载_游侠网",
+    "server": "直链",
+    "url": "https://patch1.ventacorius.com/2022/ALI213-MarvelsSpidermanR.100.Percent.Save.rar",
+    "page": "https://patch.ali213.net/showpatch/199449.html",
+    "src": "游侠补丁网",
+    "n": 12,
+    "cands": [
+     {
+      "date": "2026-08-30",
+      "ts": 1788048000000,
+      "title": "漫威蜘蛛侠重制版100%通关存档下载_漫威蜘蛛侠重制版存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2022/ALI213-MarvelsSpidermanR.100.Percent.Save.rar",
+      "page": "https://patch.ali213.net/showpatch/199449.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2026-08-11",
+      "ts": 1786406400000,
+      "title": "Marvel's Spider-Man Remastered: SaveGame (100% completed)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves2026/m/marvels/Marvel_s_Spider-Man.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/marvel_39_s_spider_man_remastered_savegame_100_completed/30-1-0-15610",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-12-09",
+      "ts": 1765238400000,
+      "title": "Marvel's Spider-Man Remastered: SaveGame (6% completed)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves_2025/m/marvels/76561197960271872.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/marvel_39_s_spider_man_remastered_savegame_6_completed/30-1-0-14704",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-08-04",
+      "ts": 1754265600000,
+      "title": "Marvel's Spider-Man Remastered - SaveGame (30% completed)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves_2025/m/marvels/slot0-s.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/marvel_39_s_spider_man_remastered_savegame_30_completed/30-1-0-14182",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-07-14",
+      "ts": 1752451200000,
+      "title": "Marvel's Spider-Man Remastered - SaveGame (After the villains escape from prison, NG+)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves_2025/m/marvels/marv_spider.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/marvel_39_s_spider_man_remastered_savegame_after_the_villains_escape_from_prison_ng/30-1-0-14100",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-04-04",
+      "ts": 1743724800000,
+      "title": "Marvel's Spider-Man Remastered - SaveGame (New Game+, Acts (I-III), Bosses)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves/m/marvspiderman/Spider-man_ultimate_save.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/marvel_39_s_spider_man_remastered_savegame_new_game_acts_i_iii_bosses/30-1-0-13722",
+      "src": "GTrainers"
+     }
+    ],
+    "chk": {
+     "code": 206
+    }
+   }
+  },
+  {
+   "id": "xd-8797",
+   "hot": 34699,
+   "score": 10,
+   "name": "战神5",
+   "nameEn": "God of War Ragnarok",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/8797.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/3279446",
+   "jidiId": "jidi-3279446",
+   "counts": {
+    "mod": 3,
+    "saves": 37,
+    "trainers": 2
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "3279446",
+    "n": 26,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791796630000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1Xx-MU1nTUm7Wj_ISgqxn3A?pwd=325a",
+      "title": "【亲测可用】解压即撸|战神 诸神黄昏|豪华中文|裂魂战吼-修罗残歌+全DLC",
+      "portUrl": "https://jidiyouxi.com/post/detail/1343403013"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791796630000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOYGFXeZ5mxEGE58w-XI8y03A1?pwd=j17c",
+      "title": "【亲测可用】解压即撸|战神 诸神黄昏|豪华中文|裂魂战吼-修罗残歌+全DLC",
+      "portUrl": "https://jidiyouxi.com/post/detail/1343403013"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791795771000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VP3ZgUw4JO-oIs_VOOSS6GEZA1?pwd=g55q#",
+      "title": "【亲测】解压即撸| Build.18979360 |豪华中文.国语配音版《战神 诸神黄昏 国语配音版》",
+      "portUrl": "https://jidiyouxi.com/post/detail/3021097378"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791795771000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/42615e34bce3",
+      "title": "【亲测】解压即撸| Build.18979360 |豪华中文.国语配音版《战神 诸神黄昏 国语配音版》",
+      "portUrl": "https://jidiyouxi.com/post/detail/3021097378"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791795771000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1ZfndGptTEepbn1CxCHhHOA?pwd=twnw",
+      "title": "【亲测】解压即撸| Build.18979360 |豪华中文.国语配音版《战神 诸神黄昏 国语配音版》",
+      "portUrl": "https://jidiyouxi.com/post/detail/3021097378"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791794963000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/9c45577549bb",
+      "title": "【亲测】解压即玩《战神5：诸神黄昏》v1.0.668.5700_豪华中文版-全DLC-赠单板补丁+修改器",
+      "portUrl": "https://jidiyouxi.com/post/detail/1695697669"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791796630000,
+    "server": "百度网盘",
+    "url": "https://pan.baidu.com/s/1Xx-MU1nTUm7Wj_ISgqxn3A?pwd=325a",
+    "title": "【亲测可用】解压即撸|战神 诸神黄昏|豪华中文|裂魂战吼-修罗残歌+全DLC",
+    "portUrl": "https://jidiyouxi.com/post/detail/1343403013",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 3,
+    "cands": [
+     {
+      "date": "2026-09-13",
+      "ts": 1789321196000,
+      "title": "战神诸神黄昏 100 全满新游戏+",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOmgJF33TCNnL3IMZPLveuZTA1?pwd=83wj",
+      "page": "https://jidiyouxi.com/post/detail/1997669004"
+     },
+     {
+      "date": "2026-09-13",
+      "ts": 1789301212000,
+      "title": "战神诸神黄昏视觉优化",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOldL9TBoMOiN7VBdyAyDsn_A1?pwd=9lu8",
+      "page": "https://jidiyouxi.com/post/detail/1930591492"
+     },
+     {
+      "date": "2026-09-10",
+      "ts": 1789030058000,
+      "title": "快速启动(跳过开场动画)",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOoXhfeZ3UVZEh5CzS-wzpbiA1?pwd=1kkr",
+      "page": "https://jidiyouxi.com/post/detail/2115150959"
+     }
+    ],
+    "date": "2026-09-13",
+    "ts": 1789321196000,
+    "title": "战神诸神黄昏 100 全满新游戏+",
+    "server": "迅雷网盘",
+    "url": "https://pan.xunlei.com/s/VOmgJF33TCNnL3IMZPLveuZTA1?pwd=83wj",
+    "page": "https://jidiyouxi.com/post/detail/1997669004",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 1,
+    "cands": [
+     {
+      "date": "2024-09-20",
+      "ts": 1726790400000,
+      "title": "God of War Ragnarok - Trainer +12 {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/trainers/092024/g/godofwar/GoWR_promo.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/god_of_war_ragnarok_trainer_12_cheathappens_com/28-1-0-12785"
+     }
+    ],
+    "date": "2024-09-20",
+    "ts": 1726790400000,
+    "title": "God of War Ragnarok - Trainer +12 {CheatHappens.com}",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/trainers/092024/g/godofwar/GoWR_promo.zip",
+    "page": "https://gtrainers.com/load/categories/trainers/god_of_war_ragnarok_trainer_12_cheathappens_com/28-1-0-12785",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2026-08-14",
+    "ts": 1786665600000,
+    "title": "战神5100%完整存档下载-100%完整存档下载_游侠网",
+    "server": "直链",
+    "url": "https://patch1.ventacorius.com/2024/ALI213-kratos%20modded%20save-109-1-0-1732747734-272925.zip",
+    "page": "https://patch.ali213.net/showpatch/272925.html",
+    "src": "游侠补丁网",
+    "n": 37,
+    "cands": [
+     {
+      "date": "2026-08-14",
+      "ts": 1786665600000,
+      "title": "战神5100%完整存档下载-100%完整存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-kratos%20modded%20save-109-1-0-1732747734-272925.zip",
+      "page": "https://patch.ali213.net/showpatch/272925.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2026-08-13",
+      "ts": 1786579200000,
+      "title": "战神5瓦尔哈拉完全解锁并附有克雷托斯皮肤存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-GOWVALHALLA100V1-53-1-0-1727285751-260979.rar",
+      "page": "https://patch.ali213.net/showpatch/260979.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2026-08-05",
+      "ts": 1785888000000,
+      "title": "战神5所有内容全解锁最高等级存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2025/ALI213-God%20of%20War%20Ragnarok%20and%20Valhalla%20100%20Percent-127-1-0-1739811744-286509.zip",
+      "page": "https://patch.ali213.net/showpatch/286509.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2025-08-20",
+      "ts": 1755648000000,
+      "title": "God of War: Ragnarok - SaveGame 100%",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves_2025/g/godofwar/God_of_War_Ragnar_k.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/god_of_war_ragnarok_savegame_100/30-1-0-14312",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-04-02",
+      "ts": 1743552000000,
+      "title": "God of War: Ragnarok - SaveGame (100%, NG+)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves/g/godofwar/God_of_War_Ragnarok_save_100.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/god_of_war_ragnarok_savegame_100_ng/30-1-0-13708",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2024-12-02",
+      "ts": 1733097600000,
+      "title": "战神5与GNA和国王HROFT战斗前存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-GNA%20and%20HROFT%20Fight%20For%20100%20PERCENT%20(NG%20PLUS)-111-1-0-1733031363-273345.zip",
+      "page": "https://patch.ali213.net/showpatch/273345.html",
+      "src": "游侠补丁网"
+     }
+    ],
+    "chk": {
+     "code": 206
+    }
+   }
+  },
+  {
+   "id": "xd-1413",
+   "hot": 32676,
+   "score": 9.4,
+   "name": "生化危机8：村庄",
+   "nameEn": "Resident Evil Village",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/1413.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/36867757",
+   "jidiId": "jidi-36867757",
+   "counts": {
+    "mod": 22,
+    "saves": 10,
+    "trainers": 8
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "36867757",
+    "n": 22,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791799418000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/37a74b056afc",
+      "title": "【亲测可玩】解压即玩| v1.2.3.9 |生化危机8 村庄 黄金版 豪华中文全DLC+国语配音+萝丝魅影DLC",
+      "portUrl": "https://jidiyouxi.com/post/detail/2366777784"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799418000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOuaQohUQ-qcay_3CFSq0DFvA1?pwd=aqvr#",
+      "title": "【亲测可玩】解压即玩| v1.2.3.9 |生化危机8 村庄 黄金版 豪华中文全DLC+国语配音+萝丝魅影DLC",
+      "portUrl": "https://jidiyouxi.com/post/detail/2366777784"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799418000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1QDlt-ZMcmbMHAEB9ADuStg?pwd=8888",
+      "title": "【亲测可玩】解压即玩| v1.2.3.9 |生化危机8 村庄 黄金版 豪华中文全DLC+国语配音+萝丝魅影DLC",
+      "portUrl": "https://jidiyouxi.com/post/detail/2366777784"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791773462000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/1610f4c31f5a",
+      "title": "【亲测可玩】解压即撸| v20260203 |豪华中文-全奖励.全DLC-赠修改器《生化危机8：村庄》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2215782866"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791773462000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOqIquBFUX4zKfaIUIs049eFA1?pwd=9r6p#",
+      "title": "【亲测可玩】解压即撸| v20260203 |豪华中文-全奖励.全DLC-赠修改器《生化危机8：村庄》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2215782866"
+     },
+     {
+      "date": "2026-10-11",
+      "ts": 1791756257000,
+      "server": "其他链接",
+      "url": "https://store.steampowered.com/app/1196590",
+      "title": "生化危机8村庄官方中文v1.2.3.9 RUNE免安装版 + 单独v1.2.3.9升级档",
+      "portUrl": "https://jidiyouxi.com/post/detail/2903701825"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791799418000,
+    "server": "夸克网盘",
+    "url": "https://pan.quark.cn/s/37a74b056afc",
+    "title": "【亲测可玩】解压即玩| v1.2.3.9 |生化危机8 村庄 黄金版 豪华中文全DLC+国语配音+萝丝魅影DLC",
+    "portUrl": "https://jidiyouxi.com/post/detail/2366777784",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 22,
+    "cands": [
+     {
+      "date": "2026-09-14",
+      "ts": 1789425039000,
+      "title": "克里斯·雷德菲尔德 DBD 服装 包含第三人称附加组件",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOmb9WR34QuCJk7Els4Nule3A1?pwd=rh2t",
+      "page": "https://jidiyouxi.com/post/detail/1980946698"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789424669000,
+      "title": "生化危机8清凉合集MOD",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1S94r0N8089QPjsXt3OGkQQ",
+      "page": "https://jidiyouxi.com/post/detail/1729288849"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789424383000,
+      "title": "生化危机8成人开场和画廊MOD",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1FB3ivguALIlm9HzxFESKEQ",
+      "page": "https://jidiyouxi.com/post/detail/2350033561"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789399856000,
+      "title": "生化危机8村庄 豪华中文版 清凉绅士MOD整合包",
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/a22c272f1814",
+      "page": "https://jidiyouxi.com/post/detail/2769477511"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789384063000,
+      "title": "无敌",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOnGYbn-ZV-w7eoHmU6wMRR5A1?pwd=hhf5",
+      "page": "https://jidiyouxi.com/post/detail/2031243979"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789384040000,
+      "title": "增强生命值",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOnUiLvDiHIyBFuBbJDWrmB0A1?pwd=o8xc",
+      "page": "https://jidiyouxi.com/post/detail/2048037591"
+     }
+    ],
+    "date": "2026-09-14",
+    "ts": 1789425039000,
+    "title": "克里斯·雷德菲尔德 DBD 服装 包含第三人称附加组件",
+    "server": "迅雷网盘",
+    "url": "https://pan.xunlei.com/s/VOmb9WR34QuCJk7Els4Nule3A1?pwd=rh2t",
+    "page": "https://jidiyouxi.com/post/detail/1980946698",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 7,
+    "cands": [
+     {
+      "date": "2026-03-19",
+      "ts": 1773878400000,
+      "title": "Resident Evil Village: SaveGame (Step-by-step walkthrough) [CODEX]",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves2026/r/residentevil/save_re8.rar",
+      "page": "https://gtrainers.com/load/categories/trainers/resident_evil_village_trainer_13_v1_0_fling/28-1-0-9408"
+     },
+     {
+      "date": "2026-02-22",
+      "ts": 1771718400000,
+      "title": "Resident Evil Village: Trainer +9 v28.10.2022 {iNvIcTUs oRCuS / HoG}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/022026/r/revillage/re8_latest03022026_steam9tr.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/resident_evil_village_trainer_9_v28_10_2022_invictus_orcus_hog/28-1-0-15020"
+     },
+     {
+      "date": "2023-06-27",
+      "ts": 1687824000000,
+      "title": "Resident Evil Village: Trainer +23 v1.0-v20230625 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://poeti-liriki.narod.ru/trainers/062023/r/residentevil/Resident_Evil_Village_v1.0-v20230625_Trainer.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/resident_evil_village_trainer_22_v1_0_fling/28-1-0-9420"
+     },
+     {
+      "date": "2021-10-20",
+      "ts": 1634688000000,
+      "title": "Resident Evil Village: Trainer +32 v10-19-2021 {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://vitaminrosta.narod.ru/trainers102021/r/residentevil/Resident_Evil_Village_Trainer_3_cha.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/resident_evil_village_trainer_32_v10_19_2021_cheathappens_com/28-1-0-10021"
+     },
+     {
+      "date": "2021-05-12",
+      "ts": 1620777600000,
+      "title": "Resident Evil Village: Trainer +23 v1.0 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://vrn-stomatolog.narod.ru/trainer0520211/r/residentevil/Resident.Evil.Village.v1.0.Plus.23.Trainer-FLiNG.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/resident_evil_village_trainer_6_gameplay_demo_fling/28-1-0-9391"
+     },
+     {
+      "date": "2021-05-09",
+      "ts": 1620518400000,
+      "title": "Resident Evil Village: Trainer +31 (FULL GAME 05.08.2021) {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://vitaminrosta.narod.ru/trainers052021/r/residentevil/Resident_Evil_Village_Trainer_cha_3.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/resident_evil_village_trainer_31_full_game_05_08_2021_cheathappens_com/28-1-0-9415"
+     }
+    ],
+    "date": "2026-03-19",
+    "ts": 1773878400000,
+    "title": "Resident Evil Village: SaveGame (Step-by-step walkthrough) [CODEX]",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/saves2026/r/residentevil/save_re8.rar",
+    "page": "https://gtrainers.com/load/categories/trainers/resident_evil_village_trainer_13_v1_0_fling/28-1-0-9408",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2026-05-28",
+    "ts": 1779926400000,
+    "title": "生化危机8村庄100%完成度存档文件v1.0下载_游侠网",
+    "server": "直链",
+    "url": "https://patch1.ventacorius.com/2026/ali213-RE8%20Village%20100%20Completed%20Save%20File-306269.rar",
+    "page": "https://patch.ali213.net/showpatch/306269.html",
+    "src": "游侠补丁网",
+    "n": 10,
+    "cands": [
+     {
+      "date": "2026-05-28",
+      "ts": 1779926400000,
+      "title": "生化危机8村庄100%完成度存档文件v1.0下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2026/ali213-RE8%20Village%20100%20Completed%20Save%20File-306269.rar",
+      "page": "https://patch.ali213.net/showpatch/306269.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2026-01-15",
+      "ts": 1768435200000,
+      "title": "Resident Evil Village: SaveGame (New Game+ completed on Hardcore, weapons not fully upgraded) [RUNE]",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves2026/r/residentevil/win64_save.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/resident_evil_village_savegame_new_game_completed_on_hardcore_weapons_not_fully_upgraded_rune/30-1-0-14884",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-12-05",
+      "ts": 1764892800000,
+      "title": "Resident Evil: Village - SaveGame (for Masters' Choice and Sprinter Dad achievements)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves_2025/r/residentevil/save.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/resident_evil_village_savegame_for_masters_39_choice_and_sprinter_dad_achievements/30-1-0-14726",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2021-09-08",
+      "ts": 1631059200000,
+      "title": "Resident Evil Village: SaveGame (A lot of money at the beginning of the game)",
+      "server": "GTrainers 直链",
+      "url": "https://zhbi-v.narod.ru/saves/r/residentevil/Roaming.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/resident_evil_village_savegame_a_lot_of_money_at_the_beginning_of_the_game/30-1-0-9823",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2021-08-01",
+      "ts": 1627776000000,
+      "title": "生化危机8普通难度通关存档下载_生化危机8存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2021/ALI213-RE8.Savegame.Standard.rar",
+      "page": "https://patch.ali213.net/showpatch/171339.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2021-07-31",
+      "ts": 1627689600000,
+      "title": "Resident Evil Village: SaveGame (The game done 100%, Standard Difficulty)",
+      "server": "GTrainers 直链",
+      "url": "https://zhbi-v.narod.ru/saves/r/residentevil/REV.EMPRESS.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/resident_evil_village_savegame_the_game_done_100_standard_difficulty/30-1-0-9637",
+      "src": "GTrainers"
+     }
+    ],
+    "chk": {
+     "code": 206
+    }
+   }
+  },
+  {
+   "id": "xd-457",
+   "hot": 31668,
+   "score": 9.5,
+   "name": "环世界",
+   "nameEn": "RimWorld",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/457.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/70421726",
+   "jidiId": "jidi-70421726",
+   "counts": {
+    "mod": 45,
+    "saves": 2,
+    "trainers": 5
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "70421726",
+    "n": 36,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791799087000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/e956b566aa35",
+      "title": "【亲测可玩】解压即玩|v1.6.4871|边缘世界/环世界豪华中文全DLC+奥德赛DLC+原声音乐集",
+      "portUrl": "https://jidiyouxi.com/post/detail/2937206762"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799087000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VP2E5kg4az-QVhKwdi5xeHKDA1?pwd=9782",
+      "title": "【亲测可玩】解压即玩|v1.6.4871|边缘世界/环世界豪华中文全DLC+奥德赛DLC+原声音乐集",
+      "portUrl": "https://jidiyouxi.com/post/detail/2937206762"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799087000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/16tliqbaz5lnTydl1pfB_6Q?pwd=8888",
+      "title": "【亲测可玩】解压即玩|v1.6.4871|边缘世界/环世界豪华中文全DLC+奥德赛DLC+原声音乐集",
+      "portUrl": "https://jidiyouxi.com/post/detail/2937206762"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791786865000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/49693d232bfb",
+      "title": "【亲测】解压即撸| V1.6.4861 |官方中文《环世界》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2836592038"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791786865000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VP0zy3Czr3xA74XuskMOq2Q-A1?pwd=khaj#",
+      "title": "【亲测】解压即撸| V1.6.4861 |官方中文《环世界》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2836592038"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791776966000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1e6lkDYPLxm2tRak8tXuQjA?pwd=38e9",
+      "title": "【亲测可用】解压即撸|边缘世界|豪华中文|奥德赛DLC+裂魂荒野+狂影诡潮+全DLC",
+      "portUrl": "https://jidiyouxi.com/post/detail/1242756634"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791799087000,
+    "server": "夸克网盘",
+    "url": "https://pan.quark.cn/s/e956b566aa35",
+    "title": "【亲测可玩】解压即玩|v1.6.4871|边缘世界/环世界豪华中文全DLC+奥德赛DLC+原声音乐集",
+    "portUrl": "https://jidiyouxi.com/post/detail/2937206762",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 45,
+    "cands": [
+     {
+      "date": "2026-09-14",
+      "ts": 1789413138000,
+      "title": "【mod】超级强大的核能发电机",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1uANPCbSzGbv6jve61wXsCw?pwd=ejea",
+      "page": "https://jidiyouxi.com/post/detail/1276304213"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789402422000,
+      "title": "元之雨RJW全种族拓展2.0整合包",
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/240a263b7a8c",
+      "page": "https://jidiyouxi.com/post/detail/2836559538"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789402389000,
+      "title": "扩容升级",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOmRr8k1-I48EuFreIks9XZcA1?pwd=rdsa",
+      "page": "https://jidiyouxi.com/post/detail/1964177345"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789402367000,
+      "title": "真实感房间",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOmWnBZVNM_e4WvUK2SatxleA1?pwd=ccxg",
+      "page": "https://jidiyouxi.com/post/detail/1980920676"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789402349000,
+      "title": "【mod】作弊基因！",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1HRO7kANR2B4CMAo5S1f7RA?pwd=w7ft",
+      "page": "https://jidiyouxi.com/post/detail/1259489149"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789402343000,
+      "title": "【mod】大量武器枪械包",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/19CdH6vT7_JZxyejR12gA2Q?pwd=9qnq",
+      "page": "https://jidiyouxi.com/post/detail/1276303616"
+     }
+    ],
+    "date": "2026-09-14",
+    "ts": 1789413138000,
+    "title": "【mod】超级强大的核能发电机",
+    "server": "百度网盘",
+    "url": "https://pan.baidu.com/s/1uANPCbSzGbv6jve61wXsCw?pwd=ejea",
+    "page": "https://jidiyouxi.com/post/detail/1276304213",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 5,
+    "cands": [
+     {
+      "date": "2022-05-12",
+      "ts": 1652313600000,
+      "title": "RimWorld: Trainer 14 v11.05.2022 {MrAntiFun / WeMod}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/052022/r/rimworld/RimWorld_Trainer_Setup.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/rimworld_trainer_13_0_14_1294_mrantifun/28-1-0-1277"
+     },
+     {
+      "date": "2020-09-17",
+      "ts": 1600300800000,
+      "title": "RimWorld: Trainer +7 v1.2.2753 (64-BIT) {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://divan-vrn.narod.ru/trainers0920202/r/rimworld/rimworld0916promo-ch.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/rimworld_trainer_7_v1_2_2753_64_bit_cheathappens_com/28-1-0-8841"
+     },
+     {
+      "date": "2018-11-13",
+      "ts": 1542067200000,
+      "title": "RimWorld: Trainer +14 v1.0.2059 B {MrAntiFun}",
+      "server": "GTrainers 直链",
+      "url": "http://ochki-v.narod.ru/load/0-0-0-2999-20",
+      "page": "https://gtrainers.com/load/categories/trainers/rimworld_trainer_13_0_14_1238_mrantifun/28-1-0-1187"
+     },
+     {
+      "date": "2017-11-20",
+      "ts": 1511136000000,
+      "title": "RimWorld: Trainer (+13) [0.18.1722] {MrAntiFun}",
+      "server": "GTrainers 直链",
+      "url": "http://zhbi-v.narod.ru/load/0-0-0-2015-20",
+      "page": "https://gtrainers.com/load/categories/trainers/rimworld_trainer_13_0_18_1722_mrantifun/28-1-0-4852"
+     },
+     {
+      "date": "2017-06-03",
+      "ts": 1496448000000,
+      "title": "RimWorld: Trainer (+13) [0.17.1546] {MrAntiFun}",
+      "server": "GTrainers 直链",
+      "url": "http://zhbi-v.narod.ru/load/0-0-0-1735-20",
+      "page": "https://gtrainers.com/load/categories/trainers/rimworld_trainer_13_0_17_1546_mrantifun/28-1-0-3761"
+     }
+    ],
+    "date": "2022-05-12",
+    "ts": 1652313600000,
+    "title": "RimWorld: Trainer 14 v11.05.2022 {MrAntiFun / WeMod}",
+    "server": "GTrainers 直链",
+    "url": "https://ochki-v.narod.ru/052022/r/rimworld/RimWorld_Trainer_Setup.zip",
+    "page": "https://gtrainers.com/load/categories/trainers/rimworld_trainer_13_0_14_1294_mrantifun/28-1-0-1277",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2026-02-17",
+    "ts": 1771286400000,
+    "title": "RimWorld: SaveGame (Wooden house) [1.6.4633]",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/saves2026/r/rimworld/Z.zip",
+    "page": "https://gtrainers.com/load/categories/savegames/rimworld_savegame_wooden_house/30-1-0-1146",
+    "src": "GTrainers",
+    "n": 2,
+    "cands": [
+     {
+      "date": "2026-02-17",
+      "ts": 1771286400000,
+      "title": "RimWorld: SaveGame (Wooden house) [1.6.4633]",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves2026/r/rimworld/Z.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/rimworld_savegame_wooden_house/30-1-0-1146",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2024-08-05",
+      "ts": 1722816000000,
+      "title": "RimWorld: SaveGame (Small house) [1.5.4104.64bit]",
+      "server": "GTrainers 直链",
+      "url": "https://zhbi-v.narod.ru/saves/r/rimworld/Small_house.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/rimworld_savegame_small_house/30-1-0-1463",
+      "src": "GTrainers"
+     }
+    ],
+    "chk": {
+     "code": 206
+    }
+   }
+  },
+  {
+   "id": "xd-153",
+   "hot": 29096,
+   "score": 9.4,
+   "name": "空洞骑士",
+   "nameEn": "Hollow Knight",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/153.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/3325778",
+   "jidiId": "jidi-3325778",
+   "counts": {
+    "mod": 27,
+    "saves": 9,
+    "trainers": 11
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "3325778",
+    "n": 19,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791795465000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/cb1afcc17064",
+      "title": "【亲测可用】解压即撸| V1.5.12620 |中文-最新GOG版-全DLC-赠存档+修改器+笔记+BGM《空洞骑士》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2148679106"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791795465000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1Os0Ck2qgVRdHPau-mRWSPQ?pwd=brsu",
+      "title": "【亲测可用】解压即撸| V1.5.12620 |中文-最新GOG版-全DLC-赠存档+修改器+笔记+BGM《空洞骑士》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2148679106"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791795465000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOhI6UpxvXMR5QtgTTAbGcFRA1?pwd=4z8u#",
+      "title": "【亲测可用】解压即撸| V1.5.12620 |中文-最新GOG版-全DLC-赠存档+修改器+笔记+BGM《空洞骑士》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2148679106"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791794058000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1LG4Ow3PJrfS3amlITSkE7g?pwd=j8fi",
+      "title": "【亲测可用】解压即撸|空洞骑士|官方中文|全DLC+多项修改器+原画集+音乐BGM",
+      "portUrl": "https://jidiyouxi.com/post/detail/2148702100"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791794058000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOp5uyp2aX0xy5i77O9ja0jiA1?pwd=pxt4#",
+      "title": "【亲测可用】解压即撸|空洞骑士|官方中文|全DLC+多项修改器+原画集+音乐BGM",
+      "portUrl": "https://jidiyouxi.com/post/detail/2148702100"
+     },
+     {
+      "date": "2026-10-11",
+      "ts": 1791731040000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1OHanl_2wdB9kMn9iUSEYaQ?pwd=9eyq",
+      "title": "【亲测可用】解压即撸|空洞骑士|豪华中文|众神与梦魇+全DLCV1.5.78.11833HF2-",
+      "portUrl": "https://jidiyouxi.com/post/detail/1477581317"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791795465000,
+    "server": "夸克网盘",
+    "url": "https://pan.quark.cn/s/cb1afcc17064",
+    "title": "【亲测可用】解压即撸| V1.5.12620 |中文-最新GOG版-全DLC-赠存档+修改器+笔记+BGM《空洞骑士》",
+    "portUrl": "https://jidiyouxi.com/post/detail/2148679106",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 27,
+    "cands": [
+     {
+      "date": "2026-09-14",
+      "ts": 1789391326000,
+      "title": "【mod】自动更新地图（无需坐椅）",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1vKC8NU7Wl8av5GkqWr5Zrw?pwd=qn74",
+      "page": "https://jidiyouxi.com/post/detail/1494411342"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789391223000,
+      "title": "【mod】异世界模式",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VO_Lpu_eK_IHZrMAjdpK1KswA1?pwd=sxd9#",
+      "page": "https://jidiyouxi.com/post/detail/1494411732"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789361205000,
+      "title": "魅力预设",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOmvYjRZxoNXI_jv2DwQOpFuA1?pwd=bdpm",
+      "page": "https://jidiyouxi.com/post/detail/2014450543"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789361189000,
+      "title": "盆地喷泉修复",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOmqbepP3sWCt7tTe4ZkgpkqA1?pwd=pvuz",
+      "page": "https://jidiyouxi.com/post/detail/1997712053"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789361178000,
+      "title": "潘乔骑士",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOnADkU8tAulRilotUU0S20SA1?pwd=sjr4",
+      "page": "https://jidiyouxi.com/post/detail/2031224498"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789361155000,
+      "title": "更多地理",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOpQEDYgMhYo6pCEGwH6_1kRA1?pwd=a5cg",
+      "page": "https://jidiyouxi.com/post/detail/2165479400"
+     }
+    ],
+    "date": "2026-09-14",
+    "ts": 1789391326000,
+    "title": "【mod】自动更新地图（无需坐椅）",
+    "server": "百度网盘",
+    "url": "https://pan.baidu.com/s/1vKC8NU7Wl8av5GkqWr5Zrw?pwd=qn74",
+    "page": "https://jidiyouxi.com/post/detail/1494411342",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 9,
+    "cands": [
+     {
+      "date": "2026-04-10",
+      "ts": 1775779200000,
+      "title": "Hollow Knight: SaveGame (to get the Neglect & Exile achievements)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves2026/h/hollowknight/saves.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/hollow_knight_trainer_9_1_0_lingon/28-1-0-3101"
+     },
+     {
+      "date": "2023-07-13",
+      "ts": 1689206400000,
+      "title": "Hollow Knight: Trainer +11 v1.4.3.2-v1.5.80 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://poeti-liriki.narod.ru/trainers/072023/h/hollowknight/Hollow_Knight_v1.5.68-v1.5.80_Trainer.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/hollow_knight_trainer_9_1_2_1_4_lingon/28-1-0-4741"
+     },
+     {
+      "date": "2022-07-14",
+      "ts": 1657756800000,
+      "title": "Hollow Knight: Trainer +4 v1.5.80.11835 {STiNGERR / WeMod}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/072022/h/hollowknight/Hollow_Knight_Trainer.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/hollow_knight_trainer_4_stingerr/28-1-0-4885"
+     },
+     {
+      "date": "2021-06-14",
+      "ts": 1623628800000,
+      "title": "Hollow Knight: Trainer +11 v1.4.3.2-v1.5.68 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://vrn-stomatolog.narod.ru/trainer0620212/h/hollowknight/Hollow.Knight.v1.5.68.Plus.11.Trainer-FLiNG.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/hollow_knight_trainer_9_v1_1_1_8_lingon/28-1-0-4429"
+     },
+     {
+      "date": "2019-01-05",
+      "ts": 1546646400000,
+      "title": "Hollow Knight: Trainer +6 v1.4.3.2 +GODMASTER (02.04.2019) {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://divan-vrn.narod.ru/trainers3/h/hollowknight/hknight1432promo-ch.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/hollow_knight_trainer_5_v1_0_3_4_cheathappens_com/28-1-0-3937"
+     },
+     {
+      "date": "2018-09-06",
+      "ts": 1536192000000,
+      "title": "Hollow Knight: Trainer +4 {MrAntiFun}",
+      "server": "GTrainers 直链",
+      "url": "http://ochki-v.narod.ru/trainers0320193/h/hollowknight/Hollow_Knight-Steam-Trainer_Setup.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/hollow_knight_trainer_3_v_03_11_2016_mrantifun/28-1-0-3193"
+     }
+    ],
+    "date": "2026-04-10",
+    "ts": 1775779200000,
+    "title": "Hollow Knight: SaveGame (to get the Neglect & Exile achievements)",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/saves2026/h/hollowknight/saves.zip",
+    "page": "https://gtrainers.com/load/categories/trainers/hollow_knight_trainer_9_1_0_lingon/28-1-0-3101",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2026-07-22",
+    "ts": 1784678400000,
+    "title": "空洞骑士100%完成度存档下载-100%完成度存档下载_游侠网",
+    "server": "直链",
+    "url": "https://patch1.ventacorius.com/2025/ali213-Save%20game-296289.rar",
+    "page": "https://patch.ali213.net/showpatch/296289.html",
+    "src": "游侠补丁网",
+    "n": 9,
+    "cands": [
+     {
+      "date": "2026-07-22",
+      "ts": 1784678400000,
+      "title": "空洞骑士100%完成度存档下载-100%完成度存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2025/ali213-Save%20game-296289.rar",
+      "page": "https://patch.ali213.net/showpatch/296289.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2025-05-24",
+      "ts": 1748044800000,
+      "title": "Hollow Knight: SaveGame (The game done 112%)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves/h/hollowknight/saved112.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/hollow_knight_savegame_the_game_done_112/30-1-0-13926",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-01-30",
+      "ts": 1738195200000,
+      "title": "空洞骑士游戏解锁Steam成就存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2025/ALI213-Hollow%20Knight%20Achievement%20Saves-64-1-0-1736470007-279185.zip",
+      "page": "https://patch.ali213.net/showpatch/279185.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2020-05-13",
+      "ts": 1589328000000,
+      "title": "Hollow Knight: SaveGame (Steel Soul, 105%)",
+      "server": "GTrainers 直链",
+      "url": "https://zhbi-v.narod.ru/saves/h/hollowknight/hollow_knight.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/hollow_knight_trainer_3_v1_1_1_8_mrantifun/30-1-0-4249",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2020-01-19",
+      "ts": 1579392000000,
+      "title": "Hollow Knight: SaveGame (after bosses)",
+      "server": "GTrainers 直链",
+      "url": "https://zhbi-v.narod.ru/saves/h/hollowknight/hollow_knight_saves.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/hollow_knight_trainer_9_1_0_3_1_lingon/30-1-0-3698",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2018-09-07",
+      "ts": 1536278400000,
+      "title": "Hollow Knight: Save Game (The game done 119%)",
+      "server": "GTrainers 直链",
+      "url": "https://zhbi-v.narod.ru/saves/h/hollowknight/user1_1.4.2.4.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/hollow_knight_save_game_the_game_done_119/30-1-0-6287",
+      "src": "GTrainers"
+     }
+    ],
+    "chk": {
+     "code": 206
+    }
+   }
+  },
+  {
+   "id": "xd-6425",
+   "hot": 28952,
+   "score": 10,
+   "name": "女神异闻录5：皇家版",
+   "nameEn": "Persona 5 Royal",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/6425.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/70397139",
+   "jidiId": "jidi-70397139",
+   "counts": {
+    "mod": 1,
+    "saves": 10,
+    "trainers": 5
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "70397139",
+    "n": 16,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791799461000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1VWGm5lcUQD1-RwCCJmQ80Q?pwd=463b",
+      "title": "【虚拟化】解压即撸|女神异闻录5皇家版|官方简体中文",
+      "portUrl": "https://jidiyouxi.com/post/detail/2165487776"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799461000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOpRP047tOf_iW48ydMk7eFvA1?pwd=rx4x",
+      "title": "【虚拟化】解压即撸|女神异闻录5皇家版|官方简体中文",
+      "portUrl": "https://jidiyouxi.com/post/detail/2165487776"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791798145000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/43d8d234ebb9",
+      "title": "【亲测可玩】解压即撸| V1.03B |中文-无需虚拟机-赠v1.2破解修复补丁《女神异闻录5：皇家版》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2349996583"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791798145000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOhiPd1WfL3Q2fbyNziLLRDbA1?pwd=ee3q#",
+      "title": "【亲测可玩】解压即撸| V1.03B |中文-无需虚拟机-赠v1.2破解修复补丁《女神异闻录5：皇家版》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2349996583"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791796327000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1H3hYel6Md-mmzDeuS3a-Pw?pwd=ikj7",
+      "title": "【switch模拟整合】解压即撸|女神异闻录5 皇家版|官方中文|Switch模拟器整合版",
+      "portUrl": "https://jidiyouxi.com/post/detail/1225931876"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791796327000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOTVr30PCbPFiXLvGZcLAyxVA1?pwd=sj5r#",
+      "title": "【switch模拟整合】解压即撸|女神异闻录5 皇家版|官方中文|Switch模拟器整合版",
+      "portUrl": "https://jidiyouxi.com/post/detail/1225931876"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791799461000,
+    "server": "百度网盘",
+    "url": "https://pan.baidu.com/s/1VWGm5lcUQD1-RwCCJmQ80Q?pwd=463b",
+    "title": "【虚拟化】解压即撸|女神异闻录5皇家版|官方简体中文",
+    "portUrl": "https://jidiyouxi.com/post/detail/2165487776",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 1,
+    "cands": [
+     {
+      "date": "2026-09-07",
+      "ts": 1788790652000,
+      "title": "恢复Joker战斗日语语音",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOpLIK1ETRexAZWYlqSwPecMA1?pwd=bzse",
+      "page": "https://jidiyouxi.com/post/detail/2165472211"
+     }
+    ],
+    "date": "2026-09-07",
+    "ts": 1788790652000,
+    "title": "恢复Joker战斗日语语音",
+    "server": "迅雷网盘",
+    "url": "https://pan.xunlei.com/s/VOpLIK1ETRexAZWYlqSwPecMA1?pwd=bzse",
+    "page": "https://jidiyouxi.com/post/detail/2165472211",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 2,
+    "cands": [
+     {
+      "date": "2022-11-16",
+      "ts": 1668556800000,
+      "title": "Persona 5 Royal: Trainer +34 v1.0 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://poeti-liriki.narod.ru/trainers/112022/p/persona5/Persona_5_Royal_v1.0_Trainer.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/persona_5_royal_trainer_34_v1_0_fling/28-1-0-10681"
+     },
+     {
+      "date": "2022-10-22",
+      "ts": 1666396800000,
+      "title": "Persona 5 Royal: Trainer +37 v22.10.2022 {ColonelRVH / WeMod}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/102022/p/persona5/Persona_5_Royal_Trainer.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/persona_5_royal_coloneirvh/28-1-0-9239"
+     }
+    ],
+    "date": "2022-11-16",
+    "ts": 1668556800000,
+    "title": "Persona 5 Royal: Trainer +34 v1.0 {FLiNG}",
+    "server": "GTrainers 直链",
+    "url": "https://poeti-liriki.narod.ru/trainers/112022/p/persona5/Persona_5_Royal_v1.0_Trainer.zip",
+    "page": "https://gtrainers.com/load/categories/trainers/persona_5_royal_trainer_34_v1_0_fling/28-1-0-10681",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2025-12-30",
+    "ts": 1767052800000,
+    "title": "Persona 5 Royal: SaveGame 100%",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/saves2026/p/persona5/P5Rsaves.rar",
+    "page": "https://gtrainers.com/load/categories/savegames/persona_5_royal_savegame_100/30-1-0-14813",
+    "src": "GTrainers",
+    "n": 10,
+    "cands": [
+     {
+      "date": "2025-12-30",
+      "ts": 1767052800000,
+      "title": "Persona 5 Royal: SaveGame 100%",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves2026/p/persona5/P5Rsaves.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/persona_5_royal_savegame_100/30-1-0-14813",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2024-11-16",
+      "ts": 1731715200000,
+      "title": "女神异闻录5皇家版适合二周目的完整存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-Complete%20Save%20File%20for%20New%20Game%20Plus-20-1-0-1731391680-269957.zip",
+      "page": "https://patch.ali213.net/showpatch/269957.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2024-09-23",
+      "ts": 1727049600000,
+      "title": "女神异闻录5皇家版NGPLUS存档下载-NGPLUS存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-Persona%205%20Royal%20New%20Game%20Pluss%20Save-3-1-0-1667820246-260173.zip",
+      "page": "https://patch.ali213.net/showpatch/260173.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2024-07-09",
+      "ts": 1720483200000,
+      "title": "女神异闻录5皇家版究极二周目开局100%图鉴存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-jjezmcd.rar",
+      "page": "https://patch.ali213.net/showpatch/248213.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2024-07-09",
+      "ts": 1720483200000,
+      "title": "女神异闻录5皇家版中期金城秘宝已确认存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ali213-zqcdsd.rar",
+      "page": "https://patch.ali213.net/showpatch/248211.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2024-07-09",
+      "ts": 1720483200000,
+      "title": "女神异闻录5皇家版角色满二周目存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-ezmcdsd.rar",
+      "page": "https://patch.ali213.net/showpatch/248209.html",
+      "src": "游侠补丁网"
+     }
+    ],
+    "chk": {
+     "code": 206
+    }
+   }
+  },
+  {
+   "id": "xd-791",
+   "hot": 26530,
+   "score": 8.8,
+   "name": "茶杯头",
+   "nameEn": "Cuphead",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/791.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/70412391",
+   "jidiId": "jidi-70412391",
+   "counts": {
+    "mod": 1,
+    "saves": 12,
+    "trainers": 7
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "70412391",
+    "n": 13,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791795936000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/18ffe7VV5LmozRsydwnn6Nw?pwd=97cd",
+      "title": "【亲测可用】解压即撸|茶杯头|官方简体中文|整合DLC",
+      "portUrl": "https://jidiyouxi.com/post/detail/1863485205"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791795936000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOkm60gO7uVa-vX4flyO1DHGA1?pwd=btzn",
+      "title": "【亲测可用】解压即撸|茶杯头|官方简体中文|整合DLC",
+      "portUrl": "https://jidiyouxi.com/post/detail/1863485205"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791794202000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/276707ab5440",
+      "title": "【亲测可玩】解压即撸| v1.3.5 |中文|整合全DLC-赠满金币存档+修改器《茶杯头》",
+      "portUrl": "https://jidiyouxi.com/post/detail/1846725005"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791794202000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOkZ7Safv4R-OKtzyAruXTQ6A1?pwd=kpkq#",
+      "title": "【亲测可玩】解压即撸| v1.3.5 |中文|整合全DLC-赠满金币存档+修改器《茶杯头》",
+      "portUrl": "https://jidiyouxi.com/post/detail/1846725005"
+     },
+     {
+      "date": "2026-10-11",
+      "ts": 1791729260000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1YiRRI9B83VskyTxnnB1S1g?pwd=5t9x",
+      "title": "【亲测】解压即撸|茶杯头|官方简体中文|整合DLC",
+      "portUrl": "https://jidiyouxi.com/post/detail/1527907920"
+     },
+     {
+      "date": "2026-10-11",
+      "ts": 1791729260000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VO_uIuQKoCPU2yVja4VspMKPA1?pwd=q2ta#",
+      "title": "【亲测】解压即撸|茶杯头|官方简体中文|整合DLC",
+      "portUrl": "https://jidiyouxi.com/post/detail/1527907920"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791795936000,
+    "server": "百度网盘",
+    "url": "https://pan.baidu.com/s/18ffe7VV5LmozRsydwnn6Nw?pwd=97cd",
+    "title": "【亲测可用】解压即撸|茶杯头|官方简体中文|整合DLC",
+    "portUrl": "https://jidiyouxi.com/post/detail/1863485205",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 1,
+    "cands": [
+     {
+      "date": "2026-09-15",
+      "ts": 1789437984000,
+      "title": "茶杯头简易版GOG版",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOmWnAhoATOOR8YAWCMut3__A1?pwd=ziss",
+      "page": "https://jidiyouxi.com/post/detail/1980920328"
+     }
+    ],
+    "date": "2026-09-15",
+    "ts": 1789437984000,
+    "title": "茶杯头简易版GOG版",
+    "server": "迅雷网盘",
+    "url": "https://pan.xunlei.com/s/VOmWnAhoATOOR8YAWCMut3__A1?pwd=ziss",
+    "page": "https://jidiyouxi.com/post/detail/1980920328",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 5,
+    "cands": [
+     {
+      "date": "2023-08-29",
+      "ts": 1693267200000,
+      "title": "Cuphead: Trainer +4 v1.3.4 (Aurora) {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/aurora/aurora.7z",
+      "page": "https://gtrainers.com/load/categories/trainers/cuphead_trainer_4_v1_3_4_aurora_cheathappens_com/28-1-0-11134"
+     },
+     {
+      "date": "2022-07-01",
+      "ts": 1656633600000,
+      "title": "Cuphead: Trainer +8 v1.3.2 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://vrn-stomatolog.narod.ru/trainer072022/c/cuphead/Cuphead.v1.3.2.Plus.8.Trainer-FLiNG.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/cuphead_trainer_7_1_0_fling/28-1-0-4525"
+     },
+     {
+      "date": "2019-04-22",
+      "ts": 1555891200000,
+      "title": "Cuphead: Trainer +3 v20.04.2019 {MrAntiFun}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/trainers0420193/c/cuphead/Cuphead_V20.04.2019_Trainer_3_MrAntiFun.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/cuphead_trainer_3_steam_v10_1_2017_mrantifun/28-1-0-4520"
+     },
+     {
+      "date": "2018-08-16",
+      "ts": 1534377600000,
+      "title": "Cuphead: Trainer +3 v15.08.2018 {MrAntiFun}",
+      "server": "GTrainers 直链",
+      "url": "http://ochki-v.narod.ru/load/0-0-0-2743-20",
+      "page": "https://gtrainers.com/load/categories/trainers/cuphead_trainer_3_v15_08_2018_mrantifun/28-1-0-6182"
+     },
+     {
+      "date": "2017-09-30",
+      "ts": 1506729600000,
+      "title": "Cuphead: Trainer +6 {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://divan-vrn.narod.ru/trainers/c/cuphead/cupheadpromo-ch.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/cuphead_trainer_6_cheathappens_com/28-1-0-4510"
+     }
+    ],
+    "date": "2023-08-29",
+    "ts": 1693267200000,
+    "title": "Cuphead: Trainer +4 v1.3.4 (Aurora) {CheatHappens.com}",
+    "server": "GTrainers 直链",
+    "url": "https://ochki-v.narod.ru/aurora/aurora.7z",
+    "page": "https://gtrainers.com/load/categories/trainers/cuphead_trainer_4_v1_3_4_aurora_cheathappens_com/28-1-0-11134",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2026-09-15",
+    "ts": 1789430400000,
+    "title": "Cuphead: Save Game (All story bosses defeated, plus a few DLC bosses)",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/saves2026/c/cuphead/Cuphead_save.zip",
+    "page": "https://gtrainers.com/load/categories/savegames/cuphead_save_game_all_story_bosses_defeated_plus_a_few_dlc_bosses/30-1-0-15774",
+    "src": "GTrainers",
+    "n": 12,
+    "cands": [
+     {
+      "date": "2026-09-15",
+      "ts": 1789430400000,
+      "title": "Cuphead: Save Game (All story bosses defeated, plus a few DLC bosses)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves2026/c/cuphead/Cuphead_save.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/cuphead_save_game_all_story_bosses_defeated_plus_a_few_dlc_bosses/30-1-0-15774",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2026-01-05",
+      "ts": 1767571200000,
+      "title": "Cuphead: Save Game (The game is 300% complete + a file with all achievements)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves2026/c/cuphead/CupHead.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/cuphead_save_game_the_game_is_300_complete_a_file_with_all_achievements/30-1-0-14840",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-12-07",
+      "ts": 1765065600000,
+      "title": "Cuphead: The Delicious Last Course - SaveGame (Main line 200%. Everything completed on A and P)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves_2025/c/cuphead/Cuphead_save.7z",
+      "page": "https://gtrainers.com/load/categories/savegames/cuphead_the_delicious_last_course_savegame_main_line_200_everything_completed_on_a_and_p/30-1-0-14734",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-04-16",
+      "ts": 1744761600000,
+      "title": "Cuphead: Save Game (300%, all weapons, skills and filters and everything completed on A)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves/c/cuphead/cuphead_player_data_v1_slot_0.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/cuphead_save_game_300_all_weapons_skills_and_filters_and_everything_completed_on_a/30-1-0-13780",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2022-07-06",
+      "ts": 1657065600000,
+      "title": "茶杯头全BOSSP评价关卡完美存档下载_茶杯头存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2022/ALI213-Cuphead.AllClear.sav.rar",
+      "page": "https://patch.ali213.net/showpatch/197067.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2020-07-10",
+      "ts": 1594339200000,
+      "title": "Cuphead: Save Game (The game done 93%)",
+      "server": "GTrainers 直链",
+      "url": "https://zhbi-v.narod.ru/saves/c/cuphead/Cuphead_93.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/cuphead_save_game_the_game_done_93/30-1-0-8550",
+      "src": "GTrainers"
+     }
+    ],
+    "chk": {
+     "code": 206
+    }
+   }
+  },
+  {
+   "id": "xd-10042",
+   "hot": 26320,
+   "score": 7.6,
+   "name": "云族裔",
+   "nameEn": "inZOI",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/10042.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/20084261",
+   "jidiId": "jidi-20084261",
+   "counts": {
+    "mod": 71,
+    "saves": 3,
+    "trainers": 3
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "20084261",
+    "n": 159,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791799117000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1VTKYYcvtDxzIH6OasJRcjQ?pwd=b9xw",
+      "title": "【亲测】解压即撸| Build.25336085 |中文-全DLC《云族裔》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2886923376"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799117000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/f119f7da607a",
+      "title": "【亲测】解压即撸| Build.25336085 |中文-全DLC《云族裔》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2886923376"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799117000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VP1itof3o-7zjavY-GrW4Bo_A1?pwd=8hi2#",
+      "title": "【亲测】解压即撸| Build.25336085 |中文-全DLC《云族裔》",
+      "portUrl": "https://jidiyouxi.com/post/detail/2886923376"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791789792000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/16zfwudmTLK7RUQ0gr89cDQ?pwd=af45",
+      "title": "【亲测可用】解压即撸|云族裔/inZOI|官方中文|赠多项修改器",
+      "portUrl": "https://jidiyouxi.com/post/detail/2886913467"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791789792000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VP1jLDsMCa3xLssy85i0h4jIA1?pwd=i0ds",
+      "title": "【亲测可用】解压即撸|云族裔/inZOI|官方中文|赠多项修改器",
+      "portUrl": "https://jidiyouxi.com/post/detail/2886913467"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791789792000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/f7aa5c6c41ec?pwd=jidi",
+      "title": "【亲测可用】解压即撸|云族裔/inZOI|官方中文|赠多项修改器",
+      "portUrl": "https://jidiyouxi.com/post/detail/2886913467"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791799117000,
+    "server": "百度网盘",
+    "url": "https://pan.baidu.com/s/1VTKYYcvtDxzIH6OasJRcjQ?pwd=b9xw",
+    "title": "【亲测】解压即撸| Build.25336085 |中文-全DLC《云族裔》",
+    "portUrl": "https://jidiyouxi.com/post/detail/2886923376",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 71,
+    "cands": [
+     {
+      "date": "2026-09-14",
+      "ts": 1789427588000,
+      "title": "yen 预设",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOnPmQKoRODisCHDF_uxXBrRA1?pwd=xacz",
+      "page": "https://jidiyouxi.com/post/detail/2048017242"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789419481000,
+      "title": "【mod】去除所有内衣（试验版）",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1ckuMTXAyUy1SPaHi9POJLA?pwd=a29i",
+      "page": "https://jidiyouxi.com/post/detail/1125310192"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789404126000,
+      "title": "【云族裔】精选Mod合集",
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/c42752684981",
+      "page": "https://jidiyouxi.com/post/detail/2769477745"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789399177000,
+      "title": "IMM InZoi 模组管理器",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOlsnAvwkURKS6Ep1k1KZ83KA1?pwd=qwa0",
+      "page": "https://jidiyouxi.com/post/detail/1930623306"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789397018000,
+      "title": "G-IDLE 朴美善",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOnPmQ__Fnnq0oUCvPAgLToeA1?pwd=ki4u",
+      "page": "https://jidiyouxi.com/post/detail/2048018274"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789395583000,
+      "title": "【mod】无限状态",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1KVF9BWlETlZbQ6vToh_Avg?pwd=uivf",
+      "page": "https://jidiyouxi.com/post/detail/1125310409"
+     }
+    ],
+    "date": "2026-09-14",
+    "ts": 1789427588000,
+    "title": "yen 预设",
+    "server": "迅雷网盘",
+    "url": "https://pan.xunlei.com/s/VOnPmQKoRODisCHDF_uxXBrRA1?pwd=xacz",
+    "page": "https://jidiyouxi.com/post/detail/2048017242",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 1,
+    "cands": [
+     {
+      "date": "2025-03-29",
+      "ts": 1743206400000,
+      "title": "Inzoi: Trainer +27 {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/trainers/032025/i/inzoi/Inzoi_promo_chaio.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/inzoi_trainer_27_cheathappens_com/28-1-0-13666"
+     }
+    ],
+    "date": "2025-03-29",
+    "ts": 1743206400000,
+    "title": "Inzoi: Trainer +27 {CheatHappens.com}",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/trainers/032025/i/inzoi/Inzoi_promo_chaio.zips",
+    "page": "https://gtrainers.com/load/categories/trainers/inzoi_trainer_27_cheathappens_com/28-1-0-13666",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2025-06-28",
+    "ts": 1751068800000,
+    "title": "Inzoi: SaveGame (Thea and Porter Figueroa)",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/saves/i/inzoi/SaveGames.zip",
+    "page": "https://gtrainers.com/load/categories/savegames/inzoi_savegame_thea_and_porter_figueroa/30-1-0-14061",
+    "src": "GTrainers",
+    "n": 3,
+    "cands": [
+     {
+      "date": "2025-06-28",
+      "ts": 1751068800000,
+      "title": "Inzoi: SaveGame (Thea and Porter Figueroa)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves/i/inzoi/SaveGames.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/inzoi_savegame_thea_and_porter_figueroa/30-1-0-14061",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-06-27",
+      "ts": 1750982400000,
+      "title": "Inzoi: SaveGame (Dakota Price)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves/i/inzoi/20250701-220414-2.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/inzoi_savegame_dakota_price/30-1-0-14060",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-06-25",
+      "ts": 1750809600000,
+      "title": "Inzoi: SaveGame (New beginning)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves/i/inzoi/20250701-220414.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/inzoi_savegame_new_beginning/30-1-0-14058",
+      "src": "GTrainers"
+     }
+    ],
+    "chk": {
+     "code": 206
+    }
+   }
+  },
+  {
+   "id": "xd-12215",
+   "hot": 25907,
+   "score": 8.3,
+   "name": "忍者龙剑传4",
+   "nameEn": "NINJA GAIDEN 4",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/12215.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/355629619",
+   "jidiId": "jidi-355629619",
+   "counts": {
+    "mod": 2,
+    "saves": 4,
+    "trainers": 3
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "355629619",
+    "n": 16,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791799245000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1lDDR3YW59We13o-JUzvfmg?pwd=a6d4",
+      "title": "【亲测可用】解压即撸|忍者龙剑传4/NINJA GAIDEN 4|官方简体中文|赠多项修改器",
+      "portUrl": "https://jidiyouxi.com/post/detail/2014462718"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799245000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOmxgFdnTwgD42nobbkbAO7_A1?pwd=m9j4",
+      "title": "【亲测可用】解压即撸|忍者龙剑传4/NINJA GAIDEN 4|官方简体中文|赠多项修改器",
+      "portUrl": "https://jidiyouxi.com/post/detail/2014462718"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799233000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/3fd7b44f1b45",
+      "title": "（PS5）忍者龙剑传4豪华版PPSA25258（v01.004.000）10.xx系统",
+      "portUrl": "https://jidiyouxi.com/post/detail/2534594682"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791799233000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1HamYMbmuIGlK9j_VDEXKow?pwd=8888",
+      "title": "（PS5）忍者龙剑传4豪华版PPSA25258（v01.004.000）10.xx系统",
+      "portUrl": "https://jidiyouxi.com/post/detail/2534594682"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791788572000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/9dc05627dcdb",
+      "title": "【亲测可玩】解压即撸| V1.0.4.0 |豪华中文-超忍双雄-全DLC+预购特典-赠VP9+修改器《忍者龙剑传4》",
+      "portUrl": "https://jidiyouxi.com/post/detail/1997723779"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791788572000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/18TdnatQbktHd_F_U0GxK0Q?pwd=243g",
+      "title": "【亲测可玩】解压即撸| V1.0.4.0 |豪华中文-超忍双雄-全DLC+预购特典-赠VP9+修改器《忍者龙剑传4》",
+      "portUrl": "https://jidiyouxi.com/post/detail/1997723779"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791799245000,
+    "server": "百度网盘",
+    "url": "https://pan.baidu.com/s/1lDDR3YW59We13o-JUzvfmg?pwd=a6d4",
+    "title": "【亲测可用】解压即撸|忍者龙剑传4/NINJA GAIDEN 4|官方简体中文|赠多项修改器",
+    "portUrl": "https://jidiyouxi.com/post/detail/2014462718",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 2,
+    "cands": [
+     {
+      "date": "2026-09-13",
+      "ts": 1789308859000,
+      "title": "快速启动 跳过开场动画",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOl9r_yBsNBmZrJGvKqC_tkkA1?pwd=y0pe",
+      "page": "https://jidiyouxi.com/post/detail/1880292645"
+     },
+     {
+      "date": "2026-09-13",
+      "ts": 1789308848000,
+      "title": "Optiscaler 配置文件 画质 1080 低配 4GB 显存 笔记本",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOl9rcIfHmAuFdIt1YDxW9_0A1?pwd=hg5t",
+      "page": "https://jidiyouxi.com/post/detail/1897008857"
+     }
+    ],
+    "date": "2026-09-13",
+    "ts": 1789308859000,
+    "title": "快速启动 跳过开场动画",
+    "server": "迅雷网盘",
+    "url": "https://pan.xunlei.com/s/VOl9r_yBsNBmZrJGvKqC_tkkA1?pwd=y0pe",
+    "page": "https://jidiyouxi.com/post/detail/1880292645",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 1,
+    "cands": [
+     {
+      "date": "2025-10-21",
+      "ts": 1761004800000,
+      "title": "Ninja Gaiden 4: Trainer +19 {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/trainers/102025/n/ninjagaiden4/NG4_promo_chaio.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/ninja_gaiden_4_trainer_19_cheathappens_com/28-1-0-14514"
+     }
+    ],
+    "date": "2025-10-21",
+    "ts": 1761004800000,
+    "title": "Ninja Gaiden 4: Trainer +19 {CheatHappens.com}",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/trainers/102025/n/ninjagaiden4/NG4_promo_chaio.zips",
+    "page": "https://gtrainers.com/load/categories/trainers/ninja_gaiden_4_trainer_19_cheathappens_com/28-1-0-14514",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2026-09-03",
+    "ts": 1788393600000,
+    "title": "忍者龙剑传4 100%完成度近乎完美存档下载_游侠网",
+    "server": "直链",
+    "url": "https://patch1.ventacorius.com/2025/ali213-100%20Percent%20Almost%20Save%20File-298043.rar",
+    "page": "https://patch.ali213.net/showpatch/298043.html",
+    "src": "游侠补丁网",
+    "n": 4,
+    "cands": [
+     {
+      "date": "2026-09-03",
+      "ts": 1788393600000,
+      "title": "忍者龙剑传4 100%完成度近乎完美存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2025/ali213-100%20Percent%20Almost%20Save%20File-298043.rar",
+      "page": "https://patch.ali213.net/showpatch/298043.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2025-10-30",
+      "ts": 1761782400000,
+      "title": "忍者龙剑传4全解锁多周目存档下载-全解锁多周目存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2025/ali213-New%20Game%20Plus%20Save%20with%20all%20Unlocks-297701.rar",
+      "page": "https://patch.ali213.net/showpatch/297701.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2025-10-22",
+      "ts": 1761091200000,
+      "title": "忍者龙剑传4多周目存档下载-多周目存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2025/ali213-Ninja%20Gaiden%204%20NG%20Save%20File-297467.rar",
+      "page": "https://patch.ali213.net/showpatch/297467.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2025-10-15",
+      "ts": 1760486400000,
+      "title": "Ninja Gaiden 4: SaveGame 100%",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves_2025/n/ninjagaiden4/Ninja_Gaiden_4_save.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/ninja_gaiden_4_savegame_100/30-1-0-14523",
+      "src": "GTrainers"
+     }
+    ],
+    "chk": {
+     "code": 206
+    }
+   }
+  },
+  {
+   "id": "xd-11964",
+   "hot": 23758,
+   "score": 10,
+   "name": "寂静岭f",
+   "nameEn": "SILENT HILL f",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/11964.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/322044062",
+   "jidiId": "jidi-322044062",
+   "counts": {
+    "mod": 12,
+    "saves": 2,
+    "trainers": 3
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "322044062",
+    "n": 48,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791795625000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1Yg2OsRxcFmji2KJ_rOE-VQ?pwd=y14p",
+      "title": "【亲测可玩】寂静岭f v1.3.389562 全DLC+官方中文 免安装硬盘版 解压即玩",
+      "portUrl": "https://jidiyouxi.com/post/detail/3021098040"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791795625000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VP3YNib85o5CDmtfg0_ejrDKA1?pwd=jy5a",
+      "title": "【亲测可玩】寂静岭f v1.3.389562 全DLC+官方中文 免安装硬盘版 解压即玩",
+      "portUrl": "https://jidiyouxi.com/post/detail/3021098040"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791795625000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/1a114ce78373",
+      "title": "【亲测可玩】寂静岭f v1.3.389562 全DLC+官方中文 免安装硬盘版 解压即玩",
+      "portUrl": "https://jidiyouxi.com/post/detail/3021098040"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791794285000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1XO-BwTHxnvSeM9poGrTksw?pwd=54cd",
+      "title": "【亲测可用】解压即撸｜寂静岭f/SILENT HILL f｜官方中文｜支持键鼠手柄",
+      "portUrl": "https://jidiyouxi.com/post/detail/2702361112"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791794285000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOzfiM-oBZ9H_S3KVp2tcU_JA1?pwd=fllh",
+      "title": "【亲测可用】解压即撸｜寂静岭f/SILENT HILL f｜官方中文｜支持键鼠手柄",
+      "portUrl": "https://jidiyouxi.com/post/detail/2702361112"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791794285000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/d8fa472dca77?pwd=jidi",
+      "title": "【亲测可用】解压即撸｜寂静岭f/SILENT HILL f｜官方中文｜支持键鼠手柄",
+      "portUrl": "https://jidiyouxi.com/post/detail/2702361112"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791795625000,
+    "server": "百度网盘",
+    "url": "https://pan.baidu.com/s/1Yg2OsRxcFmji2KJ_rOE-VQ?pwd=y14p",
+    "title": "【亲测可玩】寂静岭f v1.3.389562 全DLC+官方中文 免安装硬盘版 解压即玩",
+    "portUrl": "https://jidiyouxi.com/post/detail/3021098040",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 12,
+    "cands": [
+     {
+      "date": "2026-09-14",
+      "ts": 1789404076000,
+      "title": "Hinako 的可爱面部重贴图",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOoD56fll0VgP01TRpjlZst7A1?pwd=12o0",
+      "page": "https://jidiyouxi.com/post/detail/2098364488"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789404056000,
+      "title": "刘影",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOnA-uFXrTr3fLkln-jJNAp6A1?pwd=a3yi",
+      "page": "https://jidiyouxi.com/post/detail/2031223152"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789404034000,
+      "title": "概念雏子",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOlnQ_aDHPGV1ut0MZ6Yuv_aA1?pwd=cbqr",
+      "page": "https://jidiyouxi.com/post/detail/1930608771"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789404026000,
+      "title": "消耗山丘 f 早期体验",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOls_Dujc1Aufw_pDGNJEC9lA1?pwd=iel8",
+      "page": "https://jidiyouxi.com/post/detail/1930621917"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789404016000,
+      "title": "女主清凉MOD",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1tTUrIR3Lc7BdIbnL8BAZTQ",
+      "page": "https://jidiyouxi.com/post/detail/1712462924"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789349370000,
+      "title": "寂静岭优化调整和帧生成",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOo7wJzmpgrcOERK8GB22Gm7A1?pwd=krha",
+      "page": "https://jidiyouxi.com/post/detail/2098348234"
+     }
+    ],
+    "date": "2026-09-14",
+    "ts": 1789404076000,
+    "title": "Hinako 的可爱面部重贴图",
+    "server": "迅雷网盘",
+    "url": "https://pan.xunlei.com/s/VOoD56fll0VgP01TRpjlZst7A1?pwd=12o0",
+    "page": "https://jidiyouxi.com/post/detail/2098364488",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 1,
+    "cands": [
+     {
+      "date": "2025-09-24",
+      "ts": 1758672000000,
+      "title": "Silent Hill f: Trainer +32 {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/trainers/092025/s/silenthillf/SHf_promo_chaio.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/silent_hill_f_trainer_32_cheathappens_com/28-1-0-14410"
+     }
+    ],
+    "date": "2025-09-24",
+    "ts": 1758672000000,
+    "title": "Silent Hill f: Trainer +32 {CheatHappens.com}",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/trainers/092025/s/silenthillf/SHf_promo_chaio.zip",
+    "page": "https://gtrainers.com/load/categories/trainers/silent_hill_f_trainer_32_cheathappens_com/28-1-0-14410",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2025-10-22",
+    "ts": 1761091200000,
+    "title": "Silent Hill f: SaveGame (NG+, 5/5)",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/saves_2025/s/silenthillf/SaveSHf.zip",
+    "page": "https://gtrainers.com/load/categories/savegames/silent_hill_f_savegame_ng_5_5/30-1-0-14545",
+    "src": "GTrainers",
+    "n": 2,
+    "cands": [
+     {
+      "date": "2025-10-22",
+      "ts": 1761091200000,
+      "title": "Silent Hill f: SaveGame (NG+, 5/5)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves_2025/s/silenthillf/SaveSHf.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/silent_hill_f_savegame_ng_5_5/30-1-0-14545",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-09-20",
+      "ts": 1758326400000,
+      "title": "Silent Hill f: SaveGame 100%",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves_2025/s/silenthillf/Silent_Hill_f_save_games.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/silent_hill_f_savegame_100/30-1-0-14424",
+      "src": "GTrainers"
+     }
+    ],
+    "chk": {
+     "code": 206
+    }
+   }
+  },
+  {
+   "id": "xd-11344",
+   "hot": 23573,
+   "score": 5,
+   "name": "泰坦之旅2",
+   "nameEn": "Titan Quest II",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/11344.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/204628160",
+   "jidiId": "jidi-204628160",
+   "counts": {
+    "mod": 3,
+    "saves": 3,
+    "trainers": 2
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "204628160",
+    "n": 127,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791796308000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1RR8VTCTJpI-V3BLAeFVUmw?pwd=2c54",
+      "title": "【亲测可用】解压即撸|泰坦之旅2/Titan Quest II|官方中文|赠多项修改器",
+      "portUrl": "https://jidiyouxi.com/post/detail/2786259214"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791796308000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VP0FkKBsTjMIycX8ePha9Y1EA1?pwd=tbne",
+      "title": "【亲测可用】解压即撸|泰坦之旅2/Titan Quest II|官方中文|赠多项修改器",
+      "portUrl": "https://jidiyouxi.com/post/detail/2786259214"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791796308000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/560fabdaae7f?pwd=jidi",
+      "title": "【亲测可用】解压即撸|泰坦之旅2/Titan Quest II|官方中文|赠多项修改器",
+      "portUrl": "https://jidiyouxi.com/post/detail/2786259214"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791792697000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/711ef28b4025",
+      "title": "【亲测可玩】解压即撸| v0.7.0.137244 |泰坦之旅2豪华中文全DLC+第三章+1.4汉化补丁+mod合集",
+      "portUrl": "https://jidiyouxi.com/post/detail/2752703047"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791792697000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOzbGrvZbgKegme_Reofykk-A1?pwd=8g58",
+      "title": "【亲测可玩】解压即撸| v0.7.0.137244 |泰坦之旅2豪华中文全DLC+第三章+1.4汉化补丁+mod合集",
+      "portUrl": "https://jidiyouxi.com/post/detail/2752703047"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791792697000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1q9JiFRchTdFFpqG_bkWP0w?pwd=8888",
+      "title": "【亲测可玩】解压即撸| v0.7.0.137244 |泰坦之旅2豪华中文全DLC+第三章+1.4汉化补丁+mod合集",
+      "portUrl": "https://jidiyouxi.com/post/detail/2752703047"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791796308000,
+    "server": "百度网盘",
+    "url": "https://pan.baidu.com/s/1RR8VTCTJpI-V3BLAeFVUmw?pwd=2c54",
+    "title": "【亲测可用】解压即撸|泰坦之旅2/Titan Quest II|官方中文|赠多项修改器",
+    "portUrl": "https://jidiyouxi.com/post/detail/2786259214",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 3,
+    "cands": [
+     {
+      "date": "2026-09-14",
+      "ts": 1789419309000,
+      "title": "精通4",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOnZs8PP_9IH6F5EqEUHCyxgA1?pwd=usah",
+      "page": "https://jidiyouxi.com/post/detail/2064779650"
+     },
+     {
+      "date": "2026-09-12",
+      "ts": 1789195408000,
+      "title": "无溅射",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOmlSrhKL8L18_yy4NaBKlSrA1?pwd=2t1p",
+      "page": "https://jidiyouxi.com/post/detail/1997689171"
+     },
+     {
+      "date": "2026-09-07",
+      "ts": 1788759094000,
+      "title": "噩梦难度",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOoCsFw-n1th0-UTLK0lqPgBA1?pwd=lewf",
+      "page": "https://jidiyouxi.com/post/detail/2098363064"
+     }
+    ],
+    "date": "2026-09-14",
+    "ts": 1789419309000,
+    "title": "精通4",
+    "server": "迅雷网盘",
+    "url": "https://pan.xunlei.com/s/VOnZs8PP_9IH6F5EqEUHCyxgA1?pwd=usah",
+    "page": "https://jidiyouxi.com/post/detail/2064779650",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 1,
+    "cands": [
+     {
+      "date": "2025-08-03",
+      "ts": 1754179200000,
+      "title": "Titan Quest II: Trainer +27 {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/trainers/082025/t/titanquest2/TQ2_promo_chaio.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/titan_quest_ii_trainer_27_cheathappens_com/28-1-0-14165"
+     }
+    ],
+    "date": "2025-08-03",
+    "ts": 1754179200000,
+    "title": "Titan Quest II: Trainer +27 {CheatHappens.com}",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/trainers/082025/t/titanquest2/TQ2_promo_chaio.zip",
+    "page": "https://gtrainers.com/load/categories/trainers/titan_quest_ii_trainer_27_cheathappens_com/28-1-0-14165",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2025-09-04",
+    "ts": 1756944000000,
+    "title": "Titan Quest II: SaveGame (Battle Mage, level 26 character)",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/saves_2025/t/titanquest2/3_TQ2_SaveGames.rar",
+    "page": "https://gtrainers.com/load/categories/savegames/titan_quest_ii_savegame_battle_mage_level_26_character/30-1-0-14368",
+    "src": "GTrainers",
+    "n": 3,
+    "cands": [
+     {
+      "date": "2025-09-04",
+      "ts": 1756944000000,
+      "title": "Titan Quest II: SaveGame (Battle Mage, level 26 character)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves_2025/t/titanquest2/3_TQ2_SaveGames.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/titan_quest_ii_savegame_battle_mage_level_26_character/30-1-0-14368",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-08-20",
+      "ts": 1755648000000,
+      "title": "Titan Quest II: SaveGame (Freyja, level 24 character)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves_2025/t/titanquest2/2_TQ2_SaveGames.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/titan_quest_ii_savegame_freyja_level_24_character/30-1-0-14311",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-08-01",
+      "ts": 1754006400000,
+      "title": "Titan Quest II: SaveGame (elementalist)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves_2025/t/titanquest2/TQ2_SaveGames.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/titan_quest_ii_savegame_elementalist/30-1-0-14206",
+      "src": "GTrainers"
+     }
+    ],
+    "chk": {
+     "code": 206
+    }
+   }
+  },
+  {
+   "id": "xd-215",
+   "hot": 23058,
+   "score": 9.2,
+   "name": "刺客信条8：奥德赛",
+   "nameEn": "Assassin's Creed Odyssey",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/215.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/36877459",
+   "jidiId": "jidi-36877459",
+   "counts": {
+    "mod": 5,
+    "saves": 23,
+    "trainers": 6
+   },
+   "body": {
+    "st": "ok",
+    "from": "机地话题",
+    "engine": "api",
+    "tid": "36877459",
+    "n": 16,
+    "cands": [
+     {
+      "date": "2026-10-12",
+      "ts": 1791798030000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/3e25b593283a",
+      "title": "【VBS1.9一键启动】刺客信条：奥德赛v1.5.6 豪华中文全DLC+亚特兰蒂斯DLC",
+      "portUrl": "https://jidiyouxi.com/post/detail/2819776376"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791798030000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VP0c0H_obwizd19eeHJlKa38A1?pwd=5jd5",
+      "title": "【VBS1.9一键启动】刺客信条：奥德赛v1.5.6 豪华中文全DLC+亚特兰蒂斯DLC",
+      "portUrl": "https://jidiyouxi.com/post/detail/2819776376"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791798030000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1_OjNfSb7FMxEwIOHtNlLMg?pwd=8888",
+      "title": "【VBS1.9一键启动】刺客信条：奥德赛v1.5.6 豪华中文全DLC+亚特兰蒂斯DLC",
+      "portUrl": "https://jidiyouxi.com/post/detail/2819776376"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791798025000,
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/00cbf8fa7e96",
+      "title": "【亲测可玩】解压即玩|v1.5.3|刺客信条：奥德赛终极版 豪华中文全DLC 免安装解压即玩",
+      "portUrl": "https://jidiyouxi.com/post/detail/2769436591"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791798025000,
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VP-nQEfLqygEwWjrXV-JFGt8A1?pwd=a8f8",
+      "title": "【亲测可玩】解压即玩|v1.5.3|刺客信条：奥德赛终极版 豪华中文全DLC 免安装解压即玩",
+      "portUrl": "https://jidiyouxi.com/post/detail/2769436591"
+     },
+     {
+      "date": "2026-10-12",
+      "ts": 1791798025000,
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1Fk3VZMOQqLt2EQ_KMO-eCQ?pwd=8888",
+      "title": "【亲测可玩】解压即玩|v1.5.3|刺客信条：奥德赛终极版 豪华中文全DLC 免安装解压即玩",
+      "portUrl": "https://jidiyouxi.com/post/detail/2769436591"
+     }
+    ],
+    "date": "2026-10-12",
+    "ts": 1791798030000,
+    "server": "夸克网盘",
+    "url": "https://pan.quark.cn/s/3e25b593283a",
+    "title": "【VBS1.9一键启动】刺客信条：奥德赛v1.5.6 豪华中文全DLC+亚特兰蒂斯DLC",
+    "portUrl": "https://jidiyouxi.com/post/detail/2819776376",
+    "chk": {
+     "code": 200
+    }
+   },
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 5,
+    "cands": [
+     {
+      "date": "2026-09-14",
+      "ts": 1789403318000,
+      "title": "《刺客信条：奥德赛》v4.0真实向Reshade贴图",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOoXTuFzqcXSpC5zljEhSQqDA1?pwd=5gww",
+      "page": "https://jidiyouxi.com/post/detail/2115148916"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789357607000,
+      "title": "《ACE视觉重制合集 - 使用ReShade的 cinematic效果增强图形》",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOorJ0BR6bV9-K-BJnMLPwEnA1?pwd=agu4",
+      "page": "https://jidiyouxi.com/post/detail/2131931811"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789357601000,
+      "title": "快速启动（跳过开场动画）",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOlOt0UCc1Aufw_pDGN2Hhe4A1?pwd=jthw",
+      "page": "https://jidiyouxi.com/post/detail/1913828506"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789357587000,
+      "title": "完美阿特拉斯存档文件",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOoD55dOxBlDjrHG87Cc4DmRA1?pwd=yrnb",
+      "page": "https://jidiyouxi.com/post/detail/2098366665"
+     },
+     {
+      "date": "2026-09-12",
+      "ts": 1789210133000,
+      "title": "亚历克西奥斯面部贴图重制",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOmHqARHHmAudnqfZSAoz2olA1?pwd=fhdu",
+      "page": "https://jidiyouxi.com/post/detail/1964133991"
+     }
+    ],
+    "date": "2026-09-14",
+    "ts": 1789403318000,
+    "title": "《刺客信条：奥德赛》v4.0真实向Reshade贴图",
+    "server": "迅雷网盘",
+    "url": "https://pan.xunlei.com/s/VOoXTuFzqcXSpC5zljEhSQqDA1?pwd=5gww",
+    "page": "https://jidiyouxi.com/post/detail/2115148916",
+    "chk": {
+     "code": 200
+    }
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 3,
+    "cands": [
+     {
+      "date": "2020-12-01",
+      "ts": 1606780800000,
+      "title": "Assassin's Creed: Odyssey - Trainer +28 v1.0.2-v1.5.4 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://poeti-liriki.narod.ru/trainers/072021/a/assassins/Assassins_Creed_Odyssey_Plus_28_Trainer.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/assassin_39_s_creed_odyssey_trainer_15_v1_0_2_fling/28-1-0-6427"
+     },
+     {
+      "date": "2019-09-11",
+      "ts": 1568160000000,
+      "title": "Assassin's Creed: Odyssey - Trainer +26 v1.0.2-v1.5.0 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://vrn-stomatolog.narod.ru/trainer0920192/a/assassinscreed/Assassins_Creed_Odyssey_v1.0.2-v1.5.0_Plus_26_Trai.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/assassin_39_s_creed_odyssey_trainer_21_v1_0_2_fling/28-1-0-6441"
+     },
+     {
+      "date": "2019-07-12",
+      "ts": 1562889600000,
+      "title": "Assassin's Creed: Odyssey - Trainer +21 {MrAntiFun}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/trainers0920192/a/assassinscreed/Assassin-s_Creed_Odyssey.zips",
+      "page": "https://gtrainers.com/load/categories/trainers/assassin_39_s_creed_odyssey_trainer_11_v1_0_2_mrantifun/28-1-0-6442"
+     }
+    ],
+    "date": "2020-12-01",
+    "ts": 1606780800000,
+    "title": "Assassin's Creed: Odyssey - Trainer +28 v1.0.2-v1.5.4 {FLiNG}",
+    "server": "GTrainers 直链",
+    "url": "https://poeti-liriki.narod.ru/trainers/072021/a/assassins/Assassins_Creed_Odyssey_Plus_28_Trainer.zip",
+    "page": "https://gtrainers.com/load/categories/trainers/assassin_39_s_creed_odyssey_trainer_15_v1_0_2_fling/28-1-0-6427",
+    "chk": {
+     "code": 206
+    }
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2025-10-02",
+    "ts": 1759363200000,
+    "title": "Assassin's Creed: Odyssey - SaveGame (Alexios, level 68) [EMPRESS]",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/saves_2025/a/assassins/EMPRESS.7z",
+    "page": "https://gtrainers.com/load/categories/savegames/assassin_39_s_creed_odyssey_savegame_alexios_level_68_empress/30-1-0-14470",
+    "src": "GTrainers",
+    "n": 23,
+    "cands": [
+     {
+      "date": "2025-10-02",
+      "ts": 1759363200000,
+      "title": "Assassin's Creed: Odyssey - SaveGame (Alexios, level 68) [EMPRESS]",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves_2025/a/assassins/EMPRESS.7z",
+      "page": "https://gtrainers.com/load/categories/savegames/assassin_39_s_creed_odyssey_savegame_alexios_level_68_empress/30-1-0-14470",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-06-06",
+      "ts": 1749168000000,
+      "title": "Assassin's Creed: Odyssey - SaveGame (Alexios, level 67) [EMPRESS]",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves/a/assassinscreed/save_67.7z",
+      "page": "https://gtrainers.com/load/categories/savegames/assassin_39_s_creed_odyssey_savegame_alexios_level_67_empress/30-1-0-13986",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2021-06-01",
+      "ts": 1622505600000,
+      "title": "Assassin's Creed: Odyssey - Save Game (Kassandra, 83 lvl)",
+      "server": "GTrainers 直链",
+      "url": "https://zhbi-v.narod.ru/saves/a/assassinscreed/storage_files_83.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/assassin_39_s_creed_odyssey_save_game_kassandra_83_lvl/30-1-0-9482",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2020-12-29",
+      "ts": 1609200000000,
+      "title": "Assassin's Creed: Odyssey - Save Game (40 lvl, easy start, beginning of the game)",
+      "server": "GTrainers 直链",
+      "url": "https://zhbi-v.narod.ru/saves/a/assassinscreed/Eazy_Start_Odyssey.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/assassin_39_s_creed_odyssey_save_game_40_lvl_easy_start_beginning_of_the_game/30-1-0-9101",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2020-10-14",
+      "ts": 1602633600000,
+      "title": "Assassin's Creed: Odyssey - Save Game (NG+, 100%, Alexios 92 lvl)",
+      "server": "GTrainers 直链",
+      "url": "https://zhbi-v.narod.ru/saves/a/assassinscreed/storage_files.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/assassin_39_s_creed_odyssey_save_game_ng_100_alexios_92_lvl/30-1-0-8931",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2020-09-25",
+      "ts": 1600992000000,
+      "title": "Assassin's Creed: Odyssey - Save Game (Kassandra, 20 lvl, Kephalonia is fully explored)",
+      "server": "GTrainers 直链",
+      "url": "https://zhbi-v.narod.ru/saves/a/assassinscreed/ACO_Kassandra_Savegame.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/assassin_39_s_creed_odyssey_save_game_kassandra_20_lvl_kephalonia_is_fully_explored/30-1-0-8873",
+      "src": "GTrainers"
+     }
+    ],
+    "chk": {
+     "code": 206
+    }
+   }
+  }
+ ],
+ "dropped": [
+  {
+   "id": "xd-14263",
+   "hot": 87917,
+   "score": 8.6,
+   "name": "识质存在",
+   "nameEn": "PRAGMATA",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/14263.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/959588060",
+   "jidiId": "jidi-959588060",
+   "counts": {
+    "mod": 6,
+    "saves": 1,
+    "trainers": 1
+   },
+   "reason": "MOD/修改器/存档 有一类给不出可下载直链",
+   "miss": "修改器"
+  },
+  {
+   "id": "xd-9701",
+   "hot": 82033,
+   "score": 9,
+   "name": "天国：拯救2",
+   "nameEn": "Kingdom Come: Deliverance II",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/9701.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/3299352",
+   "jidiId": "jidi-3299352",
+   "counts": {
+    "mod": 190,
+    "saves": 26,
+    "trainers": 1
+   },
+   "reason": "MOD/修改器/存档 有一类给不出可下载直链",
+   "miss": "修改器"
+  },
+  {
+   "id": "xd-4977",
+   "hot": 74078,
+   "score": 10,
+   "name": "极限竞速：地平线5",
+   "nameEn": "Forza Horizon 5",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/4977.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/3290085",
+   "jidiId": "jidi-3290085",
+   "counts": {
+    "mod": 32,
+    "saves": 11,
+    "trainers": 1
+   },
+   "reason": "MOD/修改器/存档 有一类给不出可下载直链",
+   "miss": "修改器"
+  },
+  {
+   "id": "xd-72",
+   "hot": 61453,
+   "score": 8.7,
+   "name": "鬼谷八荒",
+   "nameEn": "Tale of Immortal",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/72.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/271769704",
+   "jidiId": "jidi-271769704",
+   "counts": {
+    "mod": 40,
+    "saves": 215,
+    "trainers": 5
+   },
+   "reason": "本体给不出可下载直链",
+   "miss": "本体",
+   "bodyWhy": "机地话题页「本体」专区没有可直取链接 / XDGAME 全部渠道需登录",
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 40,
+    "cands": [
+     {
+      "date": "2026-09-15",
+      "ts": 1789438171000,
+      "title": "鬼谷八荒 八月最新1000+MOD整合",
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/ab890b7724b4",
+      "page": "https://jidiyouxi.com/post/detail/2769456100"
+     },
+     {
+      "date": "2026-09-15",
+      "ts": 1789437553000,
+      "title": "【mod】【鬼畜八荒】新版本体mod+拓展mod合集",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOivHGST6WrZmfMBEzVUIsZfA1?pwd=p5pd#",
+      "page": "https://jidiyouxi.com/post/detail/1779576147"
+     },
+     {
+      "date": "2026-09-15",
+      "ts": 1789437467000,
+      "title": "【mod】【邪神新传(逆天炉鼎)】大型综合剧情模组，开启一段痛快的穿越之旅，与女主们一同修仙吧",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOivLWfoYS_5seSln6RoPaGqA1?pwd=9in8#",
+      "page": "https://jidiyouxi.com/post/detail/1779576554"
+     },
+     {
+      "date": "2026-09-15",
+      "ts": 1789437449000,
+      "title": "【mod】【鬼畜八荒扩展+前置 | 女档用】魅魔系统 v2.8.0",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOivKJChfeV9KCzSCZKsJ1kuA1?pwd=yj3y#",
+      "page": "https://jidiyouxi.com/post/detail/1779576408"
+     },
+     {
+      "date": "2026-09-15",
+      "ts": 1789437299000,
+      "title": "【mod】五件黑丝荤立绘（懂的都懂）",
+      "server": "百度网盘",
+      "url": "https://pan.baidu.com/s/1D7UvqCSYxCNTyXfvv8c7Cg?pwd=rt52",
+      "page": "https://jidiyouxi.com/post/detail/1779576640"
+     },
+     {
+      "date": "2026-09-15",
+      "ts": 1789437237000,
+      "title": "【mod前置框架】F框架24.12.28",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOivIQXafigt6fjTBwfZmOUUA1?pwd=my36#",
+      "page": "https://jidiyouxi.com/post/detail/1779576176"
+     }
+    ],
+    "date": "2026-09-15",
+    "ts": 1789438171000,
+    "title": "鬼谷八荒 八月最新1000+MOD整合",
+    "server": "夸克网盘",
+    "url": "https://pan.quark.cn/s/ab890b7724b4",
+    "page": "https://jidiyouxi.com/post/detail/2769456100"
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 3,
+    "cands": [
+     {
+      "date": "2023-06-10",
+      "ts": 1686355200000,
+      "title": "Tale of Immortal / Gui Gu Ba Huang: Trainer +54 v2023.06.09 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://poeti-liriki.narod.ru/trainers/062023/g/guigubahuang/Tale_of_Immortal_54_Trainer_2023.06.09.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/gui_gu_ba_huang_trainer_29_v1_0_fling/28-1-0-9166"
+     },
+     {
+      "date": "2023-05-31",
+      "ts": 1685491200000,
+      "title": "Tale of Immortal / Gui Gu Ba Huang - Trainer +54 Early Access 30.05.2023 {FLiNG}",
+      "server": "GTrainers 直链",
+      "url": "https://poeti-liriki.narod.ru/trainers/052023/g/guiguba/Gui_Gu_Ba_Huang_54_Trainer_2023.05.30.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/gui_gu_ba_huang_trainer_49_v2021_02_14_fling/28-1-0-9220"
+     },
+     {
+      "date": "2022-07-12",
+      "ts": 1657584000000,
+      "title": "Tale of Immortal: Trainer +54 v12.07.2022 {FLiNG / WeMod}",
+      "server": "GTrainers 直链",
+      "url": "https://ochki-v.narod.ru/072022/t/taleofimmortal/Tale_of_Immortal_Trainer.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/tale_of_immortal_trainer_54_fling/28-1-0-9767"
+     }
+    ],
+    "date": "2023-06-10",
+    "ts": 1686355200000,
+    "title": "Tale of Immortal / Gui Gu Ba Huang: Trainer +54 v2023.06.09 {FLiNG}",
+    "server": "GTrainers 直链",
+    "url": "https://poeti-liriki.narod.ru/trainers/062023/g/guigubahuang/Tale_of_Immortal_54_Trainer_2023.06.09.zip",
+    "page": "https://gtrainers.com/load/categories/trainers/gui_gu_ba_huang_trainer_29_v1_0_fling/28-1-0-9166"
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2024-07-18",
+    "ts": 1721260800000,
+    "title": "鬼谷八荒功法灵根技艺全50存档下载_游侠网",
+    "server": "直链",
+    "url": "https://patch1.ventacorius.com/2024/ALI213-GGBHquan50cd.zip",
+    "page": "https://patch.ali213.net/showpatch/249613.html",
+    "src": "游侠补丁网",
+    "n": 215,
+    "cands": [
+     {
+      "date": "2024-07-18",
+      "ts": 1721260800000,
+      "title": "鬼谷八荒功法灵根技艺全50存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-GGBHquan50cd.zip",
+      "page": "https://patch.ali213.net/showpatch/249613.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2024-07-18",
+      "ts": 1721260800000,
+      "title": "鬼谷八荒3红开局自带突破材料存档下载-鬼谷八荒存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-GGBHsanhongkaijuzidaisucaicd.zip",
+      "page": "https://patch.ali213.net/showpatch/249609.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2024-07-18",
+      "ts": 1721260800000,
+      "title": "鬼谷八荒普通难度多成就解锁元婴存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-GGBHduochengjiujiesuocd.zip",
+      "page": "https://patch.ali213.net/showpatch/249587.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2024-07-18",
+      "ts": 1721260800000,
+      "title": "鬼谷八荒普通难度三红仙姿男存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-GGBHputongsanhongnancd.zip",
+      "page": "https://patch.ali213.net/showpatch/249579.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2024-07-18",
+      "ts": 1721260800000,
+      "title": "鬼谷八荒炼狱3红女剑存档下载-鬼谷八荒存档存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-GGBHlanyusanhongnvjianxiucd.zip",
+      "page": "https://patch.ali213.net/showpatch/249567.html",
+      "src": "游侠补丁网"
+     },
+     {
+      "date": "2024-07-17",
+      "ts": 1721174400000,
+      "title": "鬼谷八荒6魔道黑色天赋剑魔修存档下载_游侠网",
+      "server": "直链",
+      "url": "https://patch1.ventacorius.com/2024/ALI213-GGBHmojianxiucd.zip",
+      "page": "https://patch.ali213.net/showpatch/249421.html",
+      "src": "游侠补丁网"
+     }
+    ]
+   }
+  },
+  {
+   "id": "xd-10111",
+   "hot": 57925,
+   "score": 7,
+   "name": "最后生还者2：重制版",
+   "nameEn": "The Last of Us Part II Remastered",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/10111.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/20114774",
+   "jidiId": "jidi-20114774",
+   "counts": {
+    "mod": 8,
+    "saves": 5,
+    "trainers": 1
+   },
+   "reason": "MOD/修改器/存档 有一类给不出可下载直链",
+   "miss": "修改器"
+  },
+  {
+   "id": "xd-2989",
+   "hot": 41465,
+   "score": 5,
+   "name": "哥特少女勇闯恶魔城2",
+   "nameEn": "SiNiSistar 2",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/2989.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/993165446",
+   "jidiId": "jidi-993165446",
+   "counts": {
+    "mod": 1,
+    "saves": 1,
+    "trainers": 1
+   },
+   "reason": "MOD/修改器/存档 有一类给不出可下载直链",
+   "miss": "修改器"
+  },
+  {
+   "id": "xd-2765",
+   "hot": 35795,
+   "score": 9.3,
+   "name": "上古卷轴5：周年纪念版",
+   "nameEn": "The Elder Scrolls V: Skyrim Special Edition",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/2765.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/154309039",
+   "jidiId": "jidi-70415042",
+   "counts": {
+    "mod": 557,
+    "saves": 1,
+    "trainers": 1
+   },
+   "reason": "MOD/修改器/存档 有一类给不出可下载直链",
+   "miss": "修改器"
+  },
+  {
+   "id": "jidi-171078313",
+   "hot": 33257,
+   "score": 0,
+   "name": "三国志14",
+   "nameEn": "",
+   "source": "jidi",
+   "isJidi": true,
+   "detail": "https://jidiyouxi.com/topic/detail/171078313",
+   "jidi": "",
+   "jidiId": "",
+   "counts": {
+    "mod": 1,
+    "saves": 2,
+    "trainers": 1
+   },
+   "reason": "MOD/修改器/存档 有一类给不出可下载直链",
+   "miss": "修改器"
+  },
+  {
+   "id": "xd-8929",
+   "hot": 27129,
+   "score": 5,
+   "name": "致命解药",
+   "nameEn": "The Killing Antidote",
+   "source": "xdgamer",
+   "isJidi": false,
+   "detail": "https://www.xdgame.com/game/8929.html",
+   "jidi": "https://jidiyouxi.com/topic/detail/70424413",
+   "jidiId": "jidi-70424413",
+   "counts": {
+    "mod": 108,
+    "saves": 11,
+    "trainers": 1
+   },
+   "reason": "MOD/修改器/存档 有一类给不出可下载直链",
+   "miss": "修改器"
+  },
+  {
+   "id": "jidi-187859173",
+   "hot": 23240,
+   "score": 5.7,
+   "name": "明末：渊虚之羽",
+   "nameEn": "WUCHANG: Fallen Feathers",
+   "source": "jidi",
+   "isJidi": true,
+   "detail": "https://jidiyouxi.com/topic/detail/187859173",
+   "jidi": "",
+   "jidiId": "",
+   "counts": {
+    "mod": 54,
+    "saves": 2,
+    "trainers": 3
+   },
+   "reason": "本体给不出可下载直链",
+   "miss": "本体",
+   "bodyWhy": "机地话题页「本体」专区没有可直取链接（非 XDGAME 条目，无兜底通道）",
+   "mod": {
+    "kind": "mod",
+    "src": "机地 MOD",
+    "n": 54,
+    "cands": [
+     {
+      "date": "2026-09-15",
+      "ts": 1789438666000,
+      "title": "【mod】N网爆火剑星Eve体型",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOWUYX3Qfk6BZCzki1Vq7wQNA1?pwd=eh58#",
+      "page": "https://jidiyouxi.com/post/detail/1259506561"
+     },
+     {
+      "date": "2026-09-15",
+      "ts": 1789437589000,
+      "title": "【明末渊虚之羽】26年最新100+MOD整合！实用功能+角色美化+绅士清凉，游戏体验+999%！含保姆级安装教程～",
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/ba3bc2bf3d99?pwd=b4f1",
+      "page": "https://jidiyouxi.com/post/detail/2584899082"
+     },
+     {
+      "date": "2026-09-15",
+      "ts": 1789436771000,
+      "title": "【mod】果&体裸足+MondyTS身材纹理",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOWUZVchArz2zzJnhiK1bOT7A1?pwd=mya6#",
+      "page": "https://jidiyouxi.com/post/detail/1259506696"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789417820000,
+      "title": "【明末:渊虚之羽】流川绅士Mod整合包",
+      "server": "夸克网盘",
+      "url": "https://pan.quark.cn/s/c7668aaf433d",
+      "page": "https://jidiyouxi.com/post/detail/2769455477"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789412972000,
+      "title": "【mod】明末：渊虚之羽mod加载器（更新7.27版本）",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOW-KJguFoIhJcrKIoZvcUTkA1?pwd=xygd#",
+      "page": "https://jidiyouxi.com/post/detail/1242759158"
+     },
+     {
+      "date": "2026-09-14",
+      "ts": 1789408051000,
+      "title": "【mod】清凉模型",
+      "server": "迅雷网盘",
+      "url": "https://pan.xunlei.com/s/VOW-MmGKaUOwsnWLBPEb7KqWA1?pwd=44q3#",
+      "page": "https://jidiyouxi.com/post/detail/1242759167"
+     }
+    ],
+    "date": "2026-09-15",
+    "ts": 1789438666000,
+    "title": "【mod】N网爆火剑星Eve体型",
+    "server": "迅雷网盘",
+    "url": "https://pan.xunlei.com/s/VOWUYX3Qfk6BZCzki1Vq7wQNA1?pwd=eh58#",
+    "page": "https://jidiyouxi.com/post/detail/1259506561"
+   },
+   "tr": {
+    "kind": "trainers",
+    "src": "GTrainers",
+    "n": 1,
+    "cands": [
+     {
+      "date": "2025-07-25",
+      "ts": 1753401600000,
+      "title": "Wuchang: Fallen Feathers - Trainer +10 {CheatHappens.com}",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/trainers/072025/w/wuchang/WFF_promo_chaio.zip",
+      "page": "https://gtrainers.com/load/categories/trainers/wuchang_fallen_feathers_trainer_10_cheathappens_com/28-1-0-14126"
+     }
+    ],
+    "date": "2025-07-25",
+    "ts": 1753401600000,
+    "title": "Wuchang: Fallen Feathers - Trainer +10 {CheatHappens.com}",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/trainers/072025/w/wuchang/WFF_promo_chaio.zip",
+    "page": "https://gtrainers.com/load/categories/trainers/wuchang_fallen_feathers_trainer_10_cheathappens_com/28-1-0-14126"
+   },
+   "sv": {
+    "kind": "saves",
+    "date": "2025-08-05",
+    "ts": 1754352000000,
+    "title": "Wuchang: Fallen Feathers - SaveGame (100%, before all endings)",
+    "server": "GTrainers 直链",
+    "url": "https://gtrainers.com/saves_2025/w/wuchang/GameSlots.rar",
+    "page": "https://gtrainers.com/load/categories/savegames/wuchang_fallen_feathers_savegame_100_before_all_endings/30-1-0-14243",
+    "src": "GTrainers",
+    "n": 2,
+    "cands": [
+     {
+      "date": "2025-08-05",
+      "ts": 1754352000000,
+      "title": "Wuchang: Fallen Feathers - SaveGame (100%, before all endings)",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves_2025/w/wuchang/GameSlots.rar",
+      "page": "https://gtrainers.com/load/categories/savegames/wuchang_fallen_feathers_savegame_100_before_all_endings/30-1-0-14243",
+      "src": "GTrainers"
+     },
+     {
+      "date": "2025-07-29",
+      "ts": 1753747200000,
+      "title": "Wuchang: Fallen Feathers - SaveGame 100%",
+      "server": "GTrainers 直链",
+      "url": "https://gtrainers.com/saves_2025/w/wuchang/Wuchang-Fallen_Feathers_saves.zip",
+      "page": "https://gtrainers.com/load/categories/savegames/wuchang_fallen_feathers_savegame_100/30-1-0-14178",
+      "src": "GTrainers"
+     }
+    ]
+   }
+  }
+ ]
+}
