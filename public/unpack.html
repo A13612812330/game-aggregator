@@ -5878,11 +5878,25 @@ async function init() {
     }
     $('#liveTxt').textContent = '快照';
   }
-  // URL 直达：?q= 搜索 / ?c= 分类 / ?sort=
+  // URL 直达：?q= 搜索 / ?c= 分类 / ?sort= / ?open= 详情与资源弹窗
   const sp = new URLSearchParams(location.search);
   const qp = sp.get('q'); if (qp && qp.trim()) openSearch(qp.trim()); // 直达：自动打开搜索弹窗并出结果
   const cp = sp.get('c'); if (cp && CATS.includes(cp)) { curCat = cp; renderCats(); renderList(true); }
   const sp2 = sp.get('sort'); if (sp2 && SORTS.some(s => s.k === sp2)) { curSort = sp2; renderCats(); renderList(true); }
+  /* ★ v10.66：?open=<本地库 id> 直达某一款游戏 —— 外部页面（名单页 / 分享出去的链接）
+     一跳到位，不必先搜索再点结果。
+       ?open=xd-16288                 → 打开详情抽屉
+       ?open=xd-16288&dl=1            → 详情抽屉 + 「下载与资源」弹窗（本体页签）
+       ?open=xd-16288&dl=mod          → 同上，但直接落到 Mod 页签
+     `dl` 的取值就是 DL_UNI_KEYS（body/mod/modifier/save），非法/空值兜底到 body。
+     ★ 走 gotoResTab 而不是自己拼：它内部先 `await openDetailById` 再开弹窗 ——
+       弹窗要靠抽屉里的会话上下文取 id，顺序颠倒会出现「弹窗拿到上一款游戏的 id」。 */
+  const op = (sp.get('open') || '').trim();
+  if (op) {
+    const dlv = sp.get('dl');
+    if (dlv) gotoResTab(op, '', DL_UNI_KEYS.includes(dlv) ? dlv : 'body');
+    else openDetailById(op, '');
+  }
   document.documentElement.setAttribute('data-ready', '1');
 }
 /* ================= 📥 网盘下载弹窗（v10.22 新增） =================

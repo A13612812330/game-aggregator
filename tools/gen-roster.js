@@ -33,6 +33,8 @@ const gi = (k, d) => { const i = process.argv.indexOf(k); return i >= 0 ? proces
 const STAMP = gi('--stamp', new Date().toISOString().slice(0, 10));
 const PROBE_FILE = path.join(ROOT, gi('--probe', 'data/_core-dl-probe.json'));
 const OUT = path.join(ROOT, 'docs', 'reports', `gamehub-roster-${STAMP}.html`);
+/* 线上稳定短链落点（站点静态根 = public/） */
+const WEB = path.join(ROOT, 'public', 'roster', 'index.html');
 const SNAP = path.join(ROOT, 'docs', 'reports', `_roster-${STAMP}.json`);
 
 const resGroups = require('../data/res-groups');
@@ -261,6 +263,15 @@ const html = `<!DOCTYPE html>
   .sec>h4{margin:0 0 8px;font-size:12.5px;font-weight:800;display:flex;align-items:center;gap:8px}
   .sec>h4 .bar{width:3px;height:13px;border-radius:2px;background:var(--c-primary);display:inline-block}
   .sec>h4 .n{font-family:var(--font-num);font-size:11px;color:var(--c-t3);font-weight:700}
+  /* ★ v10.66：弹窗的动作条（跳站内详情页 / 直接开资源弹窗）。
+     为什么单独一行常驻在正文之上：正文会随分类长短滚动，按钮放正文里会被滚走。 */
+  .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:11px 18px;border-bottom:1px solid var(--c-border);background:#F7F9FF}
+  .acts .dim{font-size:11px}
+  /* ★ v10.66：每类最多列 SEC_MAX 条；超出折成一行「还有 N 条」+ 去详情页看全部。
+     弹窗定位是**摘要**（一眼看清这游戏有什么），全量在站内详情页的资源模块里。 */
+  .more{margin-top:3px;font-size:11.5px;color:var(--c-t2);background:#F4F7FE;border:1px dashed #D6E2FF;
+    border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .more b{font-family:var(--font-num);color:var(--c-primary)}
   .it{border:1px solid var(--c-border);border-radius:9px;padding:9px 11px;margin-bottom:7px;background:#FDFDFF}
   .it .t1{font-weight:650;font-size:12.5px;margin-bottom:5px;word-break:break-all}
   .it .meta{font-size:11px;color:var(--c-t3);margin-bottom:6px;font-family:var(--font-num)}
@@ -302,12 +313,15 @@ const html = `<!DOCTYPE html>
     <b>① 「本体」这一列没有全量数据</b>：本体直链只能逐款打源站实时解析，19,497 款逐一抓不现实。
     本页 <b id="noteProbe">-</b> 款带 v10.57 那轮的实测结论（<span class="st ok">可下</span>
     <span class="st auth">需登录</span> <span class="st no">无</span>），其余一律标
-    <span class="st un">未测</span> —— <b>点开弹窗可以按需实时查</b>（需本地 8123 在跑）。<br>
+    <span class="st un">未测</span> —— <b>点开弹窗可以按需实时查</b>
+    （<b>在线打开</b>走本站同源接口；<b>双击本地文件</b>需本地 8123 在跑）。<br>
     <b>② MOD / 存档 / 修改器 三列是全量的</b>，与详情页、资源页同源（覆盖：<b id="noteCover">-</b>）。
     「存档」指<b>可下载的存档文件</b>，不含 Ludusavi 的存档位置记录（那是另一个口径，覆盖约 6,300 款）。<br>
     <b>名单是怎么算的</b>：<span id="noteMerged">-</span><br>
     <b>③ 筛选可以多选</b>：平台多选取<b>并集</b>（端游 ∪ 手游可玩）；资源多选的组合方式由右侧下拉框决定 ——
-    <b>需同时具备</b>（逐项收窄，默认）或 <b>任一满足</b>（取并集）。两者结论差别很大，所以不设隐式默认。
+    <b>需同时具备</b>（逐项收窄，默认）或 <b>任一满足</b>（取并集）。两者结论差别很大，所以不设隐式默认。<br>
+    <b>④ 点「查看」开的弹窗每类最多列 5 条</b>（弹窗是摘要），弹窗顶部有
+    <b>打开游戏详情页</b> 与 <b>直接打开资源弹窗</b> 两个按钮，超额条目在那里看全部。
   </div>
 
   <div class="bar">
@@ -372,6 +386,7 @@ const html = `<!DOCTYPE html>
 
 <div id="mask"><div id="dlg">
   <div class="hd"><h3 id="dTitle">-</h3><button class="btn" id="dClose">关闭 ✕</button></div>
+  <div class="acts" id="dActs" hidden></div>
   <div class="bd" id="dBody"></div>
   <div class="ft"><span class="dim" id="dHint"></span></div>
 </div></div>
@@ -381,7 +396,16 @@ const html = `<!DOCTYPE html>
 (function(){
   var D = JSON.parse(document.getElementById('roster-data').textContent);
   var R = D.rows, L = D.links;
-  var API = 'http://127.0.0.1:8123';
+  /* ★★ v10.66：API 基址改**同源自适应** —— 上一版写死 127.0.0.1:8123，
+     上线到站点根之后浏览器会把「从 https 页面打 http://127.0.0.1」当混合内容/跨站拦截，
+     本体实时查询会静默失败（页面不报错，只是按钮转圈然后说「连不上」）。
+     file://（双击本地文件）才回落到本地服务；http(s) 一律同源。 */
+  var API = (location.protocol === 'file:') ? 'http://127.0.0.1:8123' : '';
+  /* 站内入口（详情页 / 资源弹窗）指向**线上站点**：这份 HTML 可能被离线双击打开，
+     也可能被放在站点根，两者都要能一跳到位，所以不能用相对路径、必须用绝对地址。 */
+  var SITE = 'https://gamehub-agg-v4.app.workbuddy.host';
+  /* 每类最多列几条（超出折成「还有 N 条」+ 去详情页看全部） */
+  var SEC_MAX = 5;
   /* ★ 行内 src 存的是**数字**（省字节）⇒ 映射表也必须用数字键。
      首版写成字符串键，结果来源列全显示问号 —— 实测才发现（页面不报错，只是错）。 */
   var SRC_NAME = { 0:'机地', 1:'XDGAME', 2:'手游中心' };
@@ -516,6 +540,25 @@ const html = `<!DOCTYPE html>
 
   /* ── 弹窗 ── */
   var CAT_NAME = { m:'MOD', sv:'存档', tr:'修改器' };
+  /* 站内跳转地址：库里条目（xd-* / jidi-*）能直达详情抽屉与资源弹窗；
+     手游中心独有行（mh:*）本地库没有对应记录，退化为「站内搜索」。
+     「dl=<页签>」与主站 DL_UNI 的键一一对应（body / mod / modifier / save），
+     所以「某类还有 N 条」能直接落到**那一类的页签**，不用用户再点一次。 */
+  function isLibId(id){ return /^(xd|jidi)-/.test(String(id || '')); }
+  function siteLinks(r){
+    var id = String(r[1] || ''), title = String(r[0] || '');
+    if(isLibId(id)){
+      var base = SITE + '/?open=' + encodeURIComponent(id);
+      return {
+        detail: base,
+        pop: base + '&dl=1',
+        tab: function(k){ return base + '&dl=' + k; },
+        direct: true,
+      };
+    }
+    var q = SITE + '/?q=' + encodeURIComponent(title);
+    return { detail: q, pop: q, tab: function(){ return q; }, direct: false };
+  }
   function itemHtml(x){
     var title = x[0] || '(无标题)';
     var meta = [x[1], x[2], x[3], x[7] ? ('下载 ' + x[7]) : ''].filter(Boolean).join(' · ');
@@ -530,17 +573,40 @@ const html = `<!DOCTYPE html>
       + (x[4] ? '<div style="margin-top:5px"><a class="lnk" href="' + esc(x[4]) + '" target="_blank" rel="noopener">原贴 ↗</a></div>' : '')
       + '</div>';
   }
-  function secHtml(head, arr){
+  /* 每类最多列 SEC_MAX 条（v10.66 用户口径：「每个最多显示5条」）。
+     ★ 超额时**必须给出「还有 N 条」与去处** —— 只截断不说明，用户会以为这就是全部
+       （本项目里「静默截断」是一类事故模式，如熔断误判那例）。 */
+  function secHtml(head, arr, moreHref){
     if(!arr || !arr.length) return '<div class="sec"><h4><span class="bar"></span>' + head
       + ' <span class="n">0 条</span></h4><div class="none">本游戏没有这一类资源</div></div>';
-    return '<div class="sec"><h4><span class="bar"></span>' + head
-      + ' <span class="n">' + arr.length + ' 条</span></h4>' + arr.map(itemHtml).join('') + '</div>';
+    var shown = arr.slice(0, SEC_MAX);
+    var rest = arr.length - shown.length;
+    var h = '<div class="sec"><h4><span class="bar"></span>' + head
+      + ' <span class="n">' + arr.length + ' 条</span></h4>' + shown.map(itemHtml).join('');
+    if(rest > 0){
+      h += '<div class="more"><span>仅显示前 ' + SEC_MAX + ' 条 · 本类共收录 <b>' + arr.length + '</b> 条</span>'
+        + (moreHref ? '<a class="lnk" href="' + esc(moreHref) + '" target="_blank" rel="noopener">还有 '
+            + '<b>' + rest + '</b> 条，去详情页看全部 ↗</a>' : '<span class="dim">（更多见源站）</span>')
+        + '</div>';
+    }
+    return h + '</div>';
   }
   var curRow = null;
   function openDlg(r){
     curRow = r;
     var g = L[r[1]] || null;
+    var lk = siteLinks(r);
     $('#dTitle').textContent = r[0];
+    /* 动作条：跳站内详情页 / 直接开站内资源弹窗（v10.66 用户口径：
+       「增加一个跳转到该项目详情页以及弹窗的功能」） */
+    var acts = $('#dActs');
+    acts.hidden = false;
+    acts.innerHTML = lk.direct
+      ? '<a class="btn solid" href="' + esc(lk.detail) + '" target="_blank" rel="noopener">打开游戏详情页 ↗</a>'
+        + '<a class="btn" href="' + esc(lk.pop) + '" target="_blank" rel="noopener">直接打开资源弹窗 ↗</a>'
+        + '<span class="dim">在新标签打开线上站（本体 / MOD / 修改器 / 存档 四个模块页签）</span>'
+      : '<a class="btn solid" href="' + esc(lk.detail) + '" target="_blank" rel="noopener">在站内搜索这款 ↗</a>'
+        + '<span class="dim">手游中心独有条目，本地库没有同款记录 ⇒ 走站内搜索</span>';
     var bt = BODY_TXT[r[6]] || BODY_TXT[0];
     var h = '<div class="sec"><h4><span class="bar"></span>本体 '
       + '<span class="st ' + bt[0] + '">' + bt[1] + '</span>'
@@ -554,16 +620,16 @@ const html = `<!DOCTYPE html>
       + '<div class="none"><span class="mono">' + esc(String(r[1])) + '</span>'
       + (r[12] ? ' · <a href="' + esc(r[12]) + '" target="_blank" rel="noopener">源站详情页 ↗</a>' : '')
       + (r[11] ? ' · <a href="' + esc(r[11]) + '" target="_blank" rel="noopener">封面 ↗</a>' : '') + '</div></div>';
-    h += secHtml('修改器', g && g.tr);
-    h += secHtml('MOD', g && g.m);
-    h += secHtml('存档', g && g.sv);
+    h += secHtml('修改器', g && g.tr, lk.tab('modifier'));
+    h += secHtml('MOD', g && g.m, lk.tab('mod'));
+    h += secHtml('存档', g && g.sv, lk.tab('save'));
     $('#dBody').innerHTML = h;
-    $('#dHint').textContent = '数据源：本地库（MOD / 存档 / 修改器 与详情页同源）· 排序：热度 / 更新时间为实时读取';
+    $('#dHint').textContent = '每类最多显示 ' + SEC_MAX + ' 条，更多在站内详情页 · 数据源：本地库（MOD / 存档 / 修改器 与详情页同源）';
     $('#mask').classList.add('on');
     var qb = $('#qBody');
     if(qb) qb.addEventListener('click', function(){ queryBody(r, qb); });
   }
-  function closeDlg(){ $('#mask').classList.remove('on'); }
+  function closeDlg(){ $('#mask').classList.remove('on'); $('#dActs').hidden = true; }
 
   /* 本体实时查询：走 /api/download（服务端 30 分钟缓存）
    * ★★ 两个源的 items **结构不同、且 real 同名不同义** —— 这是本功能最大的坑：
@@ -643,9 +709,11 @@ const html = `<!DOCTYPE html>
       })
       .catch(function(e){
         btn.disabled = false;
-        msg.textContent = '连不上本地服务（8123 没跑？）';
-        box.innerHTML = '<div class="none">离线打开时无法实时查本体。'
-          + '启动本地服务后重试；MOD / 存档 / 修改器 三列不受影响。</div>';
+        msg.textContent = '接口没连上';
+        box.innerHTML = '<div class="none">实时查本体需要本站接口：'
+          + '<b>在线打开</b>时走同源接口（若失败说明线上服务异常）；'
+          + '<b>双击本地文件</b>时需本地 8123 在跑。'
+          + 'MOD / 存档 / 修改器 三列不受影响。</div>';
       });
   }
 
@@ -742,4 +810,12 @@ const html = `<!DOCTYPE html>
 </html>`;
 
 fs.writeFileSync(OUT, html);
-console.log(`[roster] 产出 ${path.relative(ROOT, OUT)}  ${(Buffer.byteLength(html) / 1048576).toFixed(2)} MB`);
+/* ★ v10.66：同时产出一份到 public/roster/index.html —— 这是**线上稳定短链**的落点
+   （`https://<站点>/roster/`，目录自动吃 index.html）。
+   为什么要进 public：站点静态根就是 public（server.js 里 express.static('public')），
+   放别处访问不到；覆盖式部署也不需要额外的路由。 */
+fs.mkdirSync(path.dirname(WEB), { recursive: true });
+fs.writeFileSync(WEB, html);
+const MB = (Buffer.byteLength(html) / 1048576).toFixed(2);
+console.log(`[roster] 产出 ${path.relative(ROOT, OUT)}  ${MB} MB`);
+console.log(`[roster] 产出 ${path.relative(ROOT, WEB)}  ${MB} MB（线上短链 /roster/）`);
