@@ -35,10 +35,14 @@ const { connectBrowser, newPage, sleep } = require('./browser');
 const BASE = process.env.BASE || 'http://127.0.0.1:8123';
 
 /* 两档视口 = 用户拍板时看的那两屏。别只测桌面：移动端 hero 是桌面的 4.7 倍（1289 vs 570），
-   只测桌面会得出「问题不大」的错误结论。 */
+   只测桌面会得出「问题不大」的错误结论。
+   ★ v10.69 收紧：筛选面板改成**默认折叠**后首屏又前进一截（桌面 3→5 条 / 移动 1→3 条，
+   首卡 top 718→601 / 776→630）⇒ 阈值随之上调（foldMin 2→4 / 1→2，firstTopMax 900→800 / 800→750）。
+   ★ 为什么必须跟着调：不调的话「折叠被撤掉」在**本套件里看不出来** ——
+   它会退回到 3 / 1 条，而 2 / 1 的老阈值照样绿。收紧的余量仍是 1 条（实测 5 / 3）。 */
 const VIEWPORTS = [
-  { key: '桌面 1440×1000', w: 1440, h: 1000, heroMax: 340, champMax: 145, rowMax: 86, foldMin: 2, firstTopMax: 900 },
-  { key: '移动 390×844', w: 390, h: 844, heroMax: 420, champMax: 120, rowMax: 76, foldMin: 1, firstTopMax: 800 },
+  { key: '桌面 1440×1000', w: 1440, h: 1000, heroMax: 340, champMax: 145, rowMax: 86, foldMin: 4, firstTopMax: 800 },
+  { key: '移动 390×844', w: 390, h: 844, heroMax: 420, champMax: 120, rowMax: 76, foldMin: 2, firstTopMax: 750 },
 ];
 
 const PROBE = () => {

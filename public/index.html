@@ -364,6 +364,22 @@
   .filter-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:31px}
   .filter-lb{font-size:12px;font-weight:700;color:var(--c-t3);letter-spacing:.5px;flex:none;min-width:24px}
   .fx-sp{flex:1 1 auto;min-width:0}
+  /* ★★ v10.69 折叠：后三行（容量 / 库 / 筛选）收进 `.filter-body`，默认 `.off`。
+     ★ 用 `display:none` 而不是 `max-height:0`：后者会把「展开后才可见的按钮」留在
+       **可聚焦序列**里（Tab 键能跳进看不见的按钮），可访问性是错的；
+       而且 `getBoundingClientRect().height` 报 0、元素却仍在布局里，判据容易写成假的。
+     ★ 折叠态**必须模块级存**（`curFilterOpen`）：`renderList(true)` 整块重建 `#colMain`，
+       只写 DOM class 的话——用户每点一次筛选开关都会让面板自己弹回展开。 */
+  .filter-body{display:flex;flex-direction:column;gap:7px}
+  .filter-body.off{display:none}
+  .filter-toggle{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;flex:none;cursor:pointer;
+    border:1px solid var(--c-border2);border-radius:9px;background:#fff;
+    font:700 12px/1 var(--font);color:var(--c-t2);letter-spacing:.3px;transition:.15s}
+  .filter-toggle:hover{border-color:var(--c-t1);color:var(--c-t1)}
+  .filter-toggle .ft-ar{font-size:10px;color:var(--c-t3);transition:transform .18s}
+  .filter-bar.open .filter-toggle .ft-ar{transform:rotate(180deg)}
+  .filter-toggle.on{border-color:#2E6BFF;color:#2E6BFF;background:#F3F7FF}
+  .filter-toggle.on .ft-ar{color:#2E6BFF}
   /* 分段控件（排序 / 容量共用一套规格） */
   .sort-pills,.size-pills{display:inline-flex;align-items:center;gap:3px;background:#F0F3F9;border-radius:11px;padding:3px;flex:none}
   .sort-pill,.size-pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:650;color:var(--c-t2);border-radius:8px;padding:5px 12px;cursor:pointer;transition:.14s;white-space:nowrap;line-height:1.35;font-family:inherit;border:none;background:transparent}
@@ -1804,7 +1820,13 @@
     .sort-pill .lb,.size-pill .lb{display:none}
     .fx-sp{display:none}
     .bh-toggle{flex:none}
-    .filter-count{flex:1 1 100%;margin-left:0;text-align:right}
+    /* ★ v10.69：计数行原先写死 `flex:1 1 100%`（整行独占）⇒ 折叠按钮只能**另起一行**
+       （移动端排序行实测变成 3 行：pills 32 / 计数 18 / 按钮 26 = 93px，比 v10.68 多 32px）。
+       改成 `flex:0 1 auto` 后两者**同行**；放不下时计数**整块**换行（不致截断）。
+       ★ `white-space:normal` 是刻意的：计数文案是「当前生效筛选的清单」，宁可折行也不能被截掉
+       —— 收起状态下它是**唯一**能看到「筛了什么」的地方。 */
+    .filter-count{flex:0 1 auto;min-width:0;margin-left:auto;text-align:right;white-space:normal;line-height:1.35}
+    .filter-toggle{height:24px;padding:0 9px;font-size:11.5px}
     /* 📱 手机可玩分区：单列 + 工具栏纵向 */
     #emulator{margin-top:30px}
     .emu-intro{padding:12px 13px;gap:10px}
@@ -2457,6 +2479,12 @@ let curPc = false;      // 仅看本站实测库里有记录的游戏（phonecfg
 let curMod = false;     // ★ v10.53 仅看机地社区 MOD 收录到的游戏（端游资源聚合层）
 let curTr = false;      // ★ v10.5 仅看有修改器的游戏（★ v10.53 起口径见 filterQuery 注释）
 let curSv = false;      // ★ v10.5 仅看有存档的游戏（★ v10.53 起口径见 filterQuery 注释）
+/* ★ v10.69 筛选面板折叠态（默认收起）。
+   ★★ 为什么必须是**模块级变量**、不能只写在 DOM class 上：`renderList(true)` 会用
+   `filterBarHtml()` **整块重建** `#colMain`（`col.innerHTML = …`）—— 折叠态只存 DOM 的话，
+   用户每点一次筛选开关（内部就会 `renderList(true)`）面板都会自己弹回展开。
+   这类「看起来是 UI 状态、实际是渲染输入」的值，必须与其它 `cur*` 放在同一层。 */
+let curFilterOpen = false;
 /* ★ v10.58「库范围」：pc 端游库（19,465）/ mob 手游中心（3,330）/ all 合并（21,110）。
    见 `filterBarHtml` 的「库」行与服务端 `/api/library/browse?scope=` 的整段注释。 */
 let curScope = 'pc';
@@ -2494,15 +2522,25 @@ function filterQuery() {
  *  也让「筛选」这件事有了名字。
  *  ★ v10.53：新增第五个开关「🧩 有 MOD」。五个开关在**宽屏**（≥1024）仍是一行
  *  （实测见 tools/test-filter-layout.js）；窄屏按既有规则在行内折行。
- *  开关顺序＝卡面 chip 的出现顺序：手机是「怎么玩」两枚，后三个是「有什么可下」。 */
+ *  开关顺序＝卡面 chip 的出现顺序：手机是「怎么玩」两枚，后三个是「有什么可下」。
+ *  ★★ v10.69 折叠：面板 4 行（排序 / 容量 / 库 / 筛选）实测吃掉 **167px**（移动 232px），
+ *  是首屏「最后一截」的**唯一剩余瓶颈**（列表首卡 top 718 / 776 ⇒ 首屏只见 3 / 1 条）。
+ *  ⇒ 保留**排序行常显**，后三行收进 `.filter-body`（默认 `.off`）。
+ *  ★ 为什么是「排序行常显」而不是「全收起 + 另做一行摘要」：`filterCountText()` 产出的文案
+ *  **本身就是当前生效筛选的清单**（如「手游中心 · 大 · 🛠 有修改器 · 共 1,377 款」）⇒
+ *  收起状态下**不丢信息**；再写第二套摘要必然与它漂移（同一件事两份实现是老问题）。 */
 function filterBarHtml() {
-  return `<div class="filter-bar">
+  return `<div class="filter-bar${curFilterOpen ? ' open' : ''}">
     <div class="filter-row">
       <span class="filter-lb">排序</span>
       <div class="sort-pills" id="sortPills">${SORTS.map(s => `<button class="sort-pill ${curSort === s.k ? 'on' : ''}" data-s="${s.k}"><span class="lb">${s.lb}</span>${s.nm}</button>`).join('')}</div>
       <span class="fx-sp"></span>
       <span class="filter-count" id="filterCount"></span>
+      <button class="filter-toggle${curFilterOpen ? ' on' : ''}" id="filterToggle" type="button"
+        aria-expanded="${curFilterOpen ? 'true' : 'false'}" aria-controls="filterBody"
+        title="${curFilterOpen ? '收起筛选面板' : '展开筛选面板（容量 / 库范围 / 资源筛选）'}">${curFilterOpen ? '收起' : '筛选'}<span class="ft-ar">▾</span></button>
     </div>
+    <div class="filter-body${curFilterOpen ? '' : ' off'}" id="filterBody">
     <div class="filter-row">
       <span class="filter-lb">容量</span>
       <div class="size-pills" id="sizePills">${SIZES.map(s => `<button class="size-pill ${curSize === s.k ? 'on' : ''}" data-z="${s.k}"><span class="lb">${s.lb}</span>${s.nm}</button>`).join('')}</div>
@@ -2520,6 +2558,7 @@ function filterBarHtml() {
       <button class="bh-toggle tr-badge ${curTr ? 'on' : ''}" id="trToggle" type="button" title="只看「能下到」修改器的游戏：GTrainers 真直链 + GCM 清单（按端游库 id 关联）">🛠 有修改器</button>
       <button class="bh-toggle sv-badge ${curSv ? 'on' : ''}" id="svToggle" type="button" title="只看「能下到」存档文件的游戏：游侠存档 + GTrainers（按端游库 id 关联）">💾 有存档</button>
       <span class="fx-sp"></span>
+    </div>
     </div>
   </div>`;
 }
@@ -2633,6 +2672,20 @@ async function renderList(reset) {
   loading = true;
   const moreBtn = $('#moreBtn'); if (moreBtn) moreBtn.disabled = true;
   if (reset) {
+    /* ★ v10.69 折叠按钮。★ 只切 class、**不重渲染** —— 折叠是纯视觉状态，
+       不需要重新拉数据；重渲染反而会让列表闪一下（并且 `renderList(true)` 会把
+       滚动位置重置到顶部，用户收起面板时不该被踢回顶部）。 */
+    const ft = $('#filterToggle'); if (ft) ft.addEventListener('click', () => {
+      curFilterOpen = !curFilterOpen;
+      const bar = $('.filter-bar'); const body = $('#filterBody');
+      if (bar) bar.classList.toggle('open', curFilterOpen);
+      if (body) body.classList.toggle('off', !curFilterOpen);
+      ft.classList.toggle('on', curFilterOpen);
+      ft.setAttribute('aria-expanded', curFilterOpen ? 'true' : 'false');
+      ft.title = curFilterOpen ? '收起筛选面板' : '展开筛选面板（容量 / 库范围 / 资源筛选）';
+      /* ★ 文案同步：展开态显示「收起」，收起态显示「筛选」（初始由 filterBarHtml 写好） */
+      if (ft.firstChild && ft.firstChild.nodeType === 3) ft.firstChild.nodeValue = curFilterOpen ? '收起' : '筛选';
+    });
     const sp = $('#sortPills'); if (sp) sp.addEventListener('click', (e) => {
       const b = e.target.closest('.sort-pill'); if (!b || curSort === b.dataset.s) return;
       curSort = b.dataset.s; offset = 0; renderList(true);

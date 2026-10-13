@@ -78,6 +78,14 @@ function loadPuppeteer() {
     await p.goto(BASE, { waitUntil: 'networkidle2', timeout: 60000 });
     await p.waitForSelector('#colMain .filter-bar .size-pill', { timeout: 30000 });
     await sleep(900);
+    /* ★★ v10.69：筛选面板默认**收起**（`#filterBody.off` ⇒ `display:none`）⇒ 本套件量的全是
+       `#colMain` 里的行内几何，必须**先展开再测**。不展开会同时产生两类错：
+         · 红：`segCanScroll`（`0 > 0 + 1` 为假）—— 改前报的正是这 3 条；
+         · ★★ **假绿**：`togglesWrapped` / `togglesOwnRow` / `togglesSameLine` 是**比较型**
+           （`0 > -4`、`|0-0| <= 2`）⇒ 全 0 时恒真、真出问题也照绿。
+       ⇒ 展开 + 阳性对照（`bodyVisible`）**两件一起做**，缺一不可（见下面的断言）。 */
+    await p.evaluate(() => { const ft = document.getElementById('filterToggle'); if (ft) ft.click(); });
+    await sleep(400);
 
     const m = await p.evaluate(() => {
       const q = (s) => document.querySelector(s);
@@ -89,6 +97,9 @@ function loadPuppeteer() {
         docScroll: document.documentElement.scrollWidth,
         labels: rows.map((r) => { const l = r.querySelector('.filter-lb'); return l ? l.textContent.trim() : ''; }),
         rowCount: rows.length,
+        /* ★ v10.69：展开后**真占版面**的行数（结构上永远是 4，但收起时只有 1 行可见） */
+        visRowCount: rows.filter((r) => r.getBoundingClientRect().height > 0).length,
+        bodyVisible: (() => { const b = q('#colMain #filterBody'); return !!b && b.getBoundingClientRect().height > 0; })(),
         segCanScroll: seg ? seg.scrollWidth > seg.clientWidth + 1 : false,
         togglesWrapped: R('#bhToggle') && seg ? R('#bhToggle').top > seg.getBoundingClientRect().bottom - 4 : false,
         /* ★ v10.5：四个开关应独占「筛选」行（原先挤在容量行里 → 溢出换行、半行空档）
@@ -107,6 +118,10 @@ function loadPuppeteer() {
     });
 
     t(m.docScroll <= m.vw + 1, `[${tag}] 无横向溢出（scrollWidth ${m.docScroll} ≤ ${m.vw}）`);
+    /* ★★ v10.69 阳性对照：没有这条，上面「无横向溢出」与下面所有行内几何断言
+       在「面板收起」时都会**静默变成 0 比较 0**（其中比较型的还会假绿）。 */
+    t(m.bodyVisible && m.visRowCount === 4,
+      `[${tag}] 阳性对照：筛选面板已展开且 4 行都真占版面（可见 ${m.visRowCount} / 结构 ${m.rowCount}）`);
     /* ★ v10.58：筛选条 3 行 → 4 行（新增「库」行：手游 / 端游 / 合并）。
        判据仍**恰好等于**行数 —— 不是放宽成「>= 3」，否则以后多塞一行也没人管。 */
     t(m.rowCount === 4, `[${tag}] 四行标签为「排序 / 容量 / 库 / 筛选」`, m.labels.join(' / '));
