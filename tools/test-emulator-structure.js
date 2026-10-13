@@ -793,17 +793,18 @@ const GN = require(path.join(root, 'data', 'game-name'));
     miss(/\.res-chip\{[^}]*border-radius:7px/));
 
   /* ② 服务端：复用聚合层，不重做匹配 */
-  /* ★ v10.54：判据从「整行字面量」放宽到「挂的是 withRes」——
-   *   v10.54 在同一个对象里多带了一个 `fit`（组间排序用），整行字面量就失配了。
-   *   这条断言的**意图**是「端游桶挂 withRes（不是 withBh）」，钉 `map(withRes)` 即可，
-   *   不该因为后面多一个字段就变红（否则每加一个字段都要来改断言的尾巴）。
-   * ★ v10.60：**再放宽一次** —— 本轮给这条链路套了 `withNKey`（下发归并键 `nkey`），
-   *   形状从 `map(withRes)` 变成 `map((x) => withNKey(withRes(x)))`，又在同一个位置失配。
-   *   两次都因为「钉括号形状」⇒ 这次只判**两个词**：该行**有** `withRes(`、**没有**
-   *   `map(withBh(`。意图不变，且以后再套一层也不用改这里。 */
+  /* ★ v10.61：**第三次**在同一个位置失配 —— 本轮把单条版 `withNKey` 换成整批的 `withNKeys`
+   *   （v10.61 归并键要「整批并查集」才成立），形态变成
+   *   `items: withNKeys(r.items.map(withRes))` —— 连 `items: r.items.map(` 这个前缀都没了
+   *   （v10.60 是靠箭头函数 `map((x) => withNKey(withRes(x)))` 恰好保留它才通过的）。
+   *   ⇒ **连前缀也不钉了**：先定位「那一行」，再只判**引用了哪个函数** ——
+   *   该行有 `withRes`、没有 `withBh`（用词边界 `\b`，因为它是**按引用传**的：
+   *   `map(withRes)` 里**根本没有括号** —— v10.60 注释里写的「只判 `withRes(`」本身就不成立）。
+   *   三次都在同一处修，说明「钉调用形状」的判据每轮都是欠账（v10.54 加 `fit` / v10.60 套 `withNKey`
+   *   / v10.61 套 `withNKeys`）—— 判据要钉**意图**（这条链路挂 withRes），不是钉形状。 */
+  const pcResLine = (srvSrc.split(/\r?\n/).find((l) => /pc = \{ count: r\.count/.test(l)) || '');
   t('★★ v10.52：`/api/search/all` 的端游桶改挂 `withRes`（不再是 withBh）',
-    /pc = \{ count: r\.count, items: r\.items\.map\([^\n]*withRes\(/.test(srvSrc)
-    && !/pc = \{ count: r\.count, items: r\.items\.map\(withBh\(/.test(srvSrc));
+    /\bwithRes\b/.test(pcResLine) && !/\bwithBh\b/.test(pcResLine));
   t('★★ v10.52：`withRes` 复用 `resGroups.countsFor`（聚合口径只有一处 —— 铁律 17）',
     /resGroups\.countsFor\(g\.id\)/.test(srvSrc));
   /* ⚠️ 判据说明：这条断言**一开始写的是旧写法**（`if (r.mod || r.saves || r.trainers) o.res = r;`），

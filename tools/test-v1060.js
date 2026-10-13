@@ -137,25 +137,39 @@ t(twin.groupKey('他们来了/It Reaches') !== twin.groupKey('他们来了！/Th
 t(twin.groupKey('') === '' && twin.groupKey(null) === '', 'B5 空输入 → 空键（由调用方决定不挂）');
 
 /* ============================ C 服务端下发 ============================ */
-sec('C 服务端：三处喂 `smRows` 的接口都下发 `nkey`');
+sec('C 服务端：六处喂 `smRows` 的接口都下发 `nkey`');
 
 const SRV = read('server.js');
 const SRVC = stripComments(SRV);
 
+/* ★ v10.61：本段随 `withNKey`（单条）→ `withNKeys`（整批）同步。
+ *   为什么必须改批量的理由见 `data/twin.js` 的 `groupKeys` 注释：AppID 相同是条目
+ *   **之间的关系**，单条算不出来。这里只跟着改「谁在下发」，键的算法由 test-v1061 守。 */
 (function () {
-  const b = bodyOf(SRVC, 'withNKey');
-  t(!!b, 'C1 定义 `withNKey()`');
-  t(/twin\.groupKey\(/.test(b), 'C1 用真源 `twin.groupKey()`（不自写算法）');
-  t(/k \? Object\.assign\([^)]*nkey/.test(b), '★ C1 键为空时**不挂**字段（空键会让所有条目并成一行）');
+  const b = bodyOf(SRVC, 'withNKeys');
+  t(!!b, 'C1 定义 `withNKeys()`');
+  t(/twin\.groupKeys\(/.test(b), 'C1 用真源 `twin.groupKeys()`（不自写算法）');
+  t(/keys\[i\] \? Object\.assign\([^)]*nkey/.test(b), '★ C1 键为空时**不挂**字段（空键会让所有条目并成一行）');
 })();
 
-t(/items: r\.items\.map\(\(x\) => withNKey\(withBh\(x\)\)\)/.test(SRVC), 'C2 `/api/library`（联想）挂了 `nkey`');
-t(/items: r\.items\.map\(\(x\) => withNKey\(withRes\(x\)\)\)/.test(SRVC), 'C2 `/api/search/all` 端游桶挂了 `nkey`（且仍是 `withRes`）');
-t(/items: xdR\.value\.map\(withNKey\)/.test(SRVC), 'C3 `/api/search` 源站实时搜索挂了 `nkey`（XDGAME）');
-t(/items: jiR\.value\.map\(withNKey\)/.test(SRVC), 'C3 `/api/search` headless 分支挂了 `nkey`（机地）');
-t(/items: jidiR\.value\.matched\.map\(withNKey\)/.test(SRVC), 'C3 `/api/search` 普通分支挂了 `nkey`（机地）');
-t((SRVC.match(/\.map\(withNKey\)/g) || []).length === 4, 'C3 实时源站**恰好 4 处**挂（两个分支 × 两个源）',
-  '实测 ' + (SRVC.match(/\.map\(withNKey\)/g) || []).length + ' 处');
+/* ★★ v10.62：两条**都必须把作用域收窄到各自的路由段**。
+ *   155 原先钉 `/api/library` 的内层必须是 `withBh` —— v10.62 把它换成了 `withRes`
+ *   （联想面板要带资源计数）⇒ 字面串失配、**真红**（本轮 `run-all` 就是它红的）。
+ *   而 156 用的是**全文件**正则，恰好两处串长得几乎一样
+ *   ⇒ 一旦有人把 `/api/library` 打回 `withBh`，156 会**替它变绿**（`_counterproof-v1062.js` 坏法 A 实测）。
+ *   ⇒ 155 改判**意图**（联想的 items 过了 `withNKeys`，不钉内层函数名）；两条都收窄作用域。 */
+const LIB_SECT = (SRVC.split("app.get('/api/library', ")[1] || '').split('app.get(')[0];
+const ALL_SECT = (SRVC.split("app.get('/api/search/all', ")[1] || '').split("app.get('")[0];
+t(/withNKeys\(r\.items\.map\(/.test(LIB_SECT), 'C2 `/api/library`（联想）挂了 `nkey`');
+t(/items: withNKeys\(r\.items\.map\(withRes\)\)/.test(ALL_SECT), 'C2 `/api/search/all` 端游桶挂了 `nkey`（且仍是 `withRes`）');
+t(/items: withNKeys\(xdR\.value\)/.test(SRVC), 'C3 `/api/search` 源站实时搜索挂了 `nkey`（XDGAME）');
+t(/items: withNKeys\(jiR\.value\)/.test(SRVC), 'C3 `/api/search` headless 分支挂了 `nkey`（机地）');
+t(/items: withNKeys\(jidiR\.value\.matched\)/.test(SRVC), 'C3 `/api/search` 普通分支挂了 `nkey`（机地）');
+t((SRVC.match(/items: withNKeys\(/g) || []).length === 6, 'C3 全站**恰好 6 处**挂（联想 1 + 端游桶 1 + 实时源站 2 分支 × 2 源）',
+  '实测 ' + (SRVC.match(/items: withNKeys\(/g) || []).length + ' 处');
+/* ★★ C4 反向守卫：不许再有**单条版**。单条算键 = 算不出「两边 AppID 相同」，
+ *   实测会反而把用户当晚刚修好的古惑狼那组拆开（一边有 appid、一边没有）。 */
+t(!/function withNKey\b|\.map\(withNKey\)/.test(SRVC), '★★ C4 没有残留的单条版 `withNKey`（走回逐条算会漏掉 AppID 那一半）');
 
 /* ============================ D 前端 ============================ */
 sec('D 前端四页：只消费下发的键，不再自写归一化');

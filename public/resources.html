@@ -290,24 +290,15 @@
   /* 云存档结果行直接把「存档路径」亮出来 —— 这是用户搜索时最想看到的信息 */
   .sm-row .pth{font-size:10.5px;color:var(--c-t2);font-family:var(--font-num);line-height:1.3;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-  /* ★ v10.25：同款聚拢 —— 源站（尤其 XDGAME）把同一款游戏拆成多个页面，
-   *   后缀差异如「/支持网络联机」。平铺出来搜「艾尔登」6 行里「艾尔登法环」占 3 行，
-   *   看着像同一款被搜出好几遍。归并后其余条目落成主行下方的小 chip，照样一点进详情。 */
-  .sm-alt{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:0 10px 9px 97px;margin-top:-3px}
-  /* 从封面右缘垂下来的一段虚线：把 chip 明确「挂」在主行上，
-   * 不然它看着像另一行的开头（实测第一版就是这个问题）。 */
-  .sm-alt::before{content:'';position:absolute;left:86px;top:-4px;bottom:9px;border-left:1px dashed var(--c-border)}
-  .sm-alt-h{flex:none;font-size:10.5px;font-weight:700;color:var(--c-t3)}
-  .sm-alt-h .ic{font-weight:800;color:var(--c-t2)}
-  .sm-alt-b{display:inline-flex;align-items:center;gap:5px;max-width:100%;font-family:inherit;
-    font-size:10.5px;font-weight:650;padding:2.5px 8px;border-radius:7px;cursor:pointer;transition:.13s;
-    border:1px dashed var(--c-border);background:#fff;color:var(--c-t2)}
-  .sm-alt-b:hover{border-style:solid;border-color:var(--c-primary);color:var(--c-primary);background:var(--c-primary-soft)}
-  .sm-alt-b .sb{font-weight:800}
-  .sm-alt-b.xd .sb{color:var(--c-xd)}
-  .sm-alt-b.jidi .sb{color:var(--c-jidi)}
-  .sm-alt-b .ar{opacity:.6;font-weight:700}
-  .sm-alt-b:hover .ar{opacity:1}
+  /* ★ v10.25 建的「同款聚拢」在 **v10.62 改了收尾形态**：
+   *   归并**照做**（同一款只占一行），但主行下方那排「↳ 另 N 个条目」chip **不再渲染**。
+   *   用户 2026-10-12 原话：「每个游戏仅需要提供一个即可」。
+   *
+   *   被删掉的三族样式（`.sm-alt` / `.sm-alt-h` / `.sm-alt-b`，含封面右缘那根虚线 `::before`）
+   *   与响应式的 `.sm-alt{padding-left:87px}` 一并移除 —— 留这段注释是为了让下次读到这里的人
+   *   知道它们存在过、以及为什么没了，而不是当它们从没出现过。
+   *
+   *   ⚠️ 归并键（`nkey`）与 `smGroup()` **一个字没动** —— 这次只改「组内其余条目要不要露脸」。 */
   /* ★ v10.25：评分分级 —— 原先 9.3 与 5 共用同一个琥珀底，一列扫过去分不出哪款值得点。
    *   三档：≥9 绿（高分抬起来）/ ≥7.5 蓝 / 其余灰（低分退下去）。 */
   .sm-row .pill.score.s-hi{color:#15803D;background:#DCFCE7}
@@ -1701,7 +1692,6 @@
     .smodal.show{transform:translate(-50%,0)}
     .sm-row img,.sm-row .ph2{width:66px;height:auto;aspect-ratio:var(--th-ar)}
     .sm-row .go2{display:none}
-    .sm-alt{padding-left:87px}
     .topbar .in{height:54px}
     :root{--topbar-h:54px}
     body{padding-bottom:66px}
@@ -3172,7 +3162,9 @@ function smScoreCls(v) { return v >= 9 ? 's-hi' : (v >= 7.5 ? 's-mid' : 's-lo');
  *     （用户 2026-10-12 截图报的现场）。与 `tools/test-twin.js` 那条
  *     「★ 前端不再自带 sameGame（同一语义只留后端一份）」同一条规矩。
  *
- *  归并只影响**展示**：每个条目都还在，其余收进主行下方的 chip，点了同样进详情。
+ *  归并只影响**展示**（数据一条没丢）：同键的条目**只渲染首条**，其余不再露脸。
+ *  ★ v10.62：原先其余条目会平铺成主行下方的「↳ 另 N 个条目」chip，**已按用户要求去掉** ——
+ *    「每个游戏仅需要提供一个即可」。要访问另一条来源，走详情抽屉里的跨源跳转。
  *  主行 = 该键**首次出现**的那条（接口已按「标题↔关键词」贴合度排好序，这里不重排）。 */
 function smKeyOf(it) {
   /* 服务端下发的键（正常路径）。取不到时退回旧键并加 `~` 前缀（避免与真键撞车）：
@@ -3187,28 +3179,37 @@ function smGroup(list) {
     const g = map.get(k);
     if (g) g.rest.push(it); else map.set(k, { main: it, rest: [] });
   }
-  return [...map.values()];
+  const out = [...map.values()];
+  /* ★★ v10.62：主行若没有资源计数，就**在同组里借**一条有计数的（连同它的 `resId`）。
+   *
+   *   为什么要补：v10.62 起同组只渲染主行（原先的「↳ 另 N 个条目」chip 已按用户要求去掉），
+   *   而 `res` 是**按条目**挂的 —— 万一主行恰好是没资源的那条，整组一个 chip 都出不来，
+   *   用户看到的就还是「没有 MOD / 修改器 / 存档」（正是本轮要修的现场）。
+   *
+   *   服务端 `resFor()` 已有一道**孪生兜底**（主行自己为 0 时去找孪生那条），实测
+   *   `jidi-3294040`(机地) 因此拿到了 `{mod:13,saves:9,trainers:4}`。这里是**第二道**：
+   *   两条不是孪生、只靠 AppID 并起来时兜底不会触发，只有组内互借能救。
+   *
+   *   ⚠️ 借来的只是**展示用的计数**（配 `resId` 开弹窗），**不改主行身份** ——
+   *     `main.url` / `main.title` / 封面仍是原来那条（主行 = 该键首次出现的条目）。 */
+  for (const g of out) {
+    if (g.main && !g.main.res) {
+      const donor = g.rest.find((x) => x && x.res);
+      if (donor) g.main = Object.assign({}, g.main, { res: donor.res, resId: donor.resId || donor.id });
+    }
+  }
+  return out;
 }
-/* 非主行条目的区分标签：标题第 2 段起里**带中文**的那一截
- * （`/ELDEN RING/支持网络联机` → 「支持网络联机」）；一截都没有就叫「原版」。 */
-function smVariant(it) {
-  const cn = String(it.title || '').split('/').slice(1).find((s) => /[\u4e00-\u9fa5]/.test(s));
-  return cn ? cn.trim() : '原版';
-}
-/* 主行下方「另 N 个条目」那一行；只有一个条目时返回空串（大多数情况） */
-function smAltHtml(g) {
-  if (!g.rest.length) return '';
-  const chips = g.rest.map((it) => {
-    const s = SRC[it.source] || { nm: 'XDGAME', cls: 'xd' };
-    const sc = okScoreV(it.score) ? ` ★${it.score}` : '';
-    return `<button type="button" class="sm-alt-b ${s.cls}" data-url="${esc(it.url)}" data-fb="${rankFb(it)}"><span class="sb">${esc(s.nm)}</span> ${esc(smVariant(it))}${sc} <span class="ar">↗</span></button>`;
-  }).join('');
-  return `<div class="sm-alt"><span class="sm-alt-h"><span class="ic">↳</span> 另 ${g.rest.length} 个条目</span>${chips}</div>`;
-}
-/* 列表 → HTML：主行 + 其余条目 chips。limit 是**条目**上限（沿用旧口径，聚合后再收窄行数）。 */
+/* 列表 → HTML：**一款一行**（同款聚拢后只保留主行）。limit 是**条目**上限（沿用旧口径，聚合后再收窄行数）。
+ *
+ *  ★ v10.62：`.sm-alt`（「另 N 个条目」chip）**已去掉** —— 归并照样做，但不再把组内其余条目
+ *   平铺在主行下方。用户 2026-10-12 原话：「每个游戏仅需要提供一个即可」。
+ *   其余来源（机地/XD 另一条）仍有入口：详情抽屉里的跨源跳转按钮。
+ *  ⚠️ 删掉 `smAltHtml` 后，`smVariant()` 也一并没有调用方了，两个函数已同时移除 ——
+ *    留着会变成「看起来在维护、实际永不执行」的死代码。 */
 function smRows(list, limit) {
   const arr = limit ? (list || []).slice(0, limit) : (list || []);
-  return smGroup(arr).map((g) => smRow(g.main) + smAltHtml(g)).join('');
+  return smGroup(arr).map((g) => smRow(g.main)).join('');
 }
 
 /* ★ 手游中心结果行（统一搜索的第二个分组）
@@ -3244,9 +3245,8 @@ function bindSmRows() {
     openResTab(b.dataset.resId, b.dataset.resTitle, b.dataset.resTab);
   }));
   $$('#smBody .sm-row').forEach(r => r.addEventListener('click', () => openDetailFromSearch(r)));
-  /* ★ v10.25：同款聚拢后主行下方的「另 N 个条目」chip —— 与主行**同一条路**进详情
-   *   （同样带 data-url/data-fb，所以直接复用 openDetailFromSearch，不另写一套跳转）。 */
-  $$('#smBody .sm-alt-b').forEach(r => r.addEventListener('click', () => openDetailFromSearch(r)));
+  /* ★ v10.62：`.sm-alt-b`（「另 N 个条目」chip）的绑定已随渲染一起删除 ——
+   *   归并后每组只剩主行，没有第二个可点元素了。 */
   /* 手游结果行：点了开抽屉（有 libId 用 libId，没有再退回按名字找） */
   $$('#smBody .sm-row[data-mlib]').forEach(r => r.addEventListener('click', () => {
     const body = $('#smBody');

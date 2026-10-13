@@ -277,10 +277,10 @@ app.get('/api/search', async (req, res) => {
           },
           sources: {
             xdgamer: xdR.status === 'fulfilled'
-              ? { ok: true, count: xdR.value.length, items: xdR.value.map(withNKey) }
+              ? { ok: true, count: xdR.value.length, items: withNKeys(xdR.value) }
               : { ok: false, error: String(xdR.reason && xdR.reason.message || xdR.reason), items: [] },
             jidi: jiR.status === 'fulfilled'
-              ? { ok: true, count: jiR.value.length, mode: 'real', items: jiR.value.map(withNKey) }
+              ? { ok: true, count: jiR.value.length, mode: 'real', items: withNKeys(jiR.value) }
               : { ok: false, error: String(jiR.reason && jiR.reason.message || jiR.reason), items: [] },
           },
         };
@@ -304,10 +304,10 @@ app.get('/api/search', async (req, res) => {
         },
         sources: {
           xdgamer: xdR.status === 'fulfilled'
-            ? { ok: true, count: xdR.value.length, items: xdR.value.map(withNKey) }
+            ? { ok: true, count: xdR.value.length, items: withNKeys(xdR.value) }
             : { ok: false, error: String(xdR.reason && xdR.reason.message || xdR.reason), items: [] },
           jidi: jidiR.status === 'fulfilled'
-            ? { ok: true, count: jidiR.value.matched.length, indexed: jidiR.value.indexed, items: jidiR.value.matched.map(withNKey) }
+            ? { ok: true, count: jidiR.value.matched.length, indexed: jidiR.value.indexed, items: withNKeys(jidiR.value.matched) }
             : { ok: false, error: String(jidiR.reason && jidiR.reason.message || jidiR.reason), items: [] },
         },
       };
@@ -477,10 +477,23 @@ function withBh(g) {
  *     不能拿 `normKey` 的宽类来当归并键：归并没有第二道闸门兜假阳性，
  *     实测宽类会多出 2 组**假并**（续作被并进前作）。详见 `GROUP_DECOR` 注释。
  *  ⚠️ 键为空时**不挂字段** —— 空键会让所有条目并成一行（比不并更糟）；
- *     前端取不到 `nkey` 时退回旧键，宁可少并。 */
-function withNKey(g) {
-  const k = twin.groupKey(g && g.title);
-  return k ? Object.assign({}, g, { nkey: k }) : g;
+ *     前端取不到 `nkey` 时退回旧键，宁可少并。
+ *
+ *  ★★ v10.61：`withNKey`（单条）→ **`withNKeys`（整批）**。
+ *     第二例用户现场（2026-10-12 截图，同一晚）：搜「三国无双」出两行 ——
+ *     机地 `真・三国无双 起源` 与 XD `真三国无双：起源`，**Steam AppID 都是 2384580**。
+ *     名称键兜不住（机地用中点+空格、XD 用全角冒号，而 `：` 被刻意保留）⇒ 改为
+ *     **两级归并**：名称键 ∪（AppID 相同 ∧ 非独立发行 ∧ 名称闸门）。
+ *
+ *     为什么要**批量**：AppID 相同是「两条目之间的关系」，单条算不出来。若改成
+ *     单条算的「AppID 优先」，用户当晚刚修好的古惑狼那组会**被拆回去** ——
+ *     机地那条自带 `appid`、XD 那条 cover 是 `www.xdgame.com/uploads/…` 提不到 AppID。
+ *     ★ 并查集只 union 不 split ⇒ 结构上**不可能**把原本能并的拆开，只可能多并。
+ *     算法与实测账（86 组合并 / 6 组假并嫌疑全挡）全在 `data/twin.js` 的 `groupKeys`。 */
+function withNKeys(items) {
+  const arr = Array.isArray(items) ? items : [];
+  const keys = twin.groupKeys(arr);
+  return arr.map((g, i) => (keys[i] ? Object.assign({}, g, { nkey: keys[i] }) : g));
 }
 
 /** ★ v10.52：给**搜索命中**的端游条目挂「按游戏聚合的资源计数」（MOD / 存档 / 修改器）。
@@ -497,9 +510,23 @@ function withNKey(g) {
  *
  *  ⚠️ 计数全 0 时不挂字段 —— 绝大多数条目一条资源都没有，挂 `{0,0,0}` 只是白占回包体积；
  *     前端据此判断「要不要渲染 chip」，空对象与缺字段必须是同一个意思。
- *  ⚠️ 聚合层要 `build()` 一次（有缓存），失败不能拖垮搜索：catch 住，照旧返回。 */
+ *  ⚠️ 聚合层要 `build()` 一次（有缓存），失败不能拖垮搜索：catch 住，照旧返回。
+ *
+ *  ★★ v10.62：挂字段前**必须先确认落在副本上**。
+ *     两个 `attach` 都有 `if (!h) return g;` —— BH/PC 两库都命中不到时，`withBh(g)`
+ *     返回的是**原对象 g 本身**（gamesDb 内存里的那条记录）。原写法 `const o = withBh(g)`
+ *     后直接 `o.res = …` ⇒ **原地写库**。
+ *
+ *     实测到的后果（2026-10-12 排查用户「联想里看不到 MOD/修改器/存档」时撞见）：
+ *       · 同一个进程里，`/api/library?q=赛博朋克2077` 带不带 `res`，**取决于此前有没有
+ *         人请求过 `/api/search/all`** —— 请求过（被污染）就带，没请求过就不带。
+ *         同一次排查里「三国无双」那组两次测出不同结果，就是它（一度让我怀疑改错了代码）。
+ *       · 污染**不可逆且跨接口串数据**：该记录在整个进程生命周期里永久带着**当时那一刻**
+ *         的计数，库更新后也不变（脏读），并且会漏进 browse / recent / 首页卡片。
+ *     ⇒ 一律落在副本上；已是副本时（attach 命中过）不重复拷。 */
 function withRes(g) {
-  const o = withBh(g);
+  const b = withBh(g);
+  const o = (b === g) ? Object.assign({}, g) : b;
   try {
     const h = resFor(g);
     /* ★ 同时带出 `resId`（计数**归属**的那条库内 id）——
@@ -1566,7 +1593,17 @@ app.get('/api/library', (req, res) => {
   const exp = expandAlias(raw);
   const aliasNote = exp.alias ? { alias: exp.alias, to: exp.q } : null;
   const r = gamesDb.search(exp.q, limit, libOpts(req));
-  res.json({ ok: true, q: raw, aliasNote, count: r.count, total: gamesDb.stats().total, items: r.items.map((x) => withNKey(withBh(x))) });
+  /* ★★ v10.62：联想面板改走 `withRes`（原先只有 `withBh`）——
+   *   这是用户 2026-10-12 报「我要的 mod/修改器/存档也没提供给我」的落点。
+   *
+   *   联想面板是搜索的**第一入口**（打字 180ms 就出），此前它只挂手机侧字段（bh/pc），
+   *   **一个资源计数都不挂** ⇒ 用户在这里永远看不到「N MOD / N 修改器 / N 存档」。
+   *   而同一个 `smRow()` 渲染器在搜索结果面板里是**有** chip 的
+   *   （`/api/search/all` 的 pc 桶走 withRes）⇒ 同一行 UI，两个入口两个样。
+   *
+   *   ⚠️ 必须与 `withRes` 的副本保护**同时**上线：修污染前，这里能出现 chip 纯靠
+   *     `/api/search/all` 先把对象污染了（顺序依赖），单独改任一处都会露馅。 */
+  res.json({ ok: true, q: raw, aliasNote, count: r.count, total: gamesDb.stats().total, items: withNKeys(r.items.map(withRes)) });
 });
 
 // GET /api/library/recent?limit=20 — 最近收录(供空态展示)
@@ -1766,7 +1803,7 @@ app.get('/api/search/all', (req, res) => {
   let pc = { count: 0, items: [] };
   try {
     const r = gamesDb.search(exp.q, limit, libOpts(req));
-    pc = { count: r.count, items: r.items.map((x) => withNKey(withRes(x))), fit: searchRank.fitOf(r.topScore) };
+    pc = { count: r.count, items: withNKeys(r.items.map(withRes)), fit: searchRank.fitOf(r.topScore) };
   } catch (e) { pc = { count: 0, items: [], error: e.message }; }
 
   /* ② 手游中心（合并索引，含社区库英文名与实测库中文名的别名展开） */

@@ -65,9 +65,144 @@ function splitName(title) {
  *
  *  ⚠️ 本键**只用于展示归并**，不可拿去当匹配判据：它没有第二道闸门，
  *     `：`/`！` 这类实义分隔符被刻意保留（详见 `GROUP_DECOR` 的实测账）。
+ *
+ *  ★ v10.61：入参放宽为**字符串或条目对象**（取 `title`）。为什么不改成只吃对象 ——
+ *    `tools/test-v1060.js` 有一整段（B1~B5）按**字符串**钉死本函数的行为，是窄类
+ *    假并账的唯一守卫；放宽入参两者都照顾到，不必动那些断言。
+ *  ⚠️ 但它只是**单条**的名称键。要下发前端的归并键请用 `groupKeys()`（见下）。
  */
-function groupKey(title) {
-  return decorKey(splitName(title).zh);
+function groupKey(input) {
+  const g = (typeof input === 'string' || input == null) ? { title: input } : input;
+  return decorKey(splitName(g && g.title).zh);
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * ★ v10.61 新增：**两级归并键**（`groupKeys`）—— 用户 2026-10-12 报的第二例
+ *
+ * 【现场】搜「三国无双」出两行：机地 `真・三国无双 起源` 与 XD `真三国无双：起源`，
+ *   用户问「为什么会有区分开，这是同个游戏」。硬证据是 **Steam AppID 都是 2384580**。
+ *
+ * 【为什么 v10.60 的名称键兜不住】两道兜底各漏一半：
+ *   ① 数据层：XD 条目匹配到机地后会把机地信息挂在自己身上（`jidiId`，已 13,448 条），
+ *      机地那条便不再独立存在 —— 但这组**没匹配上**，机地那条成了独立条目；
+ *   ② 展示层：名称键 `decorKey` 只剥商标号/书名号/中点，**刻意保留 `：`**
+ *      （加宽会假并，v10.60 有实测账）⇒ `真三国无双起源` ≠ `真三国无双：起源` ⇒ 不并。
+ *   实测全库：同 AppID 的跨源双条 **154 组**，其中 103 组名称键相等（会并）、
+ *   **51 组不等**（显示两行）。用户报的这组是 51 之一（且 `matchScore` 满分 100）。
+ *
+ * 【改法：AppID 当第二级判据】AppID 是 Steam 对「一款游戏」的唯一编号 ——
+ *   同一 AppID 必是同款本体（DLC 各有自己的 AppID）⇒ 这条判据**结构上零假并**，
+ *   正是名称键做不到的那一半。
+ *
+ * ★★ 为什么必须**批量**、不能像 `groupKey` 那样单条算
+ *   「两边 AppID 相同」是一个**关系**，单条算不出来。实测踩到的反例就在用户自己报过的
+ *   那一组上：`古惑狼™ 4：时机已到`（机地，自带 `appid`）与 `古惑狼4：时机已到`
+ *   （XD，cover 是 `www.xdgame.com/uploads/…jpg`，**提不到 AppID**）——
+ *   若键改成「AppID 优先」单条算，两条会分别得到 `app:1378990` 与 `古惑狼4：时机已到`，
+ *   **刚修好的那组反而被拆回去**。批量 + 并查集才既能并上「两边都有 AppID」的，
+ *   又不误伤「只有一边有」的（后者仍靠名称键，行为与 v10.60 完全一致）。
+ *   ⇒ 并查集只做 union、从不 split：**不可能把原本能并的拆开**，只可能多并。
+ *
+ * ★★ 三道闸门（缺一条都会把两款不同游戏并成一行，而界面上完全看不出来）
+ *   ① **AppID 必须相等**（不是「有一个 AppID 就行」）；
+ *   ② **排除独立发行**：zh 段含 `虚拟机版`/`HYPERVISOR` 的不参与 AppID 合并
+ *      —— 它要跑 hypervisor，是与本体**并列的另一份发行**，实测 135 条；
+ *   ③ **名称闸门**：`matchScore ≥ 30` **或**双方 zh/en 四段归一化后有任何一对相等（≥3 字）。
+ *      为什么非要有 ③：AppID 取自 `appid` 字段与 cover URL，**来源本身会脏**。
+ *      实测（全库扫描，去掉 ③ 时新增 189 组合并）抓到 6 组假并 ——
+ *      `-怀旧地下城-/UNDERGROUNDED` 被并进 `赛菲莉娅/Sephiria`、
+ *      `巨城警察/Mega City Police` 并进 `超级城市力量/Mega City Force`、
+ *      `杂货店模拟器` 并进 `超市模拟器`、`遨游中国2（CTS6 整合）` 并进 `欧洲卡车模拟2` ……
+ *      逐组查是 **cover 挂了别的游戏的图** ⇒ 提取出错误 AppID。加上 ③ 后这 6 组全部挡住，
+ *      而真同款的译名差异（`Obenseuer` ↔ `奥本瑟尔/Obenseuer`、`SpaceSlog` ↔ `太空漫游/SpaceSlog`）
+ *      由 ③ 的「四段交叉相等」救回。
+ *
+ * ★ 实测效果（全库 19,465 条，2026-10-12 逐组人工核对）：分组数 18,368 → **18,282**，
+ *   新增合并 **86 组**（跨源 32 / 同源 54），**32 组跨源逐组核验全为真同款、0 假并**；
+ *   6 组假并嫌疑在加 ③ 后全部各自独立；用户报的 `2384580` 与已修好的古惑狼**都不回归**。
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Steam AppID：机地条目自带 `appid` 字段；XD 条目从 cover 的 `/steam/apps/<id>/` 提。
+ *  ⚠️ cover 可能挂错图（见上面实测），所以本函数**只用来取候选**，成对判定必须再过 `mergeGate`。 */
+const STEAM_COVER = /\/steam\/apps\/(\d+)\//;
+
+function appIdOf(g) {
+  if (!g) return '';
+  const a = g.appid != null ? String(g.appid).trim() : '';
+  if (a) return a;
+  const m = STEAM_COVER.exec(String(g.cover || ''));
+  return m ? m[1] : '';
+}
+
+/** 独立发行（不参与 AppID 合并）：`虚拟机版` / `HYPERVISOR`。
+ *  ★ 只测 **zh 段** —— 机地把 `voices38` 一类写在英文段（`红色沙漠/Crimson Desert voices38`），
+ *    那是同一份发行的标记，不该因此拒绝合并；而「虚拟机版」在 zh 段里（135 条里 127 条如此，
+ *    另 8 条是 `…-虚拟机版/NEW MONOPOLY HYPERVISOR` 这种两段都有）。 */
+const ALT_EDITION = /虚拟机版|hypervisor/i;
+
+function isAltEdition(title) {
+  return ALT_EDITION.test(splitName(title).zh);
+}
+
+/** 名称闸门：AppID 相等**之外**的第二道保险（防 cover 挂错造成的假并）。
+ *  ① `matchScore ≥ 30`：沿用跨源配对的既有判据（中文段相等/包含，或英文段完全相等）
+ *  ② 四段交叉相等：机地常把英文名整串当 zh 段（`Obenseuer`），而 XD 分中英两段
+ *     （`奥本瑟尔/Obenseuer`）⇒ ① 的 `matchScore` 算不出来，靠这一条救回。
+ *  ⚠️ 长度护栏 ≥3：挡住 `AB`/`X` 这类短串互撞（与 `sameGame` 的护栏同口径）。 */
+function mergeGate(a, b) {
+  const A = String(a || '');
+  const B = String(b || '');
+  if (!A || !B) return false;
+  if (matchScore(A, B) >= TWIN_MIN_SCORE) return true;
+  const sa = splitName(A);
+  const sb = splitName(B);
+  const A4 = [normTitle(sa.zh), normTitle(sa.en)];
+  const B4 = [normTitle(sb.zh), normTitle(sb.en)];
+  for (const x of A4) for (const y of B4) { if (x && y && x.length >= 3 && x === y) return true; }
+  return false;
+}
+
+/** ★ 批量归并键（服务端下发前端的 `nkey` 由它算）。
+ *
+ *  @param {Array} items 同一批要展示的条目（搜索结果的一桶，≤30 条）
+ *  @returns {Array<string>} 与 `items` **等长同序**的键；组内所有条目键相同。
+ *
+ *  代表键 = 组内**首个**能给出名称键的那条的键 —— 用名称键而非 `app:<id>` 当代表，
+ *  是为了让前端主行/调试时的键保持「人能看懂」；前端只比较相等性，不解析内容。
+ */
+function groupKeys(items) {
+  const arr = Array.isArray(items) ? items : [];
+  const n = arr.length;
+  const nameKeys = arr.map((x) => groupKey(x));
+  if (n < 2) return nameKeys;
+  const parent = arr.map((_, i) => i);
+  const find = (i) => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+  const union = (a, b) => { const ra = find(a), rb = find(b); if (ra !== rb) parent[rb] = ra; };
+  const byName = new Map();
+  const byApp = new Map();
+  arr.forEach((x, i) => {
+    const k = nameKeys[i];
+    if (k) { if (byName.has(k)) union(i, byName.get(k)); else byName.set(k, i); }
+    const a = appIdOf(x);
+    if (a && !isAltEdition(x && x.title)) {
+      if (!byApp.has(a)) byApp.set(a, []);
+      byApp.get(a).push(i);
+    }
+  });
+  for (const idxs of byApp.values()) {
+    for (let p = 0; p < idxs.length; p++) {
+      for (let q = p + 1; q < idxs.length; q++) {
+        const ia = idxs[p];
+        const ib = idxs[q];
+        if (mergeGate(arr[ia] && arr[ia].title, arr[ib] && arr[ib].title)) union(ia, ib);
+      }
+    }
+  }
+  const rep = new Map();
+  arr.forEach((x, i) => { const r = find(i); if (!rep.has(r) && nameKeys[i]) rep.set(r, nameKeys[i]); });
+  /* 代表键取不到（整组标题都空）时退回自己的名称键 —— 宁可少并，也不给**空键**
+     （空键会让前端把所有条目并成一行，比不并更糟）。 */
+  return nameKeys.map((k, i) => rep.get(find(i)) || k || '');
 }
 
 /** 反过来拼：{ zh, en } → `中文名/English Name`（前端 splitName 的逆） */
@@ -348,4 +483,4 @@ function twinOf({ id = '', title = '', src = '' } = {}) {
   return (best && bestScore >= TWIN_MIN_SCORE) ? fromLibItem(best, 'name') : null;
 }
 
-module.exports = { twinOf, sameGame, matchScore, normTitle, splitName, joinTitle, tidOf, TWIN_MIN_SCORE, groupKey };
+module.exports = { twinOf, sameGame, matchScore, normTitle, splitName, joinTitle, tidOf, TWIN_MIN_SCORE, groupKey, groupKeys, appIdOf, isAltEdition, mergeGate };

@@ -1,15 +1,21 @@
 /* ★ v10.25 浏览器回归（第二层：真实浏览器 + CDP，手动分批跑）：① 搜索弹窗「同款聚拢 + 评分分级」。
  *
+ * ★★ v10.62 修订：同款聚拢**仍然做**，但主行下方那排「↳ 另 N 个条目」chip **已按用户要求删除**
+ *   （用户 2026-10-12 原话「每个游戏仅需要提供一个即可」）。A / B / D 三条随之换口径：
+ *     旧：`行数 + chip 数 == 接口条数`（靠 chip 兜住「数据一条没丢」）
+ *     新：**行数 == 接口回包里不同归并键（nkey）的个数**（款数守恒，期望值直接问接口要）
+ *   —— 换完**更硬**了：期望值不再是我手写的 `3`，库怎么变都不会失真。
+ *
  * 守护的不变量：
- *   A. 同一款游戏在结果里**只占一行**（主行），其余条目降级为 chip —— 不丢可点性
- *   B. 条目**总数守恒**：行数 + chip 数 == 接口返回条数（归并只改展示，不删数据）
+ *   A. 同一款游戏在结果里**只占一行**；面板里 `.sm-alt` / `.sm-alt-b` **一个都不许有**
+ *   B. 款数守恒：行数 == 接口回包里不同 `nkey` 的个数（归并只改展示，不删数据）
  *   C. 「艾尔登法环」与「艾尔登法环 黑夜君临」**不能并**（那是两款游戏）—— 子串匹配的反例
- *   D. chip 真占版面（宽高 > 0）且点得动（进详情抽屉）
+ *   D. 主行点得动（进详情抽屉）；行上资源 chip 的数字与接口**逐档对齐**
  *   E. 无横向溢出
  *
  * 反证锚点（打坏必变红）：
- *   把 index.html 里 `smRows(list, limit)` 的 `smGroup(arr).map(...)` 换回 `arr.map(smRow)`
- *   → A / B / C / D 全红。
+ *   · 把 `smRows` 的 `smGroup(arr).map(...)` 换回 `arr.map(smRow)` → A / B / C 全红（款数不再守恒）
+ *   · 把 `smAltHtml` 加回来渲染 → A 红（`.sm-alt` 不再是 0）
  */
 const path = require('path');
 const fs = require('fs');
@@ -45,7 +51,12 @@ const j = (o) => JSON.stringify(o);
   await sleep(2600);
 
   /* ---------------- Phase A：联想态（SUGGEST） ---------------- */
-  const a = await p.evaluate(() => {
+  const a = await p.evaluate(async () => {
+    /* ★★ v10.62：期望**款数**不再写死 —— 直接问接口「回包里不同 `nkey` 有几个」。
+       limit 必须与联想面板一致（`showSug` 拉的是 `/api/library?q=…&limit=8`）。 */
+    const lr = await fetch('/api/library?q=' + encodeURIComponent('艾尔登') + '&limit=8').then((r) => r.json());
+    const lItems = lr.items || [];
+    const expectRows = new Set(lItems.map((x) => x.nkey).filter(Boolean)).size;
     const b = document.getElementById('smBody');
     const rows = [...b.querySelectorAll('.sm-row')];
     const alts = [...b.querySelectorAll('.sm-alt')];
@@ -54,6 +65,8 @@ const j = (o) => JSON.stringify(o);
     return {
       rowTitles: rows.map((r) => (r.querySelector('.t') || {}).textContent.trim()),
       rowCount: rows.length,
+      expectRows,
+      apiTotal: lItems.length,
       altCount: alts.length,
       chipCount: chips.length,
       chipTexts: chips.map((c) => c.textContent.replace(/\s+/g, ' ').trim()),
@@ -72,13 +85,16 @@ const j = (o) => JSON.stringify(o);
   console.log('  实测 chip: ' + j(a.chipTexts));
   console.log('  计数: ' + j(a.secCnt) + '  弹窗: ' + j(a.modalRect));
 
-  chk('A 同一款只占一行：行数 3（原 6 条）', a.rowCount === 3, 'rowCount=' + a.rowCount);
-  /* ★ 守恒断言必须**连 chip>0 一起判** —— 只比「行数+chip数 == 6」的话，
-   *   打坏成平铺时是「6 行 + 0 chip」，总数照样等于 6，断言**假绿**（反证实测到了）。
-   *   守恒测「不丢数据」，chip>0 测「确实聚拢了」，两件事要一起断言。 */
-  chk('B 条目守恒 + 确有聚拢', a.rowCount + a.chipCount === 6 && a.chipCount > 0,
-    a.rowCount + '+' + a.chipCount);
-  chk('B 有 2 组挂了「另 N 个条目」', a.altCount === 2, 'altCount=' + a.altCount);
+  chk('A 同一款只占一行（行数 == 接口款数，期望值不写死）',
+    a.rowCount === a.expectRows, 'rowCount=' + a.rowCount + ' expect=' + a.expectRows);
+  /* ★ v10.62：守恒口径从「行数 + chip 数 == 条数」换成「行数 == 款数」。
+   *   旧口径靠 chip 兜住「数据没丢」，chip 一删就恒不成立；新口径直接与接口对齐，更硬。 */
+  chk('B 款数守恒 + 确有聚拢（条数 > 款数）',
+    a.rowCount === a.expectRows && a.rowCount < a.apiTotal,
+    a.apiTotal + ' 条 → ' + a.rowCount + ' 款');
+  chk('A ★★ v10.62 同款聚拢后**只出一行**：`.sm-alt` / `.sm-alt-b` 必须都为 0',
+    a.altCount === 0 && a.chipCount === 0 && a.altRect === null,
+    'alt=' + a.altCount + ' chip=' + a.chipCount + ' rect=' + j(a.altRect));
   chk('C 「艾尔登法环」在主行里只出现 1 次',
     a.rowTitles.filter((t) => t === '艾尔登法环').length === 1,
     j(a.rowTitles.filter((t) => /艾尔登法环/.test(t))));
@@ -86,38 +102,39 @@ const j = (o) => JSON.stringify(o);
     a.rowTitles.some((t) => t.indexOf('黑夜君临') >= 0), j(a.rowTitles));
   chk('C 「艾尔登炮火」独立成行（子串匹配的反例）',
     a.rowTitles.some((t) => t === '艾尔登炮火'), j(a.rowTitles));
-  chk('D chip 真占版面（宽>100 且 高>0）',
-    !!a.altRect && a.altRect.w > 100 && a.altRect.h > 0, j(a.altRect));
-  chk('D chip 文案区分出变体（有「支持网络联机」也有「原版」）',
-    a.chipTexts.some((t) => t.indexOf('支持网络联机') >= 0) && a.chipTexts.some((t) => t.indexOf('原版') >= 0),
-    j(a.chipTexts));
-  chk('计数显示款数 + 合并说明（3 款 · 合并 6 条）',
-    a.secCnt.indexOf('3 款') >= 0 && a.secCnt.indexOf('合并 6 条') >= 0, j(a.secCnt));
+  chk('D 主行真占版面（宽>200 且 高>0）',
+    !!a.rowRect && a.rowRect.w > 200 && a.rowRect.h > 0, j(a.rowRect));
+  chk('A ★ v10.62 chip 文案已彻底不渲染（这两个变体名只曾出现在 chip 上）',
+    a.chipTexts.length === 0, j(a.chipTexts));
+  chk('计数显示款数 + 合并说明（用接口值自洽推导）',
+    a.secCnt.indexOf(a.expectRows + ' 款') >= 0 && a.secCnt.indexOf('合并 ' + a.apiTotal + ' 条') >= 0,
+    j(a.secCnt));
   chk('评分分级生效（★9.3 拿到 s-hi）',
     a.scoreCls.some((c) => c.indexOf('s-hi') >= 0), j(a.scoreCls));
   chk('低分退到 s-lo（★5 那条）',
     a.scoreCls.some((c) => c.indexOf('s-lo') >= 0), j(a.scoreCls));
   chk('E 弹窗正文无横向溢出', a.overflowX <= 0, 'overflowX=' + a.overflowX);
 
-  /* ---------------- Phase B：chip 点得动 ---------------- */
-  const firstChip = await p.evaluate(() => {
-    const c = document.querySelector('#smBody .sm-alt-b');
-    return c ? c.textContent.replace(/\s+/g, ' ').trim() : '';
+  /* ---------------- Phase B：主行点得动（v10.62 起面板里只剩主行可点） ----------------
+   * 原先这里点的是「另 N 个条目」chip，chip 删了 ⇒ 改点主行。
+   * ⚠️ 别把这条也删掉：`.sm-row` 的点击绑定与 `.res-chip` 的 `stopPropagation`
+   *    是**互相牵制**的（v10.52 起），只测 chip 会漏掉「主行点不动」这种坏法。 */
+  const firstRow = await p.evaluate(() => {
+    const r = document.querySelector('#smBody .sm-row');
+    return r ? ((r.querySelector('.t') || {}).textContent || '').trim() : '';
   });
-  await p.evaluate(() => { const c = document.querySelector('#smBody .sm-alt-b'); if (c) c.click(); });
+  await p.evaluate(() => { const r = document.querySelector('#smBody .sm-row'); if (r) r.click(); });
   await sleep(3000);
   const bst = await p.evaluate(() => ({
     drawerShown: document.getElementById('drawer').classList.contains('show'),
     title: ((document.querySelector('#drawerBody h2') || {}).textContent || '').trim(),
-    badge: ((document.querySelector('#drawerBody .src-badge') || {}).textContent || '').trim(),
   }));
-  console.log('\n=== Phase B · 点第一个 chip「' + firstChip + '」===');
+  console.log('\n=== Phase B · 点第一行「' + firstRow + '」===');
   console.log('  抽屉: ' + j(bst));
-  chk('D chip 点击打开详情抽屉', bst.drawerShown === true, j(bst));
-  chk('D 抽屉标题是同一款游戏（艾尔登法环）',
-    bst.title.indexOf('艾尔登法环') >= 0, j(bst.title));
-  chk('D 抽屉走的是 chip 指向的那个源（XDGAME）',
-    bst.badge.indexOf('XDGAME') >= 0, j(bst.badge));
+  chk('D 主行点击打开详情抽屉', bst.drawerShown === true, j(bst));
+  chk('D 抽屉标题就是这一行的标题',
+    !!firstRow && bst.title.indexOf(firstRow.slice(0, 4)) >= 0,
+    'row=' + j(firstRow) + ' drawer=' + j(bst.title));
 
   /* ---------------- Phase C：回车走 /api/search/all 那条路 ---------------- */
   await p.evaluate(() => {
@@ -132,7 +149,11 @@ const j = (o) => JSON.stringify(o);
     i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
   });
   await sleep(3000);
-  const cst = await p.evaluate(() => {
+  const cst = await p.evaluate(async () => {
+    /* ★ v10.62：端游库组的期望款数也**问接口要**（`doSearch` 拉的是 `&limit=12`）。 */
+    const ar = await fetch('/api/search/all?q=' + encodeURIComponent('艾尔登') + '&limit=12').then((r) => r.json());
+    const pcItems = ((ar.pc || {}).items) || [];
+    const pcExpect = new Set(pcItems.map((x) => x.nkey).filter(Boolean)).size;
     const b = document.getElementById('smBody');
     const secs = [...b.querySelectorAll('.sm-sec')];
     /* ★ 必须**按分组**收集 —— 全文 querySelectorAll('.sm-row') 会把手游/修改器/云存档的行
@@ -150,7 +171,7 @@ const j = (o) => JSON.stringify(o);
     };
     return {
       secs: secs.map((s) => s.textContent.replace(/\s+/g, ' ').trim()),
-      pc: grab('端游库'),
+      pc: Object.assign(grab('端游库'), { expectRows: pcExpect, apiRows: pcItems.length }),
       tr: grab('修改器'),
       overflowX: b.scrollWidth - b.clientWidth,
     };
@@ -162,9 +183,10 @@ const j = (o) => JSON.stringify(o);
   console.log('  修改器组: ' + j(cst.tr.rows) + '  chip=' + cst.tr.chips);
   chk('C 端游库组「艾尔登法环」只占 1 行',
     cst.pc.rows.filter((t) => t === '艾尔登法环').length === 1, j(cst.pc.rows));
-  chk('B 条目守恒 + 确有聚拢',
-    cst.pc.rows.length + cst.pc.chips === 6 && cst.pc.chips > 0,
-    cst.pc.rows.length + '+' + cst.pc.chips);
+  chk('B ★ v10.62 端游库组一款一行（行数 == 接口款数，chip 恒 0）',
+    cst.pc.rows.length === cst.pc.expectRows && cst.pc.chips === 0,
+    'rows=' + cst.pc.rows.length + ' expect=' + cst.pc.expectRows
+    + ' api=' + cst.pc.apiRows + ' chips=' + cst.pc.chips);
   chk('C 端游库组「黑夜君临」/「炮火」各自成行',
     cst.pc.rows.some((t) => t.indexOf('黑夜君临') >= 0) && cst.pc.rows.some((t) => t === '艾尔登炮火'),
     j(cst.pc.rows));
