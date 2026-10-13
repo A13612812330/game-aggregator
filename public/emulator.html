@@ -1667,6 +1667,27 @@
   /* ============ 移动端底部 Tab 导航 ============ */
   .tabbar{display:none}
 
+  /* ★ v10.67 修：顶栏在 **761–845px 区间**会把整页撑出横向滚动条。
+   *
+   *  实测（`tools/_probe-overflow-820.js` 宽度扫描，`documentElement.scrollWidth`）：
+   *      760px → 760 ✅ ｜ 780px → **845 ❌(+65)** ｜ 820px → **845 ❌(+25)**
+   *      840px → **845 ❌(+5)** ｜ 860px → 860 ✅ ｜ 更高全 ✅
+   *  `scrollWidth` 在整段窗口里**恒为 845** = 顶栏 `.wrap` 的**内容固有宽**
+   *  （实测构成：brand 126 + nav 358 + 搜索 228 + liveTag 55 + gap 14×4 + padding 22×2）。
+   *  真凶已由探针点名到祖先链：`span#liveTag < div.wrap < header.topbar`。
+   *
+   *  根因：下方 `@media(max-width:760px)` 那套紧凑模式**来得太晚** ——
+   *  761~845 之间既没进紧凑、内容又放不下，于是白撑出 25~65px。
+   *
+   *  收窄的两条**都沿用 760px 那套既有语言**，不新增设计：
+   *    · `.live-tag` 隐藏 —— 它在 ≤760px 本来就隐藏，窄屏不是功能性元素；
+   *    · `.main-nav a` 内边距 12 → 8px —— 四个导航项共省约 32px。
+   *  修后实测内容宽 ≈ 744 < 761 ⇒ 整个溢出窗口消失（见同目录探针复测）。 */
+  @media(max-width:880px){
+    .live-tag{display:none}
+    .main-nav a{padding:6px 8px}
+  }
+
   @media(max-width:760px){
     .row-card .th{width:112px;height:auto;aspect-ratio:var(--th-ar)}
     .row-card .go{display:none}
@@ -5178,8 +5199,8 @@ function paintDetail(d, fb, merge) {
   syncDActions();            // ★ v10.15：先按「当前可见按钮数」定列数（跨源按钮默认隐藏，查到详情页才显形）
   loadBhBlock(d, title, fb); // 📱 手机模拟器配置（命中则给逐条参数，未命中给入口）
   loadReqBlock(d, fb);       // 🖥 PC 配置要求（源站优先，缺则 Steam 官方接口补）★ v10.13
-  loadTrBlock(d, title);     // 🛠 修改器（v10.1）
-  loadSvBlock(d, title);     // 💾 云存档位置（v10.1）
+  loadTrBlock(d, title, fb); // 🛠 修改器（v10.1；★ v10.67 补 fb —— 原先取 d.id 恒查不到）
+  loadSvBlock(d, title, fb); // 💾 存档（v10.1；★ v10.67 补 fb，同上）
   loadRelated(d, fb);        // 同分类推荐（库内数据 · 多因子打分）
   loadDlBlock(d, fb, title); // 📥 下载入口（机地社区 MOD / 修改器帖）
   /* ★ v10.25：先按「此刻已经渲染出来的区块」建一次定位条；
@@ -5825,12 +5846,21 @@ function dResFullHtml(note, items) {
  *   ② 行数上限 5 → 3（用户拍板「更紧凑：预留行数 5 → 3」），与 `--d-rows` 同步。
  *      ⚠️ 两处**必须一起改**：`.d-rows` 只负责撑底高，上限决定实际铺几行；
  *         只改一处会出现「卡里 5 行、槽位只留 3 行」或反之，两块又不一样高。 */
-async function loadTrBlock(d, title) {
+async function loadTrBlock(d, title, fb) {
   const slot = $('#trBlock');
   if (!slot) return;
   const t = String(title || (d && d.title) || '').trim();
   if (t.length < 2) return;
-  const gid = String((d && d.id) || '');
+  /* ★★ v10.67 修**真 bug**：原先取 `d.id` —— 那是**源站裸 id**（XD 的 `110` / `3668`），
+   *   而资源分组是按**本地库 id**（`xd-110`）归组的 ⇒ 拿裸 id 查 `/api/res/game`
+   *   **恒返回 0 条** ⇒ 「修改器」区块永远空白。
+   *   实测（`tools/_probe-trblock.js` 拦 fetch 拿到的真实 URL）：
+   *     打开 `openDetailById('xd-110')` → 页面发出的是 `?id=110&t=群星%2FStellaris` → 0/0/0
+   *     同一款换 `?id=xd-110` → **trainers 30 / saves 1**
+   *   旁边四个兄弟函数（loadBhBlock / loadReqBlock / loadRelated / loadDlBlock）**都收 fb**，
+   *   只有 loadTrBlock / loadSvBlock 漏了 —— v10.23 给兄弟函数补 fb 时没同步到这两个。
+   *   ⇒ 改用 `fb.id`（本地库 id）优先，`d.id` 仅作兜底。 */
+  const gid = String((fb && fb.id) || (d && d.id) || '');
   try {
     const j = await fetch(api('/api/res/game?id=' + encodeURIComponent(gid) + '&t=' + encodeURIComponent(t) + '&limit=100')).then(r => r.json());
     const items = (j && j.items && j.items.trainers) || [];
@@ -5860,12 +5890,16 @@ async function loadTrBlock(d, title) {
  *   合并弹窗（主区铺可下载文件、位置收进二级弹窗）**口径不一致**。
  *   现在：主区只铺**可下载的存档**（游侠存档区 + GTrainers），
  *        位置线整体让位到卡头右上角的「📍 存档位置」→ 同一个 #svLoc 二级弹窗。 */
-async function loadSvBlock(d, title) {
+async function loadSvBlock(d, title, fb) {
   const slot = $('#svBlock');
   if (!slot) return;
   const t = String(title || (d && d.title) || '').trim();
   if (t.length < 2) return;
-  const gid = String((d && d.id) || '');
+  /* ★★ v10.67 修**真 bug**（同 loadTrBlock，两个函数一起漏的）：
+     原先取 `d.id` = **源站裸 id**（`110`），而资源分组按**本地库 id**（`xd-110`）归组
+     ⇒ `/api/res/game?id=110` 恒 0 条 ⇒ 「存档」区块永远空白。
+     实测同一款：`?id=xd-110` → saves **1** 条 / `?id=110` → 0 条。改用 `fb.id` 优先。 */
+  const gid = String((fb && fb.id) || (d && d.id) || '');
   try {
     const j = await fetch(api('/api/res/game?id=' + encodeURIComponent(gid) + '&t=' + encodeURIComponent(t) + '&limit=100')).then(r => r.json());
     const items = (j && j.items && j.items.saves) || [];
@@ -8005,7 +8039,31 @@ const D_RAIL = [
 ];
 let dRailItems = [];
 let dRailScrollPend = 0;
-/** 解析一个定位项对应的**真实可见**目标节点；不可见（存在但没内容）一律当没有。 */
+/** 解析一个定位项对应的**真实可见**目标节点；不可见（存在但没内容）一律当没有。
+ *
+ *  ★ v10.67 修：可见性判据从 `offsetHeight > 0` 收紧到 **`>= RAIL_MIN_H`（24px）**。
+ *
+ *  根因（v10.51 查出、v10.52 记为「本轮仍未修」的缺陷 A，今天实拍复现）：
+ *  某款游戏没有任何 修改器 / 存档 条目时，`#trBlock` / `#svBlock` 被
+ *  `innerHTML = ''` 清空（自身 h=0），但**外层 `#trSvSlot`（`.d-pair`）仍留着两个空 DIV**
+ *  ⇒ 实测 h = **12px**。12 > 0 ⇒ **通过可见性判据** ⇒ 定位条上照样出现「修改器/存档」，
+ *  点进去是一片空白。三款样本（艾尔登法环 / 怪物火车2 / 赛博朋克2077）**全部如此** ——
+ *  正文里只有 3 个 `.d-blk`，条上却有这一项。
+ *
+ *  ★★ 连带后果（缺陷 B，就是 `test-v1025-rail.js` ⑨ 的 `6→7`）：
+ *  这个 12px 空壳的 docTop 只比下一个真分区（`#relSlot`）早 **12px** ⇒
+ *  点第 6 项滚到 1830，此时第 7 项也已越过高亮线（抽屉顶 + 90px）⇒ 高亮跳到「同分类」。
+ *  **修好 A，B 自动消失**（不是两处独立的问题）。
+ *
+ *  ⚠️ 为什么用「高度阈值」而不是「有没有文字」：`.gal`（游戏预览）是**纯图**容器，
+ *     图片没 alt 时 `textContent` 为空 ⇒ 用文字判空会把「游戏预览」整项误杀。
+ *  ⚠️ 24px 这个数的依据：实测空壳 12px，而三款样本里**最矮的真实分区是 88px**
+ *     （下载资源）⇒ 24 既高于空壳、又远低于任何真实分区。取「宁可少一项入口，
+ *     也不给一个点进去什么都没有的空壳」——空壳比漏项更糟。
+ *  ⚠️ 本轮只收紧**判据**，没有动「空壳 slot 为什么还在占 12px」的根源
+ *     （那要改 `.d-pair` 的渲染时机）。若将来某人把空壳压到 <24px，这条会**静默失效** ——
+ *     所以 `tools/test-v1025-rail.js` ⑤ 同步加了「每项都必须 ≥24px」的断言。 */
+const RAIL_MIN_H = 24;
 function railTarget(spec) {
   const body = $('#drawerBody');
   if (!body) return null;
@@ -8013,7 +8071,7 @@ function railTarget(spec) {
     for (const el of $$(s)) {
       if (!body.contains(el)) continue;
       if (spec.txt && !String(el.textContent || '').includes(spec.txt)) continue;
-      if (el.offsetWidth > 0 && el.offsetHeight > 0) return el;
+      if (el.offsetWidth > 0 && el.offsetHeight >= RAIL_MIN_H) return el;
     }
   }
   return null;

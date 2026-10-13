@@ -1,8 +1,22 @@
 /* ★ v10.25 浏览器回归（第二层：真实浏览器 + CDP，手动分批跑）：③ 详情页竖向定位条。
- * 断言全部是**行为式**的：点第 i 项 → 抽屉滚到第 i 个分区 + 高亮落在 i 上 +
- * 每一档的 scrollTop 严格递增（顺序错/落点重复都会变红）。不读页面内部变量。
+ * 断言以**行为式**为主：点第 i 项 → 抽屉滚到第 i 个分区 + 高亮落在 i 上 +
+ * 每一档的 scrollTop 严格递增（顺序错/落点重复都会变红）。
+ *
+ * ★★ v10.67 唯一的例外，以及为什么必须开这个口子：
+ *   `⑤c` / `⑤c′` 两条**直读页面内部变量 `dRailItems`**（条项 → 正文节点的映射），
+ *   其余断言仍不读内部变量。
+ *   起因：原先只有「落点几何」这一条路（点一项 → 看落点处最靠上的 ≥24px 分区），
+ *   而它在要守的场景上**会假绿** —— 「条上挂着一个 12px 空壳项」时，点它滚到的位置
+ *   紧跟着就是真分区，几何取到的仍是真分区（≥24px）⇒ 通过。
+ *   而 `dRailItems[i].el` 就是 `railTarget()` 选中的**节点本身**，高度直接判，绕不开。
+ *   ⇒ 两种判据**互补**保留：几何判「端到端落点」，直读判「条上挂了什么」。
+ *   ⚠️ 读不到 `dRailItems` 时**报红**（不静默跳过）—— 内部结构被改名必须有人知道。
+ *   ⚠️ 还必须有**零资源样本**：12px 空壳只在「没有修改器/存档」的款上存在，
+ *     第一样本（有资源）那一块是 224px 真分区，**结构上测不到**（见 ③b 段）。
+ *
  *   node tools/test-v1025-rail.js
  *   GAME=艾尔登法环 node tools/test-v1025-rail.js
+ *   ZERO_GAMES=荒野大镖客2,文明6 node tools/test-v1025-rail.js   # 覆盖零资源样本候选表
  */
 const path = require('path');
 const fs = require('fs');
@@ -40,15 +54,24 @@ async function settle(p, ms = 3000) {
   await p.goto(BASE + '/index.html', { waitUntil: 'networkidle2', timeout: 60000 });
   await sleep(1600);
 
+  /* ★ 2026-10-13：样本改用 `openDetailById` 挑**真有资源的端游库条目**。
+     原先取 `items[0]` 且传非 JSON 的 fb ⇒ 打开的是机地条目 ⇒
+     「修改器 / 存档」按本地库 id 取数为空（详见 `test-v1025-more.js` 里那段注释），
+     定位条因此少项、正文内容也不全 —— 断言在**不完整的页面**上判，结论没有意义。 */
   const pick = await p.evaluate(async (q) => {
     const j = await fetch('/api/library?q=' + encodeURIComponent(q)).then((r) => r.json());
-    const it = (j.items || [])[0];
-    return it ? { url: it.url, jidi: it.jidiUrl || '', title: it.title } : null;
+    const cands = (j.items || []).filter((x) => /^xd-/.test(String(x.id || ''))).slice(0, 6);
+    for (const c of cands) {
+      const r = await fetch('/api/res/game?id=' + encodeURIComponent(c.id) + '&limit=1').then((x) => x.json()).catch(() => null);
+      const ct = r && r.counts;
+      if (ct && (ct.trainers > 3 || ct.saves > 3)) return { id: c.id, title: c.title };
+    }
+    return cands[0] ? { id: cands[0].id, title: cands[0].title } : null;
   }, GAME);
   console.log('样例:', JSON.stringify(pick));
-  if (!pick) { console.log('❌ 库里找不到', GAME); await h.close(); process.exit(1); }
+  if (!pick) { console.log('❌ 库里找不到带端游库条目的', GAME); await h.close(); process.exit(1); }
 
-  await p.evaluate((g) => { window.openDetail(g.url, encodeURIComponent(g.jidi || ''), false); }, pick);
+  await p.evaluate((g) => window.openDetailById(g.id, g.title), pick);
   await sleep(9000);   // 等懒加载分区全部落地（MutationObserver 会在这期间多次重扫）
 
   console.log('\n=== ③ 详情页竖向定位条 ===');
@@ -78,6 +101,29 @@ async function settle(p, ms = 3000) {
   });
   if (geo.err) { console.log('❌', geo.err); await h.close(); process.exit(1); }
 
+  /* ★ 2026-10-13 新增：**直读**「条上每一项 → 它指向的正文节点」。
+     为什么单靠下面 ⑤ 的落点几何不够 —— 几何判据在「空壳项在条上」时会**假绿**：
+     点那个空壳项 → 滚到 shell.docTop → 几何取到的是 12px 之后那块真分区（≥24px）⇒ 通过。
+     `dRailItems[i].el` 就是 `railTarget()` 选中的**节点本身**，高度可以直接判，绕不开。
+     （`dRailItems` 是 index.html 顶层的 `let`，evaluate 在全局作用域求值 ⇒ 按标识符可读。
+      读不到就**报红**，不是静默跳过 —— 内部结构改了必须有人知道。） */
+  const railItems = await p.evaluate(() => {
+    const arr = (typeof dRailItems !== 'undefined') ? dRailItems : null;
+    if (!arr) return { err: 'no dRailItems' };
+    return {
+      n: arr.length,
+      it: arr.map((x) => ({
+        nm: x.nm, con: !!(x.el && x.el.isConnected),
+        h: x.el ? Math.round(x.el.getBoundingClientRect().height) : -1,
+        cls: String((x.el && (x.el.className || x.el.id)) || '').slice(0, 20),
+      })),
+    };
+  });
+  chk('⑤c 条上每一项指向的正文节点都真占版面（≥24px）—— 直读 dRailItems，与落点几何互补',
+    !railItems.err && railItems.it.length >= 5 && railItems.it.every((x) => x.con && x.h >= 24),
+    railItems.err ? '★ 读不到 dRailItems（页面内部结构变了？这条必须报红而不是跳过）'
+      : railItems.it.map((x) => `${x.nm}=${x.h}px`).join(' '));
+
   chk('① 定位条可见（未 hidden，真占版面）', !geo.hidden && geo.disp !== 'none' && geo.box.w > 0 && geo.box.h > 0,
     JSON.stringify({ hidden: geo.hidden, disp: geo.disp, box: geo.box }));
   chk('② 固定在可视区**右侧**：右边距 < 60px（让开滚动条，不贴死边缘）',
@@ -87,12 +133,8 @@ async function settle(p, ms = 3000) {
     `rail.left=${geo.box.l} drawer.left=${geo.drawer.l}`);
   chk('④ 竖直居中（条中心 ≈ 视口中心 ± 6px）', Math.abs((geo.box.top + geo.box.h / 2) - 1000 / 2) <= 6,
     `条中心 ${geo.box.top + geo.box.h / 2} vs 500`);
-  /* ★ v10.29：8 → 9 项（补「评分参数」，用户反馈「右侧悬浮定位条好像没更新」的根因）。
-     写成 `>= 9` + 不重复，而不是 `=== 9`：分区数是**随数据变化**的
-     （手机配置 / 修改器 / 云存档都可能没有内容），钉死等号会在别的样本上假红。 */
-  chk('⑤ 收录 ≥9 项且不重复（v10.28 是 8 项，本轮补了「评分参数」）',
-    geo.labels.length >= 9 && new Set(geo.labels).size === geo.labels.length,
-    `${geo.labels.length} 项: ${geo.labels.join(' / ')}`);
+  /* ★ 2026-10-13 重写（原判据：`labels.length >= 9`）。详见下方 ⑤ —— 那条现在由
+     「逐项点击后的落点几何」来判（行为式），不在这里数数。 */
   chk('⑥ 序号从 1 连续到 N', geo.nums.join(',') === geo.labels.map((_, i) => i + 1).join(','), geo.nums.join(','));
   chk('⑦ 非悬停态标签是收起的（宽度 0，不长期遮正文）', geo.tagLabelW <= 1, `label w=${geo.tagLabelW}`);
 
@@ -119,14 +161,60 @@ async function settle(p, ms = 3000) {
        否则会在两趟之间取值，判据时对时错（首版没等，落点序列来回抖）。 */
     await sleep(900);
     const st = await settle(p);
+    /* ★ 2026-10-13：同一次采样里也记下**这一趟的滚动上限**。
+       为什么要逐轮记、而不是循环后测一次：详情页分区是懒加载的，正文总高会在这 8 次
+       点击期间变（实测「手机配置」回填后总高变大）⇒ 循环后测的 maxScroll 与早几轮的
+       不是同一个数，拿它判「这一项是不是被夹住」会错。 */
+    const mx = await p.evaluate(() => {
+      const d = document.getElementById('drawer');
+      return Math.round(d.scrollHeight - d.clientHeight);
+    });
     const on = await p.evaluate(() => {
       const items = [...document.querySelectorAll('#dRail .dr-it')];
       return items.findIndex((b) => b.classList.contains('on'));
     });
-    trace.push({ i, st: Math.round(st), on, label: geo.labels[i] });
+    /* ★ 2026-10-13 追加：落点处**最靠上那块分区**的实测高度 —— ⑤ 的判据用它。
+       为什么要「最靠上」：跳转算法就是把被点分区对齐到抽屉顶部附近，
+       所以紧贴顶部的那块**应该就是被点的那一项**。空壳（12px）会顶替真分区占住这个位置，
+       这正是要抓的。⚠️ 不能放宽成「视口内所有分区里取最大高度」—— 那样空壳后面
+       12px 处就是真分区，会**假绿**（v10.51 的缺陷 A 就是这么漏过去的）。 */
+    const topBlkH = await p.evaluate(() => {
+      const dr = document.getElementById('drawer');
+      const top = dr.getBoundingClientRect().top;
+      let best = null;
+      document.querySelectorAll('#drawerBody .d-blk, #drawerBody .d-pair, #drawerBody .block, #drawerBody .gal, #drawerBody .kv, #drawerBody #relSlot, #drawerBody #dlSlot').forEach((el) => {
+        const r = el.getBoundingClientRect();
+        /* ★ 必须**先过滤空壳**（<24px）再看谁最靠上 —— 首版没过滤，于是点「同分类」时
+           取到的是正文里那个 12px 的 `.d-pair solo`（它在 `#relSlot` 之前、也落在窗口内），
+           报出 `#6同分类=12px` 的**假红**。这与 `railTarget()` 的 RAIL_MIN_H 同一个判据。 */
+        if (r.height < 24) return;
+        if (r.top < top - 6 || r.top > top + 170) return;   // 只看「贴着抽屉顶部」的那几块
+        if (!best || r.top < best.top) best = { top: r.top, h: Math.round(r.height), cls: el.className || el.id };
+      });
+      return best || { h: -1, cls: '(顶部无 ≥24px 分区)' };
+    });
+    trace.push({ i, st: Math.round(st), mx, on, label: geo.labels[i], blkH: topBlkH.h, blkCls: String(topBlkH.cls).slice(0, 24) });
   }
   console.log('  落点轨迹:');
-  trace.forEach((t) => console.log(`    #${t.i + 1} ${String(t.label).padEnd(6)} scrollTop=${String(t.st).padStart(5)}  高亮=${t.on + 1}`));
+  trace.forEach((t) => console.log(`    #${t.i + 1} ${String(t.label).padEnd(6)} scrollTop=${String(t.st).padStart(5)}  上限=${String(t.mx).padStart(5)}  高亮=${t.on + 1}  顶部块 h=${t.blkH} [${t.blkCls}]`));
+
+  /* ★ 2026-10-13 重写（原判据：`geo.labels.length >= 9`）。
+     那个 9 是 **v10.29 的版式事实**，之后两件事都变了 ——
+       · v10.32 把「修改器 / 存档」在条上**合并成一项**（用户口径：
+         「修改器和存档现在是一行了，所以只需要一个」）⇒ 9 → 8；
+       · v10.57 术语从「云存档」统一成「存档」⇒ 连名字都变了。
+     ⇒ 它从此每次都报「差 1 项」，而**真正该守的东西它一条都没守**：
+        条上照样能出现「正文里根本不存在的分区」（v10.51 缺陷 A：`#trSvSlot` 空壳 h=12px
+        也通过可见性判据 ⇒ 条上多一项「修改器/存档」，点进去一片空白）。
+     ★ 换成能力层判据：**条上每一项点完，落点处最靠上的分区都必须真占版面（≥24px）**。
+       空壳 12px 会被这条直接抓住，而它也正是 `railTarget()` 的 `RAIL_MIN_H` 在挡的东西 ——
+       判在行为层，实现侧改了阈值也不会静默失效。 */
+  chk('⑤ 条上每一项点完，落点处紧贴顶部的分区都真占版面（≥24px，不许空壳入口）',
+    trace.length >= 5 && trace.every((t) => t.blkH >= 24),
+    trace.map((t) => `#${t.i + 1}${t.label}=${t.blkH}px`).join(' '));
+  chk('⑤b 项数落在合理区间且不重复（随数据浮动，不再钉死 9）',
+    geo.labels.length >= 5 && geo.labels.length <= 12 && new Set(geo.labels).size === geo.labels.length,
+    `${geo.labels.length} 项: ${geo.labels.join(' / ')}`);
 
   /* ★ 断言必须容忍「滚动被夹住」：定位条最后几项常常都挤在最后一屏里，
      点它们只能滚到 scrollHeight - clientHeight（实测艾尔登法环的
@@ -147,16 +235,42 @@ async function settle(p, ms = 3000) {
   chk('⑨ 前 N-2 项中**落点唯一**的那些，点击后高亮严格落在被点项上（顺序不错位）',
     strict.length > 0 && strict.every((t) => t.on === t.i),
     trace.map((t) => `${t.i + 1}→${t.on + 1}${landingCount[t.st] > 1 ? '(同落点)' : ''}`).join(' '));
-  chk('⑨c 落点歧义只可能出现在**同一行**的两块之间（当前样本 = 修改器 + 云存档）',
-    ambiguous.length === 0 || ambiguous.map((i) => trace[i].label).sort().join('+') === '云存档+修改器',
-    ambiguous.map((i) => trace[i].label).join('+') || '（无歧义项）');
+  /* ★ 2026-10-13 重写（原判据：歧义项的名字必须恰好是「云存档+修改器」）。
+     那条判据**两头都陈旧**：
+       · 术语：v10.57 起界面统一叫「存档」⇒ 字符串「云存档」在页面里已不存在；
+       · 版式：v10.32 已把两块在条上**合并成一项**（D_RAIL 里只剩一条 `trsv`）
+         ⇒ 「同一行的两块互相歧义」这个场景在条上**已不可能出现**，
+            而原判据恰恰要求它出现 ⇒ 换成任何新样本都会红。
+     ★ 真正会造成歧义的成因只有一个：**滚到底被浏览器夹住**（见 ⑩ 上方那段长注释）。
+       最后几项都撞在 `scrollHeight - clientHeight` 上 ⇒ 落点必然相同。
+     ⇒ 判据改为**按成因**判：每个歧义项的落点都必须等于它那一趟的滚动上限。
+       （「正文里两块落点相同」这种真错位仍然会被抓住 —— 那种项的落点 < 上限。） */
+  const clampIds = trace.filter((t) => t.st >= t.mx - 2).map((t) => t.i);
+  chk('⑨c 落点歧义只可能来自「滚到底被夹住」的项（正文里两块落点相同 = 真错位，必须红）',
+    ambiguous.length === 0 || ambiguous.every((i) => clampIds.includes(i)),
+    ambiguous.length
+      ? ambiguous.map((i) => `#${i + 1}${trace[i].label}=${trace[i].st}(上限${trace[i].mx})`).join(', ')
+        + ` ｜ 被夹住 #${clampIds.map((i) => i + 1).join(',#') || '无'}`
+      : '（无歧义项）');
   chk('⑨b 最后一项点击后高亮落在最后一项（滚到底兜底生效）',
     trace[lastIdx].on === lastIdx, `${lastIdx + 1}→${trace[lastIdx].on + 1}`);
   const landings = trace.map((t) => t.st);
   const uniq = new Set(landings).size;
-  chk('⑩ 落点非递减 + 互不相同的落点数 ≥ n-1（顺序与正文一致，无整体错位）',
-    landings.every((v, i) => i === 0 || v >= landings[i - 1]) && uniq >= n - 1 && landings[0] < landings[lastIdx],
-    `落点 ${landings.join(' < ')} ｜ 去重 ${uniq}/${n}`);
+  /* ★ 2026-10-13 修：容忍量不再写死 `n-1`，改用**实测的夹住项数**推导。
+     原先写死 n-1 的后果：样本一旦有 3 项被夹住（实测艾尔登法环 `xd-10676`：
+     修改器/存档 1639 · 同分类 1639 · 下载 1639，上限就是 1639），去重恒为 6 = n-2 ⇒
+     每次都报「去重 6/8」的红 —— 而那**完全是正确行为**：夹住是浏览器滚动的物理上限，
+     不是顺序错位。写死的数会把「物理上限」和「真错位」混成同一条红，久了就没人看。
+     ★ 换成能力层判据：**去掉被夹住的项之后，落点必须两两不同**。
+       夹住项本身仍由 ⑨b/⑨c 守（必须落在最后一项 / 成因合法）。 */
+  const nonClamp = trace.filter((t) => !clampIds.includes(t.i));
+  const uniqNC = new Set(nonClamp.map((t) => t.st)).size;
+  chk('⑩ 落点非递减；去掉「滚到底被夹住」的项后落点两两不同（顺序与正文一致，无整体错位）',
+    landings.every((v, i) => i === 0 || v >= landings[i - 1])
+      && landings[0] < landings[lastIdx]
+      && nonClamp.length >= 2 && uniqNC === nonClamp.length,
+    `落点 ${landings.join(' < ')} ｜ 去重 ${uniq}/${n} ｜ 非夹住 ${nonClamp.length} 项去重 ${uniqNC}`
+      + ` ｜ 夹住 #${clampIds.map((i) => i + 1).join(',#') || '无'}（上限 #${trace.map((t) => t.mx).join('/')}）`);
   chk('⑪ 第 1 项落在首屏之内（第一个有内容的分区不该在第二屏之后）',
     trace[0].st < 1000, `${trace[0].st}px`);
 
@@ -201,6 +315,57 @@ async function settle(p, ms = 3000) {
     return { hidden: r.hidden, disp: getComputedStyle(r).display };
   });
   chk('⑮ 关闭详情页后定位条一并收起', after.hidden || after.disp === 'none', JSON.stringify(after));
+
+  /* ================= 第二样本：**零修改器 / 零存档**的款 =================
+   * ★ 2026-10-13 新增。为什么必须有这个样本 —— 第一样本（有修改器/存档）**测不到**要守的东西：
+   *   `#trSvSlot` 是 paintDetail 里**静态写死**的元素（index.html:3948
+   *   `<div class="d-pair" id="trSvSlot">…`），**任何一款游戏它都在**。
+   *   · 有资源时：`#trBlock`/`#svBlock` 回填 ⇒ `#trSvSlot` 是真分区（实测 224px）⇒ 合法入口；
+   *   · 无资源时：两个子块被 `innerHTML=''` 清空，但外层 `.d-pair` **仍留 12px 空壳**
+   *     ⇒ 只要可见性判据松散（`offsetHeight > 0`），条上就会多一个**点进去一片空白**的入口。
+   *   ⇒ 这 12px 空壳只在「零资源款」上存在，所以**必须**单独跑一个零资源样本。
+   *   ⚠️ 还要配一条**阳性对照**（⑤c″）：先证明这一款的 `#trSvSlot` 确实是空壳，
+   *      否则「条上没有它」可能只是因为这一款压根没渲染这个元素 ⇒ 断言空转。
+   *   （阳性对照是本项目的老规矩：出现「全 0 / 全否」先证明被测对象真的存在。） */
+  const ZERO_CANDS = (process.env.ZERO_GAMES || '荒野大镖客2,文明6,泰拉瑞亚,星露谷物语,缺氧').split(',');
+  const pick2 = await p.evaluate(async (names) => {
+    for (const nm of names) {
+      const j = await fetch('/api/library?q=' + encodeURIComponent(nm)).then((r) => r.json()).catch(() => null);
+      if (!j) continue;
+      for (const c of (j.items || []).filter((x) => /^xd-/.test(String(x.id || ''))).slice(0, 4)) {
+        const r = await fetch('/api/res/game?id=' + encodeURIComponent(c.id) + '&limit=1').then((x) => x.json()).catch(() => null);
+        const ct = r && r.counts;
+        if (ct && ct.trainers === 0 && ct.saves === 0) return { id: c.id, title: c.title };
+      }
+    }
+    return null;
+  }, ZERO_CANDS);
+  console.log('\n=== ③b 零修改器/零存档样本（空壳场景）===');
+  if (!pick2) {
+    chk('③b 找到一款「零修改器 / 零存档」的端游库条目', false, '★ 候选表全不满足（数据变了，补 ZERO_GAMES）');
+  } else {
+    console.log('  零资源样本: ' + pick2.id + ' ' + pick2.title);
+    await p.evaluate((g) => window.openDetailById(g.id, g.title), pick2);
+    await sleep(8000);
+    const zero = await p.evaluate(() => {
+      const shell = document.getElementById('trSvSlot');
+      const arr = (typeof dRailItems !== 'undefined') ? dRailItems : null;
+      return {
+        shell: shell ? Math.round(shell.getBoundingClientRect().height) : -1,
+        trH: (document.getElementById('trBlock') || {}).offsetHeight,
+        n: arr ? arr.length : -1,
+        items: arr ? arr.map((x) => ({ nm: x.nm, con: !!(x.el && x.el.isConnected),
+          h: x.el ? Math.round(x.el.getBoundingClientRect().height) : -1 })) : [],
+      };
+    });
+    /* 阳性对照：壳必须真的在、且真的是壳 —— 不然下面那条是空转 */
+    chk('⑤c″ 阳性对照：该样本的 #trSvSlot 确实存在且是**空壳**（<24px）',
+      zero.shell >= 0 && zero.shell < 24,
+      `#trSvSlot h=${zero.shell}px，其中 #trBlock h=${zero.trH}px（壳在才有可判性）`);
+    chk('⑤c′ 零资源款：条上每一项的目标节点都 ≥24px（不许出现点进去空白的空壳入口）',
+      zero.n >= 3 && zero.items.every((x) => x.con && x.h >= 24),
+      zero.n < 0 ? '★ 读不到 dRailItems' : `${zero.n} 项：` + zero.items.map((x) => `${x.nm}=${x.h}px`).join(' '));
+  }
 
   console.log('\n============================');
   console.log(`  通过 ${pass}/${pass + fail}（失败 ${fail}）`);
