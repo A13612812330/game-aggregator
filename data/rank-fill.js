@@ -1,17 +1,21 @@
 /**
- * data/rank-fill.js — 首页榜单「本地库补位」纯函数（v10.74 新增）
+ * data/rank-fill.js — 首页榜单「本地库补位」纯函数（v10.74 新增，v10.75 降级为兜底）
  *
- * 为什么需要它（**实测事实**，2026-10-14）：
- *   XD 官网首页 `.hot-soft .plate-list` 每档 SSR **只有 10 行**（三档实测都是 li 总数 10），
- *   全站榜再剔掉 1 条「XDGAME游戏运行库检测工具」⇒ **只剩 9 条**；
- *   机地社区档的 `hotRanks` 上限也是 `slice(0, 12)`。
- *   而 v10.74 首页要展示 **13 个**（轮播 5 + 卡片 2×4）⇒ 后半截必然空着。
- *   ★ 已实测排除「源站还有更多条目可拿」这条路：`/rank/`、`/top/`、`/hot/`、
- *     `/paihang/`、`/rank.html`、`/hot.html` 全部 **404**（XD 官网没有独立排行榜页）。
+ * ★★ v10.75 状态变更（**别再照旧注释理解本模块**）：
+ *   榜单源已从「XD 首页 `.hot-soft .plate-list`（每档实测只有 10 行）」换成
+ *   「XD `/update/` 的 8 个 panel（**每档实测 100 行**）」+ 机地热榜双源融合
+ *   ⇒ 每档候选池 108+ 条，**正常情况下永远轮不到补位**。
+ *   本模块因此**降级为兜底**：只在源站整档抓取失败 / 返回空表时，才用本地库热度凑够展示位，
+ *   以免首页出现「轮播空着 + 卡片只剩几格」的破相。
+ *
+ * 为什么当初需要它（**保留为历史依据**）：
+ *   首页要展示 11–13 个，而旧源每档 SSR **只有 10 行**（全站榜再剔 1 条工具 ⇒ 9 行）；
+ *   且已实测排除「源站还有更多可拿」：`/rank/`、`/top/`、`/hot/`、`/paihang/`、
+ *   `/rank.html`、`/hot.html` 全部 **404**。（该结论只对**旧源**成立，对 `/update/` 不适用。）
  *
  * ★★ 补位条目与源站榜**不同源**，这是本模块唯一必须守住的边界：
  *   标 `filled:true` 交给前端换措辞与配色（「库内热度」而非「🔥 热度」）。
- *   实测依据：榜单条目本身**几乎没有热度值**（周 0/10、月 1/10、全站 3/9 —— 源站榜行
+ *   实测依据：旧源榜单条目**几乎没有热度值**（周 0/10、月 1/10、全站 3/9 —— 源站榜行
  *   不带热度，库里对应条目又大多没有 `hot`），所以补位条目一旦照常显示
  *   「🔥 34.8 万 热度」，会比第 1–10 名还显眼，看着像「榜单从第 11 名起才变真」。
  *
@@ -19,18 +23,22 @@
  *   **仍要求 cover** —— 这是首页展示位，无图卡（首字色块）的观感代价远大于「少补一条」。
  */
 
-const RANK_SHOW_N = 13; // 首页榜单总展示数（轮播 5 + 卡片 8）
-const RANK_CAR_N = 5; // 轮播位条数
+/* ★ v10.75：展示位随卡片改 3 列而收窄为 11（轮播 5 + 卡片 2 行 × 3 列 = 6）。
+   这个数只在这里定义一处，服务端 meta 与前端分段都从这里取。 */
+const RANK_SHOW_N = 11; // 首页榜单总展示数（轮播 5 + 卡片 6）
+const RANK_CAR_N = 5;   // 轮播位条数
 
-/** 与源站 `cleanPlate` 同口径的非游戏条目过滤：榜单里混着运行库 / 检测工具 */
-const TOOL_RE = /(运行库|检测工具)/;
+/* ★ v10.75：非游戏条目判据**合并到单一真源** `data/rank-merge.js`。
+   原先它在本文件与 `fetchers/xdrank.cleanPlate` 里各写一份（同段逻辑两处实现）。 */
+const { TOOL_RE, coverScore } = require('./rank-merge');
 
 /**
  * 源站榜单不足 n 条时，用本地库按热度降序补足。**纯函数**，便于离线回归。
+ * ★ v10.75 起这是**兜底路径**（新源每档 100 条），正常数据下 `filled` 恒为 0。
  *
  * @param {Array} list 源站榜单（已映射本地库字段、已重编号）
  * @param {Array} all  本地库全量（`gamesDb.all()`）
- * @param {number} [n] 目标条数，默认 13
+ * @param {number} [n] 目标条数，默认 11
  * @returns {{list:Array, filled:number, srcN:number}}
  *   list  —— 定长（最多 n）的展示列表；补位条目标 `filled:true`
  *   filled —— 补了几条（0 = 源站本来就够，前端据此决定要不要显示「含库内补位」说明）
@@ -50,6 +58,9 @@ function fillRank(list, all, n) {
   for (const x of base) {
     if (x && x.url) seenUrl.add(x.url);
     if (x && x.title) seenTitle.add(String(x.title).trim());
+    /* ★ v10.75：融合后的条目带可能带 `jidiUrl`，也要进去重集 ——
+       否则「库里同一款游戏的 XD 记录」会与「已在榜上的机地条目」重复占位。 */
+    if (x && x.jidiUrl) seenUrl.add(x.jidiUrl);
   }
 
   const pool = (Array.isArray(all) ? all : [])
@@ -58,9 +69,10 @@ function fillRank(list, all, n) {
         g &&
         Number(g.hot) > 0 &&
         g.cover &&
-        g.url &&
+        (g.url || g.jidiUrl) &&
         !TOOL_RE.test(g.title || '') &&
         !seenUrl.has(g.url) &&
+        !seenUrl.has(g.jidiUrl) &&
         !seenTitle.has(String(g.title || '').trim())
     )
     .sort((a, b) => (Number(b.hot) || 0) - (Number(a.hot) || 0));
@@ -68,7 +80,9 @@ function fillRank(list, all, n) {
   const out = base.slice();
   for (const g of pool) {
     if (out.length >= target) break;
-    out.push({ ...g, rank: out.length + 1, filled: true });
+    /* ★ v10.75：补位条目也要带 `coverQ` —— 否则 meta 的「封面大图 n/m」会把补位条目算成 0，
+       指标就永远偏低且没人知道为什么（补位正常恒为 0，一旦非 0 这个数就是唯一线索）。 */
+    out.push({ ...g, rank: out.length + 1, filled: true, coverQ: coverScore(g.cover) });
   }
   return { list: out, filled: out.length - srcN, srcN };
 }

@@ -140,7 +140,16 @@ ok(/module\.exports = \{[^}]*coverOf[^}]*\}/.test(xdrankSrc), 'coverOf 已导出
 ok(/module\.exports = \{[^}]*mergeRankRows[^}]*\}/.test(xdrankSrc), 'mergeRankRows 已导出');
 
 const serverSrc = read('server.js');
-ok(/xdrank\.mergeRankRows\(/.test(serverSrc), '★ server 的 /api/rank 真的调用了 mergeRankRows');
+/* ★★ v10.75 职责转移（**不是把断言放宽**）：
+   v10.74 及以前，`/api/rank` 用 `xdrank.mergeRankRows(rows, dbAll)` 把**源站行**映射成
+   本地库字段（其中就含 cover 补全 —— 这个文件存在的理由）。
+   v10.75 换源后走 `rankMerge.rrfFuse(xdRows, jidiRows, dbAll)`：**同一个映射职责搬进了融合层**
+   （`buildIndex` 的 byId / byUrl / byZh 三张表 + 候选优选）。
+   ⇒ 判据跟着职责走：守的不再是「调了哪个函数」，而是
+     **「本地库被真的传进那唯一的映射入口」** —— 没传 dbAll 才是「线上没图」的真因。
+   ★ 判据按「传入 dbAll」而不是按函数名，正是为了避免下一次换实现时又红一遍。 */
+ok(/rankMerge\.rrfFuse\(\s*xdRows\s*,\s*jidiRows\s*,\s*dbAll\s*\)/.test(serverSrc),
+  '★ server 的 /api/rank 真的把本地库（dbAll）传进了映射入口 rrfFuse —— 没传就等于没图');
 ok(!/const byUrl = new Map\(all\.map/.test(serverSrc),
   '★ server 里已无内联的 byUrl 匹配（留着说明改的是死代码，线上还是没图）');
 ok(/cover: null, genres: \[\]/.test(serverSrc) === false || !/title: it\.name, cover: null/.test(serverSrc),

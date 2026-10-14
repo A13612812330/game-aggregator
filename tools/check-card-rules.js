@@ -37,6 +37,15 @@ const FILES = [
 const KEY = /\.(rel-it|x-it|row-card|sm-row|rk-card|rk-skel|sk-th|emu-card|skeleton|res-chip)\b/;
 /* 其中「承载图片的槽位」 */
 const IMGSLOT = /\.(th|cov|sk-th)\b|^\.sm-row img|\.noimg|\.ph2/;
+/* ★★ v10.75 新增：**图片槽的后代不是图片槽**。
+   实测（本轮）：`.rk-card .th .no`（名次角标）、`.rk-card .th .du`（双源徽标）因为名字里
+   含「`.th `」被 IMGSLOT 按**子串**匹配上，闸门于是要求一个 25px 的小角标
+   「改成 height:auto;aspect-ratio:var(--th-ar)」—— 荒谬，且会把角标压成一张图。
+   判据按子串匹配选择器，就会把它的**后代**一起吃掉；这里在 IMGSLOT 之前先排除。
+   写法：`.th` / `.cov` / `.sk-th` 后面**还有以空格分隔的一段** ⇒ 是后代，不是槽位本身。
+   ⚠️ 不写成「加进 IMG_EXCEPT」：那张表是「允许定高 + 钉住期望值」，
+      而角标**本来就该定高**（它是方块，不是图片）—— 语义不同，不能混进同一张表。 */
+const IMGSLOT_DESC = /\.(th|cov|sk-th)\s+\S/;
 
 /* A 段例外：图片槽允许定高（必须写出理由 + 期望值，闸门会把期望值钉住）
  * ⚠️ 例外**按选择器登记，不按页面**：emulator.html 是 index.html 的派生页、共用同一份 CSS，
@@ -123,6 +132,18 @@ const RAD_EXCEPT = new Set([
   '.res-chip',
   '.rel-row .rel-it .why',    // ★ 闸门新增：「为什么推荐」角标
   '.skeleton .sk-l1',         // 骨架条（假文字，比卡片小一号）
+  /* ★★ v10.75 闸门新增：榜单大图卡（`.rk-card` 改「上图下文」后新出现的三件**卡内小元素**）。
+   *   与 .cov-btn / .cfg-btn / .res-chip 同类 —— 它们压在封面上或贴在信息行里，
+   *   比卡片小一号才是对的；走 --cd-r（卡片圆角）会看起来像卡里嵌了张小卡片。
+   *   · `.rk-card .th .no` —— 名次角标（01 名次数字的方块，压在封面左上）
+   *   · `.rk-card .th .du` —— 「双源」徽标（胶囊，压在封面右上）
+   *   · `.rk-card .bd .s .tag` —— 分类标签胶囊（信息行里，与容量并列）
+   *   ★ 为什么这三个是 v10.75 才出现的：v10.74 的卡片是**横条**（.th 是 72px 缩略图，
+   *     没有角标/徽标），v10.75 改成竖卡后名次与徽标才移到封面上。
+   *   ⇒ 例外随被例外的规则一起出现，也随它消失（陈旧自检会盯着）。 */
+  '.rk-card .th .no',
+  '.rk-card .th .du',
+  '.rk-card .bd .s .tag',
 ]);
 
 /* ---------- CSS 规则抽取 ---------- */
@@ -159,7 +180,7 @@ for (const [tag, rel] of FILES) {
     if (!KEY.test(r.sel)) continue;
 
     /* --- A. 图片槽定高 --- */
-    if (IMGSLOT.test(r.sel)) {
+    if (IMGSLOT.test(r.sel) && !IMGSLOT_DESC.test(r.sel)) {
       stat.slots++;
       const hm = r.body.match(/(?:^|;)\s*height:\s*(\d+(?:\.\d+)?)px/);
       const hasAR = /aspect-ratio:\s*var\(--th-ar\)/.test(r.body);

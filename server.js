@@ -419,8 +419,13 @@ const related = require('./data/related');
 const jiditopics = require('./data/jiditopics');   /* v10.22 机地全量话题库读取层 */
 const indexer = require('./fetchers/indexer');
 const xdrank = require('./fetchers/xdrank');
-/* ★ v10.74：首页榜单补位（源站每档只给 10 行，而首页要展示 13 个）—— 纯函数，见模块头 */
+/* ★ v10.75：榜单源换成 XD `/update/`（8 档各 100 行，实测 SSR 直出） */
+const xdupdate = require('./fetchers/xdupdate');
+/* ★ v10.74：首页榜单补位（源站每档只给 10 行，而首页要展示 13 个）—— 纯函数，见模块头。
+   ★ v10.75：换源后每档 100 行 ⇒ 本模块降级为**兜底**（源站整档抓挂时才用）。 */
 const rankFill = require('./data/rank-fill');
+/* ★ v10.75：XD + 机地**双源加权融合**（RRF，名次先做相对位置对齐）—— 纯函数，见模块头 */
+const rankMerge = require('./data/rank-merge');
 
 /* ---- 库查询通用选项：容量区间(GB) + 仅看有手机模拟器配置(+实测) ---- */
 function libOpts(req) {
@@ -1498,52 +1503,76 @@ gamesDb.load();
 bannerhub.load();
 phonecfg.load();
 
-// ---------- 双热度合并榜 /api/rank（XD 官方周/月/全站 + 机地社区周） ----------
-// week/month/year：XD 官网首页三档 SSR 热度榜 → 映射本地库记录（URL 同源）
-// community：机地社区周热度（话题榜）→ 直接返回 jidi hotRanks weekly
+// ---------- 双源加权融合榜 /api/rank（v10.75 换源 + 合并） ----------
+// 旧源（v10.74 及以前）：XD 官网**首页** `.hot-soft .plate-list`，实测每档只有 10 行
+//   ⇒ 首页要 11–13 个只能靠本地库热度补位（补位条目与真榜混排，观感打折）。
+// 新源（v10.75）：XD 官网 `/update/` 页 **8 个 panel、每档实测 100 行、SSR 直出无 AJAX**
+//   ⇒ 不再需要补位；并与**机地热榜**做加权融合（用户拍板：双源合并给权重）。
+// 档位（用户拍板）：
+//   recent 最近更新 → **仅 XD**（机地没有「最近更新」这种榜，不硬凑）
+//   hot    人气排名 → XD `hot`     + 机地 `weekly`
+//   month  月度排名 → XD `month`   + 机地 `monthly`
+//   year   年度排名 → XD `year`    + 机地 `annual`
 const RANK_META = {
-  week: { label: '本周热门', src: 'xdgamer', tip: 'XD 官网 · 本周热门' },
-  month: { label: '当月最热', src: 'xdgamer', tip: 'XD 官网 · 当月最热' },
-  year: { label: '全站最热', src: 'xdgamer', tip: 'XD 官网 · 全站最热' },
-  community: { label: '社区热榜', src: 'jidi', tip: '机地 · 社区热度（周）' },
+  recent: { label: '最近更新', src: 'xdgamer', tip: 'XD 官网 · 最近更新' },
+  hot: { label: '人气排名', src: 'both', tip: 'XD 人气 + 机地本周热榜 · 加权合并' },
+  month: { label: '月度排名', src: 'both', tip: 'XD 月度 + 机地本月热榜 · 加权合并' },
+  year: { label: '年度排名', src: 'both', tip: 'XD 年度 + 机地历史热榜 · 加权合并' },
 };
+/** 档位 → 机地 hotRanks() 的键；null = 该档只有 XD（机地没有「最近更新」） */
+const RANK_JIDI_KEY = { recent: null, hot: 'weekly', month: 'monthly', year: 'annual' };
+/** 旧参数兼容（v10.74 及以前是 week / month / year / community）—— 外部链接与旧前端都可能带 */
+const RANK_ALIAS = { week: 'hot', community: 'hot', quarter: 'month', annual: 'year', good: 'hot', rank: 'year', size: 'year' };
+const RANK_PERIODS = Object.keys(RANK_META);
+
 app.get('/api/rank', async (req, res) => {
-  const p = ['week', 'month', 'year', 'community'].includes(String(req.query.p)) ? String(req.query.p) : 'week';
+  const raw = String(req.query.p || '');
+  const p = RANK_PERIODS.includes(raw) ? raw : (RANK_ALIAS[raw] || 'recent');
   if (req.query.refresh === '1') cache.delete('rank:' + p);
   try {
     const data = await cached('rank:' + p, 1_800_000, async () => {
       const dbAll = gamesDb.all();
-      let raw = null;
-      let mapped;
-      if (p === 'community') {
-        const hots = await jidi.hotRanks();
-        /* ★ v10.74：上限从写死的 12 改成 rankFill.RANK_SHOW_N —— 原来的 12 与「首页展示数」
-           是**两个各自写死的数**，源站哪天多给一条就会被我们自己砍掉。 */
-        mapped = (hots.weekly || []).slice(0, rankFill.RANK_SHOW_N).map((it, i) => withBh({ ...it, rank: it.rank || i + 1 }));
-      } else {
-        raw = await xdrank.rawHot(); // {week:[],month:[],year:[]}
-        const rows = raw[p] || [];
-        /* ★ v10.23：合并逻辑抽成纯函数放 xdrank 里（可离线回归）。
-           旧写法 `byUrl.get(it.url)` 落空即 cover:null → 前端只能显示首字占位块；
-           现在按「本地库精确命中 > 源站行图」取封面，库外条目也有图。 */
-        mapped = xdrank.mergeRankRows(rows, dbAll).map(withBh);
+      const jidiKey = RANK_JIDI_KEY[p] || null;
+      /* ★ 两源**并行**抓，且用 allSettled：任一侧挂掉都不该拖垮整档
+         （XD 挂了还有机地那 12 条，反之亦然；两边都挂才由下面的判空兜底）。 */
+      const [pnRes, jdRes] = await Promise.allSettled([
+        xdupdate.panels([p]),
+        jidiKey ? jidi.hotRanks() : Promise.resolve(null),
+      ]);
+      const xdRows = pnRes.status === 'fulfilled' ? (pnRes.value[p] || []) : [];
+      const jidiRows = (jidiKey && jdRes.status === 'fulfilled' && jdRes.value)
+        ? (jdRes.value[jidiKey] || []) : [];
+      /* ★★ 统一走**同一个融合入口**：jidiRows 为空时它自然退化成「仅 XD」，
+         不另写一条「只映射 XD」的渲染路径 —— 否则两条路径会各自漂移。 */
+      const fused = rankMerge.rrfFuse(xdRows, jidiRows, dbAll);
+      /* ★ 兜底补位：新源每档 100 行 ⇒ 正常恒为 0；只在源站整档抓挂时才有用 */
+      const f = rankFill.fillRank(fused, dbAll);
+      if (!f.list.length) {
+        throw new Error(`两源榜单都为空（XD ${pnRes.status} / 机地 ${jidiKey ? jdRes.status : '不适用'}）`);
       }
-      /* ★★ v10.74：实测源站每档只 SSR 10 行（全站榜剔掉 1 条工具后 9 行），
-         而首页要展示 13 个（轮播 5 + 卡片 8）⇒ 不足部分用**本地库热度**补足。
-         补位条目**不是**源站榜上的名次，所以必须标 `filled:true` 让前端换措辞与配色 ——
-         否则用户会以为第 11–13 名也是官方榜（来源见 data/rank-fill.js 头注释）。 */
-      const f = rankFill.fillRank(mapped, dbAll);
       return {
         p,
         meta: {
           ...RANK_META[p],
-          dropped: ((raw && raw._dropped) || {})[p] || 0,
-          srcN: f.srcN, // 源站原有条数
-          filled: f.filled, // 本地库补了几条（前端据此说明）
+          dropped: fused._dropped || 0,        // XD 侧被滤掉的非游戏条目数
+          srcN: f.srcN,                        // 融合候选条数（补位前）
+          filled: f.filled,                    // 本地库兜底补了几条（正常 0）
           showN: rankFill.RANK_SHOW_N,
           carN: rankFill.RANK_CAR_N,
+          xdN: (fused._srcN || {}).xd || 0,    // XD 有效行数
+          jidiN: (fused._srcN || {}).jidi || 0,// 机地行数（0 = 该档单源）
+          dualN: fused._dualN || 0,            // 两源都上榜的条数
+          /* ★ v10.75 封面质量（**口径 = 前端实际展示的那 11 条**，与 `list.length` 对齐；
+             早期版本误用「融合候选池（100 条）」当分子，会算出 `coverBig 94/11` 这种自相矛盾的值）。
+             `coverBigN` = 先验大概率 460×215 的条数（展示位是 2.14:1，方图会被裁+放大）。
+             `coverSubN` = 靠「同名提优」救回的条数。
+             ⚠️ 先验分 ≠ 实测可加载；真实性由前端 onerror 链 + v10.75 实拍套件兜。 */
+          coverBigN: f.list.filter((x) => (x.coverQ || 0) >= 3).length,
+          coverSubN: f.list.filter((x) => x.coverSub).length,
+          xdOk: pnRes.status === 'fulfilled',
+          jidiOk: !!(jidiKey && jdRes.status === 'fulfilled'),
         },
-        list: f.list,
+        list: f.list.map(withBh),
       };
     });
     res.json({ ok: true, fetchedAt: Date.now(), ...data });

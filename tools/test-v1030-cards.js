@@ -133,13 +133,40 @@ console.log('\n=== ④ 其余卡片族一致性 ===');
   for (const [sel, label] of [
     ['.row-card .th', '搜索结果缩略图'],
     ['.sm-row img', '搜索行缩略图'],
-    ['.rk-card .th', '排行缩略图'],
   ]) {
     const b = ruleOf(IDX, sel);
     ok(b.length > 0, '能取到 ' + sel + ' 规则体');
     ok(/aspect-ratio:var\(--th-ar\)/.test(b), label + ' 用 --th-ar 定比例');
     ok(/border-radius:var\(--cd-th-r\)/.test(b), label + ' 圆角走 --cd-th-r');
     ok(!/height:\d+px/.test(b), '★★ ' + label + ' 反向断言：不许再有硬编码高度');
+  }
+  /* ★★ v10.75 口径变更：`.rk-card .th`（首页排行**大图卡**）从 ① 组的 16:9 规范**独立出去**。
+     原因（用户原话「放大适配游戏大图而不是压缩游戏图片」）：
+       · 这一族展示位是**大图**，16:9 与游戏封面原比例（460×215 = 2.14）不一致 ⇒
+         容器比例 ≠ 原图比例时 `object-fit:cover` 必然裁切（底部一行被吃掉）。
+       · 所以它改用专属变量 `--cover-ar`，与 `.rk-car`（轮播）**同源同值** ——
+         「轮播 / 卡片 / 原图」三者同比例，才是「不裁不压」的**充要条件**。
+     ★ 圆角也上移到卡片层：`.rk-card` 自己 `border-radius:var(--cd-r);overflow:hidden`，
+       图片通栏顶到卡片边缘（参考站就是这么做的）。因此 `.th` **不许**再有自己的圆角 ——
+       否则会双层圆角，图与卡片边之间露出白缝。 */
+  {
+    const b = ruleOf(IDX, '.rk-card .th');
+    ok(b.length > 0, '能取到 .rk-card .th 规则体');
+    ok(/aspect-ratio:var\(--cover-ar\)/.test(b),
+      '★ 排行大图卡用 --cover-ar 定比例（与封面原图同比例 ⇒ cover 不再裁切）');
+    ok(!/aspect-ratio:var\(--th-ar\)/.test(b),
+      '★★ 反向断言：排行大图卡**不许**回到 16:9（--th-ar）—— 那会让 2.14 的封面被裁掉底部');
+    ok(!/border-radius/.test(b),
+      '★★ 反向断言：.th 不许自带圆角（圆角已上移到 .rk-card，双层会露白缝）');
+    ok(!/height:\d+px/.test(b), '★★ 排行大图卡反向断言：不许再有硬编码高度');
+
+    const card = ruleOf(IDX, '.rk-card');
+    ok(/border-radius:var\(--cd-r\)/.test(card), '★ .rk-card 自己走 --cd-r 圆角');
+    ok(/overflow:hidden/.test(card), '★ .rk-card 自己裁溢出（图片通栏顶到卡片边）');
+    ok(/--cover-ar/.test((/--cover-ar\s*:[^;]+/.exec(IDX) || [''])[0]),
+      '★ --cover-ar 与封面原图比例一致（460/215）');
+    ok(/--cover-ar\s*:\s*460\s*\/\s*215/.test(IDX),
+      '★★ --cover-ar 必须写 460/215 —— 与实测封面尺寸绑定，改它就得重测封面');
   }
   ok(/aspect-ratio:var\(--th-ar\)/.test(ruleOf(IDX, '.sm-row .ph2')),
     '★ 搜索行占位块 .ph2 与图片同步（只改 img 不改 ph2 ⇒ 有图/无图两行高度不同）');

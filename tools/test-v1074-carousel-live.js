@@ -24,7 +24,19 @@
  *   必须把鼠标**移出轮播**再计时 —— 轮播有 `mouseenter → rkCarStop`（悬停暂停）。
  *   鼠标停在轮播上时两次间隔会拉到 5s+（暂停那段不计），判据会**假绿**。
  *
+ * ★ v10.75 口径变更（本套件这一轮被批次照出来是**漏改**，教训一并记下）：
+ *   v10.75 把榜单换源到 XD `/update/`（每档实测 **100 行**）+ 卡片改 **3 列**（用户拍板
+ *   「一行 3 个放大」），于是本套件四处口径过期：卡片 8 → **6**、4 列 → **3 列**、
+ *   轮播「定高 200px」→ **按 `--cover-ar` 比例**、补位「filled > 0」→ **源量充足 ⇒ 恒不触发**。
+ *   ★★ 更硬的一条：档位 pill 的 `data-p` 从 `week` 改成 **`recent/hot/month/year`**，
+ *      旧选择器 `.stage-pill[data-p="week"]` 直接 **抛错崩掉整套**（exit 2）。
+ *   ⇒ 教训：**改主源里的选择器/枚举值时，必须 `grep` 全部 `tools/test-*.js` 里的同一字符串**。
+ *      本轮静态套件改了、这套漏了 —— 而它**只在浏览器层跑**，静态层永远照不出来。
+ *   ★ 另一条探针自身的坑：接口参数是 **`?p=`**，不是 `?period=`；写错时服务端**静默落回默认档**，
+ *      返回合法 JSON ⇒ 差点被读成「补位没了」。（铁律 127 同族）
+ *
  * 跑法：node tools/test-v1074-carousel-live.js   （需 8123 在跑；约 40 s）
+ *   ★ 建议打 8124 临时实例：BASE=http://127.0.0.1:8124 node tools/test-v1074-carousel-live.js
  */
 const { connectBrowser, newPage, sleep } = require('./browser');
 
@@ -67,6 +79,14 @@ const READ = () => {
     arwN: q('#rkCar .arw').length,
     arwDisp: q('#rkCar .arw').map((a) => getComputedStyle(a).display),
     carH: Math.round(car.getBoundingClientRect().height),
+    /* ★ v10.75 新增：宽也要取 —— A9 从「定高 200px」改成「守比例」（见 A9 注释）。 */
+    carW: Math.round(car.getBoundingClientRect().width),
+    /* ★★ G2b 的参照物：同区里另一个**整宽块**（`.rk-grid` 是满宽网格）。
+       ★ 为什么不写死「视口 - 30」：第一版就是这么写的，实测内容区其实是 `视口 - 40`
+         （页面左右各 20px 内边距），于是**必然红** —— 典型的「我以为的数」。
+       改成「**轮播宽 == 同区整宽块宽**」后，页面内边距怎么调都不会误伤，
+       而「宽度被 height 反算压窄」（v10.74 的 282）依然照得出来。 */
+    fullW: Math.round((document.querySelector('#rankList .rk-grid') || car).getBoundingClientRect().width),
     cardN: cards.length,
     cardColN: cards.filter((c) => Math.round(c.getBoundingClientRect().top) === t0).length,
     libN: libCards.length,
@@ -133,7 +153,7 @@ const INSTALL_WATCH = () => {
     await sleep(800);
     const r0 = await p.evaluate(READ);
 
-    hr('A. 结构（桌面 1440×1000）—— 轮播 5 张 + 卡片 8 张 = 13 个游戏');
+    hr('A. 结构（桌面 1440×1000）—— 轮播 5 张 + 卡片 6 张（3 列 × 2 行）= 11 个游戏');
     chk('A0 阳性对照：轮播真渲染出 .slide（否则下面全是「没数据」的假红）', ok0 && r0.car && r0.n > 0,
       'n=' + (r0.car ? r0.n : '—'));
     chk('A1 ★★ 轮播恰好 5 张（用户原话：前五做成轮播图）', r0.n === 5, '实测 ' + r0.n + ' 张');
@@ -147,9 +167,25 @@ const INSTALL_WATCH = () => {
     chk('A5 ★★ 高亮指示点的索引 === 当前 slide 索引（视觉与状态一致）', r0.dotOn === r0.cur,
       'dot.on=' + r0.dotOn + ' cur=' + r0.cur);
     chk('A6 ★ 左右箭头都在', r0.arwN === 2, '实测 ' + r0.arwN);
-    chk('A7 ★★ 卡片恰好 8 张（13 - 轮播 5）', r0.cardN === 8, '实测 ' + r0.cardN);
-    chk('A8 ★★ 卡片是 4 列 × 2 行（首行 4 张）', r0.cardColN === 4, '首行 ' + r0.cardColN + ' 张');
-    chk('A9 ★ 轮播高度是拍板的 200px 档（195~215）', r0.carH >= 195 && r0.carH <= 215, '实测 ' + r0.carH + 'px');
+    /* ★★ v10.75 口径变更：总数 13 → **11**（轮播 5 + 卡片 6），卡片 8 → **6**。
+       起因：榜单换源到 XD `/update/`（每档实测 **100 行**，旧源只有 10 行），
+       用户同时拍板「一行 3 个、两行」。⇒ 这里三个数字一起改。 */
+    chk('A7 ★★ 卡片恰好 6 张（11 - 轮播 5；v10.75 起总数由 13 改为 11）', r0.cardN === 6, '实测 ' + r0.cardN);
+    chk('A8 ★★ 卡片是 3 列 × 2 行（首行 3 张；v10.74 是 4 列，用户本轮要求「一行 3 个放大」）',
+      r0.cardColN === 3, '首行 ' + r0.cardColN + ' 张');
+    /* ★★ v10.75 口径变更：轮播高度**不再是定值**（v10.74 拍板 200px，v10.75 改成
+       `aspect-ratio:var(--cover-ar)` 由宽度推高，实测桌面 ≈ 559px）。
+       ⇒ 判据从「195~215 定高」改成「**展示框比例 == 封面原图比例（460/215 ≈ 2.14）**」+
+       一个「确实比旧版大得多」的下界 —— 前者才是用户要的「适配图片高度、不裁不压」，
+       后者挡住「比例对了但被压得很小」这种退化。
+       ★ 为什么不直接判 carH === 559：那是照抄实测值，任何正常微调都会红（见 test-home-fold 头部纪律）。 */
+    {
+      const ar = r0.carH > 0 ? r0.carW / r0.carH : 0;
+      chk('A9 ★★ 轮播框比例 == 封面原图比例（460/215 ≈ 2.14）—— 这才是「适配图片高度」',
+        Math.abs(ar - 2.14) < 0.06, '实测 ' + r0.carW + '×' + r0.carH + ' ⇒ ' + ar.toFixed(3));
+      chk('A9b ★ 桌面轮播高 ≥ 400px（负向：v10.74 的 200px 定高已废止，别再退回去）',
+        r0.carH >= 400, '实测 ' + r0.carH + 'px');
+    }
 
     /* ---- B. 手动切（真鼠标事件，走 page.click 的坐标命中） ----
        ★ 为什么每条都「点前读一次、点后读一次」而不是跟 r0.cur 比：
@@ -215,13 +251,15 @@ const INSTALL_WATCH = () => {
     const c4 = await p.evaluate(READ);
     chk('C4 ★ 采样结束后仍是稳定态：恰好 1 张 `.cur`', c4.curN === 1 && c4.cur >= 0, 'cur=' + c4.cur);
 
-    /* ---- D. 切档后的定时器纪律（本版最容易踩的坑） ---- */
-    hr('D. 切档（周 → 月）：重渲之后轮播**重建且只有一个推手**');
+    /* ---- D. 切档后的定时器纪律（本版最容易踩的坑） ----
+       ★ v10.75：档位 pill 由 week/month/year 改成 **recent/hot/month/year**（用户拍板四个档），
+         默认档是 `recent`。切到 `month` 再切回 `recent` —— 两条路径都要真点（不许只判第一次渲染）。 */
+    hr('D. 切档（最近更新 → 月度）：重渲之后轮播**重建且只有一个推手**');
     await p.click('.stage-pill[data-p="month"]');
     await sleep(2500);
     const d1 = await p.evaluate(READ);
-    chk('D1 ★★ 切档后轮播重建：仍是 5 张 + 恰好 1 张 `.cur` + 卡片 8 张',
-      d1.car && d1.n === 5 && d1.curN === 1 && d1.cardN === 8,
+    chk('D1 ★★ 切档后轮播重建：仍是 5 张 + 恰好 1 张 `.cur` + 卡片 6 张（v10.74 为 8 张）',
+      d1.car && d1.n === 5 && d1.curN === 1 && d1.cardN === 6,
       'slide ' + d1.n + ' cur ' + d1.curN + ' 卡 ' + d1.cardN);
     /* ★★ D2：切档后**重新装观察器**再计时 —— 旧容器已销毁，旧观察器跟着失效。
        如果 `rkCarStop()` 没在重渲前调用，旧 interval 会继续推**新容器**，
@@ -238,29 +276,47 @@ const INSTALL_WATCH = () => {
     chk('D3 ★ 切档后自动播放**没有**被永久停掉（重渲要重新起播）', w2.t.length >= 1,
       '切换 ' + w2.t.length + ' 次');
 
-    /* ---- E. 补位条目的真渲染（与接口 meta 对齐） ---- */
-    hr('E. 补位（源站每档只给 10 行，而首页要 13 个 ⇒ 尾部由本地库热度补）');
+    /* ---- E. 补位：v10.75 起**正常路径恒不触发**（换源后每档 100 行） ----
+       ★★ 这一节整体重写，原因值得记下来（口径变更 ≠ 降级）：
+         v10.74 的 E 段建立在「源站每档只给 10 行 ⇒ 必须补位」上，E0 是「filled > 0」阳性对照。
+         换源到 XD `/update/` 后**每档实测 100 行** ⇒ 补位**永远不会被触发**（filled 恒 0）：
+           · 沿用旧 E0（filled > 0）⇒ **必然红**；
+           · 改成「filled === 0」⇒ 又变**假绿**（源站哪天掉回 10 行、补位该生效却不生效，照样绿）。
+         ⇒ 正确口径是**守「源量足够」这个前提**，而不是守补位结果：
+           E0 = 接口 `srcN >= showN`（源站给的行数够填满展示位 ⇒ 补位**不该**被触发）；
+           E1 = 页面补位卡数 === `showN - srcN`（两处一致）。
+         这样 E1 在**两种源量下都是有效断言**（srcN 足 ⇒ 期望 0；srcN 不足 ⇒ 期望 > 0）。 */
+    hr('E. 补位（v10.75 起源量充足 ⇒ 正常路径恒不触发；逻辑保留作兜底）');
     const api = await p.evaluate(async () => {
-      const r = await fetch('/api/rank?p=week');
+      const r = await fetch('/api/rank?p=recent');
       const j = await r.json();
       return { fill: (j.meta || {}).filled, srcN: (j.meta || {}).srcN, showN: (j.meta || {}).showN, n: (j.list || []).length };
     });
-    chk('E0 阳性对照：接口真有补位（filled > 0）—— 否则 E1/E2 是无样本的空断言',
-      api.fill > 0, 'meta filled=' + api.fill + ' srcN=' + api.srcN + ' showN=' + api.showN + ' list=' + api.n);
-    /* 回到周榜再验一次（D 段把页面切到了月榜；这时接口值仍以周榜为准，故先切回） */
-    await p.click('.stage-pill[data-p="week"]');
+    chk('E0 ★★ 阳性对照：源量足够填满展示位（srcN ≥ showN）—— 这是「补位不该触发」的前提，不是「必然为 0」',
+      api.srcN >= api.showN,
+      'meta srcN=' + api.srcN + ' showN=' + api.showN + ' filled=' + api.fill + ' list=' + api.n);
+    /* 回到默认档（D 段把页面切到了月榜；接口值以 recent 档为准，故先切回） */
+    await p.click('.stage-pill[data-p="recent"]');
     await sleep(2500);
     const e = await p.evaluate(READ);
     chk('E1 ★★ 页面上的 `.libsrc` 卡片数 === 接口 meta.showN - srcN（补位不是照目录写的静态数）',
       e.libN === (api.showN - api.srcN), '页面 ' + e.libN + ' vs 接口 ' + (api.showN - api.srcN));
-    chk('E2 ★★ 补位卡的措辞是「📚 库内」（不是「🔥 x 热度」）',
-      e.libTxt.indexOf('\u5e93\u5185') !== -1 && e.libTxt.indexOf('\ud83d\udd25') === -1,
-      JSON.stringify(e.libTxt.slice(0, 60)));
+    /* ★★ E2/E4 是**样本量自适应**的：无补位卡时不许去判「补位卡的措辞」——
+       空数组上 `every` / `indexOf` 恒真 ⇒ **假绿**（铁律 124 `every` 单元素/空数组恒真）。
+       ⇒ libN > 0 才判措辞；libN === 0 时改判「补位措辞没泄漏到真榜卡上」。 */
+    chk('E2 ★★ 补位卡措辞是「📚 库内」（不是「🔥 x 热度」）；无补位卡时改判「措辞未泄漏到真榜卡」',
+      e.libN > 0
+        ? (e.libTxt.indexOf('\u5e93\u5185') !== -1 && e.libTxt.indexOf('\ud83d\udd25') === -1)
+        : (e.libN === 0 && e.srcCardTxt.indexOf('\u5e93\u5185') === -1),
+      'libN=' + e.libN + ' ' + JSON.stringify(e.libTxt.slice(0, 60)));
     chk('E3 ★★ 第 1 张卡不是补位卡（负向：真榜名次不许被补位条目顶掉）', e.firstLib === false);
-    chk('E4 ★ meta 文案如实说明补位条数（不许让用户以为第 11-13 名也是官方名次）',
-      e.metaTxt.indexOf('\u5e93\u5185\u70ed\u5ea6\u8865\u4f4d') !== -1, JSON.stringify(e.metaTxt.slice(0, 90)));
+    chk('E4 ★ meta 文案与补位条数**一致**（补了就要如实说；没补就不许出现「库内热度补位」）',
+      api.fill > 0
+        ? e.metaTxt.indexOf('\u5e93\u5185\u70ed\u5ea6\u8865\u4f4d') !== -1
+        : e.metaTxt.indexOf('\u5e93\u5185\u70ed\u5ea6\u8865\u4f4d') === -1,
+      'filled=' + api.fill + ' ' + JSON.stringify(e.metaTxt.slice(0, 90)));
 
-    /* ---- F. 点卡片进详情（13 个卡片的点击链必须真通） ---- */
+    /* ---- F. 点卡片进详情（11 个卡片的点击链必须真通） ---- */
     hr('F. 点卡片 ⇒ 打开详情抽屉');
     const firstName = await p.evaluate(() => {
       const c = document.querySelector('#rankList .rk-grid .rk-card');
@@ -294,14 +350,26 @@ const INSTALL_WATCH = () => {
     /* 箭头在 ≤760 档 `display:none`（36px 的圆钮在 390 宽下会压住标题） */
     chk('G1 ★★ 移动端箭头是 `display:none`（负向：36px 圆钮会压住标题）',
       m0.arwDisp.length === 2 && m0.arwDisp.every((d) => d === 'none'), JSON.stringify(m0.arwDisp));
-    chk('G2 ★ 移动端轮播降高（132px 档，实测 ≤145）', m0.carH <= 145, '实测 ' + m0.carH + 'px');
+    /* ★★ v10.75 口径变更：G2 原来守「移动端降到 132px」—— 那条**定高**正是本轮删掉的缺陷：
+       `aspect-ratio` 与确定 `height` 并存时宽度被 `height × ratio` 反算（实测 390 视口下
+       只有 282×132，**没撑满 350 的内容区**；height 再大还会横向溢出）。
+       ⇒ 改成守**比例**（与桌面同一条判据），并加「确实撑满了内容区」的下界。
+       ★ 这条也解释了为什么本套件能在浏览器层抓到它：**静态层看的是源码有没有 height**，
+         而「渲染出来到底多宽」只有真跑才量得到。 */
+    {
+      const arM = m0.carH > 0 ? m0.carW / m0.carH : 0;
+      chk('G2 ★★ 移动端轮播框比例也 == 封面原图比例（460/215 ≈ 2.14）—— 与桌面同一条判据',
+        Math.abs(arM - 2.14) < 0.06, '实测 ' + m0.carW + '×' + m0.carH + ' ⇒ ' + arM.toFixed(3));
+      chk('G2b ★★ 移动端轮播**撑满内容区**（宽 == 同区整宽块；负向：v10.74 的 132px 定高会把它压到 282）',
+        m0.fullW > 0 && Math.abs(m0.carW - m0.fullW) <= 2, '轮播 ' + m0.carW + ' vs 同区整宽块 ' + m0.fullW);
+    }
     await pm.click('#rkCar .dot[data-i="3"]');
     await sleep(800);
     const m1 = await pm.evaluate(READ);
     chk('G3 ★★ 移动端点第 4 颗指示点仍能切张（箭头藏了，点是指示点唯一入口）',
       m1.cur === 3 && m1.curN === 1, 'cur=' + m1.cur + ' curN=' + m1.curN);
-    /* 移动端卡片 2 列 ⇒ 8 张 = 4 行 */
-    chk('G4 ★★ 移动端卡片 2 列（8 张 = 4 行）', m0.cardColN === 2, '首行 ' + m0.cardColN + ' 张');
+    /* 移动端卡片 2 列 ⇒ 6 张 = 3 行（v10.75：卡片总数由 8 改成 6） */
+    chk('G4 ★★ 移动端卡片 2 列（6 张 = 3 行；v10.74 是 8 张 = 4 行）', m0.cardColN === 2, '首行 ' + m0.cardColN + ' 张');
     await pm.close();
 
     /* ============================================================
