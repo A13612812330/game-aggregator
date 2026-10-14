@@ -59,7 +59,10 @@ const IDX = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 
        hero 由 ~424 涨到 ~1175（**这是拍板取舍，不是回归**）。列表因此被推到 1501。
      实测（8124 实测实例，收起态）：桌面 首卡 top **1501** / 首屏游戏条目 **4**；
                                     移动 首卡 top **1097** / 首屏游戏条目 **7**。
-     ⇒ 桌面 foldMin 由 9 降到 **3**（实测 4）；F3 阈值按「实测 + ~10% 余量」重定为 1650 / 1200。
+     ⇒ 桌面 foldMin 由 9 降到 **3**（实测 4）；F3 阈值按「实测 + ~10% 余量」重定。
+     ★★ v10.76：卡片由 6 张 2 行变 **9 张 3 行** ⇒ hero 再涨一截，F3 阈值重定一次：
+       实测 1610 / 1399 ⇒ **1700 / 1490**（余量 ~6%）。方向没变：F3 仍只是「hero 不许再涨」的退化护栏，
+       首屏的内容保证由 foldMin 那条负。⚠️ 与 test-home-fold 的 firstTopMax **必须同源**（两套测同一件事）。
        ⚠️ 桌面 foldMin 降幅看着大，但它守的一直是「首屏必须有游戏」这个承诺 ——
           v10.68 的红线是「**一条都露不出来**」，现在首屏装着 4 个（1 超大轮播 + 3 大卡）。
           把它硬留在 9 只会变成噪音：除非把轮播压回 200px，否则永远红。
@@ -70,8 +73,8 @@ const IDX = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 
      （本轮实测：8123 报首卡 top **1768**，同一份前端在 8124 上是 **1501**）。
      判「常驻是不是最新代码」看回包里有没有新字段（如 `meta.coverBigN`）。 */
 const VIEWPORTS = [
-  { key: '桌面 1440×1000', w: 1440, h: 1000, saveMin: 100, barMax: 60, foldMin: 3, firstTopMax: 1650 },
-  { key: '移动 390×844', w: 390, h: 844, saveMin: 100, barMax: 110, foldMin: 5, firstTopMax: 1200 },
+  { key: '桌面 1440×1000', w: 1440, h: 1000, saveMin: 100, barMax: 60, foldMin: 3, firstTopMax: 1700 },
+  { key: '移动 390×844', w: 390, h: 844, saveMin: 100, barMax: 110, foldMin: 5, firstTopMax: 1490 },
 ];
 
 let pass = 0; let fail = 0;

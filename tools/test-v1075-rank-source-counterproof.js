@@ -167,6 +167,37 @@ const CASES = [
       '<div class="meta2">${src}${"🔥 "}${meta.join(\'\')}</div>   <!-- 反证：热度回来了 -->'),
     need: ['D12'],
   },
+  {
+    label: '⑭ ★★ 榜单缓存退回「一律 30 分钟」（降级结果被钉住 ⇒ 一次抖动 = 半小时单源）',
+    file: 'server.js',
+    /* ★★ 对应 v10.76 真踩到的：首调机地侧偶发失败 ⇒ 融合退化成仅 XD，
+       而 30 分钟 TTL 把降级结果钉死（连打三次 refresh=1 才恢复 jidiN=12）。
+       打坏方式 = 把函数 TTL 换回固定值。 */
+    break: (s) => s.replace("const data = await cached('rank:' + p, rankTtl, async () => {",
+      "const data = await cached('rank:' + p, 1_800_000, async () => {   /* 反证：降级也被缓存半小时 */"),
+    need: ['D13'],
+  },
+  {
+    label: '⑯ ★★ 去掉机地侧硬超时（挂住的一侧会把接口拖到 40s —— 实测点档位半天不出结果）',
+    file: 'server.js',
+    break: (s) => s.replace("        jidiKey ? withTimeout(jidi.hotRanks(), 6000, '机地热榜') : Promise.resolve(null),",
+      '        jidiKey ? jidi.hotRanks() : Promise.resolve(null),   /* 反证：无超时 */'),
+    need: ['D16'],
+  },
+  {
+    label: '⑰ ★★ `withTimeout` 不给内层挂 catch（内层 rejection 无人处理 ⇒ Node 22 崩进程）',
+    file: 'server.js',
+    break: (s) => s.replace(/    p\.then\(\r?\n      \(v\) => \{ clearTimeout\(t\); resolve\(v\); \},\r?\n      \(e\) => \{ clearTimeout\(t\); reject\(e\); \},\r?\n    \);/,
+      '    p.then((v) => { clearTimeout(t); resolve(v); });   /* 反证：内层 rejection 无人管 */'),
+    need: ['D17'],
+  },
+  {
+    label: '⑮ `cached()` 取消函数 TTL 支持（传函数的调用点会静默拿到「undefined TTL」）',
+    file: 'server.js',
+    break: (s) => s.replace("    (v) => { if (typeof ttlMs === 'function') entry.ttl = ttlMs(v); },",
+      '    () => {},   /* 反证：函数 TTL 永不求值 */'),
+    need: ['D14'],
+  },
 ];
 
 /* ============ 断言 id 契约（把「need 写歪」变成机器能拦的事） ============

@@ -43,6 +43,15 @@
          16/9 用在「小缩略图」（列表/小卡，尺寸小、裁一点看不出来），
          cover-ar 用在「大图展示位」（轮播 / 榜单卡），那里裁切一眼就看得出来。 */
     --cover-ar:460 / 215;
+    /* ★★ v10.76：轮播的**最大宽度**（= 用户口径「轮播图太大了」的落点）。
+       为什么用「限宽」而不是「限高」：源图比例是 2.14:1，要变矮只能同时变窄。
+       ★★ 千万不要用 `height` 去限高 —— CSS 里 `aspect-ratio` 与确定 `height` 并存时
+          **宽度会被 `height × ratio` 反算**（v10.75 实测：`height:132px` ⇒ 宽被压到 282，
+          `height:200px` ⇒ 428 直接横向溢出父容器的 350）。这里用 `width:min(100%, …)`
+          + `aspect-ratio`，高自然由宽算出 ⇒ 两个方向都不打架。
+       810px ⇒ 桌面内容区（1240 − 44 = 1196）上限下高度 = 810 ÷ 2.1395 ≈ **379px**
+       （改前是全宽 1196 ⇒ 559px，占满整个首屏）。窄屏自动退化成撑满，无需媒体查询。 */
+    --car-max-w:810px;
     --cd-s:106px;           /* 同类游戏小卡固定宽度（配合 min-width/max-width 用，防被内容撑开） */
     /* ★ v10.31：「修改器 / 云存档」两侧卡片的**单行槽位高**（用户口径
        「固定显示五个，而不是如果一边只有一个那个卡片大小就变小了」）。
@@ -147,6 +156,15 @@
        （那是深色底上的装饰，白底上会变成脏点）。 */
   .stage{position:relative;background:var(--c-surface);border-bottom:1px solid var(--c-border);overflow:hidden}
   .stage .in{position:relative;z-index:1;padding:13px 22px 13px}
+  /* ★★ v10.76：`.stage-meta` 固定成**独占一行 + 定高 + 单行省略**。
+     为什么必须这样（探针实测，不是猜的）：改前它是 `flex:none`、宽度跟着文案走 ——
+       `recent` 档文案 **158px**，能挤在标题那一行 ⇒ `.stage-h` 高 **46px**；
+       `hot/month/year` 档文案 **485–592px**，挤不下就换到第二行 ⇒ `.stage-h` 高 **85px**（+39px）。
+     点档位 pill 时整个榜单区连带下面的「最新收录」一起下移 —— 这就是用户说的
+     「**点击年度榜会有页变化**」。
+     ⇒ 三道一起上：① `flex:0 0 100%` 强制独占一行（**位置**不随文案长度变）；
+                ② 行高定死（**高度**不随行数变）；③ 文案 nowrap + 省略号（**行长**不随文案变）。
+     全站口径：**状态行的高度不许由文案长度决定**（同理适用于任何会变长变短的状态文案）。 */
   .stage-h{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:10px}
   .stage-h h1{color:var(--c-t1);font-size:clamp(17px,1.7vw,20px);font-weight:800;letter-spacing:.3px;display:flex;align-items:center;gap:8px;line-height:1.2}
   .stage-h h1 .fire{font-size:18px}
@@ -156,7 +174,11 @@
   .stage-pill{font-size:12.5px;font-weight:700;color:var(--c-t2);padding:5px 14px;border-radius:8px;transition:.16s;white-space:nowrap}
   .stage-pill:hover{color:var(--c-primary)}
   .stage-pill.on{background:#fff;color:var(--c-primary);box-shadow:0 1px 4px rgba(18,26,51,.13)}
-  .stage-meta{display:flex;align-items:center;gap:10px;color:var(--c-t3);font-size:11.5px;flex:none}
+  /* ★★ v10.76：定高 24px（= 右侧「刷新」按钮的实测高 24px，行高不能再压）。
+     文案侧 `#rankMeta` 是唯一的弹性项：`flex:1;min-width:0` + nowrap 省略号。 */
+  .stage-meta{display:flex;align-items:center;gap:10px;color:var(--c-t3);font-size:11.5px;flex:0 0 100%;height:24px;overflow:hidden}
+  /* ★ 全文仍可通过 `title` 悬停看到（省略号只截显示、不截信息）—— JS 侧 `paintRank()` 里设。 */
+  #rankMeta{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .stage-refresh{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:650;color:var(--c-t2);border:1px solid var(--c-border2);padding:4px 11px;border-radius:99px;transition:.16s;background:#fff}
   .stage-refresh:hover{background:#F5F7FB;color:var(--c-t1)}
   .stage-refresh.busy{opacity:.5;pointer-events:none}
@@ -166,6 +188,7 @@
      改前形态：冠军大卡（#1）+ 5 列小卡（#2-6）= 共 6 个，冠军卡 58px 横条。
      ★★ v10.75：轮播 **5 张**（高度按封面原比例自适应，见下）+ 卡片**3 列 × 2 行 = 6 张**
        ⇒ 首页榜单共展示 **11 个**（用户口径「一行显示3个」）。
+     ★★ v10.76：卡片改 **3 列 × 3 行 = 9 张** ⇒ 共展示 **14 个**（用户口径「轮播图下需要的是 9 个卡片」）。
        展示总数只在 `data/rank-fill.js` 的 `RANK_SHOW_N` 定义一处，服务端 meta 下发。
      ★ 为什么轮播的 DOM 必须由 JS 现创建：派生页由 page-assets.scriptForSubpage()
        从主源**整段抽走**脚本，而 `#rankStage` 节点只存在于首页 ⇒ 静态 DOM 在派生页
@@ -175,8 +198,12 @@
      （2.14:1），塞进桌面 ~1198px 宽 × 200px（≈6:1）的容器后，**上下各被裁掉约 32%**
      —— 观感就是「图被压扁/切掉」，这正是用户这次点出来的问题。
      现在容器与图片**同比例**（`--cover-ar` = 460/215）⇒ 完整显示，不裁也不留白。
-     实测宽度换算（内容区宽 ÷ 2.14）：桌面 ~1198 ⇒ **~560px**；平板 ~770 ⇒ ~360px；移动 ~350 ⇒ ~164px。 */
-  .rk-car{position:relative;aspect-ratio:var(--cover-ar);border-radius:var(--cd-r);overflow:hidden;background:#EDF0F6;margin-bottom:12px}
+     实测宽度换算（内容区宽 ÷ 2.14）：桌面 ~1198 ⇒ **~560px**；平板 ~770 ⇒ ~360px；移动 ~350 ⇒ ~164px。
+     ★★ v10.76：用户回了一句「**轮播图太大了**」—— 桌面 559px 高把整个首屏吃满（连一行卡片都露不出来）。
+       修法：给它一个最大宽度 `--car-max-w`（810px ⇒ 379px 高）并居中，
+       比例与自适应**一个字都没改**（所以「不裁不压」这条 v10.75 的成果仍在）。
+       ★ 限宽而不是限高：见 `--car-max-w` 处的注释（height 与 aspect-ratio 并存会反算宽度）。 */
+  .rk-car{position:relative;width:min(100%,var(--car-max-w));aspect-ratio:var(--cover-ar);border-radius:var(--cd-r);overflow:hidden;background:#EDF0F6;margin:0 auto 12px}
   .rk-car .slide{position:absolute;inset:0;opacity:0;transition:opacity .45s ease;cursor:pointer;z-index:1}
   /* ★★ 当前张用 `.cur`，**不是** `.on`。
      原因：`.on` 在本项目里是「当前打开的那条详情」的通用激活类（`rankMark()` 会给
@@ -188,19 +215,22 @@
   .rk-car .slide .ph{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-weight:800;font-size:52px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
   /* 底部渐变遮罩：文字要压在图上，没有它浅色封面会读不清（XDGAME 首页同款做法） */
   .rk-car .shade{position:absolute;inset:0;background:linear-gradient(to top,rgba(9,14,30,.9) 0%,rgba(9,14,30,.6) 34%,rgba(9,14,30,.12) 62%,rgba(9,14,30,0) 82%);pointer-events:none;z-index:2}
-  .rk-car .info{position:absolute;left:0;right:0;bottom:0;padding:0 22px 20px;display:flex;align-items:flex-end;gap:14px;pointer-events:none;z-index:3}
+  /* ★ v10.76：右侧多留 106px —— 轮播变窄（1196 → 810）后，原本「刚好不撞」的
+     右下指示点会压到评分上（指示点占右起 18–96px）。预留量 = 78(点阵宽) + 18(右边距) + 10 余量。 */
+  .rk-car .info{position:absolute;left:0;right:0;bottom:0;padding:0 106px 20px 22px;display:flex;align-items:flex-end;gap:14px;pointer-events:none;z-index:3}
   .rk-car .info .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
   .rk-car .info .tt{display:flex;align-items:center;gap:10px;min-width:0}
   .rk-car .info .tag1{font:800 12px/1 var(--font-num);color:#fff;background:linear-gradient(135deg,#F97316,#E11D48);padding:5px 10px;border-radius:6px;letter-spacing:.5px;flex:none;box-shadow:0 2px 8px rgba(225,29,72,.35)}
-  /* ★ v10.75：轮播从 200px 涨到 ~560px（按原图比例），字号跟着放大才有分量 */
-  .rk-car .info .t{font-size:26px;font-weight:800;color:#fff;line-height:1.2;min-width:0;
+  /* 字号：v10.75 按 ~560px 高定的 26px，v10.76 轮播收到 379px 高、宽度也从 1196 降到 810
+     ⇒ 回落一档到 22px（26px 配 810 宽的图会显得字压图）。 */
+  .rk-car .info .t{font-size:22px;font-weight:800;color:#fff;line-height:1.2;min-width:0;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 8px rgba(0,0,0,.45)}
   .rk-car .info .en{font-size:13px;color:rgba(255,255,255,.72);font-family:var(--font-num);flex:0 1 auto;min-width:0;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .rk-car .info .meta2{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:12.5px;font-weight:600}
   .rk-car .info .meta2 .it{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.24);border-radius:99px;padding:3px 11px;color:#fff;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
   .rk-car .info .meta2 .it.hot{background:rgba(251,146,60,.92);border-color:rgba(253,186,116,.9);color:#3A1B02;font-weight:750}
-  .rk-car .info .sc2{font:800 30px/1 var(--font-num);color:#fff;flex:none;text-align:center;text-shadow:0 1px 8px rgba(0,0,0,.45)}
+  .rk-car .info .sc2{font:800 26px/1 var(--font-num);color:#fff;flex:none;text-align:center;text-shadow:0 1px 8px rgba(0,0,0,.45)}
   .rk-car .info .sc2 small{display:block;font-size:10px;font-weight:600;color:rgba(255,255,255,.72);margin-top:3px;font-family:var(--font)}
   /* 左右箭头：默认隐藏、悬停浮现（不抢封面） */
   .rk-car .arw{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;
@@ -222,9 +252,13 @@
        「一行显示3个」「放大适配游戏大图而不是压缩游戏图片」
        「显示内容游戏名+游戏标签+游戏大小即可」。
      ★ 图片用 `--cover-ar`（与封面原比例一致）⇒ 不裁不压；
-       信息行**只留两样**（分类标签 + 容量），游戏名单独一行；名次与「双源」做角标压在图上，
-       不占信息行 —— 这是「即可」那两个字的落地方式（去掉评分/热度/可玩机型）。 */
-  .rk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+       信息行**只留两样**（类型标签 + 容量），游戏名单独一行；名次与「双源」做角标压在图上，
+       不占信息行 —— 这是「即可」那两个字的落地方式（去掉评分/热度/可玩机型）。
+     ★★ v10.76：用户口径变成「轮播图下需要的是 **9 个**卡片」⇒ 从 3 列 × 2 行 = 6
+       扩到 **3 列 × 3 行 = 9**（列数不变，所以「一行显示3个」这条老口径仍然成立）。
+       同一句里的「稍微优化下大小」落地为：间距 14 → 12、文字区内边距与字号各收一档、
+       并给信息行 `min-height`（见下）—— **同排卡片不等高**是这块最容易出的观感缺陷。 */
+  .rk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
   .rk-card{display:flex;flex-direction:column;background:#fff;border:1px solid var(--c-border);border-radius:var(--cd-r);overflow:hidden;cursor:pointer;transition:.16s;min-width:0}
   .rk-card:hover{border-color:#B9C7E8;box-shadow:0 8px 22px rgba(18,26,51,.12);transform:translateY(-2px)}
   .rk-card.on{outline:2px solid var(--c-primary);outline-offset:-2px}
@@ -241,11 +275,14 @@
   /* 「双源」徽标：右上角，只在 XD 与机地**同时**上榜时出现（融合分因此翻倍，必须让人知道为什么） */
   .rk-card .th .du{position:absolute;right:9px;top:9px;font-size:10px;font-weight:750;padding:3px 8px;border-radius:99px;
     color:#fff;background:linear-gradient(135deg,#E6415D,#F97316);box-shadow:0 2px 8px rgba(225,29,72,.35)}
-  .rk-card .bd{padding:10px 12px 12px;display:flex;flex-direction:column;gap:7px;min-width:0}
-  .rk-card .bd .t{font-size:14px;font-weight:700;line-height:1.35;min-width:0;
+  .rk-card .bd{padding:9px 11px 10px;display:flex;flex-direction:column;gap:6px;min-width:0}
+  .rk-card .bd .t{font-size:13.5px;font-weight:700;line-height:1.35;min-width:0;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  /* 信息行：分类标签 + 容量（游戏名在上一行，不重复） */
-  .rk-card .bd .s{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--c-t3);min-width:0}
+  /* 信息行：类型标签 + 容量（游戏名在上一行，不重复）
+     ★★ v10.76：`min-height` 是**必需**的 —— 有「类型」和「容量」都缺的条目（新入库/抓取不全），
+     那种卡片的这一行会塌成 0 高 ⇒ 同排卡片高度不齐、最后一行的卡片参差。
+     给一个固定底高后，「缺字段」只表现为这一行空着，不影响卡片外形。 */
+  .rk-card .bd .s{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--c-t3);min-width:0;min-height:17px}
   .rk-card .bd .s .tag{flex:none;max-width:60%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     background:#EEF2FA;color:#4A5771;font-weight:650;padding:2px 8px;border-radius:6px}
   .rk-card .bd .s .sz{flex:none;font-family:var(--font-num);font-weight:700;color:#5B6B8C}
@@ -260,8 +297,14 @@
      hero 改白底后白条在白底上完全看不见（骨架期会像「页面空了」）。 */
   .rk-skel{border-radius:var(--cd-r);background:linear-gradient(90deg,#EEF1F7 25%,#F7F9FC 50%,#EEF1F7 75%);background-size:200% 100%;animation:shimmer 1.2s infinite}
   /* ★ v10.75：卡片骨架改成**与真卡同结构**（图区同比例 + 文字区固定高），
-     而不是猜一个 px 数 —— 真卡高度现在是 `aspect-ratio` 算出来的，猜数会立刻失准。 */
+     而不是猜一个 px 数 —— 真卡高度现在是 `aspect-ratio` 算出来的，猜数会立刻失准。
+     ★★ v10.76：文字区从「JS 里的内联 style」改成**这里的类**（两处断点各一个值）。
+     为什么必须这样：`.bd` 在移动端有自己的内边距/字号覆盖 ⇒ 真卡高 65.61（桌面）/ 61（移动），
+     写一个内联字面值必然只对一侧 —— 实测就是「桌面 66 对上了、移动差 4.6px」。
+     ★ 两个数都是**浏览器实测值**，不许按 CSS 算式推（「类型」标签自带 padding，
+       信息行实际高 22.39 > `min-height:17px`）；由浏览器套件 P17 逐断点跨层对照守着。 */
   .rk-skel-card{display:flex;flex-direction:column;min-width:0}
+  .rk-skel-card .sk-tx{height:66px;border-radius:0 0 var(--cd-r) var(--cd-r)}
 
   /* ============ 🔍 搜索弹窗（命令面板式） ============ */
   .smask{position:fixed;inset:0;background:rgba(9,14,30,.55);z-index:120;opacity:0;transition:.2s;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);pointer-events:none}
@@ -1895,13 +1938,17 @@
     .stage-pills{order:3;width:100%;overflow-x:auto;scrollbar-width:none}
     .stage-pills::-webkit-scrollbar{display:none}
     .stage-pill{flex:1;text-align:center;padding:5px 8px;font-size:12px}
-    .stage-meta{order:2;margin-left:auto}
+    /* ★ v10.76：桌面已把 `.stage-meta` 改成「独占一行 + 定高」（见 `.stage-h` 处的注释），
+       这里只留 order。原来那句 `margin-left:auto` 在 `flex-basis:100%` 下已无作用，删掉避免误导。 */
+    .stage-meta{order:2}
     /* ★★ v10.75：移动端**不再写死轮播高度** —— 桌面已改成 `aspect-ratio:var(--cover-ar)`
        自适应，这里若再写 `height:150px` 就会与比例打架（CSS 里同时给 height 与
        aspect-ratio 时 height 胜出 ⇒ 图又被裁回去，等于移动端没改）。
        实测移动内容区 ~350px 宽 ⇒ 按 460/215 自动得 ~164px 高，正好落在原来想要的高度区间。 */
     .rk-car{margin-bottom:9px}
-    .rk-car .info{padding:0 13px 12px;gap:10px}
+    /* ★ v10.76：右侧同样给指示点让位（点阵 78px + 右边距 13px）—— 轮播变窄后
+       评分与指示点会叠在一起；这里桌面/移动用同一套「先让位再放内容」的口径。 */
+    .rk-car .info{padding:0 92px 12px 13px;gap:10px}
     .rk-car .info .tag1{font-size:10px;padding:3px 7px}
     .rk-car .info .t{font-size:15.5px}
     .rk-car .info .en{display:none}
@@ -1916,6 +1963,12 @@
        ⇒ 图只有 110×51、标题只能放 5 个字，读不下去。窄屏保持 2 列，这是**有意的例外**。 */
     .rk-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
     .rk-grid .rk-card .bd{padding:8px 10px 10px;gap:5px}
+    /* ★ v10.76：桌面给信息行加了 `min-height:17px`（防缺字段的卡片塌行），移动端字号小一号 ⇒ 同步 16px。
+       两处必须一起改：只改桌面会让移动端「缺字段卡」矮一截，同排参差。 */
+    .rk-grid .rk-card .bd .s{min-height:16px}
+    /* ★ v10.76：骨架文字区在移动端也要跟着 `.bd` 收（移动端 .bd 实测 61px / 桌面 66px）。
+       写在内联 style 里做不到这件事 —— 那正是 P17 在移动端红掉暴露出来的缺陷。 */
+    .rk-skel-card .sk-tx{height:61px}
     .rk-grid .rk-card .th .no{min-width:21px;height:21px;font-size:11.5px;left:7px;top:7px;padding:0 6px}
     .rk-grid .rk-card .th .du{font-size:9px;padding:2px 6px;right:7px;top:7px}
     .rk-grid .rk-card .bd .t{font-size:12.5px}
@@ -3296,10 +3349,17 @@ let rankAt = {};        // {recent:ms,…} — 各档数据抓取时间(供 meta
 let rankDrop = {};      // {recent:n,…} — 各档被服务端滤除的非游戏条目数（meta 说明用）
 let rankFilledN = {};   // ★ v10.74/v10.75：各档**本地库兜底补位**条数（正常恒 0）
 let rankSrcN = {};      // ★ v10.75：各档两源条数 { recent:{xd,jidi,dual}, … }（meta 说明用）
+let rankSrcOk = {};     // ★ v10.76：各档两源健康度 { recent:{src:'xdgamer'|'both', jidiOk:bool}, … }
 let rankPeriod = 'recent';
 /* ★ v10.74：轮播位条数。与 `data/rank-fill.js` 的 RANK_CAR_N 是同一个口径
    —— 服务端也在 `meta.carN` 下发，真值以服务端为准，这里只是渲染分段的默认值。 */
 const RK_CAR_N = 5;
+/* ★★ v10.76：卡片位条数（用户口径「轮播图下需要的是 **9 个**卡片」）。
+   ★ 为什么写成常量而不是「list.length - RK_CAR_N」：骨架屏在**没有数据时**也要按
+     最终形态铺满（`rankSkeleton()` 用它），那时 list 是空的。
+   与 `data/rank-fill.js` 的 `RANK_SHOW_N - RANK_CAR_N` 必须相等（浏览器套件里有一条）
+   —— 只改一边就会出现「骨架 9 格 / 真卡 6 格」的抖动。 */
+const RK_CARD_N = 9;
 /* ★ v10.75：档位换成 /update/ 的四档。`recent` 是**仅 XD**（机地没有「最近更新」这种榜）。 */
 const RANK_META_TXT = {
   recent: 'XD 官网 · 最近更新',
@@ -3467,12 +3527,13 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) rkCarStop();
   else if (rkCarEl && rkCarN > 1) rkCarPlay();
 });
-/* 榜单 #6-11：**大图卡**（上图 + 下文：游戏名 / 分类标签 / 容量）
+/* 榜单卡片（上图 + 下文：游戏名 / 类型标签 / 容量）
  * ★ v10.68：从 #2-10 收成 #2-6（配合 5 列 × 1 行）；v10.74 改 #6-13 / 4 列 × 2 行；
  * ★★ v10.75：改 **3 列 × 2 行 / 共 6 张**（用户口径「一行显示3个」），
- *   信息**只留三样**（名字 / 标签 / 容量，用户原话「即可」）——
+ *   信息**只留三样**（名字 / 类型 / 容量，用户原话「即可」）——
  *   评分、热度、可玩机型都撤掉；名次与「双源」改成压在封面上的角标，不占信息行。
- *   展示总数因此是 11（轮播 5 + 卡片 6），由 `data/rank-fill.js` 的 RANK_SHOW_N 一处定义。 */
+ * ★★ v10.76：**3 列 × 3 行 / 共 9 张**（用户口径「轮播图下需要的是 9 个卡片」）。
+ *   展示总数因此是 14（轮播 5 + 卡片 9），由 `data/rank-fill.js` 的 RANK_SHOW_N 一处定义。 */
 function rankCard(it) {
   const n = splitName(it.title);
   const g0 = (it.genres || [])[0] || it.category || '';
@@ -3499,11 +3560,18 @@ function rankMark(url) {
  *   按容器宽算）。所以骨架改成**与真卡同结构**（图区用同一个 `--cover-ar`、文字区用固定高），
  *   而不是猜一个 px 数 -- 猜数一旦改比例就会立刻失准。 */
 function rankSkeleton() {
+  /* 文字区高度由 CSS 类 `.sk-tx` 给（桌面 66px / 移动 61px，都是**浏览器实测值**）。
+     ★★ v10.76 从内联 style 改成类：`.bd` 在移动端有独立的内边距/字号覆盖，
+       写死一个内联值必然只对一侧 —— 实测就是「桌面 66 对上了、移动差 4.6px」。
+     ★ 改 `.bd` 的字号/内边距时两处 CSS 必须同步 —— v10.30 起「骨架高 = 真卡高」。
+       现在有**跨层断言**兜着（浏览器套件 P17：逐个断点比 源码字面值 vs 真实 `.bd` 实测高，
+       差 > 2px 就红），所以不会再出现「改了 CSS 忘了改骨架」的静默失配。 */
   const card = '<div class="rk-skel-card">'
     + '<div class="rk-skel" style="aspect-ratio:var(--cover-ar);border-radius:var(--cd-r) var(--cd-r) 0 0"></div>'
-    + '<div class="rk-skel" style="height:64px;border-radius:0 0 var(--cd-r) var(--cd-r)"></div></div>';
-  return `<div class="rk-skel" style="aspect-ratio:var(--cover-ar);margin-bottom:12px"></div>`
-    + `<div class="rk-grid">${card.repeat(6)}</div>`;
+    + '<div class="rk-skel sk-tx"></div></div>';
+  /* ★ v10.76：轮播骨架也要**居中 + 限宽**，否则加载完成的一瞬会从「通栏」跳成「窄条」。 */
+  return `<div class="rk-skel" style="width:min(100%,var(--car-max-w));aspect-ratio:var(--cover-ar);margin:0 auto 12px"></div>`
+    + `<div class="rk-grid">${card.repeat(RK_CARD_N)}</div>`;
 }
 function paintRank() {
   const el = $('#rankList'); if (!el) return;
@@ -3511,7 +3579,7 @@ function paintRank() {
      所以放在最前面，而不是塞进某个分支里（塞分支里迟早漏一条出口）。 */
   rkCarStop();
   const list = rankCache[rankPeriod] || [];
-  /* ★ v10.75：#1-5 进轮播，#6-11 进 **3 列 × 2 行**大图卡（共 11 个）。
+  /* ★ v10.75：#1-5 进轮播，其余进大图卡。★★ v10.76：卡片 **3 列 × 3 行 = 9 个**（共 14 个）。
      分段用的是 `RK_CAR_N` 而不是写死的 5 —— 服务端 meta 里也下发同一个数，
      哪天要调只改 `data/rank-fill.js` 一处（`RANK_SHOW_N` / `RANK_CAR_N`）。 */
   el.innerHTML = list.length
@@ -3528,12 +3596,26 @@ function paintRank() {
     const dropped = rankDrop[rankPeriod] || 0;
     const filledN = rankFilledN[rankPeriod] || 0;
     const s = rankSrcN[rankPeriod] || {};
-    meta.textContent = RANK_META_TXT[rankPeriod]
+    /* ★★ v10.76：这一行现在是**独占一行 + 定高 24px + 单行省略**（见 CSS `.stage-meta`）。
+       改前它跟着文案长度走：`recent` 158px 挤在标题行（`.stage-h` 46px）、
+       其余档 485–592px 换到第二行（85px）⇒ 点档位时整页下移 39px。
+       现在长度只影响**省略号截在哪**，不影响任何一块的高度。 */
+    /* ★★ v10.76：**降级必须如实说**。这档的静态口径写的是「XD 人气 + 机地本周热榜 · 加权合并」，
+       而机地源抽风/被拦时融合会静默退化成仅 XD —— 那时页面**照样写着「双源加权合并」**，
+       等于给用户一个不实的承诺（同一族的教训：文案要说清「谁的值」）。
+       ⇒ `src === 'both' && jidiOk === false` 时明确播报降级；`recent` 档本来就不抓机地（src='xdgamer'）
+         不算降级，不加这句。 */
+    const okn = rankSrcOk[rankPeriod] || {};
+    const metaTxt = RANK_META_TXT[rankPeriod]
       + (s.xd != null && s.jidi ? ` · XD ${s.xd} 条 + 机地 ${s.jidi} 条` : '')
       + (s.dual ? `（其中 ${s.dual} 条双源同榜）` : '')
+      + (okn.src === 'both' && okn.jidiOk === false ? ' · ⚠️ 机地源暂不可用，本档已降级为 XD 单源' : '')
       + (dropped ? ` · 已滤除 ${dropped} 条工具条目` : '')
       + (filledN ? ` · 含 ${filledN} 条库内热度补位` : '')
       + (rankAt[rankPeriod] ? ' · 更新 ' + hhmm(rankAt[rankPeriod]) : '');
+    meta.textContent = metaTxt;
+    /* 省略号只截**显示**、不截信息：全文挂 title（悬停可见）。 */
+    meta.title = metaTxt;
   }
   $$('#rankList [data-url]').forEach(x => x.addEventListener('click', () => openDetail(x.dataset.url, x.dataset.fb)));
 }
@@ -3557,6 +3639,8 @@ async function refreshRank(force) {
     rankFilledN[rankPeriod] = (j.meta && j.meta.filled) || 0;   /* 兜底补位条数（正常 0） */
     /* ★ v10.75：两源条数与「双源同榜」条数 —— meta 说明用 */
     rankSrcN[rankPeriod] = { xd: (j.meta && j.meta.xdN) || 0, jidi: (j.meta && j.meta.jidiN) || 0, dual: (j.meta && j.meta.dualN) || 0 };
+    /* ★ v10.76：两源口径与健康度 —— 降级播报用（见 paintRank 里的注释） */
+    rankSrcOk[rankPeriod] = { src: (j.meta && j.meta.src) || '', jidiOk: !(j.meta && j.meta.jidiOk === false) };
     paintRank();
   } catch (e) {
     el.innerHTML = `<div class="sm-empty" style="color:rgba(255,255,255,.65)"><div class="big">⚠️</div>榜单加载失败：${esc(e.message)}<br><span style="font-size:11.5px;opacity:.8">可点右侧「刷新」重试</span></div>`;

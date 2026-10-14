@@ -143,8 +143,11 @@ chk('A12 ★ 本地库为空 ⇒ 返回源站那几条，不崩、也不报错',
 const r5 = rf.fillRank(null, null);
 chk('A13 ★ 两个入参都是 null ⇒ 空数组返回，不抛', Array.isArray(r5.list) && r5.list.length === 0);
 
-chk('A14 ★★ 常量口径：RANK_SHOW_N=' + N + ' · RANK_CAR_N=5（' + N + ' = 轮播 5 + 卡片 2 行 × 3 列 = 6）',
-  rf.RANK_SHOW_N === 11 && rf.RANK_CAR_N === 5,
+/* ★★ v10.76：展示总数 11 → **14**（用户口径「轮播图下需要的是 9 个卡片」⇒ 卡片 3 行 × 3 列 = 9）。
+   这里钉**字面值**（不是 `=== rf.RANK_SHOW_N`）—— 它就是「拍板数」本身，
+   写成同义反复等于不守（改数时不会红）。 */
+chk('A14 ★★ 常量口径：RANK_SHOW_N=' + N + ' · RANK_CAR_N=5（' + N + ' = 轮播 5 + 卡片 3 行 × 3 列 = 9）',
+  rf.RANK_SHOW_N === 14 && rf.RANK_CAR_N === 5,
   rf.RANK_SHOW_N + ' / ' + rf.RANK_CAR_N + '（卡片位 ' + (N - rf.RANK_CAR_N) + '）');
 
 /* A15 真库池子可用性 —— 补位池在真实数据上确实够用（不依赖网络，只读本地库） */
@@ -200,9 +203,18 @@ chk('B3 ★★ meta 如实下发 srcN / filled / showN / carN（前端靠它说�
    新版机地只做**融合的一侧**（12 条原样进 RRF），条数由融合决定，没有上限可写。
    ⇒ 断言从「用常量而不是写死 12」改为「**根本没有条数上限**」，这才是本条真正的意图
      （防的从来不是「写了 12」，而是「有人又在展示层写死一个数」）。 */
+/* ★★ v10.76 修正：本条原来写成 `jidiKey ? jidi.hotRanks()` —— **绑的是「形状」不是「语义」**。
+   本轮给机地侧加了 6s 硬超时，调用变成 `jidiKey ? withTimeout(jidi.hotRanks(), 6000, …) : …`，
+   正则立刻不匹配 ⇒ **假红**（报「机地档写死了条数上限」，而实际上半句根本没命中）。
+   这正是本项目反复记过的那条：**「判形状 ≠ 判语义」** —— 断言要落在
+   「①机地分支确实抓了 hotRanks ②段内没有任何条数上限」两件事上，
+   而**不是**落在「这两个 token 是否紧邻」上（紧邻与否是实现细节，合法重构就会踩中）。
+   ⇒ 允许中间有包装（含 `withTimeout(`），仍限制在同一分支、80 字符内，别漂到别处。 */
+const b4Call = /jidiKey\s*\?[\s\S]{0,80}jidi\.hotRanks\(\)/.test(rankSeg);
+const b4Cap = /\.slice\(0,\s*\d+\)/.test(rankSeg);
 chk('B4 ★★ 机地档不再写死条数上限（它只是融合的一侧，展示数由 RANK_SHOW_N 决定）',
-  /jidiKey\s*\?\s*jidi\.hotRanks\(\)/.test(rankSeg) && !/\.slice\(0,\s*(?:12|\d+)\)/.test(rankSeg),
-  'rankSeg 里有 slice 上限 = ' + /\.slice\(0,\s*\d+\)/.test(rankSeg));
+  b4Call && !b4Cap,
+  '机地分支调了 hotRanks() = ' + b4Call + ' ｜ rankSeg 里有 slice 上限 = ' + b4Cap);
 /* B5 的意图 =「先融合、再补位」，即补位看到的是**完整候选池**而不是被截断的一段。
    ★ 判据用**两个调用的相对位置**，不绑变量名（旧版绑了 `mapped`，换源即红）。 */
 chk('B5 ★★ 顺序：先 rrfFuse 融合、再 fillRank 补位（补位必须看到完整候选池）',
@@ -297,8 +309,11 @@ chk('D9 ★★ 分段用常量 `RK_CAR_N`（不是写死的 5）—— 服务端
    v10.74 的「放大」= 卡片仍是**横条**、把封面从 42px 加到 72px；
    v10.75 的「放大」= 卡片改**上图下文竖卡**、封面**占满卡宽**（3 列时约 389px），
    并把 4 列收成 3 列。继续守「封面 72px」会在新结构下**恒红**，而且红得没有意义。 */
+/* ★ v10.76：`gap` 14 → 12（用户那句「稍微优化下大小」落地为「间距与文字区各收一档」）。
+   列数仍是 3 —— 守点与 v10.75 一致（列越少每列越宽，这是「放大封面」的来源）；
+   整条规则仍然**逐字**匹配，所以间距被改回去也会红。 */
 chk('D10 ★★ 桌面 `.rk-grid` 是 3 列（4 → 3 列是 v10.75「放大」的来源：列越少每列越宽）',
-  /\.rk-grid\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\);gap:14px\}/.test(idx));
+  /\.rk-grid\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\);gap:12px\}/.test(idx));
 chk('D11 ★★ 卡片是「上图下文」竖卡 + 封面**占满卡宽**（v10.74 的横条 72px 封面已被取代）',
   /\.rk-card\{display:flex;flex-direction:column/.test(idx) &&
   /\.rk-card \.th\{position:relative;width:100%;aspect-ratio:var\(--cover-ar\)/.test(idx));
@@ -365,9 +380,17 @@ chk('D15 ★ 自动播放有纪律：固定间隔常量 + 悬停暂停 + 页面�
 /* ★★ v10.75：真卡高度不再是定值（`aspect-ratio` 按容器宽算）⇒ **骨架也不能再写死 px**。
    判据从「等于 200px / 61px」改为「与真卡**同结构**」：图区用同一个 `--cover-ar`、文字区固定高。
    守的还是同一件事（骨架→真卡不抖），换的是表达方式 —— 写死 px 在改比例那一刻就失准了。 */
-chk('D16 ★★ 骨架与真卡**同结构**（图区 `aspect-ratio:var(--cover-ar)` + 文字区 64px），不写死高度',
+/* ★★ v10.76：骨架文字区从「JS 内联 style 的 64px」改成 **CSS 类 `.sk-tx`（两处断点）**。
+   为什么必须改（是**测试照出来的真缺陷**，不是重构冲动）：`.bd` 在移动端有自己的
+   内边距/字号覆盖 ⇒ 真卡高桌面 65.61px、移动 61px，一个内联字面值必然只对一侧 ——
+   实测就是「桌面 66 对上了、移动差 4.6px」⇒ 骨架→真卡那一瞬移动端会跳 4.6px。
+   ★ 断言只守**结构**（类 + 两处断点 + 图区同比例），**具体的数值不在这里守** ——
+     数值由浏览器套件 P17 逐断点**跨层对照真实 `.bd` 实测高**（差 > 2px 即红）。
+     这样分工的原因：静态层看不到真实高度，把数值写死在这里只会变成「抄一遍自己」。 */
+chk('D16 ★★ 骨架与真卡**同结构**（图区 `aspect-ratio:var(--cover-ar)` + 文字区走 `.sk-tx` 类，两处断点）',
   /aspect-ratio:var\(--cover-ar\);border-radius:var\(--cd-r\) var\(--cd-r\) 0 0/.test(idx) &&
-  /height:64px;border-radius:0 0 var\(--cd-r\) var\(--cd-r\)/.test(idx) &&
+  /\.rk-skel-card \.sk-tx\{height:\d+px/.test(idx) &&
+  (idx.match(/\.rk-skel-card \.sk-tx\{height:\d+px/g) || []).length === 2 &&
   !/<div class="rk-skel" style="height:200px/.test(idx));
 chk('D17 ★★ 移动端卡片区是 2 列网格（不是横滑单行）',
   /\.rk-grid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\);gap:10px\}/.test(idx));
@@ -387,6 +410,45 @@ chk('D18 ★★ 顺手修的既有缺陷：≤880 档顶栏搜索按钮收窄（
   /\.top-search\{min-width:0;padding:7px 10px\}/.test(idx) && /\.top-search \.kbd\{display:none\}/.test(idx));
 chk('D19 ★ 热度措辞只有一处实现（`fmtHot`），没有第二份格式化',
   (idx.match(/function fmtHot\s*\(/g) || []).length === 1);
+
+/* ★★ v10.76 新增守点：榜单状态行必须「**独占一行 + 定高 + 单行省略**」。
+   守的是用户直接报的缺陷（原话「**固定下榜单位置，目前点击年度榜会有页变化**」），
+   ★ 而且这个缺陷是**量化过的**（探针 1440×1000 逐档点击，改前）：
+
+     档位    | `.stage-h` 高 | meta 文案宽 | 「最新收录」top
+     recent  | 46px          | 158px       | 1258
+     hot     | 85px          | 592px       | 1297   ← 整页下移 39px
+     month   | 85px          | 485px       | 1297
+     year    | 85px          | 485px       | 1297
+
+   根因：`.stage-meta` 当时是 `flex:none`（**宽度跟着文案长度走**）——
+   recent 的短文案能挤进标题那一行，其余三档挤不下就换行 ⇒ 行数变、高度变、下面整块跟着动。
+   ⇒ 三道缺一不可：① `flex:0 0 100%` 定**位置** ② `height` 定**行数** ③ nowrap+省略号 定**行长**。
+   ★ 只做 ② 不做 ③ 的话，长文案会把定高的行撑破（`overflow` 是兜底，不是设计）。 */
+{
+  const rule = (idx.match(/\.stage-meta\{[^}]*\}/) || [''])[0];
+  chk('D20a ★★ `.stage-meta` 独占一行（`flex:0 0 100%`）+ 定高 —— 切档不位移的结构前提',
+    /flex:0 0 100%/.test(rule) && /height:\d+px/.test(rule) && !/flex:none/.test(rule),
+    rule.slice(0, 130));
+  chk('D20b ★★ `#rankMeta` 单行省略（文案变长只截显示，不撑高容器）',
+    /#rankMeta\{[^}]*white-space:nowrap/.test(idx) && /#rankMeta\{[^}]*text-overflow:ellipsis/.test(idx),
+    (idx.match(/#rankMeta\{[^}]*\}/) || [''])[0].slice(0, 130));
+  /* ★ 正向对照：省略号**不能把信息也截掉** —— 全文必须挂在 `title` 上（悬停可见）。
+     没有这条，「把文案整段删掉」也能让 D20a/D20b 保持绿。 */
+  chk('D20c ★ 省略号只截显示不截信息：状态行全文挂 `title`',
+    /meta\.title = metaTxt/.test(idx) && /const metaTxt = RANK_META_TXT/.test(idx));
+}
+
+/* ★★ v10.76 新增守点：**降级必须如实播报**（文案不能说一个做不到的承诺）。
+   背景（本版实测）：机地上游被阿里云 WAF 拦住 ⇒ 融合静默退化成「仅 XD」，
+   而该档静态口径仍写着「XD 人气 + 机地本周热榜 · 加权合并」—— 页面在**声称**一件没发生的事。
+   ⇒ 前端必须在 `src === 'both' && jidiOk === false` 时明确说清降级；
+     同时 `recent` 档（src='xdgamer'，本来就不抓机地）**不许**被误报成降级。 */
+chk('D21 ★★ 机地源不可用时**如实播报降级**（且 `recent` 档不算降级 —— 它本来就不抓机地）',
+  /rankSrcOk\[rankPeriod\] = \{ src:/.test(idx)
+    && /okn\.src === 'both' && okn\.jidiOk === false/.test(idx)
+    && /已降级为 XD 单源|降级为 XD/.test(idx),
+  (idx.match(/\|\| ''\)[\s\S]{0,40}okn\.src === 'both'[^:]*:[^,]*/) || ['(无)'])[0].slice(0, 110));
 
 /* ============================================================
    E. 五页同步（铁律 1：主源是唯一编辑入口）

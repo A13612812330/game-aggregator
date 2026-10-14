@@ -386,6 +386,45 @@ chk('D11 ★ 前端默认档是 recent（最近更新），不是旧默认 week'
     /srcRank/.test(seg) && !/🔥/.test(seg) && !/热度/.test(seg), 'seg ' + seg.length + ' 字符');
 }
 
+/* ★★ v10.76 新增：**降级结果不许按正常 TTL 缓存**。
+   实测起因（这一版真踩到的）：`/api/rank` 首调时两源并行，机地侧偶发失败 ⇒ 融合退化成「仅 XD」，
+   而 30 分钟 TTL 把这份降级结果**钉死** —— 连打三次 `refresh=1` 才恢复 `jidiN=12`。
+   用户看到的就是「双源加权合并」静默变成单源、半小时内不自愈。
+   ⇒ 修法：`cached()` 支持**函数 TTL**，`/api/rank` 在「双源档 + 机地失败」时只缓存 120s。
+   ★ 两条一起守：只守「传了函数」不够（函数也可以恒返回 1800_000）；
+     只守「有 120_000」也不够（可能没接到 meta.jidiOk 上）。 */
+chk('D13 ★★ 缓存 TTL 是**按结果降级**的函数：双源档在机地失败时只缓存 120s（正常 1800s）',
+  /const rankTtl = \(v\) =>/.test(sv)
+    && /RANK_JIDI_KEY\[p\] && v && v\.meta && v\.meta\.jidiOk === false[\s\S]{0,20}\? 120_000 : 1_800_000/.test(sv)
+    && /cached\('rank:' \+ p, rankTtl,/.test(sv),
+  'TTL 片段 = ' + (sv.match(/RANK_JIDI_KEY\[p\] && v[\s\S]{0,60}/) || ['(无)'])[0].split('\n')[0]);
+/* ★ 兼容性：`cached()` 收到**数字**时行为必须与改前一致（11 个调用点里只有 /api/rank 用函数）。 */
+chk('D14 ★★ `cached()` 支持函数 TTL；未定型（promise 还在跑）时按调用方默认 TTL 判新鲜',
+  /typeof ttlMs === 'function'/.test(sv) && /typeof hit\.ttl === 'number' \? hit\.ttl : ttlMs/.test(sv),
+  '✓ 命中 `typeof hit.ttl === \'number\' ? hit.ttl : ttlMs`');
+/* ★ 负向：`recent` 档（机地本就不适用）不许被误判成「降级」而缩短缓存 ——
+   它的 `jidiOk` 天然为 false，所以 TTL 判据里**必须**带上 `RANK_JIDI_KEY[p]`。 */
+chk('D15 ★★ 负向：`recent` 档不抓机地（jidiOk 天然 false）⇒ TTL 判据必须带 `RANK_JIDI_KEY[p]` 一起判',
+  /RANK_JIDI_KEY\[p\] && v && v\.meta && v\.meta\.jidiOk === false/.test(sv),
+  '✓ 两个条件同时成立才算降级');
+/* ★★ v10.76 新增：**机地侧必须有硬超时**。
+   实测起因：机地挂了之后 `hotRanks()` 不再快速失败而是挂着（`getHtml` = 20s × (1+1 次重试)），
+   而 `allSettled` 等最慢的一侧 ⇒ `/api/rank` 最坏 **40s** 才回；
+   探针实测「点人气榜后 2.6s 状态行还停在上一档」就是这么来的。
+   ★ 判据要**两条一起**：只守「调了 withTimeout」不够 —— 忘了给内层 promise 挂 catch 的话，
+     `allSettled` 拿到的是外层 race，内层 rejection 无人处理 ⇒ Node 22 直接崩进程
+     （比慢更糟：整站 502）。 */
+chk('D16 ★★ 机地侧有硬超时（6s），超时按同一条降级路径走（不另写分支）',
+  /withTimeout\(jidi\.hotRanks\(\), \d{4,},/.test(sv) && /Promise\.allSettled\(\[/.test(sv),
+  '✓ ' + (sv.match(/withTimeout\(jidi\.hotRanks\(\)[^)]*\)/) || ['(无)'])[0]);
+/* ★ 判据抓**拒绝处理那一路**（`(e) => { … reject(e) }`）而不是 `p.then(` 的形状：
+   第一版写的是 `/p\.then\(\s*\r?\n?\s*\(v\) =>/` ⇒ 反证 ⑰ 把两参 then 换成单参后**照样匹配**
+   （单参写法同样满足），断言不红 = 假绿。这正是本项目反复踩的「判形状而非判语义」。 */
+chk('D17 ★★ `withTimeout` 内部给内层 promise 挂了拒绝处理（否则内层 rejection 无人处理 ⇒ Node 22 崩进程）',
+  /function withTimeout\(p, ms, label\)/.test(sv)
+    && /\(e\) => \{ clearTimeout\(t\); reject\(e\); \}/.test(sv),
+  '✓ 拒绝处理一路在位');
+
 /* ============================================================
    验收汇总
    ============================================================ */

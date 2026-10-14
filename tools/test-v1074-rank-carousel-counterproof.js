@@ -161,7 +161,10 @@ const CASES = [
   {
     label: '⑫ 卡片列数退回 4 列（3 列才是 v10.75「卡片放大」的来源：列越少每列越宽）',
     file: 'public/index.html',
-    break: (s) => s.replace('.rk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}',
+    /* ★ v10.76：锚点跟着 `gap` 一起从 14px 改成 12px（用户那句「稍微优化下大小」）。
+       ⚠️ 这类「实现改了、反证锚点没跟着改」的失配会被下面的**靶子存在性预检**拦住，
+          但它拦住的方式是「整轮反证白跑」⇒ 改 CSS 里有反证锚点的规则时，顺手改锚点。 */
+    break: (s) => s.replace('.rk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}',
       '.rk-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}   /* 反证：退回 4 列 */'),
     need: ['D10'],
   },
@@ -179,10 +182,71 @@ const CASES = [
     need: ['D17b'],
   },
   {
+    label: '⑮ ★★ 状态行退回「跟着文案走」（= 用户报的「点击年度榜会有页变化」的根因）',
+    file: 'public/index.html',
+    /* ★★ 对应 v10.76 **用户直接报的缺陷**：`.stage-meta` 原是 `flex:none`，
+       宽度跟着文案走 ⇒ recent 文案 158px 挤在标题行（`.stage-h` **46px**）、
+       hot/month/year 485–592px 换到第二行（**85px**）⇒ 点档位时整页下移 **39px**。
+       打坏方式 = 把「独占一行 + 定高」拿掉、退回内容宽度。 */
+    break: (s) => s.replace('font-size:11.5px;flex:0 0 100%;height:24px;overflow:hidden}',
+      'font-size:11.5px;flex:none}   /* 反证：退回跟着文案走 */'),
+    need: ['D20a'],
+  },
+  {
+    label: '⑯ ★ 状态行取消单行省略（长文案会把行撑成两行 ⇒ 位移以另一个形式回来）',
+    file: 'public/index.html',
+    break: (s) => s.replace('#rankMeta{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '#rankMeta{flex:1;min-width:0}   /* 反证：允许换行 */'),
+    need: ['D20b'],
+  },
+  {
+    label: '⑱ ★★ 机地源挂了却仍声称「双源加权合并」（文案说一件没发生的事）',
+    file: 'public/index.html',
+    /* ★★ 对应 v10.76 实测：机地上游被 WAF 拦住 ⇒ 融合退化成仅 XD，
+       而该档静态口径仍写「XD 人气 + 机地本周热榜 · 加权合并」= 不实的承诺。
+       打坏方式 = 删掉降级播报那一句。 */
+    break: (s) => s.replace("      + (okn.src === 'both' && okn.jidiOk === false ? ' · ⚠️ 机地源暂不可用，本档已降级为 XD 单源' : '')",
+      "      + ''   /* 反证：降级不播报 */"),
+    need: ['D21'],
+  },
+  {
+    label: '⑰ ★★ 骨架文字区只在桌面给值、移动端漏了（移动端骨架→真卡跳 4.6px）',
+    file: 'public/index.html',
+    /* ★★ 对应 v10.76 由**浏览器套件 P17 照出来的真缺陷**：
+       文字区原来是 JS 里的一个内联字面值 ⇒ `.bd` 在移动端有自己的内边距/字号覆盖
+       （实测桌面 65.61px / 移动 61px）⇒ 一个值必然只对一侧，实测「桌面对上了、移动差 4.6px」。
+       打坏方式 = 删掉移动端那处断点覆盖。 */
+    break: (s) => s.replace('    .rk-skel-card .sk-tx{height:61px}',
+      '    /* 反证：移动端漏了断点值 */'),
+    need: ['D16'],
+  },
+  {
     label: '⑬ ★ 派生页漏重建（单源派生没同步 —— 本项目最高频坑 #1）',
     file: 'public/emulator.html',
     break: (s) => s.replace('function rkCarouselHtml(list) {', '/* 反证：派生页漏重建，轮播函数没了 */'),
     need: ['E1'],
+  },
+  {
+    label: '⑲ ★★ 机地档重新写死条数上限（融合的一侧被截断 ⇒ 大源压死小源的旧病回来）',
+    file: 'server.js',
+    /* ★★ 对应 v10.76 对 B4 的修正。B4 原来写成 `jidiKey ? jidi.hotRanks()`，
+       绑的是**形状**；本轮机地侧加 6s 硬超时后调用被包了一层 ⇒ 假红。
+       修正后的判据拆成两半（①机地分支真调了 hotRanks ②段内没有任何 slice 上限），
+       本条打的是**后半句**：给机地结果加回一个写死的上限。 */
+    break: (s) => s.replace(
+      "        jidiKey ? withTimeout(jidi.hotRanks(), 6000, '机地热榜') : Promise.resolve(null),",
+      "        jidiKey ? withTimeout(jidi.hotRanks(), 6000, '机地热榜').then((a) => a.slice(0, 12)) : Promise.resolve(null),   /* 反证：又写死上限 */"),
+    need: ['B4'],
+  },
+  {
+    label: '⑳ ★★ 机地那一侧**根本没抓**（`jidiKey` 分支恒返回 null ⇒ 「双源」只剩一半）',
+    file: 'server.js',
+    /* 本条打的是 B4 的**前半句**。⑲⑳ 分开写是刻意的：一条断言由两个子条件构成时，
+       只打其中一个**照不出另一个失效**（= 反证「锚点选歪」，见铁律 125）。 */
+    break: (s) => s.replace(
+      "        jidiKey ? withTimeout(jidi.hotRanks(), 6000, '机地热榜') : Promise.resolve(null),",
+      '        Promise.resolve(null),   /* 反证：机地那一侧根本没抓 */'),
+    need: ['B4'],
   },
 ];
 

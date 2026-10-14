@@ -36,16 +36,50 @@ const PORT = parseInt(process.env.PORT, 10) || 8123;
 
 // ---------- 内存缓存（支持异步 builder：并发共享同一 Promise，失败自动清理） ----------
 const cache = new Map();
+/* ★★ v10.76：`ttlMs` 允许传**函数** `(value) => ms` —— 用于「结果**降级**时只短缓存」。
+   起因是一次实测：`/api/rank` 首次调用两源并行，机地侧偶发失败 ⇒ 融合退化成「仅 XD」，
+   而这份降级结果被 30 分钟 TTL **钉死**（连打三次 `refresh=1` 才恢复 `jidiN=12`）
+   ⇒ 用户眼前的「双源加权合并」会静默变成单源，且半小时内无法自愈。
+   ★ 一般规律：**降级结果不许按正常 TTL 缓存** —— 失败要能自愈，否则一次抖动 = 长时间错误状态。
+   兼容：传数字时行为与改前完全一致（11 个调用点里只有 /api/rank 用了函数形式）。 */
 function cached(key, ttlMs, builder) {
   const hit = cache.get(key);
-  if (hit && Date.now() - hit.ts < ttlMs) return hit.value;
+  /* `hit.ttl` 还是函数 = builder 尚在跑（没定型）⇒ 按调用方默认 TTL 判「新鲜」，
+     这样并发的第二个请求仍然复用同一个 in-flight promise（与改前行为一致）。 */
+  if (hit) {
+    const t = typeof hit.ttl === 'number' ? hit.ttl : ttlMs;
+    if (typeof t === 'number' && Date.now() - hit.ts < t) return hit.value;
+  }
   const p = Promise.resolve().then(builder);
-  cache.set(key, { ts: Date.now(), value: p });
-  p.catch(() => {
-    const cur = cache.get(key);
-    if (cur && cur.value === p) cache.delete(key);
-  });
+  const entry = { ts: Date.now(), value: p, ttl: ttlMs };
+  cache.set(key, entry);
+  p.then(
+    (v) => { if (typeof ttlMs === 'function') entry.ttl = ttlMs(v); },
+    () => {
+      const cur = cache.get(key);
+      if (cur && cur.value === p) cache.delete(key);
+    },
+  );
   return p;
+}
+
+/* ★★ v10.76：给「**某一侧**源站」加硬超时，防慢/挂的那一侧把整个接口拖住。
+   实测起因：机地上游被阿里云 WAF 拦住后 `jidi.hotRanks()` 不再「快速失败」而是**挂着** ——
+   `getHtml` 是 `timeout 20s × (1 + 1 次重试)` ⇒ 最坏 **40s**，而 `/api/rank` 用 `Promise.allSettled`
+   等的是**最慢**的那一侧 ⇒ 点「人气榜」后要等 40s 才出结果
+   （探针实测：切档 2.6s 后状态行还停在上一档的文案上）。
+   ★ 与 allSettled 的关系：超时后该侧只是变成 `rejected`，**走的是同一条降级路径**，
+     不另写分支 —— 又因为降级结果只短缓存 120s，源站恢复后 2 分钟内自愈。
+   ★ 为什么必须内部挂 catch：`allSettled` 拿到的是**外层 race**，内层若无人处理，
+     Node 22 会抛 UnhandledPromiseRejection（默认直接崩进程）。这里用 `p.then(ok, err)` 兜住。 */
+function withTimeout(p, ms, label) {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${label} 超时 ${ms}ms（按降级处理）`)), ms);
+    p.then(
+      (v) => { clearTimeout(t); resolve(v); },
+      (e) => { clearTimeout(t); reject(e); },
+    );
+  });
 }
 
 // ---------- 源站 URL 白名单（防 SSRF） ----------
@@ -1530,14 +1564,26 @@ app.get('/api/rank', async (req, res) => {
   const p = RANK_PERIODS.includes(raw) ? raw : (RANK_ALIAS[raw] || 'recent');
   if (req.query.refresh === '1') cache.delete('rank:' + p);
   try {
-    const data = await cached('rank:' + p, 1_800_000, async () => {
+    /* ★★ v10.76：**降级结果只短缓存 120s**（正常 1800s）。
+       实测依据：首调时机地侧偶发失败 ⇒ 融合退化成仅 XD（`jidiOk=false` / `jidiN=0`），
+       而 30 分钟 TTL 会把「双源加权合并」静默钉成单源 —— 连打三次 `refresh=1` 才恢复 `jidiN=12`。
+       ⇒ 宁可 2 分钟后再试一次，也不要让用户半小时里都看不到机地那 12 条。
+       ★ 备注：`recent` 档本来就不抓机地（`RANK_JIDI_KEY.recent === null`）⇒ 它的 `jidiOk`
+         天然是 false，**必须**用 `RANK_JIDI_KEY[p]` 一起判，否则该档会被误判成「降级」。 */
+    const rankTtl = (v) => (
+      RANK_JIDI_KEY[p] && v && v.meta && v.meta.jidiOk === false ? 120_000 : 1_800_000
+    );
+    const data = await cached('rank:' + p, rankTtl, async () => {
       const dbAll = gamesDb.all();
       const jidiKey = RANK_JIDI_KEY[p] || null;
       /* ★ 两源**并行**抓，且用 allSettled：任一侧挂掉都不该拖垮整档
          （XD 挂了还有机地那 12 条，反之亦然；两边都挂才由下面的判空兜底）。 */
+      /* ★★ v10.76：机地侧硬超时 6s（XD 侧实测 1–3s；机地正常时也在 5s 内）。
+         不加这条的实测后果：机地挂着时本接口最坏等 **40s**（20s × 2 次），
+         用户点「人气榜」看到的是长时间不动。超时 ⇒ allSettled 判 rejected ⇒ 走同一条降级路径。 */
       const [pnRes, jdRes] = await Promise.allSettled([
         xdupdate.panels([p]),
-        jidiKey ? jidi.hotRanks() : Promise.resolve(null),
+        jidiKey ? withTimeout(jidi.hotRanks(), 6000, '机地热榜') : Promise.resolve(null),
       ]);
       const xdRows = pnRes.status === 'fulfilled' ? (pnRes.value[p] || []) : [];
       const jidiRows = (jidiKey && jdRes.status === 'fulfilled' && jdRes.value)

@@ -23,9 +23,9 @@
  *   **仍要求 cover** —— 这是首页展示位，无图卡（首字色块）的观感代价远大于「少补一条」。
  */
 
-/* ★ v10.75：展示位随卡片改 3 列而收窄为 11（轮播 5 + 卡片 2 行 × 3 列 = 6）。
+/* ★ v10.76：展示位随卡片改「3 列 × 3 行」而变成 14（轮播 5 + 卡片 9）。
    这个数只在这里定义一处，服务端 meta 与前端分段都从这里取。 */
-const RANK_SHOW_N = 11; // 首页榜单总展示数（轮播 5 + 卡片 6）
+const RANK_SHOW_N = 14; // 首页榜单总展示数（轮播 5 + 卡片 9）
 const RANK_CAR_N = 5;   // 轮播位条数
 
 /* ★ v10.75：非游戏条目判据**合并到单一真源** `data/rank-merge.js`。
@@ -38,7 +38,7 @@ const { TOOL_RE, coverScore } = require('./rank-merge');
  *
  * @param {Array} list 源站榜单（已映射本地库字段、已重编号）
  * @param {Array} all  本地库全量（`gamesDb.all()`）
- * @param {number} [n] 目标条数，默认 11
+ * @param {number} [n] 目标条数，默认 `RANK_SHOW_N`（v10.76 = 14）
  * @returns {{list:Array, filled:number, srcN:number}}
  *   list  —— 定长（最多 n）的展示列表；补位条目标 `filled:true`
  *   filled —— 补了几条（0 = 源站本来就够，前端据此决定要不要显示「含库内补位」说明）
