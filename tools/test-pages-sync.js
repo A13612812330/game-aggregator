@@ -58,6 +58,13 @@ const PAGES = [
     file: 'public/unpack.html', name: '解包匹配',
     own: ['id="upInput"', 'initUp()', 'window.initUp', 'id="upMatch"'],
   },
+  {
+    /* ★ v10.71 新增第 5 张派生页「🗜️ 解压助手」。
+     *   自身节点同样挑**不同层次**：① 骨架 id（exEnv/exUrl）② 本页初始化入口（initEx/ window.initEx）
+     *   ③ 报告容器（exReport）—— 少任何一个都是「页面能开但是死的」。 */
+    file: 'public/extract.html', name: '解压助手',
+    own: ['id="exEnv"', 'id="exUrl"', 'id="exReport"', 'initEx()', 'window.initEx'],
+  },
 ];
 
 console.log('=== 派生页同步（改了主源就必须重建，否则样式/脚本会悄悄漂移）===');
@@ -76,10 +83,12 @@ for (const p of PAGES) {
   ok(missFn.length === 0, '★ 通用脚本与主源同步（函数无缺失）',
     missFn.length ? '缺函数：' + missFn.join(', ') + ' → 请重跑对应的 build-*.js' : FN_NAMES.length + ' 个函数齐备');
 
-  /* ② 顶栏四入口必须在（导航是共享资产，最容易漏；v10.44 由 3 增至 4）
-   *    ⚠️ 用 `id="navRes"` 而不是文案匹配 —— 文案会改，id 是契约。 */
-  ok(/id="navHome"/.test(txt) && /id="navEmu"/.test(txt) && /id="navRes"/.test(txt) && /id="navUnpack"/.test(txt),
-    '顶栏含四个入口（首页 / 手机专区 / 端游资源 / 解包匹配）');
+  /* ② 顶栏五入口必须在（导航是共享资产，最容易漏；v10.44 由 3 增至 4，v10.71 增至 5）
+   *    ⚠️ 用 `id="navXxx"` 而不是文案匹配 —— 文案会改，id 是契约。
+   *    ⚠️ 新增页面/导航时**必须同步这里**，否则漏加的入口在本套件里看不出来。 */
+  ok(/id="navHome"/.test(txt) && /id="navEmu"/.test(txt) && /id="navRes"/.test(txt) &&
+     /id="navUnpack"/.test(txt) && /id="navEx"/.test(txt),
+    '顶栏含五个入口（首页 / 手机专区 / 端游资源 / 解包匹配 / 解压助手）');
   ok(!/id="navHome"[^>]*href="#/.test(txt), '★ 顶栏「首页」是真链接而非死锚点（历史坑）');
 
   /* ③ 通用脚本的 DOM 依赖：搜索弹层缺了会整段脚本中断 */

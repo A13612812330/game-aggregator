@@ -21,6 +21,8 @@
  */
 const fs = require('fs');
 const path = require('path');
+/* 只借它的语法闸门（无副作用）。见 assertScriptSyntax 的注释。 */
+const { assertScriptSyntax } = require('./page-assets');
 
 const PUB = path.join(__dirname, '..', 'public');
 const INDEX = path.join(PUB, 'index.html');
@@ -465,6 +467,9 @@ const out = [
     );
   }
 }
+
+/* ★★ 语法闸门：编译不过就不落盘（防「结构全绿、整页脚本不跑」）。 */
+assertScriptSyntax(out, 'resources.html');
 
 fs.writeFileSync(RES, out, 'utf8');
 console.log(`✅ 已生成 public/resources.html`);

@@ -15,6 +15,7 @@ const download = require('./fetchers/download');
 const shotsLib = require('./fetchers/shots');
 const specDict = require('./data/spec-dict');
 const specMatch = require('./data/spec-match');
+const extractor = require('./data/extractor');
 
 /* ★ v10.42：端口自增兜底改为「显式开关」，**默认关闭**。
  *   旧行为：`EADDRINUSE ⇒ listen(port + 1, triesLeft - 1)`，最多自增 30 次
@@ -2092,6 +2093,349 @@ app.get('/api/download', async (req, res) => {
   }
 });
 
+/* ================= 📦 解压助手（v10.71 新增） =================
+ *
+ * 需求原话（2026-10-14）：
+ *   「下载直链的压缩包，压缩包中含有压缩包，有没有办法直接自动解压并且检测到如果
+ *     还是有压缩包则直接再次解压或增加提醒+再次解压功能」
+ *
+ * 实测已复现：游侠存档直链下来是 .rar，解开里面**就是一个 .rar**，再解开才是存档目录。
+ * ⇒ 落成「固定点迭代」：解一层 → 在产出里再按魔数找压缩包 → 还有就再解，直到到底。
+ *
+ * 用户拍板的四条口径：
+ *   · 输出位置 = **原地解压**（解到压缩包同级目录）
+ *   · 原压缩包 = **保留不动**（不删不移）
+ *   · 加密包   = **列出 + 逐个填密码后续跑**（不静默跳过、不爆破）
+ *   · 网盘链接 = 服务端拿不到（要客户端/登录）⇒ 走原方式，用户手动把文件放进目录后
+ *                用 scan / run 处理 —— 所以这里必须同时支持「直链下载」和「扫目录」
+ *
+ * ★ 长任务**不上 SSE**：全站现状是「内存任务对象 + 前端轮询」（见 /api/library/progress），
+ *   这里保持一致，前端轮询 `GET /api/extract/task?id=`。
+ * ★ 任务表只留最近 `EX_KEEP` 个：这是常驻进程，不清理会一直涨（PITFALLS 31 同族）。
+ * ★ 解压是**写盘**操作 ⇒ 目录必须过护栏（见 exSafeDir），不允许盘符根与系统目录。
+ */
+
+const EX_TASKS = new Map();
+const EX_KEEP = 24;              /* 只留最近 24 个任务 */
+const EX_MAX_CONCURRENT = 2;     /* 同时最多 2 个（7z 吃磁盘，跑太多会互相拖垮） */
+let exSeq = 0;
+let exRunning = 0;
+
+/* ★ 目录护栏：页面上用户可以随手填路径，而解压会往那里写文件。
+ *   万一填成 `C:\Windows` 或盘符根，递归解压会把一堆东西写进系统目录。
+ *   这里**白名单式地拒绝**，而不是"提醒一下" —— 写盘操作不做乐观假设。 */
+const EX_BLOCKED_DIR = [
+  /^[a-z]:[\\/]?$/i,                                   /* 盘符根：C: C:\ D:/ */
+  /^[a-z]:[\\/](windows|program files|program files \(x86\)|programdata|perflogs|recovery|system volume information)([\\/]|$)/i,
+  /^[a-z]:[\\/]users[\\/][^\\/]+[\\/]?(appdata)?$/i,   /* 用户目录根本身 */
+  /^\\\\/,                                             /* UNC 网络路径不碰 */
+];
+function exSafeDir(p) {
+  const s = String(p || '').trim();
+  if (!s) return { ok: false, error: '目录不能为空' };
+  if (!path.isAbsolute(s)) return { ok: false, error: '必须是绝对路径，收到：' + s };
+  let norm;
+  try { norm = path.resolve(s); } catch (e) { return { ok: false, error: '路径无法解析' }; }
+  for (const re of EX_BLOCKED_DIR) {
+    if (re.test(norm)) return { ok: false, error: '出于安全考虑，不允许对该目录操作：' + norm };
+  }
+  return { ok: true, dir: norm };
+}
+
+function exEv(t, type, extra) {
+  t.events.push(Object.assign({ ts: Date.now(), type }, extra || {}));
+  if (t.events.length > 200) t.events.splice(0, t.events.length - 200);
+}
+
+function exNewTask(kind, label, params) {
+  const id = 'ex' + (++exSeq) + '-' + Date.now().toString(36);
+  const t = {
+    id, kind, label, params: params || {},
+    state: 'running',            /* running | done | need-password | error */
+    phase: 'queued',             /* queued | download | extract | done */
+    startedAt: Date.now(), finishedAt: null,
+    progress: 0,
+    bytes: 0, totalBytes: 0,
+    events: [],
+    report: null,
+    error: null,
+    needsPassword: [],
+    pending: [],                 /* 待密码续跑的文件 [{file, destDir}] */
+  };
+  EX_TASKS.set(id, t);
+  if (EX_TASKS.size > EX_KEEP) {
+    for (const k of [...EX_TASKS.keys()].slice(0, EX_TASKS.size - EX_KEEP)) EX_TASKS.delete(k);
+  }
+  return t;
+}
+
+/* 统一的任务启动器：管并发计数、兜住异常（★ 后台任务抛出去会打挂进程） */
+function exRun(t, fn) {
+  exRunning++;
+  (async () => {
+    try { await fn(); } catch (e) {
+      t.state = 'error';
+      t.error = String((e && e.message) || e);
+      exEv(t, 'error', { error: t.error });
+    } finally {
+      exRunning--;
+      if (t.state === 'running') t.state = 'done';
+      t.phase = 'done';
+      t.finishedAt = t.finishedAt || Date.now();
+      t.progress = 100;
+    }
+  })();
+}
+
+/* 报告 → 前端精简视图（别把 200 条 layer 明细整个甩给浏览器） */
+function exSummary(rep) {
+  if (!rep) return null;
+  return {
+    ok: rep.ok, root: rep.root, destDir: rep.destDir,
+    reachedDepth: rep.reachedDepth, maxDepth: rep.maxDepth,
+    files: (rep.final || []).length,
+    layers: (rep.layers || []).map((L) => ({
+      depth: L.depth, name: L.name, format: L.format, ok: L.ok,
+      produced: L.produced, nothingNew: L.nothingNew, needPassword: L.needPassword,
+      skipReason: L.skipReason, err: L.err,
+    })),
+    needsPassword: rep.needsPassword || [],
+    failures: rep.failures || [],
+    skipped: rep.skipped || [],
+    final: (rep.final || []).slice(0, 200),
+  };
+}
+
+function exSnapshot(t) {
+  return {
+    id: t.id, kind: t.kind, label: t.label, state: t.state, phase: t.phase,
+    progress: t.progress, bytes: t.bytes, totalBytes: t.totalBytes,
+    startedAt: t.startedAt, finishedAt: t.finishedAt,
+    error: t.error,
+    needsPassword: t.needsPassword,
+    events: t.events.slice(-60),
+    summary: exSummary(t.report),
+  };
+}
+
+/* 跑一次「下载 + 递归解压」的核心（下载与扫目录两条入口共用后一段） */
+async function exExtractFile(t, file, passwords, destDir) {
+  const rep = await extractor.extractArchive(file, {
+    destDir,
+    passwords,
+    onEvent: (ev) => {
+      if (ev.type === 'layer-start') exEv(t, 'layer', { file: path.basename(ev.file), depth: ev.depth, format: ev.format });
+      else if (ev.type === 'layer-done') exEv(t, 'layer-ok', { file: path.basename(ev.file), depth: ev.depth, produced: ev.produced });
+      else if (ev.type === 'layer-fail') exEv(t, 'layer-fail', { file: path.basename(ev.file), depth: ev.depth, err: ev.err });
+      else if (ev.type === 'need-password') exEv(t, 'need-password', { file: ev.name, depth: ev.depth });
+    },
+  });
+  return rep;
+}
+
+/* ---------- GET /api/extract/env — 环境自检（7z 在不在） ---------- */
+app.get('/api/extract/env', async (_req, res) => {
+  try {
+    const env = await extractor.envCheck();
+    res.json({ ok: true, ...env, defaultDir: extractor.DEFAULT_DEST, running: exRunning });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String((e && e.message) || e) });
+  }
+});
+
+/* ---------- POST /api/extract/scan { dir } — 扫目录里的压缩包（按魔数） ---------- */
+app.post('/api/extract/scan', (req, res) => {
+  const d = exSafeDir((req.body && req.body.dir) || extractor.DEFAULT_DEST);
+  if (!d.ok) return res.status(400).json({ ok: false, error: d.error });
+  try {
+    const items = extractor.scanDir(d.dir);
+    res.json({
+      ok: true, dir: d.dir, count: items.length,
+      items: items.map((x) => ({
+        file: x.file, name: path.basename(x.file), format: x.format,
+        size: x.size, isVolume: x.isVolume, mtime: x.mtime,
+      })),
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String((e && e.message) || e) });
+  }
+});
+
+/* ---------- POST /api/extract/download { url, dir?, name?, passwords? } ----------
+ * 下直链 → 递归解压。任务在后台跑，立即返回 id 供轮询。 */
+app.post('/api/extract/download', (req, res) => {
+  const b = req.body || {};
+  const url = String(b.url || '').trim();
+  if (!/^https?:\/\//i.test(url)) return res.status(400).json({ ok: false, error: '需要 http(s) 直链' });
+  const d = exSafeDir(b.dir || extractor.DEFAULT_DEST);
+  if (!d.ok) return res.status(400).json({ ok: false, error: d.error });
+  if (exRunning >= EX_MAX_CONCURRENT) {
+    return res.status(409).json({ ok: false, error: `已有 ${exRunning} 个任务在跑，请等一个结束再试` });
+  }
+  const env = extractor.resolve7z();
+  if (!env) return res.status(503).json({ ok: false, error: '未找到 7z.exe，请安装 7-Zip 或设置环境变量 GAMEHUB_7Z' });
+
+  const t = exNewTask('download', url, { url, dir: d.dir });
+  exEv(t, 'queued', { url });
+  exRun(t, async () => {
+    /* ── 阶段 1：下载（progress 占 0~40） ── */
+    t.phase = 'download';
+    exEv(t, 'downloading', { url });
+    const dl = await extractor.downloadTo(url, d.dir, {
+      name: b.name,
+      onProgress: (p) => {
+        t.bytes = p.got; t.totalBytes = p.total;
+        t.progress = p.total ? Math.min(40, Math.round((p.got / p.total) * 40)) : 10;
+      },
+    });
+    if (!dl.ok) {
+      t.state = 'error'; t.error = dl.error || '下载失败';
+      exEv(t, 'download-fail', { error: t.error });
+      return;
+    }
+    exEv(t, 'downloaded', { file: path.basename(dl.file), size: dl.size });
+    t.progress = 40;
+
+    /* ── 阶段 2：递归解压（progress 占 40~100） ── */
+    t.phase = 'extract';
+    const passwords = (b.passwords || []).map(String).filter(Boolean);
+    const rep = await exExtractFile(t, dl.file, passwords, d.dir);
+    t.report = rep;
+    t.needsPassword = rep.needsPassword;
+    t.pending = rep.needsPassword.map((n) => ({ file: n.file, destDir: d.dir }));
+    t.progress = 100;
+    if (rep.needsPassword.length) t.state = 'need-password';
+    else t.state = rep.ok ? 'done' : 'error';
+    if (t.state === 'error' && !t.error) {
+      t.error = rep.failures.length ? ('解压失败：' + rep.failures.map((f) => f.err).filter(Boolean).slice(0, 2).join(' / ')) : '解压未完成';
+    }
+  });
+  res.json({ ok: true, id: t.id, dir: d.dir });
+});
+
+/* ---------- POST /api/extract/run { dir?, files?, passwords? } ----------
+ * 扫目录（或按给定文件）→ 逐个递归解压。这是「网盘手动丢入」的主入口。 */
+app.post('/api/extract/run', (req, res) => {
+  const b = req.body || {};
+  const d = exSafeDir(b.dir || extractor.DEFAULT_DEST);
+  if (!d.ok) return res.status(400).json({ ok: false, error: d.error });
+  if (exRunning >= EX_MAX_CONCURRENT) {
+    return res.status(409).json({ ok: false, error: `已有 ${exRunning} 个任务在跑，请等一个结束再试` });
+  }
+  const env = extractor.resolve7z();
+  if (!env) return res.status(503).json({ ok: false, error: '未找到 7z.exe，请安装 7-Zip 或设置环境变量 GAMEHUB_7Z' });
+
+  /* files 给了就只解这些（必须落在 dir 之内 —— 防越权读别的目录）；
+   * 没给就按魔数扫整个 dir。 */
+  let targets;
+  if (Array.isArray(b.files) && b.files.length) {
+    targets = [];
+    for (const f of b.files) {
+      const fp = path.resolve(String(f));
+      if (fp !== d.dir && !fp.startsWith(d.dir + path.sep)) {
+        return res.status(400).json({ ok: false, error: '文件必须位于目标目录内：' + fp });
+      }
+      if (extractor.sniff(fp)) targets.push(fp);
+    }
+    if (!targets.length) return res.status(400).json({ ok: false, error: '给的这些文件里没有认出压缩包（按魔数识别）' });
+  } else {
+    targets = extractor.scanDir(d.dir).map((x) => x.file);
+    if (!targets.length) return res.json({ ok: true, id: null, count: 0, note: '该目录下没有认出压缩包（按魔数识别，不看扩展名）' });
+  }
+
+  const t = exNewTask('run', targets.length + ' 个压缩包', { dir: d.dir, files: targets });
+  exEv(t, 'queued', { count: targets.length, dir: d.dir });
+  exRun(t, async () => {
+    t.phase = 'extract';
+    const passwords = (b.passwords || []).map(String).filter(Boolean);
+    const agg = { ok: true, destDir: d.dir, layers: [], needsPassword: [], failures: [], skipped: [], final: [], reachedDepth: 0, maxDepth: 5, root: d.dir, count: targets.length };
+    for (let i = 0; i < targets.length; i++) {
+      const f = targets[i];
+      t.progress = Math.round((i / targets.length) * 100);
+      exEv(t, 'file-start', { file: path.basename(f), i: i + 1, n: targets.length });
+      const rep = await exExtractFile(t, f, passwords, d.dir);
+      agg.layers.push(...rep.layers);
+      agg.needsPassword.push(...rep.needsPassword);
+      agg.failures.push(...rep.failures);
+      agg.skipped.push(...rep.skipped);
+      agg.final.push(...rep.final);
+      agg.reachedDepth = Math.max(agg.reachedDepth, rep.reachedDepth);
+      if (!rep.ok) agg.ok = false;
+      /* ★ 熔断：连续 3 个包都是**真故障**（不是"需要密码"、不是"分卷"）就停。
+       *   口径同全站：只有 err 算故障；need-password / volume 是数据现状，不算。
+       *   不熔断的话，一个坏目录会让任务一直空转到超时才停。 */
+      const tailFails = agg.failures.slice(-3);
+      if (tailFails.length === 3 && tailFails.every((x) => x.reason === 'error' || x.reason === 'unreadable')) {
+        exEv(t, 'circuit-break', { reason: '连续 3 个包都是真故障，已停止（避免空转）' });
+        break;
+      }
+    }
+    t.report = agg;
+    t.needsPassword = agg.needsPassword;
+    t.pending = agg.needsPassword.map((n) => ({ file: n.file, destDir: d.dir }));
+    if (agg.needsPassword.length) t.state = 'need-password';
+    else t.state = agg.ok ? 'done' : 'error';
+  });
+  res.json({ ok: true, id: t.id, count: targets.length });
+});
+
+/* ---------- GET /api/extract/task?id= — 轮询任务进度 ---------- */
+app.get('/api/extract/task', (req, res) => {
+  const id = String(req.query.id || '');
+  if (!id) {
+    return res.json({ ok: true, tasks: [...EX_TASKS.values()].slice(-8).map(exSnapshot), running: exRunning });
+  }
+  const t = EX_TASKS.get(id);
+  if (!t) return res.status(404).json({ ok: false, error: '任务不存在或已过期' });
+  res.json({ ok: true, task: exSnapshot(t) });
+});
+
+/* ---------- POST /api/extract/password { id, passwords[] } ----------
+ * 用户填完密码后**续跑待解的那些包**（只跑 pending，不重跑已成功的）。 */
+app.post('/api/extract/password', (req, res) => {
+  const b = req.body || {};
+  const t = EX_TASKS.get(String(b.id || ''));
+  if (!t) return res.status(404).json({ ok: false, error: '任务不存在或已过期' });
+  if (!t.pending.length) return res.status(400).json({ ok: false, error: '该任务没有待解密的包' });
+  if (t.state === 'running') return res.status(409).json({ ok: false, error: '任务还在跑，请稍候' });
+  const passwords = (b.passwords || []).map(String).filter(Boolean);
+  if (!passwords.length) return res.status(400).json({ ok: false, error: '请至少填一个密码' });
+
+  const pend = t.pending.slice();
+  t.pending = [];
+  t.state = 'running';
+  t.finishedAt = null;
+  exEv(t, 'password-submitted', { count: passwords.length, targets: pend.length });
+  exRun(t, async () => {
+    let stillNeed = [], fails = [];
+    for (const p of pend) {
+      const rep = await exExtractFile(t, p.file, passwords, p.destDir || path.dirname(p.file));
+      if (t.report) {
+        t.report.layers.push(...rep.layers);
+        t.report.failures.push(...rep.failures);
+        t.report.final.push(...rep.final);
+        t.report.reachedDepth = Math.max(t.report.reachedDepth || 0, rep.reachedDepth);
+      }
+      stillNeed.push(...rep.needsPassword);
+      fails.push(...rep.failures);
+    }
+    t.needsPassword = stillNeed;
+    t.pending = stillNeed.map((n) => ({ file: n.file, destDir: path.dirname(n.file) }));
+    if (stillNeed.length) {
+      t.state = 'need-password';
+      exEv(t, 'still-need-password', { count: stillNeed.length });
+    } else {
+      t.state = fails.length ? 'error' : 'done';
+      exEv(t, 'password-ok', { count: pend.length });
+    }
+  });
+  res.json({ ok: true, id: t.id, targets: pend.length });
+});
+
+/* ★ 兜底 404 —— 必须留在**所有路由之后**。
+ *   v10.71 加解压助手时它一度被误删（用大段新路由直接替换了它），
+ *   后果是所有未匹配路径不再返回结构化 404，而是掉进后续中间件。
+ *   这里补回，并由 test-v1071 的静态断言守着「它确实在最后」。 */
 app.use((_req, res) => res.status(404).json({ ok: false, error: 'Not Found' }));
 
 /* ★ v10.42：端口被占用时**默认不再静默换端口**，改为响亮失败并给出处理办法。

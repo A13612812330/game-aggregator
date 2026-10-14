@@ -49,11 +49,15 @@ const CSS = cut(must(findLine(/^<style>/), '<style>'), must(findLine(/^<\/style>
 /* ---------- 顶栏 ---------- */
 const topA = must(findLine(/<header class="topbar"/), '顶栏 <header class="topbar">');
 const TOPBAR = cut(topA, must(findLine(/<\/header>/, topA), '顶栏 </header>'));
-/* 三条导航的原文，供派生页重写时做自检 */
+/* 四条导航的原文，供派生页重写时做自检 */
 const NAV_SRC = {
   home: /<a href="[^"]*"[^>]*id="navHome"[^>]*>[\s\S]*?<\/a>/,
   emu: /<a href="[^"]*"[^>]*id="navEmu"[^>]*>[\s\S]*?<\/a>/,
   unpack: /<a href="[^"]*"[^>]*id="navUnpack"[^>]*>[\s\S]*?<\/a>/,
+  /* ★ v10.71 新增第 5 条「🗜️ 解压助手」。注意它与 navUnpack（解包匹配）是**两件事**：
+   *   unpack = 分析解包工具导出的配置 JSON；extract = 把压缩包递归解开。
+   *   命名刻意不叫 navExtract，用 navEx，与现有 navXxx 的短名风格一致。 */
+  ex: /<a href="[^"]*"[^>]*id="navEx"[^>]*>[\s\S]*?<\/a>/,
 };
 
 /* ---------- 遮罩 + 详情抽屉 + 底部 Tab ---------- */
@@ -126,11 +130,57 @@ function assertClean(js, what) {
   return js;
 }
 
+/**
+ * ★★ 语法闸门（v10.71 新增）：派生页的内联脚本必须**编译得过**才允许落盘。
+ *
+ * 为什么要有它 —— 实测踩到的坑：
+ *   我在页面脚本里写了 `const FMT_TX = { …, 7z: '7Z', … }`。数字开头的 key 在对象
+ *   字面量里是**非法 token**，整段脚本 SyntaxError，浏览器只丢一句
+ *   `Invalid or unexpected token` 就什么都不执行了 —— 环境条永远停在初值、
+ *   所有按钮全废。而构建器当时那一堆自检**全是绿的**：节点都在、样式都在、
+ *   入口数也对，因为它们检查的是**文本存在性**，不是**可执行性**。
+ *
+ * 所以这里把产物里的每个裸 <script> 抽出来交给 vm 编译一次（只编译、不执行，
+ * 不需要 DOM / window）。编译失败 = 构建失败，页面根本没机会被写出去。
+ *
+ * @param {string} html  已组装好的整页 HTML
+ * @param {string} what  产物名（用于报错定位）
+ * @returns {number} 检查过的脚本块数
+ */
+function assertScriptSyntax(html, what) {
+  const vm = require('vm');
+  const blocks = [];
+  const re = /<script>([\s\S]*?)<\/script>/g;
+  let m;
+  while ((m = re.exec(html))) blocks.push(m[1]);
+  if (!blocks.length) {
+    throw new Error('[page-assets] ' + what + '：产物里没找到内联 <script> 块，组装可能出错。');
+  }
+  /* 标签数不配对 ⇒ 某段脚本里藏着字面量 </script>，浏览器会提前截断脚本。
+     （本类问题 vm 检查不出来，必须单独守。） */
+  const open = (html.match(/<script\b/g) || []).length;
+  const close = (html.match(/<\/script>/g) || []).length;
+  if (open !== close) {
+    throw new Error('[page-assets] ' + what + '：<script> 与 </script> 数量不配对（' + open + ' vs ' + close +
+      '）—— 多半是脚本某处的字符串里含字面量 </script>。');
+  }
+  blocks.forEach((src, i) => {
+    try {
+      new vm.Script(src, { filename: what + '#script' + i });
+    } catch (e) {
+      throw new Error('[page-assets] ' + what + ' 第 ' + (i + 1) + ' 个 <script> 语法错误：' + e.message +
+        '\n  ↳ 常见原因：① 对象键以数字开头未加引号（写 { \'7z\': \'7Z\' }，不能写 { 7z: \'7Z\' }）；' +
+        '\n            ② 模板字符串被提前闭合；③ 少/多一个括号。');
+    }
+  });
+  return blocks.length;
+}
+
 /* ---------- 导航重写 ---------- */
 
 /**
  * 生成派生页顶栏。
- * @param {'emu'|'unpack'} active 当前所在页（决定哪一条高亮）
+ * @param {'emu'|'unpack'|'extract'} active 当前所在页（决定哪一条高亮）
  */
 function buildTopbar(active) {
   let t = TOPBAR;
@@ -140,18 +190,27 @@ function buildTopbar(active) {
   if (active === 'unpack') {
     t = t.replace(/<a href="[^"]*"[^>]*id="navUnpack"[^>]*>/, '<a href="/unpack.html" class="on" id="navUnpack">');
   }
-  if (!/id="navHome"/.test(t) || !/id="navUnpack"/.test(t)) {
+  if (active === 'extract') {
+    /* ★ v10.71：新页高亮。同样要先清掉主源里的 on（主源 on 在 navHome 上，已在上一步摘掉），
+     *   否则会出现两个高亮项。 */
+    t = t.replace(/<a href="[^"]*"[^>]*id="navEx"[^>]*>/, '<a href="/extract.html" class="on" id="navEx">');
+  }
+  if (!/id="navHome"/.test(t) || !/id="navUnpack"/.test(t) || !/id="navEx"/.test(t)) {
     throw new Error('[page-assets] 顶栏重写未命中：public/index.html 的 <nav class="main-nav"> 里\n' +
-      '  「🏠 首页 / 📱 手机专区 / 📦 解包匹配」三条 <a> 的写法变了。');
+      '  「🏠 首页 / 📱 手机专区 / 🎮 端游资源 / 📦 解包匹配 / 🗜️ 解压助手」五条 <a> 的写法变了。');
   }
   return t;
 }
 
-/** 底部 Tab（≤760px 显示）。href 用真链接，不写 data-tab → 通用脚本不会 preventDefault 它们。 */
+/** 底部 Tab（≤760px 显示）。href 用真链接，不写 data-tab → 通用脚本不会 preventDefault 它们。
+ *  ★ v10.71 由 4 项增至 5 项（插在「解包」与「搜索」之间）。
+ *    5 项在 390px 上每项约 78px，文案是 2~4 个汉字 + 18px 图标，放得下（已实拍确认）。 */
 const TAB_ICON = {
   home: '<path d="M3 10.6 12 3.4l9 7.2"/><path d="M5.6 9.4V19a1.6 1.6 0 0 0 1.6 1.6h3.3V15h3v5.6h3.3A1.6 1.6 0 0 0 18.4 19V9.4"/>',
   emu: '<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18.5h2"/>',
   unpack: '<path d="M3 7.5 12 3l9 4.5-9 4.5-9-4.5Z"/><path d="M3 12.6 12 17.1l9-4.5"/><path d="M3 17.2 12 21.7l9-4.5"/>',
+  /* 箱子 + 向下箭头 = 「往里解压出来」，与 unpack 的层叠图标刻意区分 */
+  extract: '<rect x="3" y="3" width="18" height="5" rx="1.5"/><path d="M5 8v11a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V8"/><path d="M12 11.5v5"/><path d="m9.5 14.5 2.5 2.5 2.5-2.5"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
 };
 function buildTabbar(active) {
@@ -163,6 +222,7 @@ function buildTabbar(active) {
     item('home', '/', '首页', active === 'home'),
     item('emu', '/emulator.html', '手机专区', active === 'emu'),
     item('unpack', '/unpack.html', '解包', active === 'unpack'),
+    item('extract', '/extract.html', '解压', active === 'extract'),
     /* 搜索用 data-tab：通用脚本要拦下它并打开搜索弹窗 */
     '<a href="#" data-tab="search" aria-label="搜索"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
       TAB_ICON.search + '</svg>搜索</a>',
@@ -186,6 +246,7 @@ module.exports = {
   findLine, cut,
   HEAD, CSS, TOPBAR, OVERLAY, SEARCH,
   SCRIPT_RAW, SCRIPT_FOR_SCAN, deadNodes, scriptForSubpage, assertClean,
+  assertScriptSyntax,
   buildTopbar, buildTabbar, buildHead,
   NAV_SRC,
 };

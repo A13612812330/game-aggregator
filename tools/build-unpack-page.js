@@ -300,5 +300,8 @@ if (!/id="navUnpack"/.test(out)) throw new Error('[build-unpack-page] 顶栏缺�
 if (/EMU_PAGE_HREF/.test(out)) throw new Error('[build-unpack-page] 产物残留 EMU_PAGE_HREF，会导致 ReferenceError。');
 if (out.indexOf('<style>') < 0 || out.indexOf('</style>') < 0) throw new Error('[build-unpack-page] 样式块不完整。');
 
+/* ★★ 语法闸门：结构自检验不出语法错。见 page-assets.js 的 assertScriptSyntax 注释。 */
+A.assertScriptSyntax(out, 'unpack.html');
+
 fs.writeFileSync(OUT, out, 'utf8');
 console.log('[build-unpack-page] 已生成 public/unpack.html（' + (out.length / 1024).toFixed(1) + ' KB）');

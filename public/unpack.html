@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>解包配置匹配 · GameHub 聚合</title>
 <meta name="description" content="把游戏解包 / 兼容层工具导出的 JSON 贴进来，自动识别配置并对撞 Steam 官方配置要求，给出可适配游戏清单。">
+<!-- 站点图标（v10.71 新增）：内联 SVG，不新增文件、不产生额外请求。
+     加它之前全站五个页面都**没有** favicon，浏览器自动请求 /favicon.ico 必得 404，
+     每个用户控制台都挂一条红字。放在样式块之前，派生页会随 head 骨架一起继承。
+     ⚠️ 注：这里刻意不写出样式标签的字面量 —— 结构防线会数它的出现次数，
+     在注释里写一次就会被算成「出现了第二个样式块」，把好端端的页面照成红的。 -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='8'%20fill='%232E6BFF'/%3E%3Cpath%20d='M12%2011h8a5%205%200%200%201%204.9%204l1%205.4A2.9%202.9%200%200%201%2021%2022.3l-1.6-1.6h-6.8L11%2022.3a2.9%202.9%200%200%201-4.9-1.9l1-5.4A5%205%200%200%201%2012%2011Z'%20fill='%23fff'/%3E%3Cpath%20d='M12.5%2015v3M11%2016.5h3'%20stroke='%232E6BFF'%20stroke-width='1.6'%20stroke-linecap='round'/%3E%3Ccircle%20cx='19.5'%20cy='15.4'%20r='1.1'%20fill='%232E6BFF'/%3E%3Ccircle%20cx='22'%20cy='17.6'%20r='1.1'%20fill='%232E6BFF'/%3E%3C/svg%3E">
 <style>
   :root{
     --c-primary:#2E6BFF; --c-primary-deep:#1B4FD8; --c-primary-soft:#EAF1FF;
@@ -2445,6 +2451,7 @@
       <a href="/emulator.html" id="navEmu">📱 手机专区</a>
       <a href="/resources.html" id="navRes">🎮 端游资源</a>
       <a href="/unpack.html" class="on" id="navUnpack">📦 解包匹配</a>
+      <a href="/extract.html" id="navEx">🗜️ 解压助手</a>
     </nav>
     <span class="spacer"></span>
     <button class="top-search" id="searchOpen" type="button" aria-label="搜索游戏">
@@ -2622,6 +2629,7 @@
   <a href="/" aria-label="首页"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.6 12 3.4l9 7.2"/><path d="M5.6 9.4V19a1.6 1.6 0 0 0 1.6 1.6h3.3V15h3v5.6h3.3A1.6 1.6 0 0 0 18.4 19V9.4"/></svg>首页</a>
   <a href="/emulator.html" aria-label="手机专区"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18.5h2"/></svg>手机专区</a>
   <a href="/unpack.html" class="on" aria-label="解包"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5 12 3l9 4.5-9 4.5-9-4.5Z"/><path d="M3 12.6 12 17.1l9-4.5"/><path d="M3 17.2 12 21.7l9-4.5"/></svg>解包</a>
+  <a href="/extract.html" aria-label="解压"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="5" rx="1.5"/><path d="M5 8v11a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V8"/><path d="M12 11.5v5"/><path d="m9.5 14.5 2.5 2.5 2.5-2.5"/></svg>解压</a>
   <a href="#" data-tab="search" aria-label="搜索"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>搜索</a>
 </nav>
 

@@ -67,12 +67,18 @@ const count = (s, re) => (s.match(re) || []).length;
 
 /* ================= 首页 ================= */
 const navBlock = (idx.match(/<nav class="main-nav">[\s\S]*?<\/nav>/) || [''])[0];
-t('首页顶栏恰好 4 个入口（首页 / 手机专区 / 端游资源 / 解包匹配）', count(navBlock, /<a /g) === 4, `实际 ${count(navBlock, /<a /g)}`);
-t('首页顶栏含「首页」#navHome、「手机专区」#navEmu、「端游资源」#navRes',
+/* ★ v10.71：由 4 增至 5 —— 末尾新增「🗜️ 解压助手」→ /extract.html。
+ *   这条断言存在的意义是「顶栏入口**恰好**这么多」，防止悄悄多一个/少一个；
+ *   加页时它变红是**设计如此**（提醒你同步下方几条），不是误报。 */
+t('首页顶栏恰好 5 个入口（首页 / 手机专区 / 端游资源 / 解包匹配 / 解压助手）', count(navBlock, /<a /g) === 5, `实际 ${count(navBlock, /<a /g)}`);
+t('首页顶栏含「首页」#navHome、「手机专区」#navEmu、「端游资源」#navRes、「解压助手」#navEx',
   /id="navHome"/.test(navBlock) && /navEmu/.test(navBlock) && /emulator\.html/.test(navBlock)
-  && /<a href="\/resources\.html" id="navRes">🎮 端游资源<\/a>/.test(navBlock));
+  && /<a href="\/resources\.html" id="navRes">🎮 端游资源<\/a>/.test(navBlock)
+  && /<a href="\/extract\.html" id="navEx">🗜️ 解压助手<\/a>/.test(navBlock));
 t('首页顶栏第 3 项是「端游资源」→ /resources.html（手机专区与解包匹配之间）',
   /navEmu[\s\S]{0,120}navRes[\s\S]{0,120}navUnpack/.test(navBlock));
+t('首页顶栏「解压助手」在「解包匹配」之后（v10.71 追加在末尾）',
+  /navUnpack[\s\S]{0,160}navEx/.test(navBlock));
 t('首页顶栏已无 navRank / navLatest 旧分段入口', !/id="navRank"|id="navLatest"/.test(navBlock));
 t('首页已移除引导卡 #emuHub', !/id="emuHub"/.test(idx));
 t('首页无 .emu-hub CSS 死规则（注释行除外）', !/^\s*\.emu-hub[-{]/m.test(idx));

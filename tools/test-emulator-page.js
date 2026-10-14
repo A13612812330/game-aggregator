@@ -75,15 +75,19 @@ async function main() {
   // v10.20：顶栏由 2 个入口增为 3 个（新增「📦 解包匹配」），导航是共享资产故两页同步
   // v10.44：再增第 4 个「🎮 端游资源」→ /resources.html（MOD / 存档 / 修改器 独立成页），
   //         手机专区随之收缩为 3 页签，故本文件的 tr/sv 用例整体迁往 test-resource-page.js
+  // v10.71：再增第 5 个「🗜️ 解压助手」→ /extract.html（下载直链的递归解压 + 拖放工具）。
   const navLinks = $$('.main-nav a');
-  ok('顶栏有 4 个入口（首页 / 手机专区 / 端游资源 / 解包匹配）', navLinks.length === 4, `实际 ${navLinks.length}：${navLinks.map((a) => a.textContent.trim()).join(' / ')}`);
+  ok('顶栏有 5 个入口（首页 / 手机专区 / 端游资源 / 解包匹配 / 解压助手）', navLinks.length === 5, `实际 ${navLinks.length}：${navLinks.map((a) => a.textContent.trim()).join(' / ')}`);
   ok('顶栏含第 4 条「端游资源」#navRes → /resources.html',
     !!$('#navRes') && $('#navRes').getAttribute('href') === '/resources.html',
     $('#navRes') ? $('#navRes').getAttribute('href') : '(缺失)');
-  ok('顶栏顺序为 首页 → 手机专区 → 端游资源 → 解包匹配',
-    navLinks.map((a) => a.id).join(',') === 'navHome,navEmu,navRes,navUnpack',
+  ok('顶栏顺序为 首页 → 手机专区 → 端游资源 → 解包匹配 → 解压助手',
+    navLinks.map((a) => a.id).join(',') === 'navHome,navEmu,navRes,navUnpack,navEx',
     navLinks.map((a) => a.id).join(','));
-  ok('顶栏第三条是「解包匹配」#navUnpack → /unpack.html',
+  ok('顶栏含第 5 条「解压助手」#navEx → /extract.html',
+    !!$('#navEx') && $('#navEx').getAttribute('href') === '/extract.html',
+    $('#navEx') ? $('#navEx').getAttribute('href') : '(缺失)');
+  ok('顶栏第四条是「解包匹配」#navUnpack → /unpack.html',
     !!$('#navUnpack') && $('#navUnpack').getAttribute('href') === '/unpack.html',
     $('#navUnpack') ? $('#navUnpack').getAttribute('href') : '(缺失)');
   ok('顶栏第一个是「首页」#navHome', !!$('#navHome'), ($('#navHome') || {}).textContent || '(缺失)');
