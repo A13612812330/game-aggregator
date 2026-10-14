@@ -1094,10 +1094,12 @@ const GN = require(path.join(root, 'data', 'game-name'));
     !/st\.cnt\.save = files\.count \+ loc/.test(idx));
 
   /* ③ 渲染：GT 段共用一处实现（铁律 17） */
+  /* ★ v10.73：两个函数各多收一个 `cat`（类别要传进文件夹名 —— 见 v10.73
+   *   「一个任务一个文件夹：游戏名_类别_原链名」）。判据跟着**改签名**，不是放宽。 */
   t('★★ v10.53：GT 行渲染 `dlResRowsHtml` **只有一处实现**，且只被 `dlResSection` 调用（两个页签共用）',
-    count(idx, /function dlResRowsHtml\(items\)/g) === 1
-    && count(idx, /dlResRowsHtml\(items\)/g) === 2,
-    `定义 ${count(idx, /function dlResRowsHtml\(items\)/g)} / 调用 ${count(idx, /dlResRowsHtml\(items\)/g)}`);
+    count(idx, /function dlResRowsHtml\(items, cat\)/g) === 1
+    && count(idx, /dlResRowsHtml\(items, cat\)/g) === 2,
+    `定义 ${count(idx, /function dlResRowsHtml\(items, cat\)/g)} / 调用 ${count(idx, /dlResRowsHtml\(items, cat\)/g)}`);
   t('★ v10.53：GT 行带独立来源角标 `.k.gt`（与机地 `mod`/`mf`、GCM 的 `.tagx` 视觉可分）',
     /<div class="d-dl-it"><span class="k gt">GT<\/span>/.test(idx));
   t('★ v10.53：`.d-dl-it .k.gt` 有专属配色（新增角标必须有样式，否则渲染成裸块）',
@@ -1111,19 +1113,19 @@ const GN = require(path.join(root, 'data', 'game-name'));
   t('★★ v10.53：修改器页签的 GT 段排在 `.d-dl-links`（模块出口）**之前**',
     (() => {
       const seg = idx.split('function dlUniPaintMod(')[1] || '';
-      const iGt = seg.indexOf('out.push(dlResSection(gtr))');
+      const iGt = seg.indexOf("out.push(dlResSection(gtr, '修改器'))");
       const iOut = seg.indexOf(`out.push('<div class="d-dl-links">' + dModLinks()`);
       return iGt > 0 && iOut > 0 && iGt < iOut;
     })());
   t('★★ v10.53：存档页签的 GT 段排在「游侠存档区 / 存档库」出口**之前**',
     (() => {
       const seg = idx.split('function dlUniPaintSave(')[1] || '';
-      const iGt = seg.indexOf('out.push(dlResSection(gts))');
+      const iGt = seg.indexOf("out.push(dlResSection(gts, '存档'))");
       const iOut = seg.indexOf('游侠存档区 ↗');
       return iGt > 0 && iOut > 0 && iGt < iOut;
     })());
   t('★ v10.53：修改器页签**只对 `modifier`** 挂 GT 段（`mod` 分区聚合层本来就只有机地一个来源，挂上去是空段）',
-    /if \(kind === 'modifier' && gtr\.length\) out\.push\(dlResSection\(gtr\)\);/.test(idx));
+    /if \(kind === 'modifier' && gtr\.length\) out\.push\(dlResSection\(gtr, '修改器'\)\);/.test(idx));
 
   /* ⑤ 空态：这是本轮真正的那个 bug —— 老判据「游侠没文件就早退」会把 GT-only 的 842 款判成空白 */
   t('★★ v10.53：存档空态判据放宽成「两路都没有」，`!items.length` 分支**不再提前 return**',
@@ -1145,11 +1147,11 @@ const GN = require(path.join(root, 'data', 'game-name'));
   /* ⑦ 四页同步（铁律 1） */
   t('[派生页] 四页都同步了 `dlUniFetchGt` + GT 段渲染',
     P4.every(([, h]) => /async function dlUniFetchGt\(ctx, cat\)/.test(h)
-      && /function dlResSection\(items\)/.test(h)), miss(/async function dlUniFetchGt\(ctx, cat\)/));
-  t('[派生页] 四页的存档页签都接了 GT 段（`out.push(dlResSection(gts))`）与放宽后的空态',
-    P4.every(([, h]) => /out\.push\(dlResSection\(gts\)\)/.test(h)
+      && /function dlResSection\(items, cat\)/.test(h)), miss(/async function dlUniFetchGt\(ctx, cat\)/));
+  t("[派生页] 四页的存档页签都接了 GT 段（`out.push(dlResSection(gts, '存档'))`）与放宽后的空态",
+    P4.every(([, h]) => /out\.push\(dlResSection\(gts, '存档'\)\)/.test(h)
       && /\(gts\.length \? '' : '<br><span style="font-size:11\.5px">存档区按游戏名匹配/.test(h)),
-    miss(/out\.push\(dlResSection\(gts\)\)/));
+    miss(/out\.push\(dlResSection\(gts, '存档'\)\)/));
 }
 /* 专属 CSS 泄漏闸：追加的 CSS 必须整段待在 <style> 内 */
 t('端游资源页 <style> 唯一', count(res, /<style>/g) === 1, `实际 ${count(res, /<style>/g)}`);

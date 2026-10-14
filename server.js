@@ -2118,6 +2118,9 @@ app.get('/api/download', async (req, res) => {
 const EX_TASKS = new Map();
 const EX_KEEP = 24;              /* 只留最近 24 个任务 */
 const EX_MAX_CONCURRENT = 2;     /* 同时最多 2 个（7z 吃磁盘，跑太多会互相拖垮） */
+/* ★ v10.73：历史是**落盘**的（内存任务表只留 24 个且重启即丢），所以上限单列一支。
+   200 条 ≈ 几十 KB，翻起来够用；再多就该用户自己归档了。 */
+const EX_HISTORY_MAX = 200;
 let exSeq = 0;
 let exRunning = 0;
 
@@ -2168,6 +2171,11 @@ function exNewTask(kind, label, params) {
     sniffed: null,               /* 落盘时按魔数认出的格式：zip / rar / 7z / … */
     notArchive: false,           /* 地址通、也下得到东西，但内容不是压缩包 */
     contentType: null,           /* 最后一次下载响应的 Content-Type（拿不到就是 null） */
+    /* ★ v10.73：一个任务一个文件夹 —— 真实落点（DEFAULT_DEST 下的子目录）。
+     *   前端「复制路径 / 打开文件夹」用它，不许再拿 DEFAULT_DEST 顶替
+     *   （那会让用户以为东西在该在的地方，实际在子目录里）。 */
+    dir: null,
+    archive: null,               /* 落盘后是不是压缩包（null = 还没下完） */
   };
   EX_TASKS.set(id, t);
   if (EX_TASKS.size > EX_KEEP) {
@@ -2190,6 +2198,11 @@ function exRun(t, fn) {
       t.phase = 'done';
       t.finishedAt = t.finishedAt || Date.now();
       t.progress = 100;
+      /* ★★ v10.73：终态**一律留档**（含 need-password 与 error —— 「这个包要密码」
+       *   和「这个包坏了」恰恰是用户回头最想找的信息）。
+       *   放在 finally 里而不是各分支里，是为了**保证没有一条出口能绕过它** ——
+       *   散在分支上加，迟早会漏掉新加的那条（本项目已经出过同族的账）。 */
+      try { exHistoryPush(t); } catch (e) { /* 留档失败绝不许影响已完成的主产物 */ }
     }
   })();
 }
@@ -2224,9 +2237,62 @@ function exSnapshot(t) {
     sniffed: t.sniffed || null,
     notArchive: !!t.notArchive,
     contentType: t.contentType || null,
+    /* ★ v10.73：真实落点（子目录）与「是不是压缩包」 */
+    dir: t.dir || t.params.dir || null,
+    archive: t.archive === null ? null : !!t.archive,
+    game: t.params.game || '',
+    cat: t.params.cat || '',
     events: t.events.slice(-60),
     summary: exSummary(t.report),
   };
+}
+
+/* ---------- v10.73：下载/解压历史（用户要求「解压助手保留日志以及路径」） ----------
+ * 为什么必须落盘：v10.71/v10.72 的任务表 `EX_TASKS` 是**内存态**（只留最近 24 个），
+ * 服务一重启就全没了 —— 而用户恰恰是**重启之后**才想起来「刚才那个解到哪了、在哪个目录」。
+ * 落点跟着产物走（`Downloads\GameHub\_下载历史.json`），用户在自己的下载目录里就能翻到。
+ *
+ * ★ 文件名以 `_` 开头 + `.json` 后缀，双保险：`scanDir` 只认魔数，
+ *   JSON 永远不会被当成压缩包收进去（否则「扫描 → 解压全部」会多跑一次空转）。
+ */
+let exHistory = null;                       /* 懒加载：第一次用到才读盘 */
+function exHistoryFile() { return path.join(extractor.DEFAULT_DEST, '_下载历史.json'); }
+function exHistoryAll() {
+  if (exHistory) return exHistory;
+  exHistory = [];
+  try {
+    const j = JSON.parse(fs.readFileSync(exHistoryFile(), 'utf8'));
+    if (Array.isArray(j)) exHistory = j.slice(-EX_HISTORY_MAX);
+  } catch (e) { /* 首次运行 / 文件损坏：都当空历史，绝不让它影响主流程 */ }
+  return exHistory;
+}
+
+/**
+ * 记一条终态。★ **按 id 覆盖**而不是无脑追加：任务可能跑两趟
+ * （第二趟是用户填完密码后的 `need-password` 续跑），追加会让同一次下载
+ * 在历史里出现两条、且前一条永远停在「待密码」，看着像失败。
+ */
+function exHistoryPush(t) {
+  const arr = exHistoryAll();
+  const rec = {
+    id: t.id, at: t.finishedAt || Date.now(),
+    game: t.params.game || '', cat: t.params.cat || '',
+    url: t.params.url || '',
+    dir: t.dir || t.params.dir || '',
+    state: t.state,
+    sniffed: t.sniffed || null,
+    layers: t.report ? (t.report.layers || []).length : 0,
+    files: t.report ? (t.report.final || []).length : 0,
+    bytes: t.bytes || 0,
+    error: t.error || null,
+  };
+  const i = arr.findIndex((x) => x && x.id === t.id);
+  if (i >= 0) arr[i] = rec; else arr.push(rec);
+  if (arr.length > EX_HISTORY_MAX) arr.splice(0, arr.length - EX_HISTORY_MAX);
+  try {
+    fs.mkdirSync(path.dirname(exHistoryFile()), { recursive: true });
+    fs.writeFileSync(exHistoryFile(), JSON.stringify(arr, null, 1));
+  } catch (e) { /* 写不了历史不许影响已经完成的解压 —— 那才是主产物 */ }
 }
 
 /* 跑一次「下载 + 递归解压」的核心（下载与扫目录两条入口共用后一段） */
@@ -2272,32 +2338,46 @@ app.post('/api/extract/scan', (req, res) => {
   }
 });
 
-/* ---------- POST /api/extract/download { url, dir?, name?, passwords? } ----------
- * 下直链 → 递归解压。任务在后台跑，立即返回 id 供轮询。 */
+/* ---------- POST /api/extract/download { url, game?, cat?, name?, dir?, passwords? } ----------
+ * 下直链 → 递归解压。任务在后台跑，立即返回 id 供轮询。
+ *
+ * ★★ v10.73：这已经是站点上**唯一的下载通道**（并列的「🗜️ 解压」按钮按用户拍板删掉了，
+ *    原「⬇ 直接下载」改为走这里）⇒ 它必须**从不空手而归**：
+ *    是压缩包就解，不是就照存，只有 HTML 网页才丢弃。
+ *    落点也变了：不再直接把文件堆在 `Downloads\GameHub` 根下，而是
+ *    **一个任务一个文件夹** —— `游戏名_类别_原链名`。 */
 app.post('/api/extract/download', (req, res) => {
   const b = req.body || {};
   const url = String(b.url || '').trim();
   if (!/^https?:\/\//i.test(url)) return res.status(400).json({ ok: false, error: '需要 http(s) 直链' });
-  const d = exSafeDir(b.dir || extractor.DEFAULT_DEST);
-  if (!d.ok) return res.status(400).json({ ok: false, error: d.error });
+  const root = exSafeDir(b.dir || extractor.DEFAULT_DEST);
+  if (!root.ok) return res.status(400).json({ ok: false, error: root.error });
   if (exRunning >= EX_MAX_CONCURRENT) {
     return res.status(409).json({ ok: false, error: `已有 ${exRunning} 个任务在跑，请等一个结束再试` });
   }
   const env = extractor.resolve7z();
   if (!env) return res.status(503).json({ ok: false, error: '未找到 7z.exe，请安装 7-Zip 或设置环境变量 GAMEHUB_7Z' });
 
-  const t = exNewTask('download', url, { url, dir: d.dir, expectArchive: b.expectArchive !== false });
-  exEv(t, 'queued', { url });
+  /* 原链名（文件夹名的第三段）。★ 用**服务端自己**从 URL 推出来的名字，不采信前端传的
+   *   `b.name` —— 两者此刻同源，但「外面来的字符串一律当不可信」是本项目写盘路径的既定口径。 */
+  const originName = extractor.fileNameFromUrl(url, b.name);
+  const sub = extractor.taskDir(root.dir, { game: b.game, cat: b.cat, fileName: originName });
+  if (!sub.ok) return res.status(400).json({ ok: false, error: sub.error });
+
+  const t = exNewTask('download', url, {
+    url, game: b.game || '', cat: b.cat || '', dir: sub.dir, root: root.dir, name: originName,
+  });
+  t.dir = sub.dir;
+  exEv(t, 'queued', { url, dir: sub.dir, name: sub.name });
   exRun(t, async () => {
     /* ── 阶段 1：下载（progress 占 0~40） ──
-     * ★ v10.72：这里默认**要求这条链接给回来的就是压缩包**（expectArchive 默认 true）。
-     *   downloadTo 收满 512 字节即判种类，不是压缩包就立刻中止、**且不落盘** ——
-     *   点了「下载并解压」却往 Downloads\GameHub 里塞一堆网盘页 HTML，比什么都不做更糟。 */
+     * ★ v10.73：`expectArchive` 已删除。它的旧语义（不是压缩包就中止且不落盘）是配着
+     *   **并列的第二个按钮**用的；现在只剩一个按钮、它就是「下载」本身，
+     *   再丢弃就等于「点了没结果」。 */
     t.phase = 'download';
     exEv(t, 'downloading', { url });
-    const dl = await extractor.downloadTo(url, d.dir, {
-      name: b.name,
-      expectArchive: b.expectArchive !== false,
+    const dl = await extractor.downloadTo(url, sub.dir, {
+      name: originName,
       onProgress: (p) => {
         t.bytes = p.got; t.totalBytes = p.total;
         t.progress = p.total ? Math.min(40, Math.round((p.got / p.total) * 40)) : 10;
@@ -2305,8 +2385,8 @@ app.post('/api/extract/download', (req, res) => {
     });
     t.contentType = dl.contentType || null;
     if (!dl.ok) {
-      /* ★ 务必分两种上报：「地址给的不是压缩包」≠「下载出错了」。
-       *   前端对前者的正确动作是「改用『直接下载』或复制链接过去」，不是「重试」。 */
+      /* ★ 务必分两种上报：「地址给的是网页」≠「下载出错了」。
+       *   前端对前者的正确动作是「改用原贴/网盘通道」，不是「重试」。 */
       t.notArchive = !!dl.notArchive;
       t.state = dl.notArchive ? 'not-archive' : 'error';
       t.error = dl.error || '下载失败';
@@ -2314,16 +2394,34 @@ app.post('/api/extract/download', (req, res) => {
       return;
     }
     t.sniffed = dl.sniffed || null;
-    exEv(t, 'downloaded', { file: path.basename(dl.file), size: dl.size, format: t.sniffed });
+    t.archive = !!dl.archive;
     t.progress = 40;
 
-    /* ── 阶段 2：递归解压（progress 占 40~100） ── */
+    if (!dl.archive) {
+      /* ★★ v10.73：**不是压缩包 ⇒ 照存**，如实标记 `saved`。
+       *   这不是失败：用户点的是「下载」，文件已经在他机器上了。
+       *   标记成 error 会让浮层报红，用户以为没下到，转头去点网盘 —— 白折腾一趟。 */
+      t.state = 'saved';
+      exEv(t, 'saved', {
+        file: path.basename(dl.file), size: dl.size,
+        contentType: t.contentType, head: dl.head || null,
+      });
+      t.progress = 100;
+      return;
+    }
+
+    exEv(t, 'downloaded', { file: path.basename(dl.file), size: dl.size, format: t.sniffed });
+
+    /* ── 阶段 2：递归解压（progress 占 40~100） ──
+     * ★ 内层包**就地展开**、不套 L1/L2 子目录（用户拍板）：`extractArchive` 的 destDir
+     *   默认就是 `path.dirname(file)`，而外层包此刻已经在 sub.dir 里 ⇒ 传 sub.dir
+     *   就是「同一个文件夹内迭代到固定点」。 */
     t.phase = 'extract';
     const passwords = (b.passwords || []).map(String).filter(Boolean);
-    const rep = await exExtractFile(t, dl.file, passwords, d.dir);
+    const rep = await exExtractFile(t, dl.file, passwords, sub.dir);
     t.report = rep;
     t.needsPassword = rep.needsPassword;
-    t.pending = rep.needsPassword.map((n) => ({ file: n.file, destDir: d.dir }));
+    t.pending = rep.needsPassword.map((n) => ({ file: n.file, destDir: sub.dir }));
     t.progress = 100;
     if (rep.needsPassword.length) t.state = 'need-password';
     else t.state = rep.ok ? 'done' : 'error';
@@ -2331,7 +2429,22 @@ app.post('/api/extract/download', (req, res) => {
       t.error = rep.failures.length ? ('解压失败：' + rep.failures.map((f) => f.err).filter(Boolean).slice(0, 2).join(' / ')) : '解压未完成';
     }
   });
-  res.json({ ok: true, id: t.id, dir: d.dir });
+  res.json({ ok: true, id: t.id, dir: sub.dir, name: sub.name });
+});
+
+/* ---------- GET /api/extract/history?n= — 下载/解压历史（含产物路径） ----------
+ * ★ v10.73 新增（用户要求「解压助手保留日志以及路径」）。**落盘**的，重启不丢。
+ * 返回**倒序**（最新在前）—— 这个列表是给人「找刚才那次」用的，不是给机器读的。 */
+app.get('/api/extract/history', (req, res) => {
+  const n = Math.min(EX_HISTORY_MAX, Math.max(1, parseInt(req.query.n, 10) || 30));
+  const all = exHistoryAll();
+  res.json({
+    ok: true,
+    file: exHistoryFile(),
+    total: all.length,
+    max: EX_HISTORY_MAX,
+    items: all.slice(-n).reverse(),
+  });
 });
 
 /* ---------- POST /api/extract/run { dir?, files?, passwords? } ----------
@@ -2365,6 +2478,7 @@ app.post('/api/extract/run', (req, res) => {
   }
 
   const t = exNewTask('run', targets.length + ' 个压缩包', { dir: d.dir, files: targets });
+  t.dir = d.dir;              /* ★ v10.73：历史里要带「产物路径」，这条入口也得填 */
   exEv(t, 'queued', { count: targets.length, dir: d.dir });
   exRun(t, async () => {
     t.phase = 'extract';

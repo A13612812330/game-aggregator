@@ -133,7 +133,7 @@ const MAGIC_TABLE = [
  * 按魔数判定**一段字节流**是不是压缩包 —— 文件版与网络流版的**单一真源**。
  *
  * ★ v10.72 抽出：这套匹配原来只写在 sniff(文件) 里，而「下载时先问一句这是不是
- *   压缩包」需要拿**还没落盘的头部字节**判（见 downloadTo 的 expectArchive）。
+ *   压缩包」需要拿**还没落盘的头部字节**判（见 downloadTo 里边收边判的那段）。
  *   复制一份就是两张魔数表各自漂移 —— 本项目最贵的一类事故（铁律 1 同族）。
  *   所以判定只此一份，sniff() 退化成它的「读文件前 512 字节」外壳。
  *
@@ -662,6 +662,98 @@ function fileNameFromUrl(url, fallback) {
   return base;
 }
 
+/* ==================== v10.73：一个任务一个文件夹 ==================== */
+
+/**
+ * 清洗**单个路径段**（给「按游戏名建子目录」用）。
+ *
+ * ★★ 为什么必须把 `\` 与 `/` 一起换成 `_`：本版新增「一个任务一个文件夹」，
+ *    而 `游戏名` 与 `原链名` 都来自**外部数据**（源站标题 / URL）。
+ *    不清洗的话，一个叫 `..\..\..\Windows` 的游戏名就能让解压写到落点目录**之外** ——
+ *    这是本版**新引入**的攻击面：v10.72 只往一个固定目录里落文件，压根没有这个口子。
+ */
+function sanitizeSeg(s, maxLen) {
+  /* 只收字符串与数字：对象会被 `String()` 变成 `[object Object]` 混进文件夹名
+   * （实测过），既难看又毫无意义 —— 直接当空段省略掉。 */
+  if (typeof s !== 'string' && typeof s !== 'number') return '';
+  let v = String(s);
+  v = v.replace(/[\u0000-\u001f\u007f]/g, '');            /* 控制字符直接删（含换行/制表） */
+  v = v.replace(/[\\/:*?"<>|]/g, '_');                    /* 路径分隔符 + Windows 非法字符 */
+  v = v.replace(/\.{2,}/g, '_');                          /* `..` 是上跳；`...` 也会被尾点规则吞 */
+  v = v.replace(/^[\s.]+/, '').replace(/[\s.]+$/, '');    /* 首尾空白与点（尾点 Win 会静默去掉） */
+  if (maxLen && v.length > maxLen) v = v.slice(0, maxLen).replace(/[\s.]+$/, '');
+  if (!v || v === '.' || v === '..') return '';
+  /* ★ 整段只剩 `_` 与 `.`（例如输入就是 `..`，被上面换成 `_`）⇒ 视为**没有内容**。
+   *   不拦的话会生成一个名叫 `_____` 的文件夹：不报错、但完全没意义，
+   *   而且用户看到只会困惑「这是哪个游戏」。 */
+  if (/^[_.]+$/.test(v)) return '';
+  /* ★★ Windows 保留设备名（`con` / `aux` / `com1` …）的逃逸**不在这里做**。
+   *   根因（v10.73 反证实测照出）：这一段对每个**段**加前缀 `_`，而 `taskFolderName`
+   *   最后的收口 `replace(/^_+|_+$/g,'')` 会把这个前缀**又抹掉** ——
+   *   `{game:'con'}` 最终拿到的目录名就是 `con`，等于逃逸没生效。
+   *   ⇒ 挪到 `taskFolderName` 里对**最终目录名**做一次。这也更符合语义：
+   *     Windows 的保留名规则看的是**整个目录名**，中间段叫 `con` 完全没问题
+   *     （`G_con_x` 是合法目录）。 */
+  return v;
+}
+
+/**
+ * 造「一个任务一个文件夹」的名字：`游戏名_类别_原链名`（★ 原链名**去扩展名**）。
+ * 例：`赛博朋克2077_存档_ALI213-2077-243487`
+ * 任一段清洗后为空就自动省略 —— 绝不留下 `__`、也不留开头/结尾的 `_`。
+ *
+ * ★ 参数名用 `cat`（资源类别：本体 / mod / 存档 / 修改器）而不是 `kind`：
+ *   server 里 `kind` 已经是「任务类型」（download / run）的意思，
+ *   两个 `kind` 撞在一起，读代码的人迟早会搞混。
+ */
+function taskFolderName(opt) {
+  opt = opt || {};
+  const origin = path.basename(String(opt.fileName || ''));
+  const bare = origin.replace(/\.[^.]+$/, '');           /* 去扩展名，如 .rar */
+  const segs = [
+    sanitizeSeg(opt.game, 48),
+    sanitizeSeg(opt.cat, 12),
+    sanitizeSeg(bare, 48),
+  ].filter(Boolean);
+  let name = segs.join('_');
+  /* ★ 收口：段内转义（如保留名 `aux`→`_aux`）会在拼接处撞出 `__`，段为空被省略时
+   *   也会留下首尾 `_`。这里统一抹平 —— 文件夹名是**用户要天天看的**，
+   *   `_con_本体__aux` 这种很扎眼。 */
+  name = name.replace(/_{2,}/g, '_').replace(/^_+|_+$/g, '');
+  /* ★★ Windows 保留设备名逃逸 —— 必须做在**收口之后**、针对**最终目录名**。
+   *   v10.73 反证照出的真 bug：原来这条写在 `sanitizeSeg` 里（对每个段加 `_` 前缀），
+   *   紧接着被上面的收口抹掉 ⇒ `{game:'con'}` 得到的目录名还是 `con`，逃逸形同虚设。
+   *   实测确认过 `sanitizeSeg('con')` 返回 `'_con'`，而 `taskFolderName({game:'con'})`
+   *   返回 `'con'`。 */
+  if (/^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$/i.test(name)) name = '_' + name;
+  if (name.length > 120) name = name.slice(0, 120).replace(/[\s._]+$/, '');
+  return name || ('task-' + Date.now().toString(36));
+}
+
+/**
+ * 由落点根目录 + 命名要素算出**绝对子目录**，并做**二次边界校验**。
+ *
+ * ★ 清洗是「防」，这一步是「证」——两道都要有。万一以后有人放宽了 sanitizeSeg
+ *   （或喂进来的不是字符串、而是带奇怪 `toString` 的对象），这里仍然拦得住。
+ * ★ 判据用 `startsWith(root + path.sep)`：**必须带分隔符**，否则
+ *   `…\GameHub-evil` 会被 `…\GameHub` 前缀骗过（分离比较的经典写错法）。
+ *
+ * @returns {{ok:boolean, dir?:string, name?:string, error?:string}}
+ */
+function taskDir(rootDir, opt) {
+  let root;
+  try { root = path.resolve(String(rootDir || DEFAULT_DEST)); }
+  catch (e) { return { ok: false, error: '落点根目录无法解析' }; }
+  const name = taskFolderName(opt);
+  let full;
+  try { full = path.resolve(root, name); }
+  catch (e) { return { ok: false, error: '目录名无法解析' }; }
+  if (!full.startsWith(root + path.sep)) {
+    return { ok: false, error: '目录名越出落点根目录，已拒绝：' + name };
+  }
+  return { ok: true, dir: full, name };
+}
+
 /**
  * 下载直链到本地目录（**流式**，带进度回调）。★ 只对「真直链」有效 ——
  * 实测网盘（夸克/百度/迅雷）服务端拿不到，需客户端，会在此处失败并如实报错。
@@ -669,11 +761,23 @@ function fileNameFromUrl(url, fallback) {
  * 为什么流式：直链常有几十 MB 到几百 MB，一次性 arrayBuffer 会让界面在下载期间
  * 完全看不到动静（像卡死），也无法在中途判断"是不是 HTML 中间页"。
  *
- * @returns {{ok:boolean, file?:string, size?:number, status?:number, contentType?:string, error?:string}}
+ * ★ v10.73：**不是压缩包也照存**（`archive:false`），只有 HTML 网页才丢弃。
+ *   `opts.expectArchive` 已删除 —— 它的旧语义（不是压缩包就丢弃）与
+ *   「一个按钮走完下载」的唯一通道冲突，见函数内注释。
+ *
+ * @returns {{ok:boolean, file?:string, size?:number, status?:number, contentType?:string,
+ *            sniffed?:string|null, archive?:boolean, head?:string, notArchive?:boolean, error?:string}}
  */
 async function downloadTo(url, destDir, opts) {
   opts = opts || {};
-  fs.mkdirSync(destDir, { recursive: true });
+  /* ★★ v10.73：这里**不再**一进门就 `mkdirSync`。
+   *   根因是 v10.73 实测照出来的：`taskDir` 先给每个任务算好一个子目录，
+   *   而 `downloadTo` 开门第一件事就是建它 —— 结果**遇到网页地址（not-archive）
+   *   也会留下一个空文件夹**，「一个字节都不落盘」的承诺被打脸（实测确认：
+   *   `测试网盘页_存档_VP0_…` 这个空目录真的被建出来了）。
+   *   ⇒ 改成**要用的时候才建**（落盘前一行）。反正没文件要写就没有目录存在的理由。
+   *   ★ 注意 `extractArchive` 自己也会 `mkdirSync(destDir)` —— 走到那一步时
+   *     外层包已经写进该目录了，所以它那一下是无害的幂等操作。 */
   const ctl = new AbortController();
   const to = setTimeout(() => ctl.abort(), opts.timeout || 20 * 60_000);
   try {
@@ -688,15 +792,19 @@ async function downloadTo(url, destDir, opts) {
     const total = parseInt(r.headers.get('content-length') || '0', 10) || 0;
     const chunks = [];
     let got = 0;
-    /* ★ v10.72：「自动判断这条链接是不是压缩包」就在这里 —— 边收边判头部，不是压缩包就
-     *   **立刻止损**（abort + 不落盘），而不是等下完几百 MB 再告诉用户白下了。
-     *
+    /* ★ v10.72：「自动判断这条链接是不是压缩包」就在这里 —— 边收边判头部。
      *   ⚠️ 顺手修掉一个既有 bug：原来写成 `if (got <= 400) { ...判 HTML... }` ——
      *      只要首个 chunk 就大于 400 字节（大文件几乎必然如此），**那次判定被整个跳过**，
      *      HTML 中间页会一路下完才暴露。改成「累积头部 + 每轮都判」。
-     *   ⚠️ 判据从「只判 HTML」扩成三类：压缩包 / HTML / 其它二进制。
-     *      最后一类只在 `expectArchive` 时才当错误 —— 因为同一个下载函数
-     *      以后也可能被用来下非压缩包的附件。 */
+     *
+     *   ★★ v10.73 语义反转（用户拍板「不要解压按钮，默认到下载中」）：
+     *      判据从「不是压缩包就**丢**」改成「不是压缩包就**照存**」。
+     *      为什么必须反转：原来那个丢弃行为是配着**并列的第二个按钮**用的
+     *      （点错了没关系，旁边还有一个「⬇ 直接下载」）。现在只剩一个按钮、
+     *      它就是「下载」本身 —— 再丢弃就等于「点了没结果」，那是更糟的体验。
+     *      ⇒ 现在**只有一种情况仍然丢弃**：返回的是 HTML 网页（登录页/网盘页/错误页）。
+     *        存一个 146 字节的错误页 HTML 进用户目录纯属制造垃圾，没有任何价值。
+     *      是不是压缩包，由返回值 `archive` / `sniffed` 如实告诉调用方，由它决定解不解。 */
     let headBuf = Buffer.alloc(0);
     let headV = null;
     const judge = (final) => {
@@ -728,12 +836,7 @@ async function downloadTo(url, destDir, opts) {
       if (headBuf.length < 512) headBuf = Buffer.concat([headBuf, chunk]).slice(0, 512);
       const v = judge(false);
       if (v && v.kind === 'html') {
-        early = bail('返回的是 HTML 页面而不是文件（需要登录/中间页）', { notArchive: true });
-        break;
-      }
-      if (v && v.kind === 'other' && opts.expectArchive) {
-        early = bail('这条地址返回的不是压缩包（Content-Type: ' +
-          (r.headers.get('content-type') || '未知') + '）', { notArchive: true, sniffed: 'other' });
+        early = bail('返回的是 HTML 页面而不是文件（网盘页 / 需要登录的中间页 / 错误页）', { notArchive: true, head: 'html' });
         break;
       }
       if (opts.maxBytes && got > opts.maxBytes) {
@@ -743,29 +846,31 @@ async function downloadTo(url, destDir, opts) {
       if (opts.onProgress) { try { opts.onProgress({ got, total }); } catch (e) { /* 回调异常不影响下载 */ } }
     }
     if (early) return early;
-    /* 流结束但头部还不足 512 字节（小文件）—— 补判一次，别让「小 HTML 错误页」溜过去 */
+    /* 流结束但头部还不足 512 字节（小文件）—— 补判一次，别让「小 HTML 错误页」溜过去。
+     * ★ v10.73：这里只剩 HTML 一条。原来「other + expectArchive ⇒ 丢弃」那条已删除
+     *   （语义反转见上方注释）：小文件只要不是 HTML，就该**照存**。 */
     {
       const v = judge(true);
       if (v && v.kind === 'html') {
-        return { ok: false, status: r.status, error: '返回的是 HTML 页面而不是文件（需要登录/中间页）', notArchive: true };
-      }
-      if (v && v.kind === 'other' && opts.expectArchive) {
-        return {
-          ok: false, status: r.status, notArchive: true, sniffed: 'other',
-          error: '这条地址返回的不是压缩包（只收到 ' + headBuf.length + ' 字节，认不出压缩包魔数）',
-        };
+        return { ok: false, status: r.status, error: '返回的是 HTML 页面而不是文件（网盘页 / 需要登录的中间页 / 错误页）', notArchive: true, head: 'html' };
       }
     }
     const buf = Buffer.concat(chunks);
     const name = fileNameFromUrl(r.url || url, opts.name);
     const file = path.join(destDir, name);
+    /* ★ 目录在被真正需要的那一刻才建（上面 downloadTo 开头已不再预建，原因见那里） */
+    fs.mkdirSync(destDir, { recursive: true });
     fs.writeFileSync(file, buf);
+    /* 落盘时**如实回带**识别结果：调用方要显示「下到的是 zip」而不是靠扩展名猜；
+     * `archive` 决定后续解不解 —— 判据只在这里算一次，调用方不再自己判一遍。 */
+    const hv = headKind(buf.slice(0, 512));
     return {
       ok: true, file, size: buf.length, status: r.status,
       contentType: r.headers.get('content-type') || '',
       finalUrl: r.url || url,
-      /* 落盘时**如实回带**识别结果：调用方要显示「下到的是 zip」而不是靠扩展名猜 */
-      sniffed: headKind(buf.slice(0, 512)).fmt || null,
+      sniffed: hv.fmt || null,
+      archive: hv.kind === 'archive',
+      head: hv.kind,
     };
   } catch (e) {
     return { ok: false, error: String((e && e.message) || e) };
@@ -788,6 +893,7 @@ module.exports = {
   sniff, sniffBuffer, headKind, volumeOf, VOLUME_RULES,
   listEntries, testPassword, unpackOne, extractArchive, scanDir,
   downloadTo, fileNameFromUrl, snapshotDir, snapshotTree, envCheck,
+  sanitizeSeg, taskFolderName, taskDir,
   run7z,
   MAGIC_TABLE,
 };

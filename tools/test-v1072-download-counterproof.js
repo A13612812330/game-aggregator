@@ -1,4 +1,4 @@
-/* 反证：把 v10.72「下载按钮 → 自动解压」的十个打坏点逐个打坏，
+/* 反证：把 v10.72「下载按钮 → 自动解压」的打坏点逐个打坏，
  *        tools/test-v1072-download.js 的**对应断言必须变红**。
  *
  * 为什么必须做：断言全绿也可能是**假绿** —— 护栏写歪、或根本没走到被守护的分支，
@@ -9,13 +9,18 @@
  *   ② ★ 浮层 DOM 写进主源 HTML —— 会踩 page-assets.js 记着的
  *      「主源有、派生页没有 ⇒ addEventListener of null 中断整段脚本」那个坑
  *   ③ CSS 的 `[hidden]` 兜底被删 —— 作者样式 display:flex 会顶掉 hidden 属性
- *   ④ ★ 按钮的「仅本机」判断被放宽 —— 线上点了会解在云端容器里（最难发现的假成功）
- *   ⑤ 按钮脱离「有真直链」这个前提（无条件渲染）—— 点了必然失败的按钮族
+ *   ④ ★ 属性生成器的「仅本机」判断被放宽 —— 线上点了会解在云端容器里（最难发现的假成功）
+ *   ⑤ ★ 产物路径样式被删 —— 用户看不到「东西解到哪了」
  *   ⑥ ★★ 提前止损退化成「下完再说」—— 本版的核心承诺，去掉一个 break 就能退化
- *   ⑦ expectArchive 判据失效 —— 连「不要求压缩包」的正常下载都会被误拒
+ *   ⑦ ★★ 小文件（<512B）的 HTML 补判被拿掉 —— 小错误页会被当文件照存下来
  *   ⑧ 魔数判据写歪（startsWith → ===）—— hex 字符串长度是字节数的两倍，必错
  *   ⑨ ★ sniff 不再走 sniffBuffer（单一真源被切断）—— 两份判据开始各自漂移
  *   ⑩ open 的目录护栏被注释掉 —— 变成「打开本机任意目录」的洞
+ *
+ * ★ v10.73 对本文件的改造（2026-10-14）：①⑤⑥⑦ 四个锚点随语义升级失效
+ *   （`exdBtn` 改名 `exdAttr`、`.exd-go` 换成 `.exd-path`、bail 文案改了、
+ *   `expectArchive` 删除）。**必须跟着改锚点**，否则「靶子存在性预检」会直接拦住 ——
+ *   这条预检就是专门为「反证静默失效」设的（v10.71 出过：格式改了没跟，整步失效）。
  *
  * ★ 纪律：
  *   · 每个坏点**独立**打坏 → 跑 → 还原，互不干扰；
@@ -52,10 +57,10 @@ function runSuite() {
 
 const CASES = [
   {
-    label: '① 单源派生漏重建：派生页没拿到 exdBtn（改主源忘了重建）',
-    file: 'public/extract.html',
-    break: (s) => s.replace('function exdBtn(url, name) {', '/* 派生页漏重建：exdBtn 不见了 */'),
-    need: ['P1 五页都有 exdBtn 函数'],
+    label: '① 单源派生漏重建：派生页没拿到 exdAttr（改主源忘了重建）',
+    file: 'public/unpack.html',
+    break: (s) => s.replace('function exdAttr(url, game, cat) {', '/* 派生页漏重建：exdAttr 不见了 */'),
+    need: ['P1 ★ 五页都有 exdAttr 函数（v10.73：由 exdBtn 改成属性串生成器）'],
   },
   {
     label: '② ★ 浮层 DOM 被写进主源 HTML（会中断派生页整段脚本）',
@@ -70,32 +75,32 @@ const CASES = [
     need: ['P4 五页都保留了 .exd-pw[hidden]（否则 hidden 会被 display:flex 顶掉）'],
   },
   {
-    label: '④ ★ 按钮的「仅本机」判断被放宽（线上也会渲染）',
+    label: '④ ★ 属性生成器的「仅本机」判断被放宽（线上也会渲染）',
     file: 'public/index.html',
     break: (s) => s.replace("if (!url || !exdLocal()) return '';", "if (!url) return '';"),
     need: ["P9 按钮只在**本机**渲染（非 localhost 返回空串）"],
   },
   {
-    label: '⑤ 按钮脱离「有真直链」这个前提（无条件渲染）',
+    label: '⑤ ★ 产物路径样式被删（用户看不到「东西解到哪了」）',
     file: 'public/index.html',
-    break: (s) => s.replace('if (f.direct) {\n    ks.push', 'if (true) {\n    ks.push'),
-    need: ['P11 ★ 「🗜️ 解压」被拦在 if (f.direct) 块内（不能无条件渲染）'],
+    break: (s) => s.replace(/\n\s*\.exd-path\{[^}]*\}/, ''),
+    need: ['P3 ★ 五页都有「产物路径」样式 .exd-path（v10.73 新增，替掉 .exd-go）'],
   },
   {
     label: '⑥ ★★ 提前止损退化成「下完再说」（去掉 HTML 那处的 break）',
     file: 'data/extractor.js',
     break: (s) => s.replace(
-      "        early = bail('返回的是 HTML 页面而不是文件（需要登录/中间页）', { notArchive: true });\n        break;",
-      "        early = bail('返回的是 HTML 页面而不是文件（需要登录/中间页）', { notArchive: true });\n        /* break 被反证删掉 —— 退化成「下完再说」 */"),
+      "        early = bail('返回的是 HTML 页面而不是文件（网盘页 / 需要登录的中间页 / 错误页）', { notArchive: true, head: 'html' });\n        break;",
+      "        early = bail('返回的是 HTML 页面而不是文件（网盘页 / 需要登录的中间页 / 错误页）', { notArchive: true, head: 'html' });\n        /* break 被反证删掉 —— 退化成「下完再说」 */"),
     need: ['E8b ★★ 服务端观察到我们**提前断开**（是止损，不是下完再说）'],
   },
   {
-    label: '⑦ expectArchive 判据失效（连不要求压缩包的正常下载也会被拒）',
+    label: '⑦ ★★ 小文件（<512B）的 HTML 补判被拿掉 —— 小错误页会被当文件照存下来',
     file: 'data/extractor.js',
     break: (s) => s.replace(
-      '      if (v && v.kind === \'other\' && opts.expectArchive) {\n        early = bail(',
-      '      if (v && v.kind === \'other\') {\n        early = bail('),
-    need: ['E5 ★ 同一条二进制在不要求压缩包时**必须正常下载**（回归保护）'],
+      "      const v = judge(true);\n      if (v && v.kind === 'html') {",
+      "      const v = judge(true);\n      if (v && v.kind === 'htmlx') {"),
+    need: ['E2 小 HTML → notArchive + 不落盘'],
   },
   {
     label: '⑧ 魔数判据写歪（hex.startsWith → hex ===，长度差两倍必错）',

@@ -162,10 +162,21 @@ async function jpost(p, body) {
         'reachedDepth=' + (dTask && dTask.summary && dTask.summary.reachedDepth));
       chk('D4 下载字节数 > 0 且与源站声明同量级',
         dTask && dTask.bytes > 1e6, 'bytes=' + (dTask && dTask.bytes) + ' 源站声明 ' + sample.files.size);
-      const dlFiles = fs.existsSync(dlDir) ? fs.readdirSync(dlDir) : [];
-      chk('D5 ★ 落盘目录里既保留原包、又有解出来的内容',
+      /* ★ v10.73：产物不再直接躺在 `dlDir` 根下，而是落进**任务子目录**
+       *   （`游戏名_类别_原链名`，这里没传 game/cat ⇒ 只剩原链名那一段）。
+       *   判据要**跟着结构走**，不能还按旧结构断言「根下同时有 .rar 和内容」——
+       *   那样会红得莫名其妙（根下只剩一个子目录名）。 */
+      const dlRoot = fs.existsSync(dlDir) ? fs.readdirSync(dlDir) : [];
+      const subDirs = dlRoot.filter((n) => {
+        try { return fs.statSync(path.join(dlDir, n)).isDirectory(); } catch (e) { return false; }
+      });
+      const workDir = subDirs.length === 1 ? path.join(dlDir, subDirs[0]) : dlDir;
+      const dlFiles = fs.existsSync(workDir) ? fs.readdirSync(workDir) : [];
+      chk('D5 ★ 任务子目录里既保留原包、又有解出来的内容',
         dlFiles.some((n) => /\.rar$/i.test(n)) && dlFiles.some((n) => /ALI213|\.txt$/i.test(n)),
-        JSON.stringify(dlFiles.slice(0, 6)));
+        '子目录=' + JSON.stringify(subDirs) + ' 内含=' + JSON.stringify(dlFiles.slice(0, 6)));
+      chk('D5b ★ v10.73：产物落在**一个**任务子目录里（不是散在落点根下）',
+        subDirs.length === 1, '根下条目=' + JSON.stringify(dlRoot.slice(0, 6)));
       chk('D6 ★ 报告里能看到内层包也被解了（两层都 ok）',
         dTask && dTask.summary && dTask.summary.layers.filter((L) => L.ok).length >= 2,
         JSON.stringify((dTask && dTask.summary && dTask.summary.layers || []).map((L) => L.name.slice(0, 26) + ':' + L.ok)));

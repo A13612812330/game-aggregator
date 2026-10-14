@@ -54,10 +54,20 @@ const SECTIONS = `
         <input id="exUrl" class="ex-in" placeholder="粘贴下载直链（.rar / .zip / .7z）" autocomplete="off">
         <button class="ex-b primary" id="exGoUrl">下载并递归解压</button>
       </div>
+      <div class="ex-row">
+        <input id="exGame" class="ex-in sm" placeholder="游戏名（可选，用于建文件夹）" autocomplete="off">
+        <input id="exCat" class="ex-in sm" list="exCatList" placeholder="类别（可选）" autocomplete="off">
+        <datalist id="exCatList">
+          <option value="本体"></option><option value="mod"></option>
+          <option value="存档"></option><option value="修改器"></option>
+        </datalist>
+      </div>
       <input id="exDirUrl" class="ex-in sm" placeholder="保存到（留空 = 默认目录）" autocomplete="off">
       <div class="ex-hint">
         <b>只有「真直链」能这样下</b> —— 服务端直接取文件。夸克 / 百度 / 迅雷这类网盘要客户端和登录，
         服务端拿不到，请切到右边「文件夹」把下好的包丢进去处理。
+        产物会按 <code>游戏名_类别_原链名</code> <b>单独建一个文件夹</b>；
+        是压缩包就自动逐层解压，不是就原样存好。
       </div>
     </div>
 
@@ -80,6 +90,9 @@ const SECTIONS = `
   <div id="exScanRes"></div>
   <div id="exTask"></div>
   <div id="exReport"></div>
+
+  <!-- ★ v10.73：历史记录（含每次的落点路径，服务端落盘、重启不丢） -->
+  <div id="exHist"></div>
 
   <!-- 判定口径 -->
   <div class="ex-card">
@@ -249,6 +262,24 @@ const CSS_EXTRA = `
   .ex-dim b{display:block;font-size:12.5px;color:var(--c-t1);margin-bottom:3px}
   .ex-dim span{font-size:11.5px;color:var(--c-t2);line-height:1.65}
 
+  /* ---------- 历史记录（v10.73） ---------- */
+  .ex-hist{display:flex;flex-direction:column;gap:7px;max-height:430px;overflow:auto}
+  .ex-hist-it{border:1px solid var(--c-border);border-radius:var(--r-md);padding:8px 10px;background:#FCFDFF}
+  .ex-hist-it .hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .ex-hist-it .hd b{font-size:12.5px;font-weight:750;color:var(--c-t1);min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+  .ex-hist-it .hd .tm{margin-left:auto;font:11px/1 var(--font-num);color:var(--c-t3)}
+  .ex-hist-it .mt{font-size:11px;color:var(--c-t3);margin-top:3px}
+  /* 路径可能很长（中文 + 长文件名），必须能换行 —— 截断了就失去「看到路径」的意义 */
+  .ex-hist-it .pt{font:11px/1.55 var(--font-num);color:var(--c-t2);margin-top:3px;
+    word-break:break-all;background:#F5F7FB;border-radius:5px;padding:3px 6px}
+  .ex-hist-it .er{font-size:11px;color:#A32D2D;margin-top:3px;word-break:break-all}
+  .ex-hist-it .acts{display:flex;gap:6px;margin-top:6px}
+  .ex-hist-it .acts button{font-family:inherit;font-size:11px;font-weight:700;border-radius:7px;
+    padding:4px 9px;cursor:pointer;border:1px solid var(--c-border);background:#F7F9FC;color:var(--c-t2)}
+  .ex-hist-it .acts button:hover{border-color:var(--c-border2);color:var(--c-t1)}
+  .ex-hist-it .hd .badge{flex:none}
+
   .page-deadnodes{display:none!important}
 
   @media(max-width:760px){
@@ -311,7 +342,9 @@ const out = [
 
 /* ---------- 出站自检：宁可构建失败，也不要产出一版「看着还行其实全废」的页面 ---------- */
 const need = ['id="exEnv"', 'id="exUrl"', 'id="exGoUrl"', 'id="exDir"', 'id="exScanBtn"',
-  'id="exRunBtn"', 'id="exScanRes"', 'id="exTask"', 'id="exReport"', 'id="exMsg"', 'initEx()'];
+  'id="exRunBtn"', 'id="exScanRes"', 'id="exTask"', 'id="exReport"', 'id="exMsg"', 'initEx()',
+  /* ★ v10.73：游戏名 / 类别（建文件夹用）与历史记录容器 */
+  'id="exGame"', 'id="exCat"', 'id="exHist"', 'loadHistory()'];
 const miss = need.filter((s) => out.indexOf(s) < 0);
 if (miss.length) throw new Error('[build-extract-page] 产物缺少关键节点：' + miss.join(', '));
 if (!/id="navEx"/.test(out)) throw new Error('[build-extract-page] 顶栏缺少 #navEx 入口 —— 请确认主源 <nav class="main-nav"> 里已加该链接。');

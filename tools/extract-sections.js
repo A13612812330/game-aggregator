@@ -25,6 +25,7 @@
     task: null,
     scan: null,
     lastTarget: null,    /* 上一轮的目标，供「重新解压」用 */
+    hist: null,          /* ★ v10.73：落盘的历史记录（含每次的产物路径） */
   };
 
   const PHASE_TX = { queued: '排队中', download: '下载中', extract: '解压中', done: '已结束' };
@@ -111,7 +112,11 @@
           renderReport(d.task.summary, d.task);
           if (d.task.state === 'need-password') note('有压缩包需要解压密码 —— 在下面填好再点「继续解压」。', 'warn');
           else if (d.task.state === 'error') note('任务结束但有失败项，详见报告。', 'err');
+          else if (d.task.state === 'saved') note('这条地址给的不是压缩包，已按普通文件保存。');
+          else if (d.task.state === 'not-archive') note('这条地址返回的是网页，不是文件（多半是网盘页）—— 没下到东西。', 'warn');
           else note('全部完成。');
+          /* ★ v10.73：每跑完一单就刷一次历史 —— 用户要的正是「跑完回头看列表」。 */
+          loadHistory();
         }
       } catch (e) {
         note('轮询出错：' + esc(String(e.message || e)), 'err');
@@ -124,19 +129,23 @@
     const url = ($('exUrl').value || '').trim();
     if (!/^https?:\/\//i.test(url)) { note('请粘贴 http(s) 开头的下载直链。', 'warn'); return; }
     const dir = ($('exDirUrl').value || '').trim();
+    /* ★ v10.73：游戏名 + 类别 ⇒ 服务端据此建 `游戏名_类别_原链名` 文件夹。
+       两个都留空也能用（服务端会退回只用原链名），所以不做必填校验。 */
+    const game = ($('exGame').value || '').trim();
+    const cat = ($('exCat').value || '').trim();
     $('exGoUrl').disabled = true;
     note('正在建任务…');
     try {
       const r = await fetch(api('/api/extract/download'), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, dir: dir || undefined }),
+        body: JSON.stringify({ url, game, cat, dir: dir || undefined }),
       });
       const d = await r.json();
       if (!d.ok) { note('没能开始：' + esc(d.error || ('HTTP ' + r.status)), 'err'); $('exGoUrl').disabled = false; return; }
       st.taskId = d.id;
       st.lastTarget = { type: 'url', url, dir: d.dir };
       $('exReport').innerHTML = '';
-      note('任务已建立，正在下载…');
+      note('任务已建立，落点：' + esc(d.name || d.dir || '') + '，正在下载…');
       poll(d.id, 400);
     } catch (e) {
       note('请求失败：' + esc(String(e.message || e)), 'err');
@@ -252,7 +261,10 @@
     const pct = Math.max(0, Math.min(100, t.progress || 0));
     const running = t.state === 'running';
     const stx = t.state === 'done' ? '已完成' : t.state === 'need-password' ? '等待密码'
-      : t.state === 'error' ? '有失败' : '进行中';
+      : t.state === 'error' ? '有失败'
+      /* ★ v10.73 两个新终态 —— 不加这两条会掉进「进行中」，看着像卡住了 */
+      : t.state === 'saved' ? '已保存（非压缩包）'
+      : t.state === 'not-archive' ? '不是文件' : '进行中';
     el.innerHTML =
       '<div class="ex-card">' +
         '<div class="ex-card-h"><b>任务</b>' +
@@ -384,6 +396,106 @@
     return '<div class="ex-s ' + (cls || '') + '"><b>' + n + '</b><span>' + esc(label) + '</span></div>';
   }
 
+  /* ============================ 历史记录（v10.73） ============================
+   * 用户原话：「解压助手保留日志以及路径」。
+   * 服务端把每条任务的终态**落盘**到 `Downloads\GameHub\_下载历史.json` ——
+   * 内存任务表只留 24 个、且服务一重启就没，而这个列表的价值恰恰在
+   * 「重启之后才想起来要找那一次」。 */
+  const ST_TX = { done: '已解压', saved: '已保存', 'not-archive': '不是文件',
+    error: '失败', 'need-password': '待密码', running: '进行中' };
+
+  async function loadHistory() {
+    try {
+      const d = await fetch(api('/api/extract/history?n=60')).then((r) => r.json());
+      if (!d.ok) return;
+      st.hist = d;
+      renderHistory();
+    } catch (e) { /* 历史是旁路信息，拉不到不许打断主流程 */ }
+  }
+
+  function tsx(ms) {
+    if (!ms) return '—';
+    const d = new Date(ms);
+    const p = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  function renderHistory() {
+    const el = $('exHist');
+    if (!el) return;
+    const items = (st.hist && st.hist.items) || [];
+    if (!items.length) {
+      el.innerHTML = '<div class="ex-card"><div class="ex-card-h"><b>历史记录</b></div>' +
+        '<div class="ex-hint">还没有记录。跑过一次下载 / 解压之后，这里会留下每次的<b>落点路径</b>，' +
+        '重启服务也不会丢。</div></div>';
+      return;
+    }
+    el.innerHTML = '<div class="ex-card">' +
+      '<div class="ex-card-h"><b>历史记录</b>' +
+      '<span class="n">最近 ' + items.length + ' 条 / 共 ' + (st.hist.total || items.length) + ' 条</span>' +
+      '<span class="ph">' + esc(st.hist.file || '') + '</span></div>' +
+      '<div class="ex-hist">' + items.map(histRow).join('') + '</div>' +
+      '</div>';
+    /* ★ 事件用 addEventListener 逐个挂，不用内联 onclick：路径里带反斜杠、
+       引号、中文，内联拼字符串是自找注入与转义事故。 */
+    el.querySelectorAll('button[data-hcopy]').forEach((b) => {
+      b.onclick = () => copyPath(b.getAttribute('data-hcopy'));
+    });
+    el.querySelectorAll('button[data-hopen]').forEach((b) => {
+      b.onclick = () => openDir(b.getAttribute('data-hopen'));
+    });
+  }
+
+  function histRow(x) {
+    const dir = x.dir || '';
+    const name = dir ? dir.replace(/[\\/]+$/, '').split(/[\\/]/).pop() : '';
+    const bits = [];
+    if (x.layers) bits.push(x.layers + ' 层');
+    if (x.files) bits.push(x.files + ' 个文件');
+    if (x.bytes) bits.push(fmtSize(x.bytes));
+    if (x.sniffed) bits.push(String(x.sniffed).toUpperCase());
+    return '<div class="ex-hist-it">' +
+      '<div class="hd"><span class="badge ' + esc(x.state) + '">' + esc(ST_TX[x.state] || x.state) + '</span>' +
+      '<b>' + esc(name || x.game || '（未命名）') + '</b>' +
+      '<span class="tm">' + esc(tsx(x.at)) + '</span></div>' +
+      (bits.length ? '<div class="mt">' + esc(bits.join(' · ')) + '</div>' : '') +
+      '<div class="pt" title="' + esc(dir) + '">' + esc(dir || '（无路径）') + '</div>' +
+      (x.error ? '<div class="er">' + esc(x.error) + '</div>' : '') +
+      (dir ? '<div class="acts">' +
+        '<button type="button" data-hcopy="' + esc(dir) + '">复制路径</button>' +
+        '<button type="button" data-hopen="' + esc(dir) + '">打开文件夹</button></div>' : '') +
+      '</div>';
+  }
+
+  /* 复制路径：★ 必须留这个出口 ——「打开文件夹」靠 explorer.exe，
+   *   而它的退出码**不可靠**（常转交给已有实例后立刻退出），失败时用户得有别的办法。 */
+  function copyPath(p) {
+    if (!p) return;
+    const done = () => note('已复制：' + p);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(p).then(done, () => fallbackCopy(p, done));
+    } else fallbackCopy(p, done);
+  }
+  function fallbackCopy(text, done) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta); done();
+    } catch (e) { note('复制失败，请手动复制：' + text, 'warn'); }
+  }
+
+  async function openDir(p) {
+    try {
+      const r = await fetch(api('/api/extract/open'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dir: p || undefined }),
+      });
+      const d = await r.json();
+      if (!d.ok) note('打不开文件夹（' + (d.error || '未知原因') + '），请用「复制路径」', 'warn');
+    } catch (e) { note('打不开文件夹，请用「复制路径」', 'warn'); }
+  }
+
   /* ============================ 初始化 ============================ */
   window.initEx = function () {
     document.querySelectorAll('.ex-tab').forEach((b) => { b.onclick = () => setTab(b.dataset.m); });
@@ -393,5 +505,6 @@
     $('exUrl').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') startDownload(); });
     $('exDir').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') scanDir(); });
     loadEnv();
+    loadHistory();
   };
 })();

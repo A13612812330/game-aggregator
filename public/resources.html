@@ -2265,38 +2265,33 @@
     border-radius:8px;padding:6px 11px;transition:.14s}
   .dl-go:hover{background:var(--c-xd);color:#fff;border-color:transparent}
 
-  /* ============ 🗜️ 「下载并解压」按钮 + 解压进度浮层（v10.72 新增） ============
+  /* ============ 「⬇ 直接下载」= 下载 + 自动逐层解压 + 进度浮层（v10.72 起，v10.73 定型）
    * 需求原话（2026-10-14）：「如果我想直接通过下载按钮的话怎么样自动解压」
-   * ⇒ 把 v10.71 已跑通的解压链路（POST /api/extract/download → 轮询 task）接到
-   *   **真直链**按钮旁边，省掉「复制链接 → 去 /extract.html 粘贴」这两步。
+   *   → v10.73 追加拍板：「不要解压按钮（默认到下载中）」
+   * ⇒ 原先「⬇ 直接下载」（浏览器原生下载）+「🗜️ 解压」（服务端解压）**两个并列按钮**
+   *   合并成**一个**：点「⬇ 直接下载」直接走服务端下载通道，是压缩包就自动逐层解压。
+   *
+   * ★ 实现上仍是那个 `<a href="…">`（视觉一行没动，`.pri` 那套样式原样复用），
+   *   只在**本机**给它挂 `data-ex-url` 等属性；`document` 上的事件委托接到就
+   *   `preventDefault`，于是浏览器原生下载被替换成服务端通道。
+   *
+   * ★★ 为什么非本机必须**退回原生下载**（而不是也走服务端）：
+   *   解压是**服务端写盘**。线上托管版的 server 在云端容器里，包会解在云端、
+   *   用户一个字节都拿不到 —— 那正是最难被发现的一类「假成功」。
    *
    * ★ 为什么只挂在两类出口上（存档 files.direct / GTrainers links[0]）：
    *   实测本体与 Mod 那些盘口按钮**下不到压缩包** —— 机地 10 款游戏全部 1089 条
    *   地址的域名分布是「迅雷 512 / 夸克 239 / 百度 233 / 其它站点页」，零个文件直链；
    *   XD 侧 needAuth=true 且 real 全为 null（按钮本就在页面上点不动）。
-   *   给这些按钮挂「解压」= 点了必然报错，纯噪音。
-   *
-   * ★ 为什么按钮由 JS 决定渲不渲染（非 localhost 一律不出）：
-   *   解压是**服务端写盘**。线上托管版的 server 在云端容器里，包会解在云端、
-   *   用户一个字节都拿不到 —— 那正是最难被发现的一类「假成功」。
+   *   给这些按钮挂服务端通道 = 点了必然报错，纯噪音。
    *
    * ⚠️ 下面的浮层 DOM **必须由 JS 创建**，不许写进主源 HTML：
    *   派生页的脚本是从主源整段抽走的（page-assets.scriptForSubpage），
    *   「主源有、派生页没有」的节点正是 page-assets.js 里记着的那个坑 ——
    *   顶层 addEventListener 拿到 null 会抛错并**中断整段脚本**，页面交互全废。
    */
-  .exd-go{display:inline-flex;align-items:center;gap:3px;font-family:inherit;font-weight:750;
-    border:1px solid rgba(15,118,110,.32);background:#F0FDFA;color:#0F766E;
-    cursor:pointer;white-space:nowrap;transition:.14s}
-  .exd-go:hover{background:#0F766E;color:#fff;border-color:#0F766E}
-  .exd-go:disabled{opacity:.5;cursor:default}
-  /* 尺寸只做「跟同排邻居对齐」的覆盖 —— 同 v10.51 对 .po-btn 的处理口径：
-     同一排里混两种规格，肉眼直接看得出来。 */
-  .svf .k button.exd-go{font-size:11px;border-radius:7px;padding:5px 9px}
-  .d-dl-it .dl-res-lk button.exd-go{font-size:10.5px;border-radius:6px;padding:1.5px 8px}
-
   /* 右下角进度浮层。z-index 150 —— 高于抽屉(100)/下载弹窗(110)/存档位置(120)/
-     原贴(130)/搜索(140)，用户在**任何一层里**点解压都能立刻看到进度。 */
+     原贴(130)/搜索(140)，用户在**任何一层里**点下载都能立刻看到进度。 */
   #exDock{position:fixed;right:16px;bottom:16px;z-index:150;
     width:min(342px,calc(100vw - 24px));background:#fff;border:1px solid var(--c-border);
     border-radius:14px;box-shadow:0 18px 44px rgba(9,14,30,.2);overflow:hidden;display:none}
@@ -2332,6 +2327,10 @@
     padding:5px 10px;cursor:pointer;border:1px solid var(--c-border);background:#F7F9FC;color:var(--c-t2)}
   .exd-f button:hover{border-color:var(--c-border2);color:var(--c-t1)}
   .exd-f button.pri{color:#fff;background:var(--c-primary);border-color:transparent}
+  /* ★ v10.73：产物路径常驻显示 —— 用户要求「解压助手保留日志以及路径」，
+     浮层这一层也得能一眼看到「东西解到哪儿了」，而不是只能靠「复制路径」听到。 */
+  .exd-path{margin-top:7px;font-size:10.5px;line-height:1.5;color:var(--c-t3);
+    font-family:var(--font-num);word-break:break-all}
   @media(max-width:430px){#exDock{right:8px;left:8px;bottom:8px;width:auto}}
   /* ===== 独立页专属：一条 3 页签切换条（.res-tabs / .res-tab） =====
    *  ★ 为什么另起 .res-* 而不是复用 #emuTabs/.emu-tab：那是手机专区页的骨架选择器，
@@ -6044,16 +6043,23 @@ async function dlUniFetchMods(ctx, kind) {
  *  `{ src, cat, id, title, size, date, downloads, links:[{label,url,cls}], page, note, srcLabel }`。
  *  ⚠️ 下载通道排在 `.bd` 的第三行而不是行尾 `.go`：GT 一条常有 2~4 个通道，
  *     塞行尾会把标题挤没（`.go` 是 `flex:none`，窄屏直接溢出）。 */
-function dlResRowsHtml(items) {
+function dlResRowsHtml(items, cat) {
+  /* ★ v10.73：文件夹名第 1 段用 `x.game`（**纯游戏名**，实测「Fallout 4」），
+     不用 `x.title`（那是「Fallout 4: Save Game (Girl, 60 lvl, …)」这种条目名，
+     塞进文件夹名又长又乱）。与 `svfCard` 同一口径。
+     `cat` 由调用方给（存档页签传「存档」、修改器页签传「修改器」），不写死。 */
+  const gname = (x) => String(x.game
+    || (dlUni && dlUni.ctx && dlUni.ctx.title) || x.title || '').trim();
   return items.map((x) => {
     const links = (x.links || []).filter((l) => l.ch !== 'src');
     const ks = links.map((l, i) => '<a' + (i === 0 ? ' class="pri"' : '') +
-      ' href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer">' +
+      ' href="' + esc(l.url) + '"' + (i === 0 ? exdAttr(l.url, gname(x), cat || '') : '') +
+      ' target="_blank" rel="noopener noreferrer">' +
       (i === 0 ? '⬇ ' : '') + esc(l.label || '下载') + ' ↗</a>');
-    /* ★ v10.72：GT 的**首个通道**实测是真文件直链（抽测 5/5 拿到的就是 zip，
-       尽管 URL 长得像 /load/0-0-0-30-20 这样的页面地址）⇒ 给它挂「下载并解压」。
-       其余通道不挂：没有实测依据就不挂，免得变成点了必然失败的按钮。 */
-    if (links.length) ks.push(exdBtn(links[0].url, x.title || ''));
+    /* ★ v10.73：GT 的**首个通道**实测是真文件直链（抽测 5/5 拿到的就是 zip，
+       尽管 URL 长得像 /load/0-0-0-30-20 这样的页面地址）⇒ 本机时它就等于
+       「下载 + 自动解压」；其余通道不接：没有实测依据就不接，
+       免得变成点了必然失败的按钮。 */
     if (x.page) ks.push('<a class="src" href="' + esc(x.page) + '" target="_blank" rel="noopener noreferrer">源站 ↗</a>');
     return '<div class="d-dl-it"><span class="k gt">GT</span>' +
       '<span class="bd"><span class="t" title="' + esc(x.title || '') + '">' + esc(x.title || '') + '</span>' +
@@ -6062,12 +6068,14 @@ function dlResRowsHtml(items) {
   }).join('');
 }
 
-/** 聚合层段落的外壳（标题 + 免责/说明 + 行）。两个页签共用。 */
-function dlResSection(items) {
+/** 聚合层段落的外壳（标题 + 免责/说明 + 行）。两个页签共用。
+ *  ★ v10.73：`cat` 必须由调用方给 —— 同一条 GT 聚合段在**修改器页签**下是「修改器」、
+ *    在**存档页签**下是「存档」（下面两处调用点就是这两处）。写死会直接造出错的文件夹名。 */
+function dlResSection(items, cat) {
   return '<div class="dl-agg"><div class="dl-note">另有 <b>' + items.length +
     '</b> 个来自 <b>GTrainers</b> 的文件（<b>真实文件直链</b>，无需注册、无需网盘客户端）' +
     ' · <a href="https://gtrainers.com/" target="_blank" rel="noopener">gtrainers.com ↗</a></div>' +
-    dlResRowsHtml(items) + '</div>';
+    dlResRowsHtml(items, cat) + '</div>';
 }
 
 /** ②b 修改器模块的第三方段落：Game Cheats Manager 元数据（**没有下载地址**） */
@@ -6332,7 +6340,7 @@ function dlUniPaintMod(d, kind) {
   }
   /* ★ v10.53：聚合层的 GTrainers 段（排在 GCM 段之后、模块出口链接**之前**）——
      出口是「去别处找」，内容是「已经找到了」；把内容排在出口之后会被读成「这一屏到此为止」。 */
-  if (kind === 'modifier' && gtr.length) out.push(dlResSection(gtr));
+  if (kind === 'modifier' && gtr.length) out.push(dlResSection(gtr, '修改器'));
   out.push('<div class="d-dl-links">' + dModLinks() + '</div>');
   body.innerHTML = out.join('');
 }
@@ -6359,12 +6367,20 @@ function svfCard(x) {
   const f = x.files || {};
   const ks = [];
   if (f.direct) {
-    ks.push('<a class="pri" href="' + esc(f.direct) + '" target="_blank" rel="noopener">⬇ 直接下载</a>');
-    /* ★ v10.72：两个出口并存，各管各的 ——
-     *   「⬇ 直接下载」= 浏览器原生下到 Downloads（用户自己管）
-     *   「🗜️ 解压」  = 服务端下 + **自动逐层解压**到 Downloads\GameHub
-     *   存档这条实测 5/5 是压缩包（rar/zip），是本站**唯一**能自动解的出口。 */
-    ks.push(exdBtn(f.direct, svfTitle(x) || '存档'));
+    /* ★ v10.73：**一个按钮走完全程**（用户拍板「不要解压按钮，默认到下载中」）。
+     *   本机时它带 `data-ex-url` ⇒ document 上的委托会 preventDefault，
+     *   改用服务端「下载 + 自动逐层解压」；非本机不带 ⇒ 仍是浏览器原生下载。
+     *   视觉一行没动：还是那个 `<a class="pri">⬇ 直接下载</a>`。
+     *   存档这条实测 5/5 是压缩包（rar/zip），是本站**唯一**能自动解的出口。
+     *
+     *   ★★ 文件夹名第 1 段必须用 `x.game`（**纯游戏名**，实测 = 「赛博朋克2077」），
+     *      不许用 `svfTitle(x)` —— 那是**存档条目名**（「赛博朋克2077边缘行者帮瑞贝卡报仇存档下载_游侠网」），
+     *      拼出来会变成「…报仇存档_存档_ALI213-…」：类别重复、还带运营后缀。
+     *      这是 v10.73 实拍照出来的（属性值一眼就不对），不是推理出来的。 */
+    const game = String(x.game
+      || (dlUni && dlUni.ctx && dlUni.ctx.title) || '').trim();
+    ks.push('<a class="pri" href="' + esc(f.direct) + '"' +
+      exdAttr(f.direct, game, '存档') + '>⬇ 直接下载</a>');
   }
   (f.netdisk || []).forEach((n) => {
     ks.push('<a href="' + esc(n.url) + '" target="_blank" rel="noopener">' +
@@ -6435,7 +6451,7 @@ function dlUniPaintSave(d) {
      排在出口链接**之前**：出口是「去别处找」，内容是「已经找到了」。
      ⚠️ 与游侠文件**不合并去重**：两边的「同一份存档」没有可靠判据（文件名不同、打包格式不同），
         硬去重会把两条不同的通道砍掉一条。两边各自的来源说明已经写清，让用户自己选。 */
-  if (gts.length) out.push(dlResSection(gts));
+  if (gts.length) out.push(dlResSection(gts, '存档'));
   /* 出口链接：**游侠没有文件时**照旧给（改前行为不变）—— GT 段插在它前面 */
   if (!items.length) {
     out.push('<div class="d-dl-links">' +
@@ -8098,12 +8114,22 @@ function exdLocal() {
   return /^(localhost|127\.0\.0\.1|\[::1\]|::1)$/i.test(location.hostname || '');
 }
 
-/** 真直链旁的「🗜️ 解压」按钮。没有 url、或不是本机 ⇒ 返回空串（等于不渲染）。 */
-function exdBtn(url, name) {
+/** 给「⬇ 直接下载」那个 `<a>` 挂上服务端通道的属性。
+ *
+ *  ★ 只在**本机**返回属性；非本机返回空串 ⇒ 那个链接保持浏览器原生下载，行为与以前一致。
+ *    （线上的 server 在云端容器里，走服务端解压等于把包解在云端，用户啥也拿不到。）
+ *  ★ 判据是 `exdLocal()` 而不是「有没有这个函数」—— 本页与四张派生页共用同一段脚本。
+ *
+ *  @param {string} url  真直链
+ *  @param {string} game 游戏名 → 文件夹第 1 段
+ *  @param {string} cat  资源类别（本体 / mod / 存档 / 修改器）→ 文件夹第 2 段
+ */
+function exdAttr(url, game, cat) {
   if (!url || !exdLocal()) return '';
-  return '<button class="exd-go" type="button" data-ex-url="' + esc(url) +
-    '" data-ex-name="' + esc(name || '') +
-    '" title="服务端下载后自动逐层解压（压缩包套压缩包也一次解到底），产物落在 Downloads\\GameHub">🗜️ 解压</button>';
+  return ' data-ex-url="' + esc(url) + '" data-ex-game="' + esc(game || '') +
+    '" data-ex-cat="' + esc(cat || '') +
+    '" title="服务端下载：是压缩包就自动逐层解压（包里还有包也一次解到底）；' +
+    '产物按「游戏名_类别_原链名」建文件夹放在 Downloads\\GameHub"';
 }
 
 let exdEl = null, exdTimer = null, exdTaskId = null, exdTicks = 0, exdName = '';
@@ -8125,6 +8151,7 @@ function exdDock() {
     '<div class="exd-pw" id="exdPw" hidden><input id="exdPwIn" type="text" ' +
     'placeholder="压缩包密码" autocomplete="off"><button type="button" id="exdPwGo">继续解压</button></div>' +
     '<div class="exd-f" id="exdF"></div>' +
+    '<div class="exd-path" id="exdPath"></div>' +
     '</div>';
   document.body.appendChild(d);
   d.querySelector('#exdX').addEventListener('click', exdHide);
@@ -8161,14 +8188,22 @@ function exdPaint(t) {
   const layers = (sum.layers || []).length;
   const doneLink = '<button type="button" onclick="exdOpenPage()">查看详情</button>';
 
+  /* ★ v10.73：产物路径常驻一行（终态才有值）。运行中先清空，避免上一单的路径
+     挂在新任务下面 —— 那会让人以为「这次解到了上次那个目录」。 */
+  const pathEl = d.querySelector('#exdPath');
+
   if (t.state === 'running') {
     pw.hidden = true;
     foot.innerHTML = '';
+    pathEl.textContent = '';
     sub.innerHTML = t.phase === 'download'
       ? '⬇ 正在下载 <b>' + esc(exdMB(t.bytes, t.totalBytes)) + '</b>'
       : '🗜️ 正在逐层解压…（里面还有压缩包就接着解）';
     return;
   }
+
+  /* 终态统一显示落点 */
+  pathEl.textContent = exdDest() ? '📁 ' + exdDest() : '';
 
   if (t.state === 'need-password') {
     sub.innerHTML = '🔒 有 <b>' + t.needsPassword.length + '</b> 个压缩包需要密码。' +
@@ -8184,11 +8219,25 @@ function exdPaint(t) {
   pw.hidden = true;
 
   if (t.state === 'not-archive') {
-    sub.innerHTML = '⚠️ <b>这条地址给的不是压缩包</b>，服务端没下到文件（' +
+    /* ★ v10.73：这条**只剩一种成因** —— 返回的是 HTML 网页。v10.72 时它还包含
+     *   「不是压缩包」，但那种情况现在改为照存（见下面的 saved 分支）。 */
+    sub.innerHTML = '⚠️ <b>这条地址返回的是网页，不是文件</b>（' +
       esc(t.contentType || '未知类型') + '）。<br>' +
-      '多半是网盘页 / 需要登录的中间页 —— 请改用同一行的「⬇ 直接下载」到浏览器里，' +
-      '或复制链接粘到解压助手。';
-    foot.innerHTML = '<button type="button" class="pri" onclick="exdOpenPage()">去解压助手粘贴</button>';
+      '多半是网盘页 / 需要登录的中间页 —— 请改用同一行的网盘通道（迅雷云盘 / 百度网盘）' +
+      '或「原贴」，把包下好后丢进解压助手。';
+    foot.innerHTML = '<button type="button" class="pri" onclick="exdOpenPage()">去解压助手</button>';
+    return;
+  }
+
+  if (t.state === 'saved') {
+    /* ★★ v10.73 新增：**不是压缩包 ⇒ 照存**。
+     *   必须把「已保存」三个字说出来：这颗按钮的承诺里含解压，
+     *   用户看到绿色浮层却找不到解压结果，会以为哪里坏了。 */
+    sub.innerHTML = '✓ <b>已保存</b>：这条地址给的不是压缩包' +
+      (t.contentType ? '（' + esc(t.contentType) + '）' : '') +
+      '，已按普通文件存好，没有可解的内容。';
+    foot.innerHTML = '<button type="button" class="pri" onclick="exdCopyPath()">复制路径</button>' +
+      '<button type="button" onclick="exdOpenDir()">打开文件夹</button>' + doneLink;
     return;
   }
 
@@ -8203,7 +8252,8 @@ function exdPaint(t) {
     ? '，产出 <b>' + sum.files + '</b> 个文件'
     : '';
   sub.innerHTML = '✓ 解压完成：共解开 <b>' + layers + '</b> 层' + frag +
-    (sum.reachedDepth ? '（最深第 ' + sum.reachedDepth + ' 层）' : '');
+    (sum.reachedDepth ? '（最深第 ' + sum.reachedDepth + ' 层）' : '') +
+    (t.sniffed ? ' · 源格式 ' + esc(t.sniffed) : '');
   foot.innerHTML = '<button type="button" class="pri" onclick="exdCopyPath()">复制路径</button>' +
     '<button type="button" onclick="exdOpenDir()">打开文件夹</button>' + doneLink;
 }
@@ -8282,8 +8332,9 @@ async function exdPwSubmit() {
   } catch (e) { exdToast('提交失败：' + String((e && e.message) || e)); d.querySelector('#exdPw').hidden = false; }
 }
 
-function exdStart(url, name) {
-  exdName = name || '';
+function exdStart(url, game, cat) {
+  /* 浮层标题：「游戏名 · 类别」（两者都可能空着，那就退回通用文案） */
+  exdName = [game, cat].filter(Boolean).join(' · ') || '下载并解压';
   const d = exdDock();
   d.dataset.dest = '';
   d.querySelector('#exdPw').hidden = true;
@@ -8297,11 +8348,13 @@ function exdStart(url, name) {
   exdTicks = 0;
   fetch('/api/extract/download', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url: url, expectArchive: true }),
+    /* ★ v10.73：`expectArchive` 不再传（服务端已删该参数）——
+     *   现在「不是压缩包」也照存，只有 HTML 网页才丢弃。 */
+    body: JSON.stringify({ url: url, game: game || '', cat: cat || '' }),
   }).then((r) => r.json()).then((j) => {
     if (!j.ok) { exdPaint({ state: 'error', error: j.error || '发起失败', progress: 0 }); return; }
     exdTaskId = j.id;
-    /* ★ 产物目录由服务端定（用户拍板 Downloads\GameHub），前端只如实显示 */
+    /* ★ 产物目录由服务端定（`Downloads\GameHub\游戏名_类别_原链名`），前端只如实显示 */
     d.dataset.dest = j.dir || '';
     exdPoll();
   }).catch((e) => exdPaint({ state: 'error', error: String((e && e.message) || e), progress: 0 }));
@@ -8329,15 +8382,19 @@ function exdPoll() {
   }, 900);
 }
 
-/* 事件委托挂在 document 上：主源与四张派生页都能用，且不依赖任何 DOM 节点存在。 */
+/* 事件委托挂在 document 上：主源与四张派生页都能用，且不依赖任何 DOM 节点存在。
+ * ★ v10.73：命中目标从「独立的解压按钮」变成了**「⬇ 直接下载」那个链接本身** ——
+ *   本机时 `exdAttr()` 会给它挂 `data-ex-url`，于是这里的 preventDefault 把
+ *   浏览器原生下载换成服务端「下载 + 自动解压」。非本机没有该属性 ⇒ 原样放行。 */
 document.addEventListener('click', (e) => {
   const el = (e.target && e.target.closest) ? e.target.closest('[data-ex-url]') : null;
   if (!el) return;
   /* ★ 拦住冒泡：下载弹窗里那些行自己也有整行点击（data-post-open 之类），
-     不拦会让「点解压」顺带把原贴弹窗也打开。 */
+     不拦会让「点下载」顺带把原贴弹窗也打开。 */
   e.preventDefault();
   e.stopPropagation();
-  exdStart(el.getAttribute('data-ex-url'), el.getAttribute('data-ex-name'));
+  exdStart(el.getAttribute('data-ex-url'),
+    el.getAttribute('data-ex-game'), el.getAttribute('data-ex-cat'));
 });
 </script>
 </body>
