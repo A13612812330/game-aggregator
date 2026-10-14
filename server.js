@@ -1692,21 +1692,25 @@ function projectMobile(x) {
 
 /** 两个**已按同一键降序**排好的数组，归并取出 `[offset, offset+limit)`。
  *  不拼接全量（端游 19,465 + 手游 1,645 每次请求都拼一遍太亏）。 */
-function mergePick(A, B, keyOf, offset, limit) {
+/* ★ v10.70：`cmp` 是**比较函数**（不是取值函数）。
+   改动原因：加 `sizeAsc`（容量升序）/ `title`（名称升序）后必须有「小于」这个
+   方向，而旧的 `keyOf(A[i]) >= keyOf(B[j])` 只能表达降序一种方向。
+   A 胜出（应排在前面）时该函数返回 <= 0。 */
+function mergePick(A, B, cmp, offset, limit) {
   const out = [];
   let i = 0, j = 0, k = 0;
   while ((i < A.length || j < B.length) && out.length < limit) {
     let take;
     if (i >= A.length) take = B[j++];
     else if (j >= B.length) take = A[i++];
-    else take = keyOf(A[i]) >= keyOf(B[j]) ? A[i++] : B[j++];
+    else take = cmp(A[i], B[j]) <= 0 ? A[i++] : B[j++];
     if (k >= offset) out.push(take);
     k++;
   }
   return out;
 }
 
-// GET /api/library/browse?g=动作冒险&limit=50&offset=0&sort=updated|score|size&sizeMin=&sizeMax=&bh=1
+// GET /api/library/browse?g=动作冒险&limit=50&offset=0&sort=updated|hot|score|size|sizeAsc|title&sizeMin=&sizeMax=&bh=1
 //   ★ v10.58 新增 `scope=pc|mob|all`（见上方「库范围」整段注释）
 //
 // ★ v10.53：改用 `withRes` —— 首页「最新收录 / 分类浏览」的卡片从此也带
@@ -1718,7 +1722,10 @@ function mergePick(A, B, keyOf, offset, limit) {
 //   ⚠️ `withRes` 内部对全 0 的条目**不挂字段**，所以绝大多数卡片的回包体积不变。
 app.get('/api/library/browse', (req, res) => {
   const g = String(req.query.g || '').trim();
-  const sort = ['score', 'size'].includes(String(req.query.sort || '')) ? String(req.query.sort) : 'updated';
+  /* ★ v10.70：白名单从 `gamesDb.SORT_KEYS` 取 —— 过去的 `['score','size']`
+     写死在这里，加一个排序维度要改两处（这里 + gamesDb 的比较函数），
+     漏改一处就变成「前端发了 hot、服务端静默回落 updated」。 */
+  const sort = gamesDb.SORT_KEYS.includes(String(req.query.sort || '')) ? String(req.query.sort) : 'updated';
   const limit = Math.min(parseInt(req.query.limit || '50', 10) || 50, 100);
   const offset = Math.max(0, parseInt(req.query.offset || '0', 10) || 0);
   const scopeRaw = String(req.query.scope || '');
@@ -1730,10 +1737,12 @@ app.get('/api/library/browse', (req, res) => {
     return res.json({ ok: true, scope, ...r, items: r.items.map(withRes) });
   }
 
-  /** ★ 排序键：与端游侧 `gamesDb.browse` 用的是同一套口径（★ 一份实现，别各写一套）。 */
-  const keyOf = (it) => (sort === 'score' ? (it.score || 0)
-    : sort === 'size' ? (gamesDb.sizeGb(it.size) || 0)
-      : (it._sortTs || 0));
+  /** ★ v10.70：排序键**统一从 `gamesDb.cmp(sort)` 取比较函数**。
+      过去这里是另写的一份 `keyOf`（只认 score / size / updated），与
+      `gamesDb.browse()` 内部那份是**两套口径** —— 新增 hot / sizeAsc / title
+      后若不同步，同一个 `sort` 在 `scope=pc` 与 `scope=all` 下会排出不同顺序，
+      而且不报错、测试照绿。 */
+  const cmp = gamesDb.cmp(sort);
   const gAll = !g || g === '全部' || g === 'all';
   const bhOn = String(req.query.bh || '') === '1';
   const pcOn = String(req.query.pc || '') === '1';
@@ -1763,7 +1772,7 @@ app.get('/api/library/browse', (req, res) => {
       return true;
     })
     .map(projectMobile)
-    .sort((a, b) => keyOf(b) - keyOf(a));
+    .sort(cmp);
 
   if (scope === 'mob') {
     return res.json({
@@ -1777,7 +1786,7 @@ app.get('/api/library/browse', (req, res) => {
   const mol = gAll ? mobPool.filter((x) => x.mol) : [];
   return res.json({
     ok: true, scope, sort, total: pcAll.length + mol.length, offset, limit,
-    items: mergePick(pcAll, mol, keyOf, offset, limit).map(withRes),
+    items: mergePick(pcAll, mol, cmp, offset, limit).map(withRes),
   });
 });
 

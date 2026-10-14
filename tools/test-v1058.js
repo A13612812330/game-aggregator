@@ -157,8 +157,8 @@ t(/const pcAll = gamesDb\.browse\([\s\S]{0,400}const mol = gAll \? mobPool\.filt
   '★ all 分支 = 端游全量 ∪ **手游独有**（`filter(x => x.mol)`）——「只并独有」是三个视图互不相同的前提');
 t(/total: pcAll\.length \+ mol\.length/.test(SRV_CODE2),
   'all 的 total 由两段相加（不是端游总数 —— 那正是"合并=端游"的退化形态）');
-t(/mergePick\(pcAll, mol, keyOf, offset, limit\)/.test(SRV_CODE2),
-  'all 走归并取页 mergePick（不拼接全量）');
+t(/mergePick\(pcAll, mol, cmp, offset, limit\)/.test(SRV_CODE2),
+  'all 走归并取页 mergePick（不拼接全量）—— ★ v10.70：第 3 参由取值函数 `keyOf` 换成比较函数 `cmp`（支持升序维度，见 server.js 注释）');
 
 /* ============================ E 三视图·服务端口径 ====================== */
 sec('E 三视图 · 服务端的口径注释（防下轮"顺手合并"）');

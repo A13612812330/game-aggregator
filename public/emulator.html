@@ -125,52 +125,69 @@
      列表容器起于 **y=985**，视口只有 1000 ⇒ **首屏一条游戏都看不到**（移动端 hero 1289，要滚 2.2 屏）。
      参照站 designeer.xyz 同视口内容起于 230px。⇒ 本轮把 hero 压到 ~270–300px。
      压缩原则：**只改尺寸、不删信息** —— 榜单仍显示 #1-6（改前 #1-10，网格 3 列 3 行 → 5 列 1 行）。 */
-  .stage{position:relative;background:linear-gradient(125deg,#0E1B3A 0%,#16275C 52%,#24337A 100%);overflow:hidden}
-  .stage::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:36px 36px;mask-image:radial-gradient(80% 100% at 50% 0%,#000 30%,transparent);pointer-events:none}
-  .stage .in{position:relative;z-index:1;padding:16px 22px 18px}
-  .stage-h{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:12px}
-  .stage-h h1{color:#fff;font-size:clamp(17px,1.7vw,20px);font-weight:800;letter-spacing:.3px;display:flex;align-items:center;gap:8px;line-height:1.2}
-  .stage-h h1 .fire{font-size:18px;filter:drop-shadow(0 3px 10px rgba(249,115,22,.5))}
-  .stage-h .sub{color:rgba(255,255,255,.55);font-size:11.5px;font-weight:500;margin-top:4px;letter-spacing:.2px}
+  /* ★★ v10.70：hero 从「深蓝渐变通栏」改成**白底分区**（参考 XDGAME「天梯排名」）。
+     实测改前事实：hero 275px 的深蓝块 + 金黄榜首卡，与紧接着的纯白列表是**两套
+     视觉语言**（深色 vs 浅色、金色 vs 白），中间没有任何过渡 —— 这是「布局和样式
+     不太行」里最直观的一条。
+     ⇒ 现在整站一套浅色语言；hero 不再靠深色块划界，改用底部 1px 分隔线 + 同底色，
+       只承担「分区标题 + 榜单元」的职责。原来的网格纹理 ::before 一并去掉
+       （那是深色底上的装饰，白底上会变成脏点）。 */
+  .stage{position:relative;background:var(--c-surface);border-bottom:1px solid var(--c-border);overflow:hidden}
+  .stage .in{position:relative;z-index:1;padding:13px 22px 13px}
+  .stage-h{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+  .stage-h h1{color:var(--c-t1);font-size:clamp(17px,1.7vw,20px);font-weight:800;letter-spacing:.3px;display:flex;align-items:center;gap:8px;line-height:1.2}
+  .stage-h h1 .fire{font-size:18px}
+  .stage-h .sub{color:var(--c-t3);font-size:11.5px;font-weight:500;margin-top:4px;letter-spacing:.2px}
   .stage-h .sp{flex:1;min-width:0}
-  .stage-pills{display:flex;gap:4px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.13);padding:4px;border-radius:12px;flex:none}
-  .stage-pill{font-size:12.5px;font-weight:700;color:rgba(255,255,255,.72);padding:6px 15px;border-radius:9px;transition:.16s;white-space:nowrap}
-  .stage-pill:hover{color:#fff}
-  .stage-pill.on{background:#fff;color:var(--c-primary);box-shadow:0 4px 14px rgba(0,0,0,.22)}
-  .stage-meta{display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.5);font-size:11.5px;flex:none}
-  .stage-refresh{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:650;color:rgba(255,255,255,.78);border:1px solid rgba(255,255,255,.22);padding:5px 12px;border-radius:99px;transition:.16s}
-  .stage-refresh:hover{background:rgba(255,255,255,.14);color:#fff}
+  .stage-pills{display:flex;gap:3px;background:#F0F3F9;border:1px solid var(--c-border2);padding:3px;border-radius:11px;flex:none}
+  .stage-pill{font-size:12.5px;font-weight:700;color:var(--c-t2);padding:5px 14px;border-radius:8px;transition:.16s;white-space:nowrap}
+  .stage-pill:hover{color:var(--c-primary)}
+  .stage-pill.on{background:#fff;color:var(--c-primary);box-shadow:0 1px 4px rgba(18,26,51,.13)}
+  .stage-meta{display:flex;align-items:center;gap:10px;color:var(--c-t3);font-size:11.5px;flex:none}
+  .stage-refresh{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:650;color:var(--c-t2);border:1px solid var(--c-border2);padding:4px 11px;border-radius:99px;transition:.16s;background:#fff}
+  .stage-refresh:hover{background:#F5F7FB;color:var(--c-t1)}
   .stage-refresh.busy{opacity:.5;pointer-events:none}
   .stage-refresh svg{width:12px;height:12px}
   .rk-list{min-height:96px}
-  /* 冠军大卡（v10.68：整卡 174 → 131px：padding 16/20→12/16、缩略图 228×128→172×97） */
-  .rk-champ{position:relative;display:flex;align-items:center;gap:16px;padding:12px 16px;border-radius:var(--cd-r);margin-bottom:10px;cursor:pointer;overflow:hidden;background:linear-gradient(120deg,#FFF3DC,#FFE2B8 55%,#FFD09B);border:1px solid #F3D6A6;box-shadow:0 14px 34px rgba(0,0,0,.3);transition:.18s}
-  .rk-champ:hover{transform:translateY(-2px);box-shadow:0 18px 44px rgba(0,0,0,.36)}
-  .rk-champ.on{outline:3px solid rgba(46,107,255,.8);outline-offset:-3px}
-  .rk-champ .no1{position:absolute;right:12px;top:-26px;font:900 92px/1 var(--font-num);opacity:.13;color:#8A5400;pointer-events:none;user-select:none}
-  .rk-champ .th{width:172px;height:97px;border-radius:var(--cd-th-r);overflow:hidden;flex:none;background:#fff;box-shadow:0 6px 18px rgba(138,84,0,.28);position:relative;z-index:1}
+  /* 冠军卡（v10.70：**白底紧凑版** —— 整卡 123 → 58px）
+     改前是金黄渐变（#FFF3DC→#FFE2B8）+ 深蓝 hero，饱和度冲突最扎眼；
+     现在 hero 自身是白底，冠军卡改用「左侧 3px 主色竖条 + 浅灰底」与其余榜卡
+     区分 —— 不靠高饱和底色，也不再需要大阴影。
+     ★ 结构从 3 行（NO.1 徽章行 / 标题行 / 英文名行 / 元信息行）压成 **2 行**：
+       第 1 行 = NO.1 + 中文名 + 英文名（同一行，英文名自动吃掉剩余宽度）；
+       第 2 行 = 类型 / 容量 / 日期 / 热度。缩略图 172×97 → **78×44**。 */
+  .rk-champ{position:relative;display:flex;align-items:center;gap:12px;padding:7px 12px;border-radius:var(--cd-r);margin-bottom:8px;cursor:pointer;overflow:hidden;background:#F7F9FC;border:1px solid var(--c-border);transition:.18s}
+  .rk-champ::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,#F59E0B,#E11D48)}
+  .rk-champ:hover{border-color:#B9C7E8;box-shadow:0 8px 22px rgba(18,26,51,.10)}
+  .rk-champ.on{outline:2px solid var(--c-primary);outline-offset:-2px}
+  .rk-champ .no1{position:absolute;right:10px;top:-16px;font:900 60px/1 var(--font-num);opacity:.06;color:#0F1A33;pointer-events:none;user-select:none}
+  .rk-champ .th{width:78px;height:44px;border-radius:var(--cd-th-r);overflow:hidden;flex:none;background:#EDF0F6;position:relative;z-index:1}
   .rk-champ .th img{width:100%;height:100%;object-fit:cover}
-  .rk-champ .th .ph{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-weight:800;font-size:26px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
-  .rk-champ .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;position:relative;z-index:1}
-  .rk-champ .bd .up{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-  .rk-champ .bd .tag1{font:800 10.5px/1 var(--font-num);color:#fff;background:linear-gradient(135deg,#F97316,#E11D48);padding:3px 8px;border-radius:6px;letter-spacing:.5px}
-  .rk-champ .bd .t{font-size:clamp(15px,1.5vw,18px);font-weight:800;color:#4A2C00;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .rk-champ .bd .en{font-size:11.5px;color:#9A6A20;font-family:var(--font-num);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .rk-champ .bd .meta2{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;font-weight:650;color:#8A5400}
-  .rk-champ .bd .meta2 .it{background:rgba(255,255,255,.62);border-radius:99px;padding:1.5px 9px}
-  .rk-champ .sc2{font:800 24px/1 var(--font-num);color:#C2410C;flex:none;position:relative;z-index:1;text-align:center}
-  .rk-champ .sc2 small{display:block;font-size:9.5px;font-weight:600;color:#9A6A20;margin-top:3px;font-family:var(--font)}
-  /* #2-6 榜单小卡（v10.68：3 列 × 3 行 → **5 列 × 1 行**，整块 244 → 47px） */
+  .rk-champ .th .ph{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-weight:800;font-size:20px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
+  .rk-champ .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;position:relative;z-index:1}
+  .rk-champ .bd .tt{display:flex;align-items:center;gap:7px;min-width:0}
+  .rk-champ .bd .tag1{font:800 10px/1 var(--font-num);color:#fff;background:linear-gradient(135deg,#F97316,#E11D48);padding:2.5px 7px;border-radius:5px;letter-spacing:.5px;flex:none}
+  .rk-champ .bd .t{font-size:15px;font-weight:800;color:var(--c-t1);line-height:1.25;min-width:0;flex:0 1 auto;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rk-champ .bd .en{font-size:11px;color:var(--c-t3);font-family:var(--font-num);flex:1 1 auto;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rk-champ .bd .meta2{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;font-weight:600;color:var(--c-t2)}
+  .rk-champ .bd .meta2 .it{background:#fff;border:1px solid var(--c-border);border-radius:99px;padding:1px 8px}
+  /* 排序依据值（热度）单独着色 —— 与 XDGAME 把「574,032 热度」做成行内小胶囊同理 */
+  .rk-champ .bd .meta2 .it.hot{background:#FFF4E5;border-color:#FBD9A8;color:#C2410C;font-weight:750}
+  .rk-champ .sc2{font:800 20px/1 var(--font-num);color:var(--c-score);flex:none;position:relative;z-index:1;text-align:center}
+  .rk-champ .sc2 small{display:block;font-size:9px;font-weight:600;color:var(--c-t3);margin-top:2px;font-family:var(--font)}
+  /* #2-6 榜单小卡（v10.68：3 列 × 3 行 → 5 列 × 1 行；v10.70：整卡 47 → 42px） */
   .rk-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
-  .rk-card{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.6);border-radius:var(--cd-r);padding:7px 10px;cursor:pointer;transition:.16s;min-width:0;min-height:0}
-  .rk-card:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(0,0,0,.3)}
+  .rk-card{display:flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--c-border);border-radius:var(--cd-r);padding:5px 9px;cursor:pointer;transition:.16s;min-width:0}
+  .rk-card:hover{border-color:#B9C7E8;box-shadow:0 6px 18px rgba(18,26,51,.10);transform:translateY(-1px)}
   .rk-card.on{outline:2px solid var(--c-primary);outline-offset:-2px}
-  .rk-card .no{flex:none;width:18px;text-align:center;font:800 13px/1 var(--font-num);color:#B9C0D2}
+  .rk-card .no{flex:none;width:16px;text-align:center;font:800 12px/1 var(--font-num);color:#B9C0D2}
   .rk-card .no.r2{color:#F59E0B}
   .rk-card .no.r3{color:#2E6BFF}
-  .rk-card .th{width:46px;height:auto;aspect-ratio:var(--th-ar);border-radius:var(--cd-th-r);overflow:hidden;flex:none;background:#EDF0F6}
+  .rk-card .th{width:42px;height:auto;aspect-ratio:var(--th-ar);border-radius:var(--cd-th-r);overflow:hidden;flex:none;background:#EDF0F6}
   .rk-card .th img{width:100%;height:100%;object-fit:cover}
-  .rk-card .th .ph{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-weight:800;font-size:14px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
+  .rk-card .th .ph{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-weight:800;font-size:13px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
   .rk-card .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
   /* ★ v10.68：小卡标题从「固定预留两行」（--cd-t2 = 2.8em，是 v10.30 的统一规范）
      收成**单行**。理由：单行卡高 47px 才够把 hero 压到 ~300px，而 v10.30 的两行预留
@@ -186,7 +203,9 @@
   .bdg{font-size:9px;font-weight:750;padding:1px 5px;border-radius:4px;flex:none}
   .bdg.xd{background:rgba(11,123,255,.12);color:#0B7BFF}
   .bdg.jidi{background:rgba(230,65,93,.12);color:#E6415D}
-  .rk-skel{border-radius:var(--cd-r);background:linear-gradient(90deg,rgba(255,255,255,.13) 25%,rgba(255,255,255,.26) 50%,rgba(255,255,255,.13) 75%);background-size:200% 100%;animation:shimmer 1.2s infinite}
+  /* ★ v10.70：骨架从「白色半透明」改浅灰 —— 原来是给深蓝 hero 做的高亮条，
+     hero 改白底后白条在白底上完全看不见（骨架期会像「页面空了」）。 */
+  .rk-skel{border-radius:var(--cd-r);background:linear-gradient(90deg,#EEF1F7 25%,#F7F9FC 50%,#EEF1F7 75%);background-size:200% 100%;animation:shimmer 1.2s infinite}
 
   /* ============ 🔍 搜索弹窗（命令面板式） ============ */
   .smask{position:fixed;inset:0;background:rgba(9,14,30,.55);z-index:120;opacity:0;transition:.2s;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);pointer-events:none}
@@ -1302,7 +1321,19 @@
 
   main{padding:24px 0 60px}
   .grid2{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
-  @media(max-width:1060px){.grid2{grid-template-columns:1fr}}
+  /* ★★ v10.70 修正：单列档必须写 `minmax(0,1fr)`，不能写 `1fr`。
+     两者**不等价** —— `1fr` 展开是 `minmax(auto,1fr)`，`min` 取 **auto = min-content**，
+     于是栅格项的 min-content 会把列**撑宽**（栅格项的 min-width:auto 老问题）。
+     桌面档写的本来就是 `minmax(0,1fr)`（见上一行 `.grid2`），只有这条单列档漏了。
+     ⇒ 后果：761~1060px 区间的横向溢出。实测（820px 视口，`tools/_probe-v1070-overflow.js`）：
+        改前 `#colMain` **910px** / 文档宽 **932px**（越界元素 312 个）；
+        改后 `#colMain` **768px** / 文档宽 **812px**（越界元素 0 个）。
+     ★ 这是**历史遗留**、不是 v10.70 引进的：`1fr` 写法自 v10.14 初始提交就在，
+       同一个探针量 HEAD 版同样是 932 ⇒ 本版顺手修掉，并且**已经把溢出从 932 压到 831**
+       （本轮缩略图 96→78、删掉行内长英文名，都减小了 min-content）。
+     ★ 为什么 ≤760px 那档看不到：那里另有 `#colMain{min-width:0}` 兜着（见下方 760 断点），
+       而 761~1060 这段**两头都不管** —— 与 v10.68 修的 `.live-tag` 溢出是**同一类**「断点区间漏兜底」。 */
+  @media(max-width:1060px){.grid2{grid-template-columns:minmax(0,1fr)}}
 
   /* ============ 内容库行式列表（参考 XD 行卡：封面+中英文名+评分/大小/日期） ============ */
   .sec-h{display:flex;align-items:center;gap:10px;margin:6px 0 14px}
@@ -1338,9 +1369,12 @@
      ★ 有意偏离 v10.30 的「标题固定预留两行」规范：那套在 158px 缩略图时代是对的
      （让卡片高度一致），现在行高由缩略图主导（54px > 文字块 40px），两行预留只会白白撑高。 */
   .lib{display:flex;flex-direction:column;gap:8px}
-  .row-card{display:flex;gap:12px;background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--cd-r);padding:9px 12px;cursor:pointer;transition:.16s;align-items:center}
+  /* ★ v10.70：行密度 74 → **56px**（学 XDGAME /update 的 47px 紧凑行）。
+     两处改动：padding 9→6px、缩略图 96→78px 宽（16:9 ⇒ 43.9px 高）。
+     行高由「缩略图高 + 上下 padding」主导（文字块 39px < 图 44px）⇒ 43.9+12 ≈ 56。 */
+  .row-card{display:flex;gap:10px;background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--cd-r);padding:6px 12px;cursor:pointer;transition:.16s;align-items:center}
   .row-card:hover{border-color:#B9C7E8;box-shadow:0 8px 22px rgba(18,26,51,.09);transform:translateY(-1px)}
-  .row-card .th{width:96px;height:auto;aspect-ratio:var(--th-ar);border-radius:var(--cd-th-r);overflow:hidden;flex:none;background:#EDF0F6;position:relative}
+  .row-card .th{width:78px;height:auto;aspect-ratio:var(--th-ar);border-radius:var(--cd-th-r);overflow:hidden;flex:none;background:#EDF0F6;position:relative}
   .row-card .th img{width:100%;height:100%;object-fit:cover;transition:transform .35s}
   .row-card:hover .th img{transform:scale(1.06)}
   .row-card .ph{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-weight:800;font-size:18px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
@@ -1358,6 +1392,9 @@
   .pill.size{color:#7C5BD6;background:rgba(124,91,214,.09)}
   .pill.type{color:#0E7490;background:rgba(14,116,144,.09)}
   .pill.time{color:var(--c-t3);background:transparent;padding-left:2px}
+  /* ★ v10.70：热度 pill —— 「排序依据值」的载体之一（见 sortKeyPill）。
+     配色与榜单卡 `.it.hot` 同源（橙），保证同一屏里「热度」永远是同一个颜色。 */
+  .pill.hot{color:#C2410C;background:#FFF4E5;font-weight:750;font-family:var(--font-num)}
   .row-card .go{flex:none;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--c-xd);background:rgba(11,123,255,.07);border:1px solid rgba(11,123,255,.22);padding:6px 13px;border-radius:9px;transition:.15s;white-space:nowrap}
   .row-card:hover .go{background:var(--c-xd);color:#fff;border-color:var(--c-xd)}
   .row-card .go svg{width:11px;height:11px}
@@ -1379,7 +1416,7 @@
   .skeleton{display:flex;gap:12px;background:#fff;border:1px solid var(--c-border);border-radius:var(--cd-r);padding:9px 12px;align-items:center}
   .sk{background:linear-gradient(90deg,#E8EBF3 25%,#F5F6FA 50%,#E8EBF3 75%);background-size:200% 100%;animation:shimmer 1.2s infinite;border-radius:8px}
   @keyframes shimmer{to{background-position:-200% 0}}
-  .skeleton .sk-th{width:96px;height:auto;aspect-ratio:var(--th-ar);border-radius:var(--cd-th-r);flex:none}
+  .skeleton .sk-th{width:78px;height:auto;aspect-ratio:var(--th-ar);border-radius:var(--cd-th-r);flex:none}
   .skeleton .sk-l1{height:14px;width:46%;border-radius:6px}
   .skeleton .sk-l2{height:11px;width:66%;margin-top:6px}
   .skeleton .sk-l3{height:10px;width:34%;margin-top:6px}
@@ -1402,6 +1439,34 @@
   .idx-bar{height:6px;background:#E4E9F5;border-radius:99px;margin-top:10px;overflow:hidden;display:none}
   .idx-bar i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#2E6BFF,#6366F1);border-radius:99px;transition:width .4s}
   .idx-tip{font-size:11px;color:var(--c-t3);margin-top:6px;min-height:16px}
+  /* ============ ★ v10.70 侧栏「发现向」组件 ============
+     背景：改前侧栏只有「内容库状态 + 关于本站」两张卡，实测高 612px 而主栏 3174px
+     ⇒ **填充率仅 19%**，下方 2562px 全是空白；而且那两张卡是**运维信息**
+     （索引运行 / 增量更新 / 校准续跑），对「找游戏」这个主任务没有帮助。
+     参考对象 byrutgame.org 的右栏是 aside.right-nav（296px）＝ **导航 + 类型**，
+     即「帮你发现内容」。⇒ 现在侧栏改成：热度 Top5 / 分类速览 / 按容量逛
+     ＋ 运维与说明**折叠收起**（功能一个不删）。 */
+  .side-rank-it{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed #EDEFF6;cursor:pointer;font-size:12px}
+  .side-rank-it:last-child{border-bottom:none}
+  .side-rank-it:hover .tt{color:var(--c-primary)}
+  .side-rank-it .rk{flex:none;width:16px;text-align:center;font:800 11px/1 var(--font-num);color:#B9C0D2}
+  .side-rank-it .rk.top{color:#E6415D}
+  .side-rank-it .tt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--c-t1);font-weight:600}
+  .side-rank-it .hv{flex:none;font:750 11px/1 var(--font-num);color:#C2410C}
+  .side-empty{font-size:11.5px;color:var(--c-t3);padding:6px 0}
+  .side-cats{display:flex;flex-wrap:wrap;gap:6px}
+  .side-cat{font-size:11.5px;font-weight:600;color:var(--c-t2);background:#F1F3F8;border:none;border-radius:8px;
+    padding:4px 9px;cursor:pointer;transition:.14s;font-family:inherit}
+  .side-cat:hover{background:var(--c-primary-soft);color:var(--c-primary)}
+  .side-more{margin-top:10px;width:100%;font-size:11.5px;font-weight:700;color:var(--c-primary);background:none;
+    border:1px dashed rgba(46,107,255,.35);border-radius:9px;padding:6px;cursor:pointer;font-family:inherit;transition:.14s}
+  .side-more:hover{background:var(--c-primary-soft)}
+  .side-fold summary{font-size:13.5px;font-weight:750;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}
+  .side-fold summary::-webkit-details-marker{display:none}
+  .side-fold summary::before{content:"";width:6px;height:6px;border-radius:2px;background:linear-gradient(135deg,#94A3B8,#64748B)}
+  .side-fold summary::after{content:"▾";margin-left:auto;font-size:10px;color:var(--c-t3);transition:transform .18s}
+  .side-fold[open] summary::after{transform:rotate(180deg)}
+  .side-fold[open] summary{margin-bottom:11px}
   /* （旧 .sort-pills「胶囊列表」样式已删除 —— 排序组改用与容量组同规格的分段控件） */
 
   /* ============ 详情抽屉 ============ */
@@ -1748,9 +1813,9 @@
   }
 
   @media(max-width:760px){
-    .row-card .th{width:84px;height:auto;aspect-ratio:var(--th-ar)}
+    .row-card .th{width:70px;height:auto;aspect-ratio:var(--th-ar)}
     .row-card .go{display:none}
-    .skeleton .sk-th{width:84px;height:auto;aspect-ratio:var(--th-ar)}
+    .skeleton .sk-th{width:70px;height:auto;aspect-ratio:var(--th-ar)}
     .grid2{grid-template-columns:1fr}
     /* 热榜舞台（★ v10.68：移动端 hero 实测 **1289px** ⇒ 列表容器被推到 y=1877，
        在 844 高的屏上要滚 **2.2 屏**才见到第一条游戏。压到 ~300px：
@@ -1764,11 +1829,17 @@
     .stage-pills::-webkit-scrollbar{display:none}
     .stage-pill{flex:1;text-align:center;padding:5px 8px;font-size:12px}
     .stage-meta{order:2;margin-left:auto}
-    .rk-champ{gap:10px;padding:10px 12px;margin-bottom:8px}
-    .rk-champ .th{width:104px;height:59px;border-radius:var(--cd-th-r)}
-    .rk-champ .bd .t{font-size:15px}
+    /* ★ v10.70：跟着桌面一起压缩（104×59 → 66×37）—— 否则移动端 hero 会比桌面还高 */
+    .rk-champ{gap:9px;padding:6px 10px;margin-bottom:7px}
+    .rk-champ .th{width:66px;height:37px;border-radius:var(--cd-th-r)}
+    .rk-champ .bd .t{font-size:14px}
     .rk-champ .bd .en{display:none}
-    .rk-champ .sc2{font-size:20px}
+    /* ★ v10.70：移动端 meta 行收紧（gap 6→4、pill padding 8→6、字号 11→10.5）。
+       不收紧时「XD 动作冒险 17.2GB 2026-10-08」的实测宽度 ≈238px，而卡内文字区
+       只有 ~240px ⇒ 日期被挤到第二行，整卡从 58 撑到 ~90px（实拍所见）。 */
+    .rk-champ .bd .meta2{gap:4px}
+    .rk-champ .bd .meta2 .it{padding:1px 6px;font-size:10.5px}
+    .rk-champ .sc2{font-size:18px}
     .rk-grid{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px}
     .rk-grid::-webkit-scrollbar{display:none}
     .rk-grid .rk-card{flex:0 0 74%;min-width:0}
@@ -1853,8 +1924,8 @@
     .load-more{width:100%}
   }
   @media(max-width:420px){
-    .row-card .th{width:76px;height:auto;aspect-ratio:var(--th-ar)}
-    .skeleton .sk-th{width:76px;height:auto;aspect-ratio:var(--th-ar)}
+    .row-card .th{width:64px;height:auto;aspect-ratio:var(--th-ar)}
+    .skeleton .sk-th{width:64px;height:auto;aspect-ratio:var(--th-ar)}
     .row-card{padding:8px 10px}
     .row-card h3{font-size:13px}
     .pill.time{display:none}
@@ -1863,8 +1934,8 @@
     .stage-h h1{font-size:16px}
     .stage-h .sub{font-size:11px}
     .stage-meta{font-size:11px}
-    .rk-champ .th{width:92px;height:52px}
-    .rk-champ .sc2{font-size:18px}
+    .rk-champ .th{width:58px;height:33px}
+    .rk-champ .sc2{font-size:16px}
     .sm-row .en{display:none}
     .sm-quick button{font-size:12px;padding:4px 11px}
     /* v10.15：窄屏下四库速览改两列、底部按键条收起「自动回到这里」（窄屏本就靠手势返回） */
@@ -2704,10 +2775,22 @@ function normTime(d) {
 /* ================= 分类 ================= */
 // 参考 XD 官网分类：全部 + 库内实际收录的类型（与 games.json genres 对齐）
 const CATS = ['全部', '动作冒险', '角色扮演', '模拟经营', '休闲益智', '策略战棋', '恐怖惊悚', '枪战射击', '体育竞速', '即时战略', '联机整合', '免费专区', '模拟器整合'];
+/* ★★ v10.70：排序维度 3 → 6（参考 XDGAME「天梯排名」的 8 个 tab / 机地的 5 个 sort）。
+   ★ 为什么**不是**「本周最热 / 本月最热 / 全站最热」这三档 —— 实测我们**没有**这两档
+     的库内数值：XD 官网首页热榜（`fetchers/xdrank.js` 的 `rawHot`）只解析出
+     `gid / name / url / img / rank`，**不带热度数值**；本地库也只有单一 `hot` 字段
+     （19,497 条中 9,869 条有值 = 50.6%）。那三档只存在于 hero 的**榜单**区
+     （周榜 / 月榜 / 全站榜 —— 正是那三档），列表侧做不到，写上去就是骗人。
+   ⇒ 这 6 维是**当前数据真能算**的：热度 / 评分 / 容量（两个方向）/ 名称 / 时间。
+   ★ `k` 必须与 `data/gamesDb.js` 的 `SORT_KEYS` 完全一致 —— 服务端的白名单直接
+     取那个常量（过去两处各写一份，加一个维度要改两个地方，漏一处就静默回落）。 */
 const SORTS = [
   { k: 'updated', nm: '最新更新', lb: 'NEW' },
+  { k: 'hot', nm: '最热', lb: 'HOT' },
   { k: 'score', nm: '评分最高', lb: 'SCORE' },
   { k: 'size', nm: '容量最大', lb: 'SIZE' },
+  { k: 'sizeAsc', nm: '容量最小', lb: 'MIN' },
+  { k: 'title', nm: '名称', lb: 'A-Z' },
 ];
 /* 容量区间筛选（min/max 单位 GB，null=不限；min 含、max 不含） */
 const SIZES = [
@@ -2865,13 +2948,34 @@ function statlineHtml(st) {
 function skeletonRows(n) {
   return Array.from({ length: n }).map(() => `<div class="skeleton"><div class="sk sk-th"></div><div style="flex:1;min-width:0"><div class="sk sk-l1"></div><div class="sk sk-l2"></div><div class="sk sk-l3"></div></div></div>`).join('');
 }
+/* ★ v10.70：**排序依据值** pill —— 当前按什么排，行首就显示什么值。
+   与榜单卡（`champHtml` 的 `.it.hot`）同一套「依据显性化」口径，学的是 XDGAME
+   「天梯排名」：那里的每行末尾直接写「574,032 热度」/「2,141 赞」/「554 GB」，
+   用户一眼知道这条为什么在这儿。
+   ★ 为什么必须是**一个函数**而不是在 rowCard 里就地写 switch：排序键 ↔ 显示键的
+   对应关系只有这一处定义，将来加维度只改这里，不会出现「按热度排、显示容量」。 */
+function sortKeyPill(it, okScore) {
+  if (curSort === 'hot') { const h = fmtHot(it.hot); return h ? `<span class="pill hot">🔥 ${h}</span>` : ''; }
+  if (curSort === 'size' || curSort === 'sizeAsc') return it.size ? `<span class="pill size">${esc(it.size)}</span>` : '';
+  if (curSort === 'score') return okScore ? `<span class="pill score">★ ${it.score}</span>` : '';
+  /* `updated`：**返回空**。原因 —— 时间视图的列表本来就按日期分组，每组上面已经有
+     「今天更新 / 昨天更新」分隔条（`groupByDate` 的 `.date-sep`），行内再顶一枚日期
+     pill 就是同一信息说两遍，还会把日期挤到标题左边（第一版就是这么错的）。
+     日期 pill 在 `updated` 视图仍留在行尾，位置不变。 */
+  if (curSort === 'updated') return '';
+  return '';   /* title：名称排序没有「值」可显示 */
+}
 function rowCard(it) {
   const n = splitName(it.title);
   const meta = [];
   const okScore = it.score != null && it.score > 0 && it.score <= 10;
-  if (okScore) meta.push(`<span class="pill score">★ ${it.score}</span>`);
+  const keyPill = sortKeyPill(it, okScore);
+  if (keyPill) meta.push(keyPill);
+  /* 其余字段：与依据值重复的**不再出第二枚** —— 否则「容量最大」视图里同一行
+     会出现两个一模一样的容量 pill（依据一枚 + 常规一枚）。 */
+  if (okScore && curSort !== 'score') meta.push(`<span class="pill score">★ ${it.score}</span>`);
   if ((it.genres || []).length) meta.push(`<span class="pill type">${esc(it.genres.slice(0, 2).join(' / '))}</span>`);
-  if (it.size) meta.push(`<span class="pill size">${esc(it.size)}</span>`);
+  if (it.size && curSort !== 'size' && curSort !== 'sizeAsc') meta.push(`<span class="pill size">${esc(it.size)}</span>`);
   meta.push(`<span class="pill time">${esc(normTime(it.dateLabel))}</span>`);
   /* ★ v10.58：手游视图（`scope=mob|all`）的条目带 `mob` —— 用**手游侧口径**渲染，
      不再走 bh/pc attach：同一款游戏两套源都有，两边都画会出现两枚重复徽标。
@@ -2893,7 +2997,7 @@ function rowCard(it) {
   return `<article class="row-card${it.mol ? ' is-mol' : ''}" data-url="${esc(it.url)}" data-mol="${it.mol ? '1' : ''}" data-mq="${it.mol ? esc(it.title) : ''}" data-fb="${fbJson}">
     <div class="th">${coverHtml({ ...it, zh: n.zh })}</div>
     <div class="bd">
-      <div class="tt"><h3 title="${esc(n.zh)}">${esc(n.zh)}</h3><span class="src-badge ${SRC[it.source] ? SRC[it.source].cls : 'xd'}">${SRC[it.source] ? SRC[it.source].nm : 'XDGAME'}</span>${n.en ? `<span class="en" title="${esc(n.en)}">${esc(n.en)}</span>` : ''}</div>
+      <div class="tt"><h3 title="${esc(n.zh)}">${esc(n.zh)}</h3><span class="src-badge ${SRC[it.source] ? SRC[it.source].cls : 'xd'}">${SRC[it.source] ? SRC[it.source].nm : 'XDGAME'}</span></div>
       <div class="meta">${meta.join('')}</div>
       ${resChips(it)}
     </div>
@@ -3043,24 +3147,45 @@ function rankFb(it) {
   }));
 }
 function hhmm(ts) { return new Date(ts).toTimeString().slice(0, 5); }
+/* ★ v10.70：热度数值的**统一显示口径**。
+   参考两家的写法：XDGAME 用「574,032 热度」、机地用「7.9W」。
+   我们用「万」档 + 千分位：≥1 万 → `34.8 万`（≥100 万取整）；否则 `8,742`。
+   ★ 为什么要收在一处：改前同一屏能看到 `348068` / `34.8W` 两种写法混用，
+     是因为各渲染点各写各的。任何新的热度渲染都从这里取。 */
+function fmtHot(n) {
+  const v = Number(n) || 0;
+  if (v <= 0) return '';
+  if (v >= 10000) {
+    const w = v / 10000;
+    return (w >= 100 ? String(Math.round(w)) : w.toFixed(1).replace(/\.0$/, '')) + ' 万';
+  }
+  return v.toLocaleString('en-US');
+}
 /* 榜单 #1：冠军大卡（大图 + 中英文名 + 类型/容量/日期 + 评分） */
 function champHtml(it) {
   if (!it) return '';
   const n = splitName(it.title);
   const bdg = it.source === 'jidi' ? '<span class="bdg jidi">机地</span>' : '<span class="bdg xd">XD</span>';
   const meta = [];
+  /* ★ v10.70：**排序依据值**放到元信息行最前 —— 参考 XDGAME「天梯排名」的做法
+     （那里每行末尾直接写「574,032 热度」/「2,141 赞」/「554 GB」，一眼知道这条
+     为什么排这儿）。榜单条目由源站榜行 + 本地库合并而来，因此**库内字段**
+     （hot / score / size）命中时就有值；库外的工具条目没有这些字段，就不显示 ——
+     宁可不显示，也不补一个假的。 */
+  const hot = fmtHot(it.hot);
+  if (hot) meta.push(`<span class="it hot">🔥 ${hot} 热度</span>`);
   if ((it.genres || []).length) meta.push(`<span class="it">${esc(it.genres.slice(0, 2).join(' / '))}</span>`);
   if (it.size) meta.push(`<span class="it">${esc(it.size)}</span>`);
   if (it.dateLabel) meta.push(`<span class="it">${esc(it.dateLabel)}</span>`);
   if (it.bh) meta.push(`<span class="it" style="color:#C2410C;font-weight:750">📱 可玩 ${it.bh.c}</span>`);
+  /* ★ v10.70：结构 3 行 → **2 行**（NO.1 徽章与中英文名同行；类型/容量/日期/热度一行）。
+     整卡 123 → 58px。 */
   return `<div class="rk-champ" data-url="${esc(it.url)}" data-fb="${rankFb(it)}" title="${esc(it.title)}">
     <span class="no1">1</span>
     <div class="th">${it.cover ? `<img src="${esc(it.cover)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<div class="ph">${esc(n.zh.charAt(0))}</div>`}</div>
     <div class="bd">
-      <div class="up"><span class="tag1">NO.1</span>${bdg}</div>
-      <div class="t">${esc(n.zh)}</div>
-      ${n.en ? `<div class="en">${esc(n.en)}</div>` : ''}
-      ${meta.length ? `<div class="meta2">${meta.join('')}</div>` : ''}
+      <div class="tt"><span class="tag1">NO.1</span><span class="t">${esc(n.zh)}</span>${n.en ? `<span class="en">${esc(n.en)}</span>` : ''}</div>
+      <div class="meta2">${bdg}${meta.join('')}</div>
     </div>
     ${okScoreV(it.score) ? `<div class="sc2">${it.score}<small>玩家评分</small></div>` : ''}
   </div>`;
@@ -3072,7 +3197,10 @@ function champHtml(it) {
 function rankCard(it) {
   const n = splitName(it.title);
   const bdg = it.source === 'jidi' ? '<span class="bdg jidi">机地</span>' : '<span class="bdg xd">XD</span>';
-  const sub = [(it.genres || [])[0] || '', it.size || ''].filter(Boolean).join(' · ');
+  /* ★ v10.70：小卡副行改成**以排序依据值打头**（热度优先），再跟类型/容量。
+     5 列网格里一行塞不下三个字段，所以热度用「34.8 万」缩写。 */
+  const hot = fmtHot(it.hot);
+  const sub = [(hot ? '🔥 ' + hot : ''), (it.genres || [])[0] || '', it.size || ''].filter(Boolean).join(' · ');
   return `<div class="rk-card" data-url="${esc(it.url)}" data-fb="${rankFb(it)}" title="${esc(it.title + (sub ? ' · ' + sub : ''))}">
     <span class="no ${it.rank <= 3 ? 'r' + it.rank : ''}">${it.rank}</span>
     <div class="th">${it.cover ? `<img src="${esc(it.cover)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<div class="ph">${esc(n.zh.charAt(0))}</div>`}</div>
@@ -3089,7 +3217,7 @@ function rankMark(url) {
  * ★ 不要写死旧值 —— v10.68 前这里写的是 162 / 66，与 `.rk-champ`/`.rk-card` 的实际高度
  *   差 1px 就会在骨架→真卡的切换里抖一下（v10.30 起就是这么定的：骨架高 = 真卡高）。 */
 function rankSkeleton() {
-  return `<div class="rk-skel" style="height:121px;margin-bottom:10px"></div><div class="rk-grid">${'<div class="rk-skel" style="height:47px"></div>'.repeat(5)}</div>`;
+  return `<div class="rk-skel" style="height:58px;margin-bottom:8px"></div><div class="rk-grid">${'<div class="rk-skel" style="height:42px"></div>'.repeat(5)}</div>`;
 }
 function paintRank() {
   const el = $('#rankList'); if (!el) return;
@@ -3144,9 +3272,29 @@ function bindRankUI() {
   });
   $('#rankRefresh').addEventListener('click', () => { toast('正在刷新榜单…'); refreshRank(true); });
 }
+/* ★★ v10.70：侧栏从「运维向」改成「发现向」（参考 byrutgame.org 的 aside.right-nav）。
+   ★ 为什么必须改：实测 #colSide 高 612px / #colMain 高 3174px ⇒ **填充率 19%**，
+     下方 2562px 全空；且当时唯一有内容的卡是「内容库状态」（索引运行 / 增量更新 /
+     校准续跑）—— 那是**后台运维信息**，不是「找游戏」需要的东西。
+   ★★ 运维功能一个都没删：增量更新 / 校准续跑 / 同步机地三个按钮、进度条、状态行
+     全部原样搬进 `<details>` 折叠区。理由：那是真实可用的功能（不是装饰），
+     顺手删掉等于砍功能；而「收起来」既让首屏侧栏装的是用户要的东西，也不丢能力。
+   ★ 顶部三张卡的数据全部走**已有接口**（`/api/library/browse?sort=hot`），不新增后端依赖。 */
 function renderSide() {
   $('#colSide').innerHTML = `
-    <div class="side-card stat-card"><h4><span class="ic" style="background:linear-gradient(135deg,#2E6BFF,#6366F1)"></span>内容库状态</h4><div id="srcStat"></div>
+    <div class="side-card"><h4><span class="ic" style="background:linear-gradient(135deg,#F97316,#E11D48)"></span>🔥 热度 Top 5</h4>
+      <div id="sideRank"><div class="side-empty">加载中…</div></div>
+      <button class="side-more" id="sideGoHot" type="button">按热度浏览全部 →</button>
+    </div>
+    <div class="side-card"><h4><span class="ic" style="background:linear-gradient(135deg,#2E6BFF,#6366F1)"></span>分类速览</h4>
+      <div class="side-cats" id="sideCats">${CATS.filter((c) => c !== '全部').map((c) => `<button class="side-cat" data-c="${esc(c)}" type="button">${esc(c)}</button>`).join('')}</div>
+    </div>
+    <div class="side-card"><h4><span class="ic" style="background:linear-gradient(135deg,#7C5BD6,#A78BFA)"></span>按容量逛</h4>
+      <div class="side-cats" id="sideSizes">${SIZES.filter((s) => s.k !== 'all').map((s) => `<button class="side-cat" data-sz="${esc(s.k)}" type="button">${esc(s.nm)}</button>`).join('')}</div>
+    </div>
+    <details class="side-card side-fold" id="sideFold">
+      <summary>站点状态与维护</summary>
+      <div id="srcStat"></div>
       <div style="display:flex;gap:8px;margin-top:10px">
         <button class="mini-btn" id="idxBtn" style="flex:1.35">↻ 增量更新</button>
         <button class="mini-btn" id="calBtn" style="flex:1;background:#fff;color:var(--c-t2);border-color:var(--c-border2)">校准续跑</button>
@@ -3154,13 +3302,47 @@ function renderSide() {
       <button class="mini-btn" id="jidiBtn" style="background:rgba(230,65,93,.07);border-color:rgba(230,65,93,.3);color:var(--c-jidi)">⇅ 同步机地话题入本地库</button>
       <div class="idx-bar" id="idxBar"><i id="idxBarI"></i></div>
       <div class="idx-tip" id="idxTip"></div>
-    </div>
-    <div class="side-card"><h4><span class="ic" style="background:linear-gradient(135deg,#16A34A,#4ADE80)"></span>关于本站</h4>
-      <div class="note">合并<b>机地(jidiyouxi.com)</b>与<b>XDGAME(xdgame.com)</b>两个爬取内容源：XD 游戏库全量本地索引 + 机地首页/热榜话题同步入库，搜索与浏览<b>双源打通</b>。<br><br>· 页面顶部<b>🔥 全站热榜</b>＝XD 官方热度（周/月/全站）+ 机地社区热度合并榜<br>· 点顶栏<b>搜索框 / Ctrl K</b> 打开搜索弹窗，一键<b>搜本地库</b>（毫秒），未收录时可<b>实时查源站</b><br>· 卡片点击看<b>详情抽屉</b>（源站实时抓取），<b>←/→</b> 切换条目、<b>Esc</b> 关闭<br>· 本站<b style="color:var(--c-danger)">不含下载资源</b></div></div>`;
+    </details>
+    <details class="side-card side-fold">
+      <summary>关于本站</summary>
+      <div class="note">合并<b>机地(jidiyouxi.com)</b>与<b>XDGAME(xdgame.com)</b>两个爬取内容源：XD 游戏库全量本地索引 + 机地首页/热榜话题同步入库，搜索与浏览<b>双源打通</b>。<br><br>· 页面顶部<b>🔥 全站热榜</b>＝XD 官方热度（周/月/全站）+ 机地社区热度合并榜<br>· 列表<b>排序 6 维</b>：最新更新 / 最热 / 评分最高 / 容量最大 / 容量最小 / 名称 —— 每行行首会显示<b>当前排序依据值</b><br>· 点顶栏<b>搜索框 / Ctrl K</b> 打开搜索弹窗，一键<b>搜本地库</b>（毫秒），未收录时可<b>实时查源站</b><br>· 卡片点击看<b>详情抽屉</b>（源站实时抓取），<b>←/→</b> 切换条目、<b>Esc</b> 关闭<br>· 本站<b style="color:var(--c-danger)">不含下载资源</b></div>
+    </details>`;
   $('#idxBtn').addEventListener('click', () => runXdIndex('incr'));
   $('#calBtn').addEventListener('click', () => runXdIndex('calibrate'));
   $('#jidiBtn').addEventListener('click', syncJidi);
+  /* 发现向的点击 → 与顶部筛选/排序**同一套状态变量**（curCat / curSize / curSort），
+     所以点完侧栏，顶部的分类行与排序 pill 高亮也会跟着走（renderCats + renderList 重绘）。 */
+  $$('#colSide [data-c]').forEach((b) => b.addEventListener('click', () => {
+    curCat = b.dataset.c; offset = 0; renderCats(); renderList(true);
+  }));
+  $$('#colSide [data-sz]').forEach((b) => b.addEventListener('click', () => {
+    curSize = b.dataset.sz; offset = 0; renderList(true);
+  }));
+  const goHot = $('#sideGoHot');
+  if (goHot) goHot.addEventListener('click', () => { curSort = 'hot'; offset = 0; renderList(true); });
   updateIdxTip();
+  loadSideRank();
+}
+/* 侧栏「热度 Top 5」：走已有的 browse 接口（sort=hot），不新增后端依赖。
+   ★ 用 `.filter(hot > 0)` 后再取前 5：库里有 50.6% 的条目 hot=0，
+     若直接取 limit=5 可能取到「有 hot 但很小」的条目之外的空值行。 */
+async function loadSideRank() {
+  const el = $('#sideRank'); if (!el) return;
+  try {
+    const j = await fetch(api('/api/library/browse?sort=hot&limit=8')).then((r) => r.json());
+    const list = (j.items || []).filter((x) => x.hot > 0).slice(0, 5);
+    el.innerHTML = list.length ? list.map((x, i) => {
+      const n = splitName(x.title);
+      return `<div class="side-rank-it" data-url="${esc(x.url)}" title="${esc(x.title)}">
+        <span class="rk${i < 3 ? ' top' : ''}">${i + 1}</span>
+        <span class="tt">${esc(n.zh)}</span>
+        <span class="hv">${esc(fmtHot(x.hot))}</span>
+      </div>`;
+    }).join('') : '<div class="side-empty">暂无热度数据</div>';
+    $$('#sideRank .side-rank-it').forEach((x) => x.addEventListener('click', () => openDetail(x.dataset.url)));
+  } catch (e) {
+    el.innerHTML = '<div class="side-empty">加载失败</div>';
+  }
 }
 
 /* ============ 内容库维护：增量更新 / 校准续跑 / 机地双源同步 ============ */

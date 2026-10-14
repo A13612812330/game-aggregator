@@ -183,8 +183,59 @@ function stats() {
   return { total: games.length, bySource, withJidi, withXd, dual };
 }
 
+/** ★ v10.70：**排序口径只此一份**（返回比较函数）。
+ *
+ *  为什么必须集中：`server.js` 的 `/api/library/browse` 在 `scope=pc` 时走
+ *  `browse()`，而在 `scope=mob|all` 时走**内存排序**（`mobPool.sort` 与
+ *  `mergePick`）—— 那里历史上另写了一份 `keyOf`。两份口径一旦漂移，同一个
+ *  `sort` 参数在两个 scope 下会排出不同顺序，而且**不报错、测试也照绿**。
+ *  正解：比较函数从这里出去，两处共用。
+ *
+ *  @param {string} sort updated(默认) | hot | score | size | sizeAsc | title
+ */
+const SORT_KEYS = ['updated', 'hot', 'score', 'size', 'sizeAsc', 'title'];
+function cmp(sort) {
+  const k = SORT_KEYS.includes(String(sort || '')) ? String(sort) : 'updated';
+  return (a, b) => {
+    /* ★ v10.8：次键统一用「更新日期优先」的排序键 —— 同一档内的条目也按日期
+       倒序，与「最新更新」视图观感一致。 */
+    const tA = sortKeyOf(a);
+    const tB = sortKeyOf(b);
+    const tie = () => (tB - tA) || ((b.updatedTs || 0) - (a.updatedTs || 0));
+    if (k === 'hot') {
+      const hA = typeof a.hot === 'number' && a.hot > 0 ? a.hot : 0;
+      const hB = typeof b.hot === 'number' && b.hot > 0 ? b.hot : 0;
+      return (hB - hA) || tie();
+    }
+    if (k === 'score') {
+      const sA = (a.score || 0) <= 10 ? (a.score || 0) : 0;
+      const sB = (b.score || 0) <= 10 ? (b.score || 0) : 0;
+      return (sB - sA) || tie();
+    }
+    if (k === 'size') return (sizeGb(b.size) || 0) - (sizeGb(a.size) || 0) || tie();
+    if (k === 'sizeAsc') {
+      /* ★ 容量**无效**的条目必须排在最后。无效有两种，且实测都存在：
+         ① `sizeGb` 返回 null（size 为空串 / 解析不出）—— 全库 456 条；
+         ② 源站声明的 `"0.0GB"` / `"0KB"` —— 解析出来是**数值 0**，
+            只判 null 会把它们当成「最小容量」冲到最前，
+            榜单第一页变成「数据缺失榜」（实测前 8 名全是 0）。
+         直接 `null - n` 更糟：算成 0，同样冲到最前。 */
+      const zA = sizeGb(a.size), zB = sizeGb(b.size);
+      const okA = zA != null && zA > 0;
+      const okB = zB != null && zB > 0;
+      if (!okA && !okB) return tie();
+      if (!okA) return 1;
+      if (!okB) return -1;
+      return (zA - zB) || tie();
+    }
+    if (k === 'title') return String(a.title || '').localeCompare(String(b.title || ''), 'zh') || tie();
+    /* 日期优先 → 同日再按精确收录时间打平（同日多批抓取时顺序更稳定） */
+    return tie();
+  };
+}
 /** 分类浏览：按 genres 过滤 + 排序 + 分页（XD 风格分类流）
- *  sort: 'updated'(默认,更新时间倒序) | 'score'(评分倒序) | 'size'(容量倒序)
+ *  sort: 'updated'(默认,更新时间倒序) | 'hot'(热度倒序) | 'score'(评分倒序)
+ *      | 'size'(容量倒序) | 'sizeAsc'(容量升序) | 'title'(名称排序)
  *  opts: { sizeMin, sizeMax } 容量区间(GB) | { filter } 自定义谓词
  */
 function browse(genre, limit = 50, offset = 0, sort = 'updated', opts) {
@@ -194,22 +245,7 @@ function browse(genre, limit = 50, offset = 0, sort = 'updated', opts) {
     pool = games.filter((x) => (x.genres || []).some((t) => t.includes(g)));
   }
   pool = applyOpts(pool, opts);
-  pool = pool.slice().sort((a, b) => {
-    const sA = (a.score || 0) <= 10 ? (a.score || 0) : 0;
-    const sB = (b.score || 0) <= 10 ? (b.score || 0) : 0;
-    /* ★ v10.8：次键统一改用「更新日期优先」的排序键 —— 让同一评分/容量档内的
-       条目也按日期倒序，与「最新更新」视图观感一致。 */
-    const tA = sortKeyOf(a);
-    const tB = sortKeyOf(b);
-    if (sort === 'score') {
-      return (sB - sA) || (tB - tA);
-    }
-    if (sort === 'size') {
-      return (sizeGb(b.size) || 0) - (sizeGb(a.size) || 0) || (tB - tA);
-    }
-    /* 日期优先 → 同日再按精确收录时间打平（同日多批抓取时顺序更稳定） */
-    return (tB - tA) || ((b.updatedTs || 0) - (a.updatedTs || 0));
-  });
+  pool = pool.slice().sort(cmp(sort));
   const total = pool.length;
   const items = pool.slice(offset, offset + limit);
   return { genre: g || null, sort, total, offset, limit, items };
@@ -218,4 +254,4 @@ function browse(genre, limit = 50, offset = 0, sort = 'updated', opts) {
 function byIdGet(id) { return byId.get(id); }
 function all() { return games; }
 
-module.exports = { load, upsert, search, stats, browse, byIdGet, all, persist, sizeGb, applyOpts };
+module.exports = { load, upsert, search, stats, browse, byIdGet, all, persist, sizeGb, applyOpts, cmp, SORT_KEYS };
