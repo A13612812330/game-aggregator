@@ -16,8 +16,10 @@
  *      （「🛠 有修改器 · 命中 3,692 款」），收起时仍要能看到；且**不被截断**
  *      （`scrollWidth ≤ clientWidth`）—— 它是收起态唯一的信息出口。
  *   F. ★★ 折叠**真省出首屏**：收起 vs 展开的高度差 ≥ 120px（桌面）/ ≥ 120px（移动），
- *      且收起态首屏完整可见条数 ≥ 4（桌面）/ ≥ 2（移动）。
+ *      且收起态首屏完整可见**游戏条目** ≥ 9（桌面）/ ≥ 5（移动）。
  *      —— 这条是「本版为什么存在」的判据；折叠若只是换个样子不省空间，本版没有意义。
+ *      ★★ v10.74：口径由「可见**列表**条数」换成「可见**游戏条目**数」，
+ *         否则本版首屏被榜单占满时会给出 0 条的反向结论（实测撞到，详见 VIEWPORTS 上方）。
  *   G. 无横向溢出（两视口）
  *
  * 反证锚点（打坏必变红）：
@@ -41,10 +43,18 @@ const IDX = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 
    ⚠️ `saveMin` 的由来（★ 留个教训）：第一版两个视口都写 120，桌面**没先测就拍的数** ⇒ 实测 117
    直接报红。它不是「真回归」，是我把阈值定在了实测值之上 ——
    正解是把**规格**写成判据（`barMax`：收起后就是「一行」的高度），把**收益**写成下界（≥100）。
-   ⇒ 规矩同 v10.68：阈值只允许写成「目标 + 余量」，不允许写成「我以为的数」。 */
+   ⇒ 规矩同 v10.68：阈值只允许写成「目标 + 余量」，不允许写成「我以为的数」。
+   ★★ v10.74 口径变更（本版实测撞出来的，不是「阈值放宽了事」）：
+     桌面 F2 实测 **0 条**、F3 实测 top=862 —— 看着像大回归，其实**方向完全反了**：
+     v10.74 把榜单改成「前 5 轮播 + 2×4 卡片」共 13 个，hero 由 ~200px 回到 ~424px，
+     首屏**被榜单占满**（实测装满 13 个游戏），列表本来就该在第二屏。
+     ⇒ 与 `test-home-fold.js` 的 D①② 同步换口径：
+       旧「首屏完整可见的**列表**条数」→ 新「首屏完整可见的**游戏条目**数」
+       （轮播当前张 + 榜单卡片 + 列表行）；F3 由「必须进首屏」降级为**退化护栏**
+       （hero 再涨 ~60px 就红）。阈值仍按「拍板目标 + 余量」定，实测值见 v10.74.md。 */
 const VIEWPORTS = [
-  { key: '桌面 1440×1000', w: 1440, h: 1000, saveMin: 100, barMax: 60, foldMin: 4 },
-  { key: '移动 390×844', w: 390, h: 844, saveMin: 100, barMax: 110, foldMin: 2 },
+  { key: '桌面 1440×1000', w: 1440, h: 1000, saveMin: 100, barMax: 60, foldMin: 9, firstTopMax: 800 },
+  { key: '移动 390×844', w: 390, h: 844, saveMin: 100, barMax: 110, foldMin: 5, firstTopMax: 920 },
 ];
 
 let pass = 0; let fail = 0;
@@ -113,6 +123,18 @@ const PROBE = () => {
     cardN: cards.length,
     firstTop: cards[0] ? Math.round(cards[0].getBoundingClientRect().top) : null,
     fold: cards.filter((c) => c.getBoundingClientRect().bottom <= innerHeight).length,
+    /* ★★ v10.74 新增：与 `test-home-fold.js` 同口径的「首屏内完整可见的**游戏条目**数」
+       = 轮播当前张 + 榜单卡片 + 列表行。
+       为什么必须在这里也算一份：本套件的 F2 原本只看 `fold`（列表行），
+       而 v10.74 首屏被榜单占满 ⇒ 它会给出 **0 条**，方向完全反了（实测撞到）。
+       「完整可见」= 上下边界都在视口内 —— 只露个头的卡片对用户等于没看见。 */
+    gameInFold: (() => {
+      const vis = (el) => { const r = el.getBoundingClientRect(); return r.height > 0 && r.top >= 0 && r.bottom <= innerHeight; };
+      const cur = [...document.querySelectorAll('#rkCar .slide')].find((s) => s.classList.contains('cur'));
+      return (cur && vis(cur) ? 1 : 0)
+        + [...document.querySelectorAll('#rankList .rk-grid .rk-card')].filter(vis).length
+        + cards.filter(vis).length;
+    })(),
     docScrollW: document.documentElement.scrollWidth,
     trOn: (() => { const t = q('#trToggle'); return t ? t.classList.contains('on') : null; })(),
   };
@@ -161,8 +183,16 @@ const PROBE = () => {
         a.barH != null && a.barH <= v.barMax, '实测 ' + a.barH + 'px（展开 ' + b.barH + 'px）');
       chk('F1 ★★ 收起比展开省 ≥ ' + v.saveMin + 'px（折叠的意义）', save >= v.saveMin,
         '展开 ' + b.barH + 'px → 收起 ' + a.barH + 'px（省 ' + save + 'px）');
-      chk('F2 ★★ 收起态首屏完整可见 ≥ ' + v.foldMin + ' 条', a.fold >= v.foldMin, '实测 ' + a.fold + ' 条');
-      chk('F3 收起态首卡进第一屏（top ≤ 视口高）', a.firstTop != null && a.firstTop <= v.h, 'top=' + a.firstTop);
+      /* F2 ★★ v10.74 口径已换（依据见文件头 VIEWPORTS 上方那段）：
+         旧判据「收起态首屏完整可见的**列表**条数」在本版实测 **0 条** —— 而首屏
+         其实装着 13 个游戏（轮播 1 + 榜单卡片 8 + 列表 4）。继续用它不是「严」，
+         是**方向反了**：会逼着人把榜单再压回去，与本版的拍板目标冲突。 */
+      chk('F2 ★★ 收起态首屏完整可见的**游戏条目** ≥ ' + v.foldMin + '（= 轮播当前张 + 榜单卡片 + 列表行）',
+        a.gameInFold >= v.foldMin, '实测 ' + a.gameInFold + ' 个（旧的「只看列表」口径会给出 ' + a.fold + '）');
+      /* F3 由「必须进首屏」降级为**退化护栏**：hero 再涨 ~60px 就红。
+         为什么不删：删了就没人拦「有人把 hero 又加高 200px」。 */
+      chk('F3 收起态列表首卡 top ≤ ' + v.firstTopMax + 'px（退化护栏：hero 再涨就红）',
+        a.firstTop != null && a.firstTop <= v.firstTopMax, 'top=' + a.firstTop + ' / 视口 ' + v.h);
 
       /* ---- C 再点能收 ---- */
       await p.evaluate(() => document.getElementById('filterToggle').click());

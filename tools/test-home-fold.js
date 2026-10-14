@@ -1,31 +1,44 @@
-/* ★ v10.68 浏览器回归（第二层：真实浏览器 + CDP）：首页首屏几何。
+/* 首页首屏几何（第二层：真实浏览器 + CDP）
  *
- * 起因：用户说「首页还需优化」，参考 designeer.xyz 后拍板四项 —— 但**改前连一个数字都没有**：
- *   截图里第一屏（1440×1000）**一条游戏都没露出来**。探针实测才拿到根因：
- *     顶栏 61 + hero **570** + 区块头 27 + 分类行 + 筛选面板 167 ⇒ 列表容器 top = **985 / 1000**。
- *   移动 390×844 更夸张：hero **1289** ⇒ 列表 top **1877**（要滚 2.2 屏才见第一条）。
+ * 本套件的**唯一职责**：守住「首屏那一截」是像素事实 —— 它能测、且必须被守。
  *
- * 本套件守的就是「首屏那一截」——**它是像素事实，不是审美意见**，所以必须能测、且必须被守：
- *   A. 桌面 hero ≤ 340px（改前 570）· 移动 hero ≤ 420px（改前 1289）
- *   B. 榜首卡 ≤ 145px（改前 174）· hero 榜单收进**一行**（改前 3 列 × 3 行）
- *   C. 行高：桌面 ≤ 86px（改前 112）· 移动 ≤ 76px（改前 105）
- *   D. ★★ 首屏内**完整可见的列表条数**：桌面 ≥ 2（改前 **0**）· 移动 ≥ 1（改前 **0**）
- *   E. ★★ 移动端 `.cat-row` 高 ≤ 60px —— 守 v10.68 修掉的那个**真缺陷**：
- *      `.cat-row{flex-wrap:nowrap}` 挡不住内层 `.statline{flex-wrap:wrap}`（flex item 默认
- *      `flex-shrink:1` ⇒ 被压窄 ⇒ **它自己内部换行**），实测把 `.cat-row` 从 34px 撑到 **181px**。
- *      与 v10.30 的 `.rel-it` 同一类坑，所以两边都得有锚。
- *   F. 秩序语言：`.sec-no` 编号（01/02）真的在 · `.sec-sub` 桌面显示、移动隐藏
+ * 现状（v10.74 实测，1440×1000 / 820×900 / 390×844）：
+ *   hero 424 / 461 / 544 · 轮播 200 / 200 / 132 · 卡片 61 / 61 / 54（各 8 张）
+ *   列表首条 top 750 / 830 / 862 · 首屏内可见游戏条目 13 / 10 / 9
  *
- * 反证锚点（打坏必变红）：
- *   · `.rk-grid` 从 `repeat(5,…)` 改回 `repeat(3,…)` ⇒ B 的「同排」红
- *   · `.rk-champ .th` 高度 97 → 128           ⇒ A / B 红
- *   · `.row-card .th` 宽度 96 → 158           ⇒ C / D 红
- *   · 删掉 `.cat-row .statline{flex:none;…}`  ⇒ E 红
- *   · `.rk-grid .rk-card{flex:0 0 74%}` 删掉  ⇒ 移动端横滑断言红
+ * ── 三版演进（每次改口径都留在这里，免得下轮有人拿旧目标来「修正」实现）──
+ * v10.68：改前首屏 **一条游戏都露不出来** —— 探针实测：顶栏 61 + hero 570 + 区块头 27
+ *         + 分类行 + 筛选面板 167 ⇒ 列表容器 top = **985 / 1000**；
+ *         移动端更夸张：hero 1289 ⇒ 列表 top 1877（要滚 2.2 屏）。⇒ 本轮目标是「压 hero」，
+ *         并顺手定下「骨架高 = 真卡高」「取样别取到 .date-sep」这些基础设施。
+ * v10.70：hero 从深蓝渐变通栏改白底分区（参考 XDGAME 天梯排名）；榜单 #1-6 由 3 列 3 行改 5 列 1 行；
+ *         并新增**平板 820×900** 这一档 —— 它守的是**断点区间**（761~1060 那个「两头都不管」的夹缝），
+ *         只测 1440 与 390 永远测不到那里。
  *
- * ⚠️ 阈值怎么定：**取拍板目标 + 少量余量**，不是「照抄当前实测值」。
- *   照抄实测值 ⇒ 任何人做一次正常微调这里就红，防线变成噪音；取目标值 ⇒ 只有真的退回
- *   「占满一屏」才红。当前实测余量：桌面 hero 275 / 目标 300 / 闸 340。
+ * ★★ v10.74（本次）：**前 5 名改轮播图 + #6-13 走 4 列 × 2 行卡片**（用户拍板，共 13 个游戏）。
+ *   ⇒ hero 由 ~200px 回到 ~424px：v10.68/v10.70 的「压首屏」成果被**有意**让回一部分，
+ *     换来轮播的视觉分量。**这不是回归**，是拍板过的取舍（用户明确选了「200px 中等档」
+ *     而不是更小的方案）。
+ *   ⇒ **本套件的核心口径随之改变**（这是本次改造的重点，不是「把阈值放宽了事」）：
+ *       · 旧口径「首屏内完整可见的**列表**条数」不再合适 —— 首屏现在被**榜单**占满，
+ *         列表本来就在第二屏。继续用它守，会在「首屏明明装着 13 个游戏」时报「0 条可见」，
+ *         得出**方向完全相反**的结论。
+ *       · 新口径 =「首屏内完整可见的**游戏条目**数」= 轮播当前张 + 卡片 + 列表行。
+ *         它比旧口径**更严**：既守「首屏必须有内容」，也守「榜单不能只露半截」。
+ *       · 「列表首条 top」保留为**退化护栏**（不再是「必须进首屏」）：hero 再涨 ~60px 就红。
+ *
+ * 负向守卫（打坏必变红，对应实现见 test-v1074 反证套件）：
+ *   · `.rk-car` 高度 200 → 320                       ⇒ A①② / D① 红
+ *   · `.rk-grid` 从 `repeat(4,…)` 改回 `repeat(5,…)`  ⇒ B③「桌面 4 列」红
+ *   · 移动端 `.rk-grid` 改回 flex 横滑                 ⇒ E③ 红
+ *   · `.rk-car .slide.cur` 改回 `.on`                  ⇒ B④ 红（`.on` 被 rankMark 占用）
+ *   · 删掉 `.cat-row .statline{flex:none;…}`           ⇒ E①② 红
+ *
+ * ⚠️ 阈值怎么定：**取拍板目标 + 余量**，不是「照抄当前实测值」。
+ *   照抄 ⇒ 任何人做一次正常微调这里就红，防线变噪音；取目标+余量 ⇒ 只有真退回
+ *   「占满一屏」才红。余量的现实来源是字体替换与**数据换行**（榜单标题每档长短都不同）。
+ *   v10.74 的拍板目标是「轮播 200px 档」：实测 hero 424 ⇒ 闸 470（余量 46），
+ *   轮播一旦改成 280 档会到 ~504 ⇒ 立刻红。
  *
  * 跑法：node tools/test-home-fold.js     （需服务在 8123；约 25 s）
  */
@@ -34,40 +47,24 @@ const { connectBrowser, newPage, sleep } = require('./browser');
 
 const BASE = process.env.BASE || 'http://127.0.0.1:8123';
 
-/* 两档视口 = 用户拍板时看的那两屏。别只测桌面：移动端 hero 是桌面的 4.7 倍（1289 vs 570），
-   只测桌面会得出「问题不大」的错误结论。
-   ★ v10.69 收紧：筛选面板改成**默认折叠**后首屏又前进一截（桌面 3→5 条 / 移动 1→3 条，
-   首卡 top 718→601 / 776→630）⇒ 阈值随之上调（foldMin 2→4 / 1→2，firstTopMax 900→800 / 800→750）。
-   ★ 为什么必须跟着调：不调的话「折叠被撤掉」在**本套件里看不出来** ——
-   它会退回到 3 / 1 条，而 2 / 1 的老阈值照样绿。收紧的余量仍是 1 条（实测 5 / 3）。
-   ★★ v10.70 **第二次收紧**（本轮改的是 hero 视觉语言 + 列表行密度，见下方「为什么每轮都要收紧」）：
-   实测（node tools/_probe-v1070.js，1440×900 / 390×844）
-        hero 197 / 273  榜首卡 60 / 55   行高 58 / 60   首卡 top 523 / 591   可见 6 / 4 条
-   改前（v10.69 末）是 hero 275 / 1289 时代留下的老口径，阈值当时定在 340 / 420 ——
-   ★ 这意味着 **「hero 退回 275px 深蓝大块」在本套件里是绿的**（275 ≤ 340），
-     而那正是用户在 v10.70 明确否掉的形态。所以阈值必须跟着实测往下压：
-     桌面 heroMax 340→**240**（275 > 240 ⇒ 真回退立刻红）、rowMax 86→**64**（74 > 64 ⇒ 拦得住）、
-     champMax 145→**80**（123 > 80 ⇒ 拦得住）。
-   ⚠️ 余量的取法仍是「拍板目标 + 余量」，不是照抄实测：桌面 hero 实测 197 / 闸 240（余量 43），
-     移动 273 / 闸 320（余量 47）；行高实测 58 / 闸 64（余量 6，够吃掉 1px 边框与字体替换的漂移）。 */
+/* 三档视口 = 拍板时真正看的那几屏。**别只测桌面与移动**：761~1060 那个夹缝里的问题
+   （v10.70 的 `.grid2` 横向溢出、v10.74 又冒出来的顶栏溢出）两头都测不到。
+   逐档的实测与阈值依据见文件头「现状」与「三版演进」。 */
 const VIEWPORTS = [
-  { key: '桌面 1440×1000', w: 1440, h: 1000, heroMax: 240, champMax: 80, rowMax: 64, foldMin: 5, firstTopMax: 600 },
-  /* ★★ v10.70 新增第三档「平板 820×900」—— 守的是**断点区间**而不是第三个尺寸：
-     本页的响应式分档是 `≤760`（紧凑）/ `761~1060`（单列但走桌面语言）/ `>1060`（两栏）。
-     v10.70 修掉的那条横向溢出**只存在于中间那档**：`≤760` 有 `#colMain{min-width:0}` 兜着，
-     `>1060` 的 `.grid2` 写的是 `minmax(0,1fr)`（min=0），
-     只有 `761~1060` 写成了 `1fr`（min=auto=min-content）⇒ 被内容撑宽。
-     ⇒ 再加一个 1440 或 390 的视口**永远测不到它**；必须钉住这个**区间**里的一个点。
-       （同类教训见 v10.68 的 `.live-tag`：761~845 那段也是「两头都不管」。） */
-  /* 平板档的阈值**按本档实测单独定**（不许照搬桌面档 —— 820 的 hero 比 1440 高 37px：
-     内容在窄一点的宽度里换行。实测 hero **234** / 首卡 top **603** / 行高 58 / 可见 **5** 条。
-     ⇒ 阈值：heroMax 260（余量 26；仍 < 275 ⇒ 拦得住「退回深蓝大块」）、
-        firstTopMax 620（余量 17；仍拦得住 v10.68 时代的 718）、foldMin 4（余量 1）。
-     ⚠️ 第一版我按桌面档照抄了 heroMax 240 / firstTopMax 600 / foldMin 5，
-        结果 hero 余量只剩 6px、首卡 top 直接报红（603 > 600）、foldMin 余量 0 ——
-        典型的「阈值写成我以为的数」。**每加一档都要先量再定**。 */
-  { key: '平板 820×900', w: 820, h: 900, heroMax: 260, champMax: 80, rowMax: 64, foldMin: 4, firstTopMax: 620 },
-  { key: '移动 390×844', w: 390, h: 844, heroMax: 320, champMax: 70, rowMax: 66, foldMin: 3, firstTopMax: 660 },
+  /* ★★ v10.74 阈值重定（**先实测再定**，实测值见文件头「现状」表）：
+     hero 424 → 闸 470（余量 46）；轮播 200 → 闸 210；卡片高 61 → 闸 72。
+     ★ 为什么余量取 ~10%：真实漂移来源是字体替换与**数据换行**（榜单标题长短每档都不同），
+       不是布局本身。取目标+余量 ⇒ 正常数据波动不红，真退回「轮播 280 档 / 卡片堆 3 行」才红。 */
+  { key: '桌面 1440×1000', w: 1440, h: 1000, heroMax: 470, carMax: 210, cardHMax: 72, cardN: 8, colN: 4, rowN: 2, rowMax: 64, foldMin: 9, firstTopMax: 800 },
+  /* ★★ 平板 820×900 这一档守的是**断点区间**（`≤760` 紧凑 / `761~1060` 单列桌面语言 / `>1060` 两栏），
+     不是第三个尺寸 —— 只测 1440 与 390 会永远漏掉中间档（v10.70 的横向溢出、
+     v10.74 又冒出来的顶栏溢出都只存在于这一档）。 */
+  { key: '平板 820×900', w: 820, h: 900, heroMax: 510, carMax: 210, cardHMax: 72, cardN: 8, colN: 4, rowN: 2, rowMax: 64, foldMin: 6, firstTopMax: 880 },
+  /* 移动档：轮播降到 132px（≤420 断点），卡片走 2 列 ⇒ 8 张 = 4 行。
+     ★ `firstTopMax` 920 > 视口 844 —— 这一条在移动端**已不是「必须进首屏」**，
+       而是「hero 不许再涨」（实测 862，余量 58）。首屏的内容保证由 foldMin 那条负。
+       为什么不删：删了就没人拦「有人把移动 hero 又加高 200px」。 */
+  { key: '移动 390×844', w: 390, h: 844, heroMax: 600, carMax: 145, cardHMax: 66, cardN: 8, colN: 2, rowN: 4, rowMax: 66, foldMin: 5, firstTopMax: 920 },
 ];
 
 const PROBE = () => {
@@ -80,29 +77,57 @@ const PROBE = () => {
      写成 `#libList > *` 会把分隔行当成第一张卡：行高报 20px（真值 74px）、
      首条 top 报 690（真值 718）、可见条数多数一条（4 / 真值 3）。
      三个数全错、且**全绿** —— 这就是「喂错样本 ⇒ 假绿」，2026-10 首次踩到。 */
-  const cards = [...document.querySelectorAll('#libList > .row-card')];
-  const rows = cards.map((e) => R(e));
+  const rows = [...document.querySelectorAll('#libList > .row-card')].map((e) => R(e));
   const seps = [...document.querySelectorAll('#libList > .date-sep')];
   const rankCards = [...document.querySelectorAll('#rankList .rk-grid .rk-card')];
   const grid = document.querySelector('#rankList .rk-grid');
+  /* ★ v10.74：轮播 —— 张数 / 当前张 / `cur` 与 `on` 各自的计数（见下方 B④ 的用意）。 */
+  const slides = [...document.querySelectorAll('#rankList .rk-car .slide')];
+  const car = document.querySelector('#rankList .rk-car');
   const stat = document.querySelector('.cat-row .statline');
   const catRow = document.querySelector('.cat-row');
   const cs = (el) => (el ? getComputedStyle(el) : null);
+  /* 「完整可见」= 上下边界都落在视口内。不用「露了个头」：只露 5px 的卡片对用户
+     等于没看见 —— 用宽松判据会让 foldMin 这条**假绿**。 */
+  const inFold = (el) => {
+    const r = el.getBoundingClientRect();
+    return r.height > 0 && r.top >= 0 && r.bottom <= innerHeight;
+  };
+  const curSlide = slides.find((s) => s.classList.contains('cur'));
   return {
     vh: innerHeight,
     stage: R(document.getElementById('rankStage')),
-    champ: R(document.querySelector('#rankList .rk-champ')),
+    car: R(car),
+    carN: slides.length,
+    /* ★★ 这两个计数是**语义分离**的守卫：`cur` = 轮播当前张（同一时刻只能有 1 张）；
+       `on` = rankMark() 给「当前打开的详情」加的通用激活类。两者一旦混用，
+       打开任意详情就会把**所有** slide 一起点亮（它们在 CSS 里都靠这个类控制可见性）。 */
+    carCurN: slides.filter((s) => s.classList.contains('cur')).length,
+    carOnN: slides.filter((s) => s.classList.contains('on')).length,
+    carInFold: curSlide ? inFold(curSlide) : false,
     cardTops: rankCards.map((c) => Math.round(c.getBoundingClientRect().top)),
     cardN: rankCards.length,
+    cardH: rankCards[0] ? Math.round(rankCards[0].getBoundingClientRect().height) : null,
+    /* 列数用**首行卡数**判，而不是读 `grid-template-columns` —— 后者是写法，
+       落点才是效果（改字号/封面尺寸也可能把卡挤到第二行）。 */
+    cardColN: (() => {
+      if (!rankCards.length) return 0;
+      const t0 = Math.round(rankCards[0].getBoundingClientRect().top);
+      return rankCards.filter((c) => Math.round(c.getBoundingClientRect().top) === t0).length;
+    })(),
+    cardInFold: rankCards.filter(inFold).length,
     gridDisp: grid ? cs(grid).display : null,
     gridOverflowX: grid ? cs(grid).overflowX : null,
-    cardFlexBasis: rankCards[0] ? cs(rankCards[0]).flexBasis : null,
     rows,
     rowN: rows.length,
     sepN: seps.length,
     firstTop: rows[0] ? rows[0].top : null,
     rowH: rows[0] ? rows[0].h : null,
-    foldRows: rows.filter((r) => r.bottom <= innerHeight).length,
+    rowInFold: rows.filter((r) => r.bottom <= innerHeight).length,
+    /* ★★ v10.74 新口径：首屏内完整可见的**游戏条目**数
+       = 轮播当前张(0/1) + 卡片 + 列表行。
+       旧的「只看列表行」在本版会给出 0，而首屏其实装着 13 个游戏 —— 方向完全反了的结论。 */
+    gameInFold: (curSlide && inFold(curSlide) ? 1 : 0) + rankCards.filter(inFold).length + rows.filter((r) => r.bottom <= innerHeight).length,
     catRowH: catRow ? Math.round(catRow.getBoundingClientRect().height) : null,
     statH: stat ? Math.round(stat.getBoundingClientRect().height) : null,
     // 横向溢出：文档宽 vs 视口宽（1px 容差，别把亚像素舍入判成溢出）
@@ -146,16 +171,33 @@ function chk(name, ok, extra) {
       /* A 首屏高度 */
       chk('A  ① hero（#rankStage）高 ≤ ' + v.heroMax + 'px', r.stage && r.stage.h <= v.heroMax,
         '实测 ' + (r.stage ? r.stage.h : '—') + 'px' + (r.stage ? '（top ' + r.stage.top + '）' : ''));
-      chk('A  ② 榜首卡高 ≤ ' + v.champMax + 'px', r.champ && r.champ.h <= v.champMax,
-        '实测 ' + (r.champ ? r.champ.h : '—') + 'px');
+      /* A② 由「榜首卡高」改成「轮播高」—— v10.74 冠军卡已被轮播取代（`.rk-champ` 不复存在）。
+         轮播高度是本版的**拍板项**（用户选的是 200px 档），所以它必须自己有一条硬闸：
+         否则有人把高度改成 280/360 时，A① 只在 hero 涨过闸才报警，反馈太迟。 */
+      chk('A  ② 轮播高 ≤ ' + v.carMax + 'px（拍板档位，不是随手值）', r.car && r.car.h <= v.carMax,
+        '实测 ' + (r.car ? r.car.h : '—') + 'px');
 
-      /* B hero 榜单收进一行 —— 判据用「所有卡 offsetTop 极差」，不用列数：
-         grid-template-columns 是写法，实测落点才是效果（改行高/字号也可能把它挤下去）。 */
-      chk('B  ① hero 榜单卡数在 1–5 之间（截断生效，不再堆 3 行）', r.cardN >= 1 && r.cardN <= 5,
-        'n=' + r.cardN + ' tops=' + r.cardTops.join(','));
-      const spread = r.cardTops.length ? Math.max(...r.cardTops) - Math.min(...r.cardTops) : 999;
-      chk('B  ② ★★ hero 榜单卡**同排**（offsetTop 极差 ≤ 2px）', r.cardN > 0 && spread <= 2,
-        '极差 ' + spread + 'px');
+      /* B 榜单结构（v10.74）= #1-5 轮播 + #6-13 两行 × 四列（移动 2 列） */
+      chk('B  ① 轮播 5 张 · 卡片 8 张（共 13 个 = 用户拍板口径）',
+        r.carN === 5 && r.cardN === v.cardN,
+        '轮播 ' + r.carN + ' 张 / 卡片 ' + r.cardN + ' 张（期望 5 / ' + v.cardN + '）');
+      const rowSet = new Set(r.cardTops);
+      /* 行数 = 8 张 ÷ 列数 ⇒ 桌面/平板 4 列 = 2 行，移动 2 列 = 4 行。
+         ★ 不写死 2 —— 列数变了行数必然跟着变（第一版就是写死 2，移动端当场红）。 */
+      chk('B  ② ★ 卡片排成 ' + v.rowN + ' 行（top 去重后恰为 ' + v.rowN + ' 个值）',
+        r.cardTops.length > 0 && rowSet.size === v.rowN,
+        '行数 ' + rowSet.size + ' tops=' + r.cardTops.join(','));
+      /* 列数用**首行卡数**实测，不读 `grid-template-columns` —— 前者是效果，后者只是写法。 */
+      chk('B  ③ ★ 卡片列数 = ' + v.colN, r.cardColN === v.colN,
+        '首行 ' + r.cardColN + ' 张｜display=' + r.gridDisp);
+      /* ★★ B④ 语义分离守卫：`cur` = 轮播当前张（同刻只能 1 张）/ `on` = 详情联动高亮。
+         两者混用 ⇒ 打开任意详情会把**所有** slide 一起点亮（CSS 里靠同一个类控可见性）。
+         理由与踩法见 index.html 里 `.rk-car .slide.cur` 那段注释。
+         ★ 静止态下 slide 的 `on` 必须恒为 0（没人打开详情）。 */
+      chk('B  ④ ★★ slide 用 `cur` 不用 `on`（`on` 被 rankMark 占用，混用会让多张同时可见）',
+        r.carCurN === 1 && r.carOnN === 0, 'cur=' + r.carCurN + ' on=' + r.carOnN);
+      chk('B  ⑤ 卡片高 ≤ ' + v.cardHMax + 'px（放大后仍在闸内）', r.cardH != null && r.cardH <= v.cardHMax,
+        '实测 ' + r.cardH + 'px');
 
       /* C 行密度 */
       chk('C  ① 列表行高 ≤ ' + v.rowMax + 'px', r.rowH != null && r.rowH <= v.rowMax, '实测 ' + r.rowH + 'px');
@@ -165,11 +207,17 @@ function chk(name, ok, extra) {
       chk('C  ② 取样合理性：行高 ≥ 40px（≈20px 就是取到 .date-sep 了）', r.rowH != null && r.rowH >= 40,
         '实测 ' + r.rowH + 'px');
 
-      /* D 首屏 —— 本套件存在的理由 */
-      chk('D  ① 列表首条 top ≤ ' + v.firstTopMax + 'px（进第一屏）', r.firstTop != null && r.firstTop <= v.firstTopMax,
-        '实测 ' + r.firstTop + 'px / 视口 ' + r.vh);
-      chk('D  ② ★★ 首屏内**完整可见**的列表条数 ≥ ' + v.foldMin + '（改前恒为 0）', r.foldRows >= v.foldMin,
-        '实测 ' + r.foldRows + ' 条');
+      /* D 首屏 —— 本套件存在的理由。★★ v10.74 口径已变（依据见文件头「三版演进」）：
+         旧口径只看**列表**条数，会在本版给出「0 条可见」的**反向结论** ——
+         而实测首屏装着 13 个游戏（轮播 1 + 卡片 8 + 列表 4）。 */
+      chk('D  ① 列表首条 top ≤ ' + v.firstTopMax + 'px（退化护栏：hero 再涨就红）',
+        r.firstTop != null && r.firstTop <= v.firstTopMax, '实测 ' + r.firstTop + 'px / 视口 ' + r.vh);
+      chk('D  ② ★★ 首屏内完整可见的**游戏条目** ≥ ' + v.foldMin + '（= 轮播当前张 + 卡片 + 列表行）',
+        r.gameInFold >= v.foldMin,
+        '实测 ' + r.gameInFold + ' 个（轮播 ' + (r.carInFold ? 1 : 0) + ' + 卡片 ' + r.cardInFold + ' + 列表 ' + r.rowInFold + '）');
+      /* D③ 阳性对照：轮播那一张**必须**在首屏内 —— 否则 D② 的 1 分是凭空加的。
+         没有它，把轮播挪出首屏时 D② 仍可能靠卡片凑够闸值而不报红。 */
+      chk('D  ③ 阳性对照：轮播当前张本身完整可见（否则 D② 的 +1 是虚的）', r.carInFold === true);
 
       /* E 移动端分类行 —— 守 v10.68 修掉的真缺陷（`.statline` 内部换行把行撑高） */
       if (v.w <= 760) {
@@ -177,12 +225,17 @@ function chk(name, ok, extra) {
           r.catRowH != null && r.catRowH <= 60, '实测 ' + r.catRowH + 'px');
         chk('E  ② 移动端 .cat-row .statline 保持**单行**（高 ≤ 24px）', r.statH != null && r.statH <= 24,
           '实测 ' + r.statH + 'px');
-        /* 负向：移动端 hero 榜单必须是**横滑**，不是换行堆叠 —— 否则 5 张卡又变成 3 行高 */
-        chk('E  ③ 移动端 hero 榜单是横滑行（display:flex + overflow-x:auto）',
-          r.gridDisp === 'flex' && r.gridOverflowX === 'auto', 'display=' + r.gridDisp + ' overflowX=' + r.gridOverflowX);
-        chk('E  ④ 移动端 hero 榜单卡宽度收窄（flex-basis 不是 100%）',
-          r.cardFlexBasis != null && r.cardFlexBasis !== 'auto' && r.cardFlexBasis !== '100%',
-          'flex-basis=' + r.cardFlexBasis);
+        /* ★★ v10.74 **方向反转**：移动端卡片区从「横向滚动单行」改成 **2 列网格**。
+           为什么反转（不是把旧断言删掉）：横滑单行是为了把 5 张卡压进一行高度；
+           本版要「放大卡片」且要一屏看到更多条 ⇒ 2 列网格一屏能看到 4 条，
+           横滑只能露 74% 还要动手划。若有人改回横滑，这条必须红。 */
+        chk('E  ③ ★★ 移动端卡片区是 **2 列网格**（不是横滑单行）',
+          r.gridDisp === 'grid' && r.gridOverflowX === 'visible' && r.cardColN === 2,
+          'display=' + r.gridDisp + ' overflowX=' + r.gridOverflowX + ' 首行=' + r.cardColN + ' 张');
+        /* E④ 由「flex-basis 不是 100%」换成本版真实存在的约束：移动端轮播降高。
+           横滑时代的那个判据随 E③ 一起作废（`flex-basis` 在 grid 里恒为 auto，测不出东西）。 */
+        chk('E  ④ ★ 移动端轮播降高（≤ ' + v.carMax + 'px；桌面档是 200）',
+          r.car && r.car.h <= v.carMax, '实测 ' + (r.car ? r.car.h : '—') + 'px');
       }
 
       /* F 秩序语言（拍板「全采纳」的那一条，必须真有落点 —— 存在 ≠ 可见） */

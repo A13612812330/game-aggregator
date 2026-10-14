@@ -155,57 +155,89 @@
   .stage-refresh.busy{opacity:.5;pointer-events:none}
   .stage-refresh svg{width:12px;height:12px}
   .rk-list{min-height:96px}
-  /* 冠军卡（v10.70：**白底紧凑版** —— 整卡 123 → 58px）
-     改前是金黄渐变（#FFF3DC→#FFE2B8）+ 深蓝 hero，饱和度冲突最扎眼；
-     现在 hero 自身是白底，冠军卡改用「左侧 3px 主色竖条 + 浅灰底」与其余榜卡
-     区分 —— 不靠高饱和底色，也不再需要大阴影。
-     ★ 结构从 3 行（NO.1 徽章行 / 标题行 / 英文名行 / 元信息行）压成 **2 行**：
-       第 1 行 = NO.1 + 中文名 + 英文名（同一行，英文名自动吃掉剩余宽度）；
-       第 2 行 = 类型 / 容量 / 日期 / 热度。缩略图 172×97 → **78×44**。 */
-  .rk-champ{position:relative;display:flex;align-items:center;gap:12px;padding:7px 12px;border-radius:var(--cd-r);margin-bottom:8px;cursor:pointer;overflow:hidden;background:#F7F9FC;border:1px solid var(--c-border);transition:.18s}
-  .rk-champ::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,#F59E0B,#E11D48)}
-  .rk-champ:hover{border-color:#B9C7E8;box-shadow:0 8px 22px rgba(18,26,51,.10)}
-  .rk-champ.on{outline:2px solid var(--c-primary);outline-offset:-2px}
-  .rk-champ .no1{position:absolute;right:10px;top:-16px;font:900 60px/1 var(--font-num);opacity:.06;color:#0F1A33;pointer-events:none;user-select:none}
-  .rk-champ .th{width:78px;height:44px;border-radius:var(--cd-th-r);overflow:hidden;flex:none;background:#EDF0F6;position:relative;z-index:1}
-  .rk-champ .th img{width:100%;height:100%;object-fit:cover}
-  .rk-champ .th .ph{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-weight:800;font-size:20px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
-  .rk-champ .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;position:relative;z-index:1}
-  .rk-champ .bd .tt{display:flex;align-items:center;gap:7px;min-width:0}
-  .rk-champ .bd .tag1{font:800 10px/1 var(--font-num);color:#fff;background:linear-gradient(135deg,#F97316,#E11D48);padding:2.5px 7px;border-radius:5px;letter-spacing:.5px;flex:none}
-  .rk-champ .bd .t{font-size:15px;font-weight:800;color:var(--c-t1);line-height:1.25;min-width:0;flex:0 1 auto;
+  /* ★★ v10.74：前 5 名从「冠军卡」改成**轮播图**（用户拍板）。
+     改前形态：冠军大卡（#1）+ 5 列小卡（#2-6）= 共 6 个，冠军卡 58px 横条。
+     现在：#1-5 进轮播（200px 大图 + 渐变遮罩信息层），#6-13 走 4 列 × 2 行卡片。
+     ★ 高度为什么是 200px：用户在「中等 200 / 更大 280」里选了中等 ——
+       首屏仍要能露出下面第一行卡片。这是**有意的取舍**：hero 会从 ~200px 回到 ~430px，
+       v10.68/v10.70 压首屏的成果被这一版部分让回，换来轮播的视觉分量。
+     ★ 为什么轮播的 DOM 必须由 JS 现创建：派生页由 page-assets.scriptForSubpage()
+       从主源**整段抽走**脚本，而 `#rankStage` 节点只存在于首页 ⇒ 静态 DOM 在派生页
+       会变成孤儿（v10.73 的浮层踩过同一条，见 PITFALLS 103）。 */
+  .rk-car{position:relative;height:200px;border-radius:var(--cd-r);overflow:hidden;background:#EDF0F6;margin-bottom:10px}
+  .rk-car .slide{position:absolute;inset:0;opacity:0;transition:opacity .45s ease;cursor:pointer;z-index:1}
+  /* ★★ 当前张用 `.cur`，**不是** `.on`。
+     原因：`.on` 在本项目里是「当前打开的那条详情」的通用激活类（`rankMark()` 会给
+     `#rankList [data-url]` 里**所有**匹配元素加 `.on`），而 slide 也带 `data-url`
+     ⇒ 若可见性也用 `.on`，打开任意一条详情就会把**所有** slide 一起点亮（多张同时可见）。
+     两个语义必须分开：`.cur` = 轮播当前张，`.on` = 详情联动高亮。 */
+  .rk-car .slide.cur{opacity:1;z-index:2}
+  .rk-car .slide img{width:100%;height:100%;object-fit:cover;display:block}
+  .rk-car .slide .ph{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-weight:800;font-size:52px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
+  /* 底部渐变遮罩：文字要压在图上，没有它浅色封面会读不清（XDGAME 首页同款做法） */
+  .rk-car .shade{position:absolute;inset:0;background:linear-gradient(to top,rgba(9,14,30,.9) 0%,rgba(9,14,30,.6) 34%,rgba(9,14,30,.12) 62%,rgba(9,14,30,0) 82%);pointer-events:none;z-index:2}
+  .rk-car .info{position:absolute;left:0;right:0;bottom:0;padding:0 18px 15px;display:flex;align-items:flex-end;gap:14px;pointer-events:none;z-index:3}
+  .rk-car .info .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+  .rk-car .info .tt{display:flex;align-items:center;gap:9px;min-width:0}
+  .rk-car .info .tag1{font:800 11px/1 var(--font-num);color:#fff;background:linear-gradient(135deg,#F97316,#E11D48);padding:4px 9px;border-radius:6px;letter-spacing:.5px;flex:none;box-shadow:0 2px 8px rgba(225,29,72,.35)}
+  .rk-car .info .t{font-size:20px;font-weight:800;color:#fff;line-height:1.2;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 8px rgba(0,0,0,.45)}
+  .rk-car .info .en{font-size:12px;color:rgba(255,255,255,.72);font-family:var(--font-num);flex:0 1 auto;min-width:0;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .rk-champ .bd .en{font-size:11px;color:var(--c-t3);font-family:var(--font-num);flex:1 1 auto;min-width:0;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .rk-champ .bd .meta2{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;font-weight:600;color:var(--c-t2)}
-  .rk-champ .bd .meta2 .it{background:#fff;border:1px solid var(--c-border);border-radius:99px;padding:1px 8px}
-  /* 排序依据值（热度）单独着色 —— 与 XDGAME 把「574,032 热度」做成行内小胶囊同理 */
-  .rk-champ .bd .meta2 .it.hot{background:#FFF4E5;border-color:#FBD9A8;color:#C2410C;font-weight:750}
-  .rk-champ .sc2{font:800 20px/1 var(--font-num);color:var(--c-score);flex:none;position:relative;z-index:1;text-align:center}
-  .rk-champ .sc2 small{display:block;font-size:9px;font-weight:600;color:var(--c-t3);margin-top:2px;font-family:var(--font)}
-  /* #2-6 榜单小卡（v10.68：3 列 × 3 行 → 5 列 × 1 行；v10.70：整卡 47 → 42px） */
-  .rk-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
-  .rk-card{display:flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--c-border);border-radius:var(--cd-r);padding:5px 9px;cursor:pointer;transition:.16s;min-width:0}
+  .rk-car .info .meta2{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11.5px;font-weight:600}
+  .rk-car .info .meta2 .it{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.24);border-radius:99px;padding:2px 9px;color:#fff;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+  .rk-car .info .meta2 .it.hot{background:rgba(251,146,60,.92);border-color:rgba(253,186,116,.9);color:#3A1B02;font-weight:750}
+  .rk-car .info .sc2{font:800 26px/1 var(--font-num);color:#fff;flex:none;text-align:center;text-shadow:0 1px 8px rgba(0,0,0,.45)}
+  .rk-car .info .sc2 small{display:block;font-size:10px;font-weight:600;color:rgba(255,255,255,.72);margin-top:3px;font-family:var(--font)}
+  /* 左右箭头：默认隐藏、悬停浮现（不抢封面） */
+  .rk-car .arw{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;
+    background:rgba(9,14,30,.44);color:#fff;display:grid;place-items:center;z-index:4;
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;transition:.2s;cursor:pointer}
+  .rk-car:hover .arw{opacity:1}
+  .rk-car .arw:hover{background:rgba(9,14,30,.7)}
+  .rk-car .arw.prev{left:12px}
+  .rk-car .arw.next{right:12px}
+  .rk-car .arw svg{width:18px;height:18px}
+  /* 指示点：当前项拉长成胶囊（与站内 `.stage-pill` 的激活态同一套语言） */
+  .rk-car .dots{position:absolute;right:18px;bottom:16px;display:flex;gap:6px;z-index:4}
+  .rk-car .dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.42);transition:.22s;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+  .rk-car .dot:hover{background:rgba(255,255,255,.75)}
+  .rk-car .dot.on{background:#fff;width:22px;border-radius:4px}
+  /* #2-13 榜单卡片（v10.68：3 列 × 3 行 → 5 列 × 1 行；v10.70：整卡 47 → 42px；
+     ★★ v10.74：5 列 × 1 行 → **4 列 × 2 行**，且卡片**整体放大**（用户要求「卡片放大一点」）。
+     放大是可量化的：整卡 42 → ~61px、封面 42 → 72px、标题 12 → 13.5px。
+     列数 5 → 4 是「放大」的主要来源 —— 同宽容器里列越少，每列越宽。 */
+  .rk-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .rk-card{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--c-border);border-radius:var(--cd-r);padding:9px 12px;cursor:pointer;transition:.16s;min-width:0}
   .rk-card:hover{border-color:#B9C7E8;box-shadow:0 6px 18px rgba(18,26,51,.10);transform:translateY(-1px)}
   .rk-card.on{outline:2px solid var(--c-primary);outline-offset:-2px}
-  .rk-card .no{flex:none;width:16px;text-align:center;font:800 12px/1 var(--font-num);color:#B9C0D2}
+  .rk-card .no{flex:none;width:20px;text-align:center;font:800 14px/1 var(--font-num);color:#B9C0D2}
   .rk-card .no.r2{color:#F59E0B}
   .rk-card .no.r3{color:#2E6BFF}
-  .rk-card .th{width:42px;height:auto;aspect-ratio:var(--th-ar);border-radius:var(--cd-th-r);overflow:hidden;flex:none;background:#EDF0F6}
+  .rk-card .th{width:72px;height:auto;aspect-ratio:var(--th-ar);border-radius:var(--cd-th-r);overflow:hidden;flex:none;background:#EDF0F6}
   .rk-card .th img{width:100%;height:100%;object-fit:cover}
-  .rk-card .th .ph{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-weight:800;font-size:13px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
-  .rk-card .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .rk-card .th .ph{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-weight:800;font-size:18px;background:linear-gradient(135deg,#5B86E5,#7F6FF0)}
+  .rk-card .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
   /* ★ v10.68：小卡标题从「固定预留两行」（--cd-t2 = 2.8em，是 v10.30 的统一规范）
      收成**单行**。理由：单行卡高 47px 才够把 hero 压到 ~300px，而 v10.30 的两行预留
      在 231px 宽的 5 列网格里会让每张卡高 73px ⇒ 一行就吃掉 73px，与目标冲突。
-     ★ 这是**有意的口径变更**，不是回归 —— 完整标题仍在本行 `title` 属性里
+     ★ v10.74：**仍然单行**（放大后 4 列每列 ~295px，单行放得下更长的标题），
+     这是**有意保持的口径**，不是回归 —— 完整标题仍在本行 `title` 属性里
      （见 rankCard 的 title），悬停可看全；且 v10.30 当时防的「标题高度不齐」在这里
      由 `min-height` 归零 + 单行 ellipsis 同样解决（所有卡恒 1 行，不会参差）。 */
-  .rk-card .bd .t{font-size:12px;font-weight:700;line-height:1.3;min-height:0;
+  .rk-card .bd .t{font-size:13.5px;font-weight:700;line-height:1.3;min-height:0;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .rk-card .bd .s{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--c-t3);min-width:0}
+  .rk-card .bd .s{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--c-t3);min-width:0}
   .rk-card .bd .s .g{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .rk-card .sc{flex:none;font-size:10.5px;font-weight:750;color:var(--c-score);font-family:var(--font-num)}
+  .rk-card .sc{flex:none;font-size:12px;font-weight:750;color:var(--c-score);font-family:var(--font-num)}
+  /* ★★ v10.74：**库内补位**条目（源站榜单只有 10 行，13 个里的尾部由本地库热度补）
+     —— 它们不是源站榜上的名次，必须让人一眼分清，否则用户会以为第 11–13 名也是官方榜。
+     两处标记同时上：① 虚线边框（形态差异，扫一眼就分得出）② 副行措辞换「📚 库内 x」
+     （而不是「🔥 x 热度」—— 源站榜条目反而多数没有热度值，不换措辞的话补位条目
+       会比第 1–10 名还显眼，看着像「真榜从第 11 名才开始」）。
+     口径与 `data/rank-fill.js` 头注释同源。 */
+  .rk-card.libsrc{border-style:dashed;background:#FCFDFF}
+  .rk-card .bd .s .lib{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#5B6B8C;font-weight:700}
   .bdg{font-size:9px;font-weight:750;padding:1px 5px;border-radius:4px;flex:none}
   .bdg.xd{background:rgba(11,123,255,.12);color:#0B7BFF}
   .bdg.jidi{background:rgba(230,65,93,.12);color:#E6415D}
@@ -1816,6 +1848,17 @@
   @media(max-width:880px){
     .live-tag{display:none}
     .main-nav a{padding:6px 8px}
+    /* ★ v10.74 实测补：这一档**又溢出了 11px**（820×900 实测 doc 831 / 视口 820，
+       越界元素就是 `button#searchOpen.top-search` right=831）——
+       它的 `min-width:228px` 是写死的、且 `flex:none` 根本不收缩，所以顶栏内容一超
+       就直接把文档撑宽（整页出现横向滚动条）。
+       ★ 责任归属**用 stash 实测确认过**：改造前的旧页面在 820 档同样溢出 11px、同一个
+       元素 ⇒ 这是本档的既有问题，不是 v10.74 轮播改版带来的（浏览器层套件一直是
+       「未跑」状态，所以这条红了很久没人发现）。
+       收窄**沿用 ≤760 那套既有语言**，不新增设计：`min-width` 归零 + 隐藏 `.kbd`
+       （与 ≤760 隐藏的是同一组元素）；`.lb` 文字**保留** —— 窄屏仍要看得懂这按钮是什么。 */
+    .top-search{min-width:0;padding:7px 10px}
+    .top-search .kbd{display:none}
   }
 
   @media(max-width:760px){
@@ -1835,20 +1878,28 @@
     .stage-pills::-webkit-scrollbar{display:none}
     .stage-pill{flex:1;text-align:center;padding:5px 8px;font-size:12px}
     .stage-meta{order:2;margin-left:auto}
-    /* ★ v10.70：跟着桌面一起压缩（104×59 → 66×37）—— 否则移动端 hero 会比桌面还高 */
-    .rk-champ{gap:9px;padding:6px 10px;margin-bottom:7px}
-    .rk-champ .th{width:66px;height:37px;border-radius:var(--cd-th-r)}
-    .rk-champ .bd .t{font-size:14px}
-    .rk-champ .bd .en{display:none}
-    /* ★ v10.70：移动端 meta 行收紧（gap 6→4、pill padding 8→6、字号 11→10.5）。
-       不收紧时「XD 动作冒险 17.2GB 2026-10-08」的实测宽度 ≈238px，而卡内文字区
-       只有 ~240px ⇒ 日期被挤到第二行，整卡从 58 撑到 ~90px（实拍所见）。 */
-    .rk-champ .bd .meta2{gap:4px}
-    .rk-champ .bd .meta2 .it{padding:1px 6px;font-size:10.5px}
-    .rk-champ .sc2{font-size:18px}
-    .rk-grid{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px}
-    .rk-grid::-webkit-scrollbar{display:none}
-    .rk-grid .rk-card{flex:0 0 74%;min-width:0}
+    /* ★★ v10.74：轮播在移动端降高（200 → 150px）—— 窄屏里 200px 大图太占地方，
+       而移动端首屏本来就只有 844px。 */
+    .rk-car{height:150px;margin-bottom:9px}
+    .rk-car .info{padding:0 13px 11px;gap:10px}
+    .rk-car .info .tag1{font-size:10px;padding:3px 7px}
+    .rk-car .info .t{font-size:15.5px}
+    .rk-car .info .en{display:none}
+    .rk-car .info .meta2{gap:4px;font-size:10.5px}
+    .rk-car .info .meta2 .it{padding:1px 7px}
+    .rk-car .info .sc2{font-size:20px}
+    /* 触屏没有 hover —— 箭头常显会挡住封面，改由指示点 + 左右滑承担切换 */
+    .rk-car .arw{display:none}
+    .rk-car .dots{right:13px;bottom:12px}
+    /* ★★ v10.74：卡片区从「横向滚动单行」改成 **2 列网格**（8 张 ⇒ 4 行）。
+       改的理由：v10.68 用横滑是为了把 5 张卡压进一行高度；本版既然要「放大卡片」，
+       横滑的单行卡在窄屏里只能露 74% 宽、其余还得左右划 —— 而 2 列网格一屏能看到
+       4 条，信息效率更高，也不依赖横滑手势。 */
+    .rk-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .rk-grid .rk-card{padding:8px 10px;gap:8px}
+    .rk-grid .rk-card .th{width:56px}
+    .rk-grid .rk-card .bd .t{font-size:12.5px}
+    .rk-grid .rk-card .bd .s{font-size:10.5px}
     /* 顶栏搜索按钮：只留图标 */
     .top-search{min-width:0;padding:8px 10px}
     .top-search .lb,.top-search .kbd{display:none}
@@ -1935,13 +1986,15 @@
     .row-card{padding:8px 10px}
     .row-card h3{font-size:13px}
     .pill.time{display:none}
-    /* ★ v10.68：这三条原是为「冠军卡竖排 + 全宽大图」写的（height 132 / sc2 26 / h1 18），
-       760 断点已改成横条小图 ⇒ 这里必须同步收小，否则窄屏又被顶回 132px 大图。 */
+    /* ★ v10.74：窄屏轮播再降一档（150 → 132px）+ 信息层字号收紧
+       （v10.68 那三条原是为「冠军卡竖排 + 全宽大图」写的，冠军卡已被轮播取代）。 */
     .stage-h h1{font-size:16px}
     .stage-h .sub{font-size:11px}
     .stage-meta{font-size:11px}
-    .rk-champ .th{width:58px;height:33px}
-    .rk-champ .sc2{font-size:16px}
+    .rk-car{height:132px}
+    .rk-car .info .t{font-size:14px}
+    .rk-car .info .sc2{font-size:17px}
+    .rk-car .info .meta2 .it{padding:1px 6px;font-size:10px}
     .sm-row .en{display:none}
     .sm-quick button{font-size:12px;padding:4px 11px}
     /* v10.15：窄屏下四库速览改两列、底部按键条收起「自动回到这里」（窄屏本就靠手势返回） */
@@ -3024,7 +3077,7 @@ function skeletonRows(n) {
   return Array.from({ length: n }).map(() => `<div class="skeleton"><div class="sk sk-th"></div><div style="flex:1;min-width:0"><div class="sk sk-l1"></div><div class="sk sk-l2"></div><div class="sk sk-l3"></div></div></div>`).join('');
 }
 /* ★ v10.70：**排序依据值** pill —— 当前按什么排，行首就显示什么值。
-   与榜单卡（`champHtml` 的 `.it.hot`）同一套「依据显性化」口径，学的是 XDGAME
+   与榜单卡（v10.74 起是 `rkSlideHtml` / `rankCard` 的 `.it.hot`）同一套「依据显性化」口径，学的是 XDGAME
    「天梯排名」：那里的每行末尾直接写「574,032 热度」/「2,141 赞」/「554 GB」，
    用户一眼知道这条为什么在这儿。
    ★ 为什么必须是**一个函数**而不是在 rowCard 里就地写 switch：排序键 ↔ 显示键的
@@ -3210,7 +3263,11 @@ async function loadStats() {
 let rankCache = {};     // {week:[],month:[],year:[],community:[]} — 前端缓存,切档秒显
 let rankAt = {};        // {week:ms,…} — 各档数据抓取时间(供 meta 展示)
 let rankDrop = {};      // {week:n,…} — 各档被服务端滤除的非游戏条目数（meta 说明用）
+let rankFilledN = {};   // {week:n,…} — ★ v10.74：各档由**本地库热度补位**的条数（meta 说明用）
 let rankPeriod = 'week';
+/* ★ v10.74：轮播位条数。与 `data/rank-fill.js` 的 RANK_CAR_N 是同一个口径
+   —— 服务端也在 `meta.carN` 下发，真值以服务端为准，这里只是渲染分段的默认值。 */
+const RK_CAR_N = 5;
 const RANK_META_TXT = {
   week: 'XD 官网 · 本周热门', month: 'XD 官网 · 当月最热', year: 'XD 官网 · 全站最热', community: '机地 · 社区热度（周）',
 };
@@ -3236,50 +3293,142 @@ function fmtHot(n) {
   }
   return v.toLocaleString('en-US');
 }
-/* 榜单 #1：冠军大卡（大图 + 中英文名 + 类型/容量/日期 + 评分） */
-function champHtml(it) {
+/* ★★ v10.74：前 5 名 = **轮播图**（取代 v10.68–v10.70 的「冠军卡 + 5 列小卡」）。
+   用户原话：「前五做成轮播图，后面的五个一行一共两行，一共显示13个游戏
+   （轮播图5个+8个卡片 两行），卡片我需要放大一点」。
+   落地结构：#1-5 进轮播（`.rk-car`，200px 大图 + 底部渐变遮罩信息层），
+   #6-13 走 4 列 × 2 行卡片（`.rk-grid`）。
+   ★ 轮播的 DOM **由 JS 现创建**，不是静态写在 HTML 里 —— 派生页由
+     page-assets.scriptForSubpage() 从主源**整段抽走**脚本，而 `#rankStage` 节点只在首页
+     存在 ⇒ 静态 DOM 在派生页会变成孤儿（v10.73 的浮层踩过同一条，PITFALLS 103）。 */
+
+/* 轮播里的**单张**（大图 + 渐变遮罩 + NO.x + 中英文名 + 元信息 + 评分） */
+function rkSlideHtml(it, i) {
   if (!it) return '';
   const n = splitName(it.title);
-  const bdg = it.source === 'jidi' ? '<span class="bdg jidi">机地</span>' : '<span class="bdg xd">XD</span>';
   const meta = [];
-  /* ★ v10.70：**排序依据值**放到元信息行最前 —— 参考 XDGAME「天梯排名」的做法
-     （那里每行末尾直接写「574,032 热度」/「2,141 赞」/「554 GB」，一眼知道这条
-     为什么排这儿）。榜单条目由源站榜行 + 本地库合并而来，因此**库内字段**
-     （hot / score / size）命中时就有值；库外的工具条目没有这些字段，就不显示 ——
-     宁可不显示，也不补一个假的。 */
+  /* ★ v10.70 的「排序依据值放最前」口径保留 —— 参考 XDGAME「天梯排名」每行写「574,032 热度」。
+     ★ v10.74：补位条目（`filled`）**必须换措辞**。它是本地库的 `hot`，不是源站榜上的
+       排名依据；而源站榜条目多数**根本没有热度值**（实测周 0/10、月 1/10、全站 3/9）
+       ⇒ 补位条目若照常写「🔥 34.8 万 热度」，会比第 1-10 名还显眼，
+       看着像「真榜从第 11 名才开始」。口径见 data/rank-fill.js 头注释。 */
   const hot = fmtHot(it.hot);
-  if (hot) meta.push(`<span class="it hot">🔥 ${hot} 热度</span>`);
+  if (hot) meta.push(`<span class="it hot">${it.filled ? '📚 库内 ' + hot : '🔥 ' + hot + ' 热度'}</span>`);
   if ((it.genres || []).length) meta.push(`<span class="it">${esc(it.genres.slice(0, 2).join(' / '))}</span>`);
   if (it.size) meta.push(`<span class="it">${esc(it.size)}</span>`);
   if (it.dateLabel) meta.push(`<span class="it">${esc(it.dateLabel)}</span>`);
-  if (it.bh) meta.push(`<span class="it" style="color:#C2410C;font-weight:750">📱 可玩 ${it.bh.c}</span>`);
-  /* ★ v10.70：结构 3 行 → **2 行**（NO.1 徽章与中英文名同行；类型/容量/日期/热度一行）。
-     整卡 123 → 58px。 */
-  return `<div class="rk-champ" data-url="${esc(it.url)}" data-fb="${rankFb(it)}" title="${esc(it.title)}">
-    <span class="no1">1</span>
-    <div class="th">${it.cover ? `<img src="${esc(it.cover)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<div class="ph">${esc(n.zh.charAt(0))}</div>`}</div>
-    <div class="bd">
-      <div class="tt"><span class="tag1">NO.1</span><span class="t">${esc(n.zh)}</span>${n.en ? `<span class="en">${esc(n.en)}</span>` : ''}</div>
-      <div class="meta2">${bdg}${meta.join('')}</div>
+  if (it.bh) meta.push(`<span class="it">📱 可玩 ${it.bh.c}</span>`);
+  const src = it.filled
+    ? '<span class="it" style="background:rgba(91,107,140,.9);border-color:rgba(255,255,255,.34)">库内补位</span>'
+    : (it.source === 'jidi' ? '<span class="it">机地</span>' : '<span class="it">XD</span>');
+  return `<div class="slide${i === 0 ? ' cur' : ''}" data-url="${esc(it.url)}" data-fb="${rankFb(it)}" title="${esc(it.title)}">
+    ${it.cover ? `<img src="${esc(it.cover)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<div class="ph">${esc(n.zh.charAt(0))}</div>`}
+    <div class="shade"></div>
+    <div class="info">
+      <div class="bd">
+        <div class="tt"><span class="tag1">NO.${i + 1}</span><span class="t">${esc(n.zh)}</span>${n.en ? `<span class="en">${esc(n.en)}</span>` : ''}</div>
+        <div class="meta2">${src}${meta.join('')}</div>
+      </div>
+      ${okScoreV(it.score) ? `<div class="sc2">${it.score}<small>玩家评分</small></div>` : ''}
     </div>
-    ${okScoreV(it.score) ? `<div class="sc2">${it.score}<small>玩家评分</small></div>` : ''}
   </div>`;
 }
-/* 榜单 #2-6：网格小卡（排名 + 封面 + 中文名 + 源徽标 + 类型/容量 + 评分）
- * ★ v10.68：从 #2-10 收成 #2-6 —— 配合 `.rk-grid` 改 5 列 × 1 行（原 3 列 × 3 行）。
- *   这是首屏压缩的**代价项**，写在这里免得下轮有人以为数据被截断了：
- *   榜单本身在服务端仍是完整抓取，只是首页舞台只展示前 6 位。 */
+
+/* 轮播容器：#1-5 的滑动区 + 左右箭头 + 指示点。
+   ★ 只有 1 张时不渲染箭头与指示点（点了也没意义，还多两个 tab 停靠点）。 */
+function rkCarouselHtml(list) {
+  const arr = Array.isArray(list) ? list.filter(Boolean) : [];
+  if (!arr.length) return '';
+  const slides = arr.map((it, i) => rkSlideHtml(it, i)).join('');
+  const dots = arr.map((_, i) => `<span class="dot${i === 0 ? ' on' : ''}" data-i="${i}"></span>`).join('');
+  const nav = arr.length > 1
+    ? `<button class="arw prev" type="button" aria-label="上一条"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <button class="arw next" type="button" aria-label="下一条"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+    <div class="dots">${dots}</div>`
+    : '';
+  return `<div class="rk-car" id="rkCar">${slides}${nav}</div>`;
+}
+
+/* ============ ★★ v10.74 轮播控制器 ============
+   ★★ 定时器必须能**被彻底停掉**。原因：切档（周 → 月 → 全站 → 社区）会整体重渲 #rankList，
+      旧 interval 若不停，会继续操作**已被替换掉**的 DOM —— 表现为内存泄漏、
+      以及「手动点一次却跳了两格」（旧定时器与新定时器同时在推同一个索引）。
+      ⇒ 规则写死：**任何重新渲染之前先 rkCarStop()**，而不是指望「反正 DOM 换掉了」。
+   ★ 悬停暂停：正看着某一屏被自动切走是最烦的交互细节，成本极低所以做掉。 */
+let rkCarT = null; // 自动播放定时器
+let rkCarI = 0; // 当前索引
+let rkCarN = 0; // 张数
+let rkCarEl = null; // 当前容器（重渲后会被换掉，所以每次 mount 都重新取）
+const RK_CAR_MS = 5000; // 自动播放间隔
+
+function rkCarStop() {
+  if (rkCarT) { clearInterval(rkCarT); rkCarT = null; }
+}
+function rkCarGo(i) {
+  const el = rkCarEl;
+  if (!el || !rkCarN) return;
+  const slides = el.querySelectorAll('.slide');
+  if (!slides.length) return;
+  const dots = el.querySelectorAll('.dot');
+  rkCarI = ((i % slides.length) + slides.length) % slides.length; // 取模支持 -1 往回绕
+  /* ★ 用 `.cur` 而不是 `.on` —— `.on` 被 `rankMark()` 占用（详情联动高亮），
+     两者混用会让「打开详情」把所有 slide 一起点亮（见 CSS 里那段注释）。 */
+  slides.forEach((s, k) => s.classList.toggle('cur', k === rkCarI));
+  dots.forEach((d, k) => d.classList.toggle('on', k === rkCarI));
+}
+function rkCarPlay() {
+  rkCarStop();
+  if (rkCarN <= 1) return;
+  rkCarT = setInterval(() => rkCarGo(rkCarI + 1), RK_CAR_MS);
+}
+function rkCarMount() {
+  rkCarStop(); // ← 先停再挂，见上方注释
+  rkCarEl = document.getElementById('rkCar');
+  rkCarI = 0;
+  if (!rkCarEl) { rkCarN = 0; return; }
+  rkCarN = rkCarEl.querySelectorAll('.slide').length;
+  if (rkCarN <= 1) return;
+  const prev = rkCarEl.querySelector('.arw.prev');
+  const next = rkCarEl.querySelector('.arw.next');
+  /* stopPropagation：箭头落在 .slide 之上（z-index 4 > 3），不拦的话
+     「切页」会连带触发「打开详情」。 */
+  if (prev) prev.addEventListener('click', (e) => { e.stopPropagation(); rkCarGo(rkCarI - 1); rkCarPlay(); });
+  if (next) next.addEventListener('click', (e) => { e.stopPropagation(); rkCarGo(rkCarI + 1); rkCarPlay(); });
+  rkCarEl.querySelectorAll('.dot').forEach((d) => d.addEventListener('click', (e) => {
+    e.stopPropagation();
+    rkCarGo(Number(d.dataset.i) || 0);
+    rkCarPlay();
+  }));
+  rkCarEl.addEventListener('mouseenter', rkCarStop);
+  rkCarEl.addEventListener('mouseleave', rkCarPlay);
+  rkCarPlay();
+}
+/* 页面切到后台就停（省电；回来时若索引已停，重新起播而不是「补跳」好几格） */
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) rkCarStop();
+  else if (rkCarEl && rkCarN > 1) rkCarPlay();
+});
+/* 榜单 #6-13：网格卡片（排名 + 封面 + 中文名 + 源徽标 + 类型/容量 + 评分）
+ * ★ v10.68：从 #2-10 收成 #2-6（配合 5 列 × 1 行）；★★ v10.74：改 **#6-13 / 4 列 × 2 行**。
+ *   展示位从 6 个增到 13 个（轮播 5 + 卡片 8），条数由服务端 `/api/rank` 保证
+ *   （源站只有 10 行，尾部由本地库热度补位，见 data/rank-fill.js）。 */
 function rankCard(it) {
   const n = splitName(it.title);
   const bdg = it.source === 'jidi' ? '<span class="bdg jidi">机地</span>' : '<span class="bdg xd">XD</span>';
-  /* ★ v10.70：小卡副行改成**以排序依据值打头**（热度优先），再跟类型/容量。
-     5 列网格里一行塞不下三个字段，所以热度用「34.8 万」缩写。 */
+  /* ★ v10.70：小卡副行**以排序依据值打头**（热度优先），再跟类型/容量。
+     ★ v10.74：补位条目（`filled`）两处标记 —— ① 热度换措辞「📚 库内 x」而不是「🔥 x」，
+       ② 卡片加 `.libsrc`（虚线边框）。理由同 rkSlideHtml：补位条目不是源站榜名次，
+       而源站榜条目多数没有热度值 ⇒ 不换措辞的话它会比真榜条目还显眼。 */
   const hot = fmtHot(it.hot);
-  const sub = [(hot ? '🔥 ' + hot : ''), (it.genres || [])[0] || '', it.size || ''].filter(Boolean).join(' · ');
-  return `<div class="rk-card" data-url="${esc(it.url)}" data-fb="${rankFb(it)}" title="${esc(it.title + (sub ? ' · ' + sub : ''))}">
+  const hotTxt = hot ? (it.filled ? '📚 库内 ' + hot : '🔥 ' + hot) : '';
+  const sub = [hotTxt, (it.genres || [])[0] || '', it.size || ''].filter(Boolean).join(' · ');
+  /* ★ v10.74 顺手修：`📱 可玩 N` 原来内联 `color:#FFD9C2` —— 那是给 v10.68 之前的
+     **深蓝 hero 底**写的浅色，而榜单卡早就改成白底了 ⇒ 白底上 #FFD9C2 几乎看不见
+     （实测对比度 ≈1.2:1）。改用与「热度」胶囊同源的 #C2410C。 */
+  return `<div class="rk-card${it.filled ? ' libsrc' : ''}" data-url="${esc(it.url)}" data-fb="${rankFb(it)}" title="${esc(it.title + (sub ? ' · ' + sub : '') + (it.filled ? '（本地库热度补位）' : ''))}">
     <span class="no ${it.rank <= 3 ? 'r' + it.rank : ''}">${it.rank}</span>
     <div class="th">${it.cover ? `<img src="${esc(it.cover)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<div class="ph">${esc(n.zh.charAt(0))}</div>`}</div>
-    <div class="bd"><div class="t">${esc(n.zh)}</div><div class="s">${bdg}${it.bh ? `<span class="g" style="color:#FFD9C2;font-weight:750">📱 ${it.bh.c}</span>` : ''}${sub ? `<span class="g">${esc(sub)}</span>` : ''}</div></div>
+    <div class="bd"><div class="t">${esc(n.zh)}</div><div class="s">${bdg}${it.bh ? `<span class="g" style="color:#C2410C;font-weight:750">📱 ${it.bh.c}</span>` : ''}${sub ? `<span class="g${it.filled ? ' lib' : ''}">${esc(sub)}</span>` : ''}</div></div>
     ${okScoreV(it.score) ? `<span class="sc">★${it.score}</span>` : ''}
   </div>`;
 }
@@ -3288,25 +3437,36 @@ function rankMark(url) {
   const el = $('#rankList'); if (!el || !url) return;
   $$('#rankList [data-url]').forEach(o => o.classList.toggle('on', o.dataset.url === url));
 }
-/* 采样高度跟着改后的真实尺寸走：冠军卡 121 + 小卡 47，
- * ★ 不要写死旧值 —— v10.68 前这里写的是 162 / 66，与 `.rk-champ`/`.rk-card` 的实际高度
- *   差 1px 就会在骨架→真卡的切换里抖一下（v10.30 起就是这么定的：骨架高 = 真卡高）。 */
+/* 骨架高度跟着改后的**真实尺寸**走：轮播 200px + 卡片 ~61px。
+ * ★ 不要写死旧值 —— v10.68 前这里写的是 162 / 66，与真卡差 1px 就会在骨架→真卡的切换里抖一下
+ *   （v10.30 起就是这么定的：骨架高 = 真卡高）。v10.74 冠军卡 58 → **轮播 200**、小卡 42 → **61**。 */
 function rankSkeleton() {
-  return `<div class="rk-skel" style="height:58px;margin-bottom:8px"></div><div class="rk-grid">${'<div class="rk-skel" style="height:42px"></div>'.repeat(5)}</div>`;
+  return `<div class="rk-skel" style="height:200px;margin-bottom:10px"></div><div class="rk-grid">${'<div class="rk-skel" style="height:61px"></div>'.repeat(8)}</div>`;
 }
 function paintRank() {
   const el = $('#rankList'); if (!el) return;
+  /* ★★ 重渲之前**先停轮播定时器** —— 这条对所有出口成立（有数据 / 空态都算），
+     所以放在最前面，而不是塞进某个分支里（塞分支里迟早漏一条出口）。 */
+  rkCarStop();
   const list = rankCache[rankPeriod] || [];
+  /* ★ v10.74：#1-5 进轮播，#6-13 进 4 列 × 2 行卡片（共 13 个）。
+     分段用的是 `RK_CAR_N` 而不是写死的 5 —— 服务端 meta 里也下发同一个数，
+     哪天要调只改 `data/rank-fill.js` 一处。 */
   el.innerHTML = list.length
-    ? champHtml(list[0]) + `<div class="rk-grid">${list.slice(1, 6).map(rankCard).join('')}</div>`
+    ? rkCarouselHtml(list.slice(0, RK_CAR_N)) + `<div class="rk-grid">${list.slice(RK_CAR_N).map(rankCard).join('')}</div>`
     : `<div class="sm-empty" style="color:rgba(255,255,255,.6)"><div class="big">📭</div>该档榜单暂无数据</div>`;
+  rkCarMount();
   const meta = $('#rankMeta');
   if (meta) {
     /* 源站榜单里混着「运行库 / 检测工具」这类非游戏条目（全站榜第 1 名就是），
        服务端已滤除并重编号；这里如实说明，免得用户以为数据丢了。 */
     const dropped = rankDrop[rankPeriod] || 0;
+    const filledN = rankFilledN[rankPeriod] || 0;
     meta.textContent = RANK_META_TXT[rankPeriod]
       + (dropped ? ` · 已滤除 ${dropped} 条工具条目` : '')
+      /* ★ v10.74：源站每档只给 10 行（全站榜剔工具后 9 行），尾部由**本地库热度**补位 ——
+         必须如实说明，不能让用户以为第 11-13 名也是官方榜上的名次。 */
+      + (filledN ? ` · 含 ${filledN} 条库内热度补位` : '')
       + (rankAt[rankPeriod] ? ' · 更新 ' + hhmm(rankAt[rankPeriod]) : '');
   }
   $$('#rankList [data-url]').forEach(x => x.addEventListener('click', () => openDetail(x.dataset.url, x.dataset.fb)));
@@ -3314,6 +3474,10 @@ function paintRank() {
 async function refreshRank(force) {
   const el = $('#rankList'), meta = $('#rankMeta'), btn = $('#rankRefresh');
   if (!el) return;
+  /* ★ v10.74：本函数会**直接替换 #rankList 的内容**（骨架块 / 错误块 / 真卡），
+     所以每一条出口都得先把轮播定时器停掉 —— 否则旧 interval 会继续推一个
+     已脱离文档的轮播（内存泄漏；若新数据恰好也是轮播，还会叠成「点一次跳两格」）。 */
+  rkCarStop();
   if (!force && rankCache[rankPeriod]) { paintRank(); return; } // 缓存秒显,不重复请求
   if (meta) meta.textContent = '加载中…';
   if (btn) btn.classList.add('busy');
@@ -3324,6 +3488,7 @@ async function refreshRank(force) {
     rankCache[rankPeriod] = j.list;
     rankAt[rankPeriod] = j.fetchedAt || Date.now();
     rankDrop[rankPeriod] = (j.meta && j.meta.dropped) || 0;
+    rankFilledN[rankPeriod] = (j.meta && j.meta.filled) || 0;   /* ★ v10.74 补位条数 */
     paintRank();
   } catch (e) {
     el.innerHTML = `<div class="sm-empty" style="color:rgba(255,255,255,.65)"><div class="big">⚠️</div>榜单加载失败：${esc(e.message)}<br><span style="font-size:11.5px;opacity:.8">可点右侧「刷新」重试</span></div>`;
@@ -3342,8 +3507,7 @@ function bindRankUI() {
   $('#rankPills').addEventListener('click', (e) => {
     const b = e.target.closest('.stage-pill'); if (!b || b.dataset.p === rankPeriod) return;
     rankPeriod = b.dataset.p;
-    $$('#rankPills .stage-pill').forEach(x => x.classList.toggle('on', x === b));
-  /* refreshRank：独立页无热榜分区，跳过 */
+    $$('#rankPills .stage-pill').forEach(x => x.classList.toggle('on', x === b));  /* refreshRank：独立页无热榜分区，跳过 */
   });
   $('#rankRefresh').addEventListener('click', () => { toast('正在刷新榜单…'); refreshRank(true); });
 }
@@ -7311,11 +7475,7 @@ async function loadDlBlock(d, fb, title) {
 $('#mask').addEventListener('click', closeDetail);
 
 /* ================= 启动 ================= */
-async function init() {
-  /* bindRankUI：独立页无榜单 UI，跳过 */
-  /* renderSide：独立页无右栏，跳过 */
-  /* renderCats：独立页无分类行，跳过 */
-  /* renderList：独立页无最新收录列表，跳过 */
+async function init() {  /* bindRankUI：独立页无榜单 UI，跳过 */  /* renderSide：独立页无右栏，跳过 */  /* renderCats：独立页无分类行，跳过 */  /* renderList：独立页无最新收录列表，跳过 */
   refreshRank(false); // 首页主体：热榜（缓存秒显 / 首次拉取）
   // 手机三个分区（社区配置 / 实测配置 / 指南）已拆到 /emulator.html，
   // 首页只保留入口卡（数字由上面的专区跳转块异步回填），此处不再初始化。

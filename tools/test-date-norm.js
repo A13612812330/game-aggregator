@@ -131,9 +131,19 @@ const midNoise = cleanPlate([
 ]);
 t(midNoise.rows.map((x) => x.rank).join(',') === '1,2', '噪声在中间也能保持连续', `实际 ${midNoise.rows.map((x) => x.rank).join(',')}`);
 
-/* 上限 10 与超长输入 */
+/* ★★ v10.74：`cleanPlate` 原来自带「至多取 10 条」，本版**去掉了**这个截断。
+   为什么去掉：实测源站每档**就 10 行**（三档 li 总数都是 10）⇒ 那个 10 从来没生效过，
+   却会**悄悄砍掉源站未来多出来的条目**；而它与「首页展示 13 个」是两个各自写死的数，
+   改一个忘一个就静默丢数据。⇒ 截断职责上移到展示层 `data/rank-fill.js` 的 `slice(0, target)`。
+   ⇒ 这条断言的方向**反转**：从「至多 10 条」改成「不传 max 就不截断 / 传了才截断」。
+   （★ 反证要打坏它，只需把 `Number(max) > 0` 改成恒真 —— 见 test-v1074 反证套件。） */
 const many = Array.from({ length: 14 }, (_, i) => ({ gid: String(i), name: '游戏' + i, rank: i + 1 }));
-t(cleanPlate(many).rows.length <= 10, '至多取 10 条');
+t(cleanPlate(many).rows.length === 14, '不传 max ⇒ 不截断（源站给多少就返回多少）',
+  `实际 ${cleanPlate(many).rows.length} 条`);
+t(cleanPlate(many, 13).rows.length === 13, '传 max 才截断（可选护栏仍在）',
+  `实际 ${cleanPlate(many, 13).rows.length} 条`);
+t(cleanPlate(many, 13).rows.map((x) => x.rank).join(',') === Array.from({ length: 13 }, (_, i) => i + 1).join(','),
+  '★ 截断后名次仍是连续的 1..N（截断不能破坏重编号）');
 
 /* ============ ⑥ 真实本地库：排序不变量 ============ */
 console.log('\n=== ⑥ 本地库排序不变量 ===');

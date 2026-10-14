@@ -23,14 +23,23 @@ const TTL = 30 * 60 * 1000; // 30 分钟（官网热度为日更级）
  *    普通卡从 3 开始 → 用户看到「榜单从 3 开始、缺 1 和 2」（原话：少了2）。
  *
  *  @param {Array<{name:string,rank:number}>} rows 源站行（rank 为源站序号）
+ *  @param {number} [max] 可选护栏（防源站哪天返回几百行）；不传 = 不截断
  *  @returns {{dropped:number, rows:Array}} dropped = 剔除条数；rows 已重排为连续 1..N
  */
-function cleanPlate(rows) {
+function cleanPlate(rows, max) {
   const list = Array.isArray(rows) ? rows : [];
   const clean = list.filter((x) => !/(运行库|检测工具)/.test(x.name || ''));
+  /* ★ v10.74：`clean.slice(0, 10)` 这个写死的 10 去掉了。
+     理由：实测源站每档**就 10 行**（三档 li 总数都是 10）⇒ 那个 10 从来没生效过，
+     却会**悄悄砍掉源站未来多出来的条目** —— 而它与「首页展示 13 个」是两个
+     各自写死的数，改一个忘一个就静默丢数据。
+     ⇒ 截断职责上移到展示层 `data/rank-fill.js` 的 `slice(0, target)`：
+       fetcher 忠实返回源站给的全部，展示多少由展示层定。
+     `max` 保留成**可选**护栏（默认不截断），需要时由调用方显式传。 */
+  const capped = Number(max) > 0 ? clean.slice(0, Number(max)) : clean;
   return {
     dropped: list.length - clean.length,
-    rows: clean.slice(0, 10).map((x, i) => ({ ...x, rank: i + 1, srcRank: x.rank })),
+    rows: capped.map((x, i) => ({ ...x, rank: i + 1, srcRank: x.rank })),
   };
 }
 

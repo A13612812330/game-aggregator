@@ -419,6 +419,8 @@ const related = require('./data/related');
 const jiditopics = require('./data/jiditopics');   /* v10.22 机地全量话题库读取层 */
 const indexer = require('./fetchers/indexer');
 const xdrank = require('./fetchers/xdrank');
+/* ★ v10.74：首页榜单补位（源站每档只给 10 行，而首页要展示 13 个）—— 纯函数，见模块头 */
+const rankFill = require('./data/rank-fill');
 
 /* ---- 库查询通用选项：容量区间(GB) + 仅看有手机模拟器配置(+实测) ---- */
 function libOpts(req) {
@@ -1510,17 +1512,39 @@ app.get('/api/rank', async (req, res) => {
   if (req.query.refresh === '1') cache.delete('rank:' + p);
   try {
     const data = await cached('rank:' + p, 1_800_000, async () => {
+      const dbAll = gamesDb.all();
+      let raw = null;
+      let mapped;
       if (p === 'community') {
         const hots = await jidi.hotRanks();
-        return { p, meta: RANK_META[p], list: (hots.weekly || []).slice(0, 12).map((it, i) => withBh({ ...it, rank: it.rank || i + 1 })) };
+        /* ★ v10.74：上限从写死的 12 改成 rankFill.RANK_SHOW_N —— 原来的 12 与「首页展示数」
+           是**两个各自写死的数**，源站哪天多给一条就会被我们自己砍掉。 */
+        mapped = (hots.weekly || []).slice(0, rankFill.RANK_SHOW_N).map((it, i) => withBh({ ...it, rank: it.rank || i + 1 }));
+      } else {
+        raw = await xdrank.rawHot(); // {week:[],month:[],year:[]}
+        const rows = raw[p] || [];
+        /* ★ v10.23：合并逻辑抽成纯函数放 xdrank 里（可离线回归）。
+           旧写法 `byUrl.get(it.url)` 落空即 cover:null → 前端只能显示首字占位块；
+           现在按「本地库精确命中 > 源站行图」取封面，库外条目也有图。 */
+        mapped = xdrank.mergeRankRows(rows, dbAll).map(withBh);
       }
-      const raw = await xdrank.rawHot(); // {week:[],month:[],year:[]}
-      const rows = raw[p] || [];
-      /* ★ v10.23：合并逻辑抽成纯函数放 xdrank 里（可离线回归）。
-         旧写法 `byUrl.get(it.url)` 落空即 cover:null → 前端只能显示首字占位块；
-         现在按「本地库精确命中 > 源站行图」取封面，库外条目也有图。 */
-      const list = xdrank.mergeRankRows(rows, gamesDb.all());
-      return { p, meta: { ...RANK_META[p], dropped: (raw._dropped || {})[p] || 0 }, list: list.map(withBh) };
+      /* ★★ v10.74：实测源站每档只 SSR 10 行（全站榜剔掉 1 条工具后 9 行），
+         而首页要展示 13 个（轮播 5 + 卡片 8）⇒ 不足部分用**本地库热度**补足。
+         补位条目**不是**源站榜上的名次，所以必须标 `filled:true` 让前端换措辞与配色 ——
+         否则用户会以为第 11–13 名也是官方榜（来源见 data/rank-fill.js 头注释）。 */
+      const f = rankFill.fillRank(mapped, dbAll);
+      return {
+        p,
+        meta: {
+          ...RANK_META[p],
+          dropped: ((raw && raw._dropped) || {})[p] || 0,
+          srcN: f.srcN, // 源站原有条数
+          filled: f.filled, // 本地库补了几条（前端据此说明）
+          showN: rankFill.RANK_SHOW_N,
+          carN: rankFill.RANK_CAR_N,
+        },
+        list: f.list,
+      };
     });
     res.json({ ok: true, fetchedAt: Date.now(), ...data });
   } catch (e) {

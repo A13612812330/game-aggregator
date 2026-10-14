@@ -32,7 +32,7 @@
  *
  * 反证锚点（打坏必变红）：
  *   · `.stage` 背景改回 `linear-gradient(…)`        ⇒ A1/A2 红（backgroundColor 变透明）
- *   · `.rk-champ` 背景改回 `#FFF3DC→#FFE2B8` 渐变   ⇒ A3 红
+ *   · 榜单卡背景改成深蓝（`.rk-card{background:#0E1B3A}`）⇒ A3 红
  *   · `sortKeyPill()` 的 `hot` 分支删掉              ⇒ D1 红（行内没有热度依据值）
  *   · `sortKeyPill()` 的 `updated` 分支改成返回日期  ⇒ A6 红（静态段，唯一能区分的地方）
  *   · `sizeAsc` 判据改回 `zA - zB`（不做 >0 过滤）   ⇒ E2 红（前 4 名变 "0.0GB"）
@@ -132,7 +132,16 @@ const PROBE_BASE = () => {
   const fold = document.querySelector('#sideFold');
   return {
     heroBg: getComputedStyle(document.querySelector('.stage')).backgroundColor,
-    champBg: getComputedStyle(document.querySelector('.rk-champ')).backgroundColor,
+    /* ★ v10.74：`.rk-champ`（冠军卡）已被**轮播**取代 ⇒ 该节点不再存在，
+       原来的 `getComputedStyle(document.querySelector('.rk-champ'))` 会直接抛
+       「parameter 1 is not of type Element」，把整个套件** FATAL 掉**（不是断言变红、
+       是异常退出 —— 更难看出根因）。
+       改用 `.rk-card` 的背景色 —— 守的是**同一条**视觉语言：榜单卡必须是**实色浅底**
+       （深蓝块会让亮度跌破 200；金黄渐变是 gradient ⇒ backgroundColor 透明、亮度算不出来）。 */
+    cardBg: (() => {
+      const c = document.querySelector('#rankList .rk-card');
+      return c ? getComputedStyle(c).backgroundColor : null;
+    })(),
     rowN: document.querySelectorAll('#libList > .row-card').length,
     firstPills: (() => { const c = document.querySelector('#libList > .row-card');
       return c ? [...c.querySelectorAll('.pill')].map((p) => p.textContent.trim()) : []; })(),
@@ -181,19 +190,21 @@ const PROBE_BASE = () => {
       const r = await p.evaluate(PROBE_BASE);
 
       /* A0 阳性对照 —— 没有它，后面所有断言在「接口挂了」时会以「全空」的形式**全绿或假红**。 */
-      chk('A0 阳性对照：列表真渲染出卡片 + 榜首卡在位',
-        r.rowN > 0 && r.heroBg != null && r.champBg != null, 'rowN=' + r.rowN);
+      chk('A0 阳性对照：列表真渲染出卡片 + 榜单卡在位',
+        r.rowN > 0 && r.heroBg != null && r.cardBg != null, 'rowN=' + r.rowN);
 
       /* A 视觉语言统一 —— 见文件头「判据的关键在 backgroundColor 的性质」 */
       const heroB = brightOf(r.heroBg);
-      const champB = brightOf(r.champBg);
+      const cardB = brightOf(r.cardBg);
       chk('A1 ★★ hero 背景是**实色**（不是 linear-gradient ⇒ 透明）',
         !Number.isNaN(heroB), 'background-color=' + r.heroBg);
       chk('A2 ★★ hero 背景是**浅色**（亮度 ≥ 200，挡深蓝 #0E1B3A 那类）',
         heroB >= 200, '亮度 ' + (Number.isNaN(heroB) ? '—' : heroB.toFixed(0)) + ' / 255');
-      chk('A3 ★★ 榜首卡背景是实色浅底（不是金黄渐变 #FFF3DC→#FFE2B8）',
-        !Number.isNaN(champB) && champB >= 200,
-        'background-color=' + r.champBg + ' 亮度 ' + (Number.isNaN(champB) ? '—' : champB.toFixed(0)));
+      /* ★ v10.74：判据对象从「榜首卡」换成「榜单卡」（榜首卡已被轮播取代），
+         守的仍是那条：**实色浅底，不是金黄渐变**。 */
+      chk('A3 ★★ 榜单卡背景是实色浅底（不是深蓝块 / 金黄渐变 #FFF3DC→#FFE2B8）',
+        !Number.isNaN(cardB) && cardB >= 200,
+        'background-color=' + r.cardBg + ' 亮度 ' + (Number.isNaN(cardB) ? '—' : cardB.toFixed(0)));
 
       /* B 排序 6 维 */
       chk('B1 排序 pill 恰好 6 个', r.sortN === 6, '实测 ' + r.sortN + ' 个');
