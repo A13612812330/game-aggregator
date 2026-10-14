@@ -129,6 +129,34 @@ const MAGIC_TABLE = [
  *    ⇒ 教训两条：① hex 长度 ≠ 字节长度，别混；② 断言必须配**阳性对照**，
  *      只测「不该认的没认」而不测「该认的认了」，bug 会以全绿的样子藏起来。
  */
+/**
+ * 按魔数判定**一段字节流**是不是压缩包 —— 文件版与网络流版的**单一真源**。
+ *
+ * ★ v10.72 抽出：这套匹配原来只写在 sniff(文件) 里，而「下载时先问一句这是不是
+ *   压缩包」需要拿**还没落盘的头部字节**判（见 downloadTo 的 expectArchive）。
+ *   复制一份就是两张魔数表各自漂移 —— 本项目最贵的一类事故（铁律 1 同族）。
+ *   所以判定只此一份，sniff() 退化成它的「读文件前 512 字节」外壳。
+ *
+ * @param {Buffer} head 建议 ≥ 512 字节（tar 的 "ustar" 在 offset 257）；< 4 字节判不出
+ * @returns {string|null} 格式名（zip/rar/7z/xz/cab/gzip/bzip2/tar），认不出为 null
+ */
+function sniffBuffer(head) {
+  if (!head || head.length < 4) return null;
+  /* ★ 内部**自己截断**：`head.toString('hex')` 会按原长度再生成一份字符串，
+   *   调用方稍不留神传进整个几百 MB 的包就是一次内存灾难。判据只需要前 512 字节
+   *   （tar 的 "ustar" 在 offset 257），所以这里不信任入参长度。 */
+  const h = head.length > 512 ? head.slice(0, 512) : head;
+  const hex = h.toString('hex');
+  for (const m of MAGIC_TABLE) {
+    for (const sig of m.hex) {
+      if (hex.startsWith(sig)) return m.fmt;
+    }
+  }
+  /* tar：offset 257 的 "ustar" */
+  if (h.length >= 262 && h.slice(257, 262).toString('binary') === 'ustar') return 'tar';
+  return null;
+}
+
 function sniff(file) {
   let fd = null;
   try {
@@ -137,22 +165,23 @@ function sniff(file) {
     fd = fs.openSync(file, 'r');
     const buf = Buffer.alloc(512);
     const n = fs.readSync(fd, buf, 0, 512, 0);
-    if (n < 4) return null;
-    const head = buf.slice(0, n);
-    const hex = head.toString('hex');
-    for (const m of MAGIC_TABLE) {
-      for (const sig of m.hex) {
-        if (hex.startsWith(sig)) return m.fmt;
-      }
-    }
-    /* tar：offset 257 的 "ustar" */
-    if (n >= 262 && head.slice(257, 262).toString('binary') === 'ustar') return 'tar';
-    return null;
+    return sniffBuffer(buf.slice(0, n));
   } catch (e) {
     return null;
   } finally {
     if (fd !== null) { try { fs.closeSync(fd); } catch (e) { /* 忽略 */ } }
   }
+}
+
+/** 头部字节的**种类**判定（比 sniffBuffer 多分两类：网页 / 其它二进制）。
+ *  为什么不合并进 sniffBuffer：sniffBuffer 是纯魔数、给「文件是不是压缩包」用；
+ *  这里是「这条链接给回来的到底是什么」用，两者判据不同（后者还要认 HTML 中间页）。 */
+function headKind(head) {
+  const fmt = sniffBuffer(head);
+  if (fmt) return { kind: 'archive', fmt };
+  const s = head.slice(0, 400).toString('utf8').toLowerCase();
+  if (/^\s*<(!doctype|html)/.test(s)) return { kind: 'html' };
+  return { kind: 'other' };
 }
 
 /* ============================== 分卷识别 ============================== */
@@ -659,28 +688,85 @@ async function downloadTo(url, destDir, opts) {
     const total = parseInt(r.headers.get('content-length') || '0', 10) || 0;
     const chunks = [];
     let got = 0;
+    /* ★ v10.72：「自动判断这条链接是不是压缩包」就在这里 —— 边收边判头部，不是压缩包就
+     *   **立刻止损**（abort + 不落盘），而不是等下完几百 MB 再告诉用户白下了。
+     *
+     *   ⚠️ 顺手修掉一个既有 bug：原来写成 `if (got <= 400) { ...判 HTML... }` ——
+     *      只要首个 chunk 就大于 400 字节（大文件几乎必然如此），**那次判定被整个跳过**，
+     *      HTML 中间页会一路下完才暴露。改成「累积头部 + 每轮都判」。
+     *   ⚠️ 判据从「只判 HTML」扩成三类：压缩包 / HTML / 其它二进制。
+     *      最后一类只在 `expectArchive` 时才当错误 —— 因为同一个下载函数
+     *      以后也可能被用来下非压缩包的附件。 */
+    let headBuf = Buffer.alloc(0);
+    let headV = null;
+    const judge = (final) => {
+      if (headV) return headV;
+      if (headBuf.length >= 512 || final) headV = headKind(headBuf);
+      return headV;
+    };
+    /* ★★ v10.72 实测踩到并修掉的坑 —— 在 `for await (r.body)` **循环内部**调
+     *   `ctl.abort()` 再 return，abort 会让**正在被迭代的那个流**抛
+     *   `AbortError: This operation was aborted`；这个异常比 return 先到外层 catch，
+     *   于是结论被吞掉，只剩一句含糊的「This operation was aborted」。
+     *
+     *   实测症状（本版第一轮 e2e）：拿一条网盘页去打，本该回
+     *   `state=not-archive / notArchive=true`，实际回的是
+     *   `state=error / error=This operation was aborted` —— **两种完全不同的处置
+     *   被折叠成了一个**（「换按钮」vs「重试」），前端根本没法给对提示。
+     *
+     *   ⇒ 改成：循环内只 `break`，循环外统一返回。`break` 会触发异步迭代器的
+     *     return()，ReadableStream 顺势 cancel 掉剩余流 —— 一样是「立刻停止下载」，
+     *     但不会制造异常。 */
+    const bail = (msg, extra) => Object.assign({
+      ok: false, status: r.status, error: msg,
+      contentType: r.headers.get('content-type') || '',
+    }, extra || {});
+    let early = null;
     for await (const chunk of r.body) {
       chunks.push(chunk);
       got += chunk.length;
-      /* ★ 头部一到位就先做「是不是 HTML」的判定，别等下完几十 MB 才说"这是个网页" */
-      if (got <= 400) {
-        const head = Buffer.concat(chunks).slice(0, 400).toString('utf8').toLowerCase();
-        if (/^\s*<(!doctype|html)/.test(head)) {
-          try { ctl.abort(); } catch (e) { /* 已结束 */ }
-          return { ok: false, status: r.status, error: '返回的是 HTML 页面而不是文件（需要登录/中间页）' };
-        }
+      if (headBuf.length < 512) headBuf = Buffer.concat([headBuf, chunk]).slice(0, 512);
+      const v = judge(false);
+      if (v && v.kind === 'html') {
+        early = bail('返回的是 HTML 页面而不是文件（需要登录/中间页）', { notArchive: true });
+        break;
+      }
+      if (v && v.kind === 'other' && opts.expectArchive) {
+        early = bail('这条地址返回的不是压缩包（Content-Type: ' +
+          (r.headers.get('content-type') || '未知') + '）', { notArchive: true, sniffed: 'other' });
+        break;
       }
       if (opts.maxBytes && got > opts.maxBytes) {
-        try { ctl.abort(); } catch (e) { /* 已结束 */ }
-        return { ok: false, status: r.status, error: '超过大小上限 ' + opts.maxBytes + ' B' };
+        early = bail('超过大小上限 ' + opts.maxBytes + ' B');
+        break;
       }
       if (opts.onProgress) { try { opts.onProgress({ got, total }); } catch (e) { /* 回调异常不影响下载 */ } }
+    }
+    if (early) return early;
+    /* 流结束但头部还不足 512 字节（小文件）—— 补判一次，别让「小 HTML 错误页」溜过去 */
+    {
+      const v = judge(true);
+      if (v && v.kind === 'html') {
+        return { ok: false, status: r.status, error: '返回的是 HTML 页面而不是文件（需要登录/中间页）', notArchive: true };
+      }
+      if (v && v.kind === 'other' && opts.expectArchive) {
+        return {
+          ok: false, status: r.status, notArchive: true, sniffed: 'other',
+          error: '这条地址返回的不是压缩包（只收到 ' + headBuf.length + ' 字节，认不出压缩包魔数）',
+        };
+      }
     }
     const buf = Buffer.concat(chunks);
     const name = fileNameFromUrl(r.url || url, opts.name);
     const file = path.join(destDir, name);
     fs.writeFileSync(file, buf);
-    return { ok: true, file, size: buf.length, status: r.status, contentType: r.headers.get('content-type') || '', finalUrl: r.url || url };
+    return {
+      ok: true, file, size: buf.length, status: r.status,
+      contentType: r.headers.get('content-type') || '',
+      finalUrl: r.url || url,
+      /* 落盘时**如实回带**识别结果：调用方要显示「下到的是 zip」而不是靠扩展名猜 */
+      sniffed: headKind(buf.slice(0, 512)).fmt || null,
+    };
   } catch (e) {
     return { ok: false, error: String((e && e.message) || e) };
   } finally { clearTimeout(to); }
@@ -699,7 +785,7 @@ async function envCheck() {
 
 module.exports = {
   resolve7z, _reset7zCache, DEFAULT_DEST,
-  sniff, volumeOf, VOLUME_RULES,
+  sniff, sniffBuffer, headKind, volumeOf, VOLUME_RULES,
   listEntries, testPassword, unpackOne, extractArchive, scanDir,
   downloadTo, fileNameFromUrl, snapshotDir, snapshotTree, envCheck,
   run7z,

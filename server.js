@@ -2161,6 +2161,13 @@ function exNewTask(kind, label, params) {
     error: null,
     needsPassword: [],
     pending: [],                 /* 待密码续跑的文件 [{file, destDir}] */
+    /* ★ v10.72：这条直链下回来的**到底是什么**。
+     *   下载弹窗里那些按钮给的多半是网盘页（要登录/客户端），服务端取不到 ——
+     *   以前只能含糊地说「下载失败」，现在把识别结果如实带出来，
+     *   前端能直说「这条是网盘页 / 不是压缩包」，用户一眼知道该改点哪个按钮。 */
+    sniffed: null,               /* 落盘时按魔数认出的格式：zip / rar / 7z / … */
+    notArchive: false,           /* 地址通、也下得到东西，但内容不是压缩包 */
+    contentType: null,           /* 最后一次下载响应的 Content-Type（拿不到就是 null） */
   };
   EX_TASKS.set(id, t);
   if (EX_TASKS.size > EX_KEEP) {
@@ -2213,6 +2220,10 @@ function exSnapshot(t) {
     startedAt: t.startedAt, finishedAt: t.finishedAt,
     error: t.error,
     needsPassword: t.needsPassword,
+    /* ★ v10.72：这三项让前端能区分「下载失败」与「下到了但不是压缩包」 */
+    sniffed: t.sniffed || null,
+    notArchive: !!t.notArchive,
+    contentType: t.contentType || null,
     events: t.events.slice(-60),
     summary: exSummary(t.report),
   };
@@ -2275,25 +2286,35 @@ app.post('/api/extract/download', (req, res) => {
   const env = extractor.resolve7z();
   if (!env) return res.status(503).json({ ok: false, error: '未找到 7z.exe，请安装 7-Zip 或设置环境变量 GAMEHUB_7Z' });
 
-  const t = exNewTask('download', url, { url, dir: d.dir });
+  const t = exNewTask('download', url, { url, dir: d.dir, expectArchive: b.expectArchive !== false });
   exEv(t, 'queued', { url });
   exRun(t, async () => {
-    /* ── 阶段 1：下载（progress 占 0~40） ── */
+    /* ── 阶段 1：下载（progress 占 0~40） ──
+     * ★ v10.72：这里默认**要求这条链接给回来的就是压缩包**（expectArchive 默认 true）。
+     *   downloadTo 收满 512 字节即判种类，不是压缩包就立刻中止、**且不落盘** ——
+     *   点了「下载并解压」却往 Downloads\GameHub 里塞一堆网盘页 HTML，比什么都不做更糟。 */
     t.phase = 'download';
     exEv(t, 'downloading', { url });
     const dl = await extractor.downloadTo(url, d.dir, {
       name: b.name,
+      expectArchive: b.expectArchive !== false,
       onProgress: (p) => {
         t.bytes = p.got; t.totalBytes = p.total;
         t.progress = p.total ? Math.min(40, Math.round((p.got / p.total) * 40)) : 10;
       },
     });
+    t.contentType = dl.contentType || null;
     if (!dl.ok) {
-      t.state = 'error'; t.error = dl.error || '下载失败';
-      exEv(t, 'download-fail', { error: t.error });
+      /* ★ 务必分两种上报：「地址给的不是压缩包」≠「下载出错了」。
+       *   前端对前者的正确动作是「改用『直接下载』或复制链接过去」，不是「重试」。 */
+      t.notArchive = !!dl.notArchive;
+      t.state = dl.notArchive ? 'not-archive' : 'error';
+      t.error = dl.error || '下载失败';
+      exEv(t, dl.notArchive ? 'not-archive' : 'download-fail', { error: t.error, contentType: t.contentType });
       return;
     }
-    exEv(t, 'downloaded', { file: path.basename(dl.file), size: dl.size });
+    t.sniffed = dl.sniffed || null;
+    exEv(t, 'downloaded', { file: path.basename(dl.file), size: dl.size, format: t.sniffed });
     t.progress = 40;
 
     /* ── 阶段 2：递归解压（progress 占 40~100） ── */
@@ -2430,6 +2451,40 @@ app.post('/api/extract/password', (req, res) => {
     }
   });
   res.json({ ok: true, id: t.id, targets: pend.length });
+});
+
+/* ---------- POST /api/extract/open { dir } — 在文件管理器里打开解压产物目录 ----------
+ *
+ * ★ 为什么护栏收得比别的接口还紧：这是一个「让服务端替网页去执行动作」的接口，
+ *   一旦能被任意页面调，它就等于一个「打开本机任意目录」的洞。所以：
+ *     ① 必须再走一遍 exSafeDir（拒绝盘符根 / 系统目录 / UNC）
+ *     ② 还要求**必须落在 DEFAULT_DEST 之内**（连它的父目录都不许）
+ *     ③ 打不开就如实失败，并让前端退回「复制路径」—— 不假装成功
+ *
+ * ⚠️ 已知局限（如实记，别当它是可靠的）：`explorer.exe` 常把请求转交给已有实例后
+ *    **立刻退出**，退出码不可靠（实测常见 rc=1 但窗口确实开了）⇒ 不能用退出码判成败。
+ *    这里只能听 180ms 内的 spawn error（覆盖「explorer 不存在 / 被策略拦」这类即时失败）。
+ *    ⇒ 前端**必须**同时给「复制路径」，不能只依赖这个按钮。 */
+app.post('/api/extract/open', async (req, res) => {
+  const d = exSafeDir((req.body && req.body.dir) || extractor.DEFAULT_DEST);
+  if (!d.ok) return res.status(400).json({ ok: false, error: d.error });
+  const root = path.resolve(extractor.DEFAULT_DEST);
+  if (d.dir !== root && !d.dir.startsWith(root + path.sep)) {
+    return res.status(400).json({ ok: false, error: '只允许打开解压目录内的路径：' + root });
+  }
+  try {
+    const ch = spawn('explorer.exe', [d.dir], { detached: true, stdio: ['ignore', 'ignore', 'ignore'] });
+    let failed = null;
+    ch.on('error', (e) => { failed = e; });
+    ch.unref();
+    await new Promise((s) => setTimeout(s, 180));
+    if (failed) {
+      return res.status(502).json({ ok: false, error: '打不开文件管理器：' + String((failed && failed.message) || failed) });
+    }
+    res.json({ ok: true, dir: d.dir });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String((e && e.message) || e) });
+  }
 });
 
 /* ★ 兜底 404 —— 必须留在**所有路由之后**。

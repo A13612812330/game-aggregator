@@ -2264,6 +2264,75 @@
     color:var(--c-xd);background:rgba(11,123,255,.08);border:1px solid rgba(11,123,255,.28);
     border-radius:8px;padding:6px 11px;transition:.14s}
   .dl-go:hover{background:var(--c-xd);color:#fff;border-color:transparent}
+
+  /* ============ 🗜️ 「下载并解压」按钮 + 解压进度浮层（v10.72 新增） ============
+   * 需求原话（2026-10-14）：「如果我想直接通过下载按钮的话怎么样自动解压」
+   * ⇒ 把 v10.71 已跑通的解压链路（POST /api/extract/download → 轮询 task）接到
+   *   **真直链**按钮旁边，省掉「复制链接 → 去 /extract.html 粘贴」这两步。
+   *
+   * ★ 为什么只挂在两类出口上（存档 files.direct / GTrainers links[0]）：
+   *   实测本体与 Mod 那些盘口按钮**下不到压缩包** —— 机地 10 款游戏全部 1089 条
+   *   地址的域名分布是「迅雷 512 / 夸克 239 / 百度 233 / 其它站点页」，零个文件直链；
+   *   XD 侧 needAuth=true 且 real 全为 null（按钮本就在页面上点不动）。
+   *   给这些按钮挂「解压」= 点了必然报错，纯噪音。
+   *
+   * ★ 为什么按钮由 JS 决定渲不渲染（非 localhost 一律不出）：
+   *   解压是**服务端写盘**。线上托管版的 server 在云端容器里，包会解在云端、
+   *   用户一个字节都拿不到 —— 那正是最难被发现的一类「假成功」。
+   *
+   * ⚠️ 下面的浮层 DOM **必须由 JS 创建**，不许写进主源 HTML：
+   *   派生页的脚本是从主源整段抽走的（page-assets.scriptForSubpage），
+   *   「主源有、派生页没有」的节点正是 page-assets.js 里记着的那个坑 ——
+   *   顶层 addEventListener 拿到 null 会抛错并**中断整段脚本**，页面交互全废。
+   */
+  .exd-go{display:inline-flex;align-items:center;gap:3px;font-family:inherit;font-weight:750;
+    border:1px solid rgba(15,118,110,.32);background:#F0FDFA;color:#0F766E;
+    cursor:pointer;white-space:nowrap;transition:.14s}
+  .exd-go:hover{background:#0F766E;color:#fff;border-color:#0F766E}
+  .exd-go:disabled{opacity:.5;cursor:default}
+  /* 尺寸只做「跟同排邻居对齐」的覆盖 —— 同 v10.51 对 .po-btn 的处理口径：
+     同一排里混两种规格，肉眼直接看得出来。 */
+  .svf .k button.exd-go{font-size:11px;border-radius:7px;padding:5px 9px}
+  .d-dl-it .dl-res-lk button.exd-go{font-size:10.5px;border-radius:6px;padding:1.5px 8px}
+
+  /* 右下角进度浮层。z-index 150 —— 高于抽屉(100)/下载弹窗(110)/存档位置(120)/
+     原贴(130)/搜索(140)，用户在**任何一层里**点解压都能立刻看到进度。 */
+  #exDock{position:fixed;right:16px;bottom:16px;z-index:150;
+    width:min(342px,calc(100vw - 24px));background:#fff;border:1px solid var(--c-border);
+    border-radius:14px;box-shadow:0 18px 44px rgba(9,14,30,.2);overflow:hidden;display:none}
+  #exDock.on{display:block}
+  .exd-h{display:flex;align-items:center;gap:7px;padding:9px 11px;border-bottom:1px solid var(--c-border);
+    background:linear-gradient(180deg,#F7FDFC,#fff)}
+  .exd-h .exd-tt{flex:1;min-width:0;font-size:12px;font-weight:750;color:var(--c-t1);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .exd-h .exd-x{flex:none;border:0;background:none;font-size:13px;line-height:1;color:var(--c-t3);
+    cursor:pointer;padding:2px 4px;border-radius:6px}
+  .exd-h .exd-x:hover{background:#EEF2F8;color:var(--c-t1)}
+  .exd-b{padding:10px 11px}
+  .exd-sub{font-size:11.5px;line-height:1.6;color:var(--c-t2);margin-bottom:7px}
+  .exd-sub b{color:var(--c-t1)}
+  .exd-bar{height:5px;border-radius:3px;background:#EDF1F7;overflow:hidden}
+  .exd-bar i{display:block;height:100%;width:0;border-radius:3px;
+    background:linear-gradient(90deg,#0F766E,#14B8A6);transition:width .3s}
+  #exDock.bad .exd-bar i{background:linear-gradient(90deg,#B4541A,#D97706)}
+  .exd-log{margin-top:8px;max-height:104px;overflow:auto;font-size:10.5px;line-height:1.7;color:var(--c-t3)}
+  .exd-log .l{display:flex;gap:5px}
+  .exd-log .l .d{flex:none;font-family:var(--font-num);color:#9BA6B8}
+  .exd-pw{display:flex;gap:6px;margin-top:9px}
+  /* ⚠️ 必须显式写 [hidden]：上面给了 display:flex，作者样式优先于 UA 的 [hidden]{display:none}，
+     不补这一条 hidden 属性会**完全失效**。 */
+  .exd-pw[hidden]{display:none}
+  .exd-pw input{flex:1;min-width:0;font-family:inherit;font-size:11.5px;color:var(--c-t1);
+    border:1px solid var(--c-border);border-radius:8px;padding:6px 9px;background:#FBFCFE}
+  .exd-pw input:focus{outline:none;border-color:var(--c-primary);background:#fff}
+  .exd-pw button{flex:none;font-family:inherit;font-size:11.5px;font-weight:750;color:#fff;
+    background:var(--c-primary);border:0;border-radius:8px;padding:6px 11px;cursor:pointer}
+  .exd-f{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .exd-f button{font-family:inherit;font-size:11px;font-weight:750;border-radius:8px;
+    padding:5px 10px;cursor:pointer;border:1px solid var(--c-border);background:#F7F9FC;color:var(--c-t2)}
+  .exd-f button:hover{border-color:var(--c-border2);color:var(--c-t1)}
+  .exd-f button.pri{color:#fff;background:var(--c-primary);border-color:transparent}
+  @media(max-width:430px){#exDock{right:8px;left:8px;bottom:8px;width:auto}}
   /* ===== 独立页专属：一条 3 页签切换条（.res-tabs / .res-tab） =====
    *  ★ 为什么另起 .res-* 而不是复用 #emuTabs/.emu-tab：那是手机专区页的骨架选择器，
    *    本页是**另一张页面**，复用会让「改手机专区页签样式」意外改到这里。
@@ -5981,6 +6050,10 @@ function dlResRowsHtml(items) {
     const ks = links.map((l, i) => '<a' + (i === 0 ? ' class="pri"' : '') +
       ' href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer">' +
       (i === 0 ? '⬇ ' : '') + esc(l.label || '下载') + ' ↗</a>');
+    /* ★ v10.72：GT 的**首个通道**实测是真文件直链（抽测 5/5 拿到的就是 zip，
+       尽管 URL 长得像 /load/0-0-0-30-20 这样的页面地址）⇒ 给它挂「下载并解压」。
+       其余通道不挂：没有实测依据就不挂，免得变成点了必然失败的按钮。 */
+    if (links.length) ks.push(exdBtn(links[0].url, x.title || ''));
     if (x.page) ks.push('<a class="src" href="' + esc(x.page) + '" target="_blank" rel="noopener noreferrer">源站 ↗</a>');
     return '<div class="d-dl-it"><span class="k gt">GT</span>' +
       '<span class="bd"><span class="t" title="' + esc(x.title || '') + '">' + esc(x.title || '') + '</span>' +
@@ -6285,7 +6358,14 @@ const svfTitle = (x) => String(x.title || x.game || '').replace(/_游侠网$/, '
 function svfCard(x) {
   const f = x.files || {};
   const ks = [];
-  if (f.direct) ks.push('<a class="pri" href="' + esc(f.direct) + '" target="_blank" rel="noopener">⬇ 直接下载</a>');
+  if (f.direct) {
+    ks.push('<a class="pri" href="' + esc(f.direct) + '" target="_blank" rel="noopener">⬇ 直接下载</a>');
+    /* ★ v10.72：两个出口并存，各管各的 ——
+     *   「⬇ 直接下载」= 浏览器原生下到 Downloads（用户自己管）
+     *   「🗜️ 解压」  = 服务端下 + **自动逐层解压**到 Downloads\GameHub
+     *   存档这条实测 5/5 是压缩包（rar/zip），是本站**唯一**能自动解的出口。 */
+    ks.push(exdBtn(f.direct, svfTitle(x) || '存档'));
+  }
   (f.netdisk || []).forEach((n) => {
     ks.push('<a href="' + esc(n.url) + '" target="_blank" rel="noopener">' +
       esc(SVF_ND[n.kind] || (String(n.kind || '') + ' 网盘')) + ' ↗</a>');
@@ -7989,6 +8069,276 @@ function dHeroSpy() {
 railBoot();   // 定位条：绑一次观察器/滚动监听（常驻节点，不进 #drawerBody）
 
 init();
+/* ================= 🗜️ 下载并解压（v10.72） =================
+ * 需求原话（2026-10-14）：「如果我想直接通过下载按钮的话怎么样自动解压」
+ * 上一轮（v10.71）解的是「你给我一条链接/一个目录」；这一轮把它接进下载按钮。
+ *
+ * 链路（判定全在服务端，前端不重复判一遍）：
+ *   点按钮 → POST /api/extract/download {url, expectArchive:true}
+ *   → 服务端收满 512 字节就**按魔数判这是不是压缩包**（不是 → 立刻中止、**不落盘**）
+ *   → 是 → 下载 + 逐层递归解压（解出来的里面还有包就接着解，直到没有了）
+ *   → 前端轮询 /api/extract/task?id= 显示进度
+ *   → 加密包给「填密码继续解压」；完事给「复制路径 / 打开文件夹」
+ *
+ * ★ 为什么这里**不重写**任何解压/判定逻辑：
+ *   7z 的退出码 2 是三义的（加密错密码 / 坏包 / 非压缩包都是 2），
+ *   密码对错只能靠 `7z t`，`-aos` 还会造成「假成功」…… 这些坑 v10.71 全踩过了。
+ *   前端再来一份判据 = 必然漂移。所以这里只做「发起 + 显示」。
+ *
+ * ⚠️ 浮层 DOM 全部**现创建**，主源 HTML 里一个节点都不加 ——
+ *   派生页的脚本是从主源整段抽走的，顶层绑定「主源有、派生页没有」的节点会
+ *   抛 addEventListener of null 并**中断整段脚本**（page-assets.js 里记着的坑）。
+ *   同理，唯一那个顶层监听挂在 document 上（哪一页都存在）。
+ */
+
+/** 只有本机实例才谈得上「解压到我这台机器」。
+ *  线上托管版：server 跑在云端容器里，包解在云端、用户一个字节都拿不到
+ *  ⇒ 那种情况下按钮一律不渲染，免得变成「转圈半天什么都没有」。 */
+function exdLocal() {
+  return /^(localhost|127\.0\.0\.1|\[::1\]|::1)$/i.test(location.hostname || '');
+}
+
+/** 真直链旁的「🗜️ 解压」按钮。没有 url、或不是本机 ⇒ 返回空串（等于不渲染）。 */
+function exdBtn(url, name) {
+  if (!url || !exdLocal()) return '';
+  return '<button class="exd-go" type="button" data-ex-url="' + esc(url) +
+    '" data-ex-name="' + esc(name || '') +
+    '" title="服务端下载后自动逐层解压（压缩包套压缩包也一次解到底），产物落在 Downloads\\GameHub">🗜️ 解压</button>';
+}
+
+let exdEl = null, exdTimer = null, exdTaskId = null, exdTicks = 0, exdName = '';
+
+/** 浮层（惰性创建，只造一次） */
+function exdDock() {
+  if (exdEl && document.body && document.body.contains(exdEl)) return exdEl;
+  const d = document.createElement('div');
+  d.id = 'exDock';
+  d.setAttribute('role', 'dialog');
+  d.setAttribute('aria-label', '解压进度');
+  d.innerHTML =
+    '<div class="exd-h"><span aria-hidden="true">🗜️</span>' +
+    '<span class="exd-tt" id="exdTt">下载并解压</span>' +
+    '<button class="exd-x" type="button" id="exdX" aria-label="收起">✕</button></div>' +
+    '<div class="exd-b">' +
+    '<div class="exd-sub" id="exdSub">准备中…</div>' +
+    '<div class="exd-bar"><i id="exdFill"></i></div>' +
+    '<div class="exd-pw" id="exdPw" hidden><input id="exdPwIn" type="text" ' +
+    'placeholder="压缩包密码" autocomplete="off"><button type="button" id="exdPwGo">继续解压</button></div>' +
+    '<div class="exd-f" id="exdF"></div>' +
+    '</div>';
+  document.body.appendChild(d);
+  d.querySelector('#exdX').addEventListener('click', exdHide);
+  d.querySelector('#exdPwGo').addEventListener('click', exdPwSubmit);
+  d.querySelector('#exdPwIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') exdPwSubmit(); });
+  exdEl = d;
+  return d;
+}
+
+function exdHide() {
+  if (exdEl) exdEl.classList.remove('on');
+  clearTimeout(exdTimer);
+  exdTimer = null;
+}
+
+/** 字节数 → 人看的大小（下载中显示「已下 / 共」） */
+function exdMB(got, total) {
+  const f = (n) => n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : (n >= 1024 ? (n / 1024).toFixed(0) + ' KB' : n + ' B');
+  if (!got) return '…';
+  return total ? f(got) + ' / ' + f(total) : f(got);
+}
+
+function exdPaint(t) {
+  const d = exdDock();
+  d.classList.add('on');
+  const bad = (t.state === 'error' || t.state === 'not-archive');
+  d.classList.toggle('bad', bad);
+  d.querySelector('#exdTt').textContent = exdName || '下载并解压';
+  d.querySelector('#exdFill').style.width = Math.max(0, Math.min(100, t.progress || 0)) + '%';
+  const sub = d.querySelector('#exdSub');
+  const pw = d.querySelector('#exdPw');
+  const foot = d.querySelector('#exdF');
+  const sum = t.summary || {};
+  const layers = (sum.layers || []).length;
+  const doneLink = '<button type="button" onclick="exdOpenPage()">查看详情</button>';
+
+  if (t.state === 'running') {
+    pw.hidden = true;
+    foot.innerHTML = '';
+    sub.innerHTML = t.phase === 'download'
+      ? '⬇ 正在下载 <b>' + esc(exdMB(t.bytes, t.totalBytes)) + '</b>'
+      : '🗜️ 正在逐层解压…（里面还有压缩包就接着解）';
+    return;
+  }
+
+  if (t.state === 'need-password') {
+    sub.innerHTML = '🔒 有 <b>' + t.needsPassword.length + '</b> 个压缩包需要密码。' +
+      '填一次密码会**把待解的整批都试一遍**（同一个包不会重复解）。';
+    pw.hidden = false;
+    foot.innerHTML = doneLink;
+    const box = d.querySelector('#exdPwIn');
+    box.value = '';
+    setTimeout(() => { try { box.focus(); } catch (e) { /* 忽略 */ } }, 60);
+    return;
+  }
+
+  pw.hidden = true;
+
+  if (t.state === 'not-archive') {
+    sub.innerHTML = '⚠️ <b>这条地址给的不是压缩包</b>，服务端没下到文件（' +
+      esc(t.contentType || '未知类型') + '）。<br>' +
+      '多半是网盘页 / 需要登录的中间页 —— 请改用同一行的「⬇ 直接下载」到浏览器里，' +
+      '或复制链接粘到解压助手。';
+    foot.innerHTML = '<button type="button" class="pri" onclick="exdOpenPage()">去解压助手粘贴</button>';
+    return;
+  }
+
+  if (t.state === 'error') {
+    sub.innerHTML = '✗ ' + esc(t.error || '解压未完成');
+    foot.innerHTML = doneLink;
+    return;
+  }
+
+  /* done */
+  const frag = sum.files
+    ? '，产出 <b>' + sum.files + '</b> 个文件'
+    : '';
+  sub.innerHTML = '✓ 解压完成：共解开 <b>' + layers + '</b> 层' + frag +
+    (sum.reachedDepth ? '（最深第 ' + sum.reachedDepth + ' 层）' : '');
+  foot.innerHTML = '<button type="button" class="pri" onclick="exdCopyPath()">复制路径</button>' +
+    '<button type="button" onclick="exdOpenDir()">打开文件夹</button>' + doneLink;
+}
+
+function exdOpenPage() {
+  try { window.open('/extract.html', '_blank', 'noopener'); } catch (e) { /* 忽略 */ }
+}
+
+function exdDest() {
+  return (exdEl && exdEl.dataset && exdEl.dataset.dest) || '';
+}
+
+/** 复制产物路径。★ 必须留这个出口：「打开文件夹」靠 explorer.exe，失败时用户得有出路。 */
+function exdCopyPath() {
+  const p = exdDest();
+  if (!p) { exdToast('还没拿到产物路径'); return; }
+  const done = () => exdToast('已复制：' + p);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(p).then(done, () => exdCopyFallback(p, done));
+  } else {
+    exdCopyFallback(p, done);
+  }
+}
+function exdCopyFallback(text, done) {
+  /* 老路子：临时 textarea + execCommand（clipboard API 在非 https 且非 localhost 时会拒绝） */
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    done();
+  } catch (e) { exdToast('复制失败，请手动复制：' + text); }
+}
+
+function exdToast(msg) {
+  const d = exdDock();
+  const el = d.querySelector('#exdSub');
+  const old = el.innerHTML;
+  el.innerHTML = '📋 ' + esc(msg);
+  setTimeout(() => { if (el.innerHTML.indexOf('📋') === 0) el.innerHTML = old; }, 2600);
+}
+
+async function exdOpenDir() {
+  const p = exdDest();
+  try {
+    const r = await fetch('/api/extract/open', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dir: p || undefined }),
+    });
+    const j = await r.json();
+    if (!j.ok) exdToast('打不开文件夹（' + (j.error || '未知原因') + '），请用「复制路径」');
+  } catch (e) {
+    exdToast('打不开文件夹，请用「复制路径」');
+  }
+}
+
+async function exdPwSubmit() {
+  const d = exdDock();
+  const v = String(d.querySelector('#exdPwIn').value || '').trim();
+  if (!v) { exdToast('请先填密码'); return; }
+  if (!exdTaskId) { exdToast('任务已失效，请重新发起'); return; }
+  d.querySelector('#exdPw').hidden = true;
+  try {
+    const r = await fetch('/api/extract/password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: exdTaskId, passwords: [v] }),
+    });
+    const j = await r.json();
+    if (!j.ok) { exdToast(j.error || '提交失败'); d.querySelector('#exdPw').hidden = false; return; }
+    exdTicks = 0;
+    exdPoll();
+  } catch (e) { exdToast('提交失败：' + String((e && e.message) || e)); d.querySelector('#exdPw').hidden = false; }
+}
+
+function exdStart(url, name) {
+  exdName = name || '';
+  const d = exdDock();
+  d.dataset.dest = '';
+  d.querySelector('#exdPw').hidden = true;
+  d.querySelector('#exdF').innerHTML = '';
+  d.querySelector('#exdSub').innerHTML = '正在交给服务端…';
+  d.querySelector('#exdFill').style.width = '0%';
+  d.classList.add('on');
+  d.classList.remove('bad');
+  d.querySelector('#exdTt').textContent = exdName || '下载并解压';
+  exdTaskId = null;
+  exdTicks = 0;
+  fetch('/api/extract/download', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: url, expectArchive: true }),
+  }).then((r) => r.json()).then((j) => {
+    if (!j.ok) { exdPaint({ state: 'error', error: j.error || '发起失败', progress: 0 }); return; }
+    exdTaskId = j.id;
+    /* ★ 产物目录由服务端定（用户拍板 Downloads\GameHub），前端只如实显示 */
+    d.dataset.dest = j.dir || '';
+    exdPoll();
+  }).catch((e) => exdPaint({ state: 'error', error: String((e && e.message) || e), progress: 0 }));
+}
+
+function exdPoll() {
+  clearTimeout(exdTimer);
+  exdTimer = setTimeout(async () => {
+    if (!exdTaskId) return;
+    /* ★ 轮询上限：任务表只留最近 24 个，服务重启后这个 id 就查不到了 ——
+     *   没有上限的话会一直轮下去（PITFALLS 43：长跑必须熔断）。 */
+    if (++exdTicks > 900) { exdPaint({ state: 'error', error: '任务太久没结束，已停止跟踪（去解压助手看结果）', progress: 100 }); return; }
+    try {
+      const j = await (await fetch('/api/extract/task?id=' + encodeURIComponent(exdTaskId))).json();
+      if (j.ok && j.task) {
+        exdPaint(j.task);
+        if (j.task.state === 'running') { exdPoll(); return; }
+        return;   /* 终态：停轮询 */
+      }
+      /* 任务查不到（过期/服务重启）—— 如实说，不假装还在跑 */
+      exdPaint({ state: 'error', error: j.error || '任务已过期', progress: 100 });
+    } catch (e) {
+      exdPoll();   /* 网络抖动：继续轮，但受上面的次数上限约束 */
+    }
+  }, 900);
+}
+
+/* 事件委托挂在 document 上：主源与四张派生页都能用，且不依赖任何 DOM 节点存在。 */
+document.addEventListener('click', (e) => {
+  const el = (e.target && e.target.closest) ? e.target.closest('[data-ex-url]') : null;
+  if (!el) return;
+  /* ★ 拦住冒泡：下载弹窗里那些行自己也有整行点击（data-post-open 之类），
+     不拦会让「点解压」顺带把原贴弹窗也打开。 */
+  e.preventDefault();
+  e.stopPropagation();
+  exdStart(el.getAttribute('data-ex-url'), el.getAttribute('data-ex-name'));
+});
 </script>
 </body>
 </html>

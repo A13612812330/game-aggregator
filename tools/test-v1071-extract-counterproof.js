@@ -37,6 +37,18 @@ const { execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
 const SUITE = path.join(__dirname, 'test-v1071-extract.js');
 
+/* ★★ v10.72 修：这里的取汇总正则原本写死成旧格式「通过 n / 失败 f」。
+ *   v10.71 把各套件的收尾统一改成「通过 n/m（失败 f）」（★ 斜杠后是**总数**，
+ *   不是失败数 —— 见 run-all 取成绩段的约定），于是这个正则**恒不匹配**：
+ *     · 「变红 N 条」旁边永远只显示 (无汇总)，人看不出套件到底跑成什么样；
+ *     · 更要命的是最后那步「全部还原后必须复跑全绿」—— 判据变成看一个
+ *       **永远匹配不到**的字符串，等于这一步的守护**整个消失了**（本轮实测：
+ *       反证明明已经在报「❌ 反证失败 1 项」，全量防线却报 3995/0 全绿）。
+ *   ⇒ 判据必须跟着产物格式一起改。这类「判据的作用域/形状变了但没人跟着改」
+ *     是本项目最贵的一类坑（PITFALLS 105）。 */
+const SUM_ANY = /通过 \d+ \/ \d+（失败 \d+）/;
+const SUM_ALL_GREEN = /^通过 (\d+) \/ (\d+)（失败 0）$/;
+
 /** 跑一次套件，返回它打印的全部输出 */
 function runSuite() {
   try {
@@ -143,7 +155,7 @@ try {
     const fails = out.split('\n')
       .filter((l) => l.indexOf('❌') >= 0)
       .map((l) => l.replace(/^\s*❌\s*/, '').trim());
-    const sum = (out.match(/通过 \d+ \/ 失败 \d+/) || ['(无汇总)'])[0];
+    const sum = (out.match(SUM_ANY) || ['(无汇总)'])[0];
     console.log('   ' + sum + '   变红 ' + fails.length + ' 条');
 
     /* ★★ 判据要**精确到断言名**：只数「红了几条」会把「级联崩溃」当成通过。
@@ -167,9 +179,9 @@ try {
 /* 还原后必须复跑一次全绿，否则「还原」本身可能是假的 */
 console.log('\n◀ 全部还原后复跑');
 const out2 = runSuite();
-const sum2 = (out2.match(/通过 \d+ \/ 失败 \d+/) || ['(无汇总)'])[0];
+const sum2 = (out2.match(SUM_ANY) || ['(无汇总)'])[0];
 console.log('   ' + sum2);
-if (!/^通过 (\d+) \/ 失败 0$/.exec(sum2)) {
+if (!SUM_ALL_GREEN.exec(sum2)) {
   console.log('   ❌ 还原后未全绿 —— 说明还原不干净（或有别的改动漏进去了）');
   bad++;
 } else {
