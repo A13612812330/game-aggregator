@@ -17,6 +17,16 @@
  *   ⑧ 同步产出 .gz（server.js 零依赖 zlib 直出 —— 部署载荷没有 node_modules，
  *     加 compression 包会牵动部署链，内置 zlib 零成本）。
  *
+ * v10.80（2026-10-15，用户口径：「为什么获取不到」+「数据分析模块优化：字段/更新时间/时间对比等筛选」）：
+ *   ① 弹窗「实时查询本体」机地分支**直链直出** —— 旧口径只报分区条数，理由（items 混流、
+ *      会拿 MOD 冒充本体）早在 v10.27 就被 flatFrom 的 section 字段解决，是注释没跟上代码：
+ *      接口明明把 18 条本体的网盘直链取回来了，前端却只显示「需点进源站查看」⇒ 用户看到「获取不到」。
+ *      现按 section==='body' 过滤出纯本体，渲染 网盘类型/提取码/帖子标题/原帖；上游被限流
+ *      （实测 429 / 非 JSON / env 缺失）时把 sections[].error **如实放大**，不装作 0 条。
+ *   ② 数据分析 v2：数据新鲜度行（builtAt + 每日 09:30 自动重生成说明）+ 独立筛选条
+ *      （平台 / 来源 / 时间范围）+ 时间对比卡（近 7 天 vs 前 7 天、近 30 天 vs 前 30 天环比）+
+ *      榜行字段加富（来源 tag / 副字段）+ 筛选变化即时重算（v10.79 是只算一次）。
+ *
  * ★ 数据来源**全部复用既有模块**，不自己写匹配（铁律：不手写已有能力覆盖的功能）：
  *     · 端游名单 + 热度(score/hot/size/时间) → data/games.json（19,497 条原始记录）
  *     · 手游名单 + 关联端游 id                → data/mobilehub.js#all()（3,339 条）
@@ -384,6 +394,20 @@ const html = `<!DOCTYPE html>
   .ana-it .tt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:650}
   .ana-it .hv{flex:none;font:800 10.5px/1.6 var(--font-num);color:var(--c-t2)}
   .ana-empty{color:var(--c-t3);font-size:12px;padding:8px 2px}
+  /* ── v10.80：分析模块 v2 —— 新鲜度行 + 独立筛选条 + 时间对比卡 ── */
+  .ana-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  .ana-fresh{font-size:11px;color:var(--c-t3)}
+  .ana-fresh b{font-family:var(--font-num);color:var(--c-t2)}
+  .ana-filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto}
+  .ana-filters label{font-size:12px;color:var(--c-t2);font-weight:650}
+  .ana-cmp{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .ana-cmp .cmp{background:#F7F9FC;border:1px solid var(--c-border);border-radius:10px;
+    padding:8px 13px;font-size:11px;color:var(--c-t3);min-width:190px}
+  .ana-cmp .cmp b{font:800 15px/1.4 var(--font-num);color:var(--c-t1);margin:0 2px}
+  .ana-cmp .cmp .up{color:var(--c-ok);font-weight:800;font-family:var(--font-num)}
+  .ana-cmp .cmp .dn{color:var(--c-danger);font-weight:800;font-family:var(--font-num)}
+  .ana-it .tg{flex:none}
+  .ana-it .sub{flex:none;font:600 10.5px/1.6 var(--font-num);color:var(--c-t3)}
   @media(max-width:760px){
     .wrap{padding:10px 10px 50px}
     .nm{max-width:170px}
@@ -414,8 +438,9 @@ const html = `<!DOCTYPE html>
     <b>① 「本体」这一列没有全量数据</b>：本体直链只能逐款打源站实时解析，19,497 款逐一抓不现实。
     本页 <b id="noteProbe">-</b> 款带 v10.57 那轮的实测结论（<span class="st ok">可下</span>
     <span class="st auth">需登录</span> <span class="st no">无</span>），其余一律标
-    <span class="st un">未测</span> —— <b>点开弹窗可以按需实时查</b>
-    （<b>在线打开</b>走本站同源接口；<b>双击本地文件</b>需本地 8123 在跑）。<br>
+    <span class="st un">未测</span> —— <b>点开弹窗按需实时查</b>：机地本体的<b>网盘直链 + 提取码</b>
+    与 XD 的下载通道会<b>直接列在弹窗里</b>（v10.80 起）；上游被限流/拦截时会<b>如实报错</b>，
+    不装作 0 条。（<b>在线打开</b>走本站同源接口；<b>双击本地文件</b>需本地 8123 在跑）。<br>
     <b>② MOD / 存档 / 修改器 三列是全量的</b>，与详情页、资源页同源（覆盖：<b id="noteCover">-</b>）。
     「存档」指<b>可下载的存档文件</b>，不含 Ludusavi 的存档位置记录（那是另一个口径，覆盖约 6,300 款）。<br>
     <b>名单是怎么算的</b>：<span id="noteMerged">-</span><br>
@@ -498,7 +523,32 @@ const html = `<!DOCTYPE html>
   </div>
 
   <div class="card" id="anaCard" hidden>
+    <div class="ana-top">
+      <span class="ana-fresh" id="anaFresh"></span>
+      <div class="ana-filters">
+        <label>平台</label>
+        <div class="seg" id="anaKind" role="group" aria-label="分析平台筛选">
+          <button data-v="all" class="on">全部</button>
+          <button data-v="pc">端游</button>
+          <button data-v="mob">手游可玩</button>
+        </div>
+        <label>来源</label>
+        <div class="seg" id="anaSrc" role="group" aria-label="分析来源筛选">
+          <button data-v="all" class="on">全部</button>
+          <button data-v="jidi">机地</button>
+          <button data-v="xd">XDGAME</button>
+        </div>
+        <select id="anaRange" class="sm" title="只看最近 N 天内有更新的条目">
+          <option value="0" selected>时间：全部</option>
+          <option value="7">近 7 天有更新</option>
+          <option value="30">近 30 天有更新</option>
+          <option value="90">近 90 天有更新</option>
+        </select>
+        <button class="btn" id="anaReset">重置</button>
+      </div>
+    </div>
     <div class="ana-kpis" id="anaKpi"></div>
+    <div class="ana-cmp" id="anaCmp"></div>
     <div class="ana-grid">
       <div class="ana-col">
         <h4>🔥 热游 Top 20<button class="cp" id="cpHot" type="button">复制 TSV</button></h4>
@@ -839,13 +889,31 @@ const html = `<!DOCTYPE html>
   function closeDlg(){ $('#mask').classList.remove('on'); $('#dActs').hidden = true; }
 
   /* 本体实时查询：走 /api/download（服务端 30 分钟缓存）
-   * ★★ 两个源的 items **结构不同、且 real 同名不同义** —— 这是本功能最大的坑：
-   *    · 机地  ：items = 帖子流（mod + 修改器**混在一起**，没有分区标记）
-   *             链接字段 = real（URL 字符串）；标题 = postTitle；分区只能看 sections
+   * ★★ 两个源的 items **结构不同**，v10.80 起两侧都直出链接：
+   *    · 机地  ：items = 按专区打平的**帖子链接**（v10.27 起 flatFrom 每条都带 section 字段）
+   *             ⇒ 按 section==='body' 过滤就是纯本体（旧版「只报条数」的混流顾虑已不存在，
+   *               那条注释没跟上代码，让用户以为「获取不到」）；链接字段 = real（URL 字符串），
+   *               提取码已由 splitPwd 拆好（pwd），帖子标题/原帖/日期齐全
    *    · XDGAME：items = 下载按钮（kind=downbtn）
    *             链接字段 = serverUrl；real 是**布尔**（是否真实可下）；需登录时 count=0 但仍有入口
-   *   ⇒ 对机地**绝不能**把 items 当本体列出来（会拿 MOD 冒充本体）；
-   *     机地只按 sections 报各专区条数，本体链接给源站出口。 */
+   *   ⇒ 对机地**绝不能**把 items 不加过滤全列出来（MOD 冒充本体）；过滤后直链直出。
+   *   上游被限流 / 改版时 sections[].error 带原文 ⇒ **如实放大**（v10.80），不装作 0 条。 */
+  function fmtDate(t){
+    if(!t) return '';
+    var d = new Date(t);
+    return isNaN(d) ? '' : (d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'));
+  }
+  /* 机地本体直链卡：网盘类型 + 提取码 + 帖子标题 + 日期 + 原帖 */
+  function jidiItemHtml(x){
+    var u = x.real || x.serverUrl || '';
+    var meta = [x.server, x.pwd ? ('提取码 ' + x.pwd) : '', fmtDate(x.ct)].filter(Boolean).join(' · ');
+    return '<div class="it"><div class="t1">' + esc(x.postTitle || x.server || '本体资源') + '</div>'
+      + (meta ? '<div class="meta">' + esc(meta) + '</div>' : '')
+      + '<div class="ls"><a class="lnk direct" href="' + esc(u) + '" target="_blank" rel="noopener">打开 '
+      + esc(x.server || '链接') + ' ↗</a>'
+      + (x.postUrl ? '<a class="lnk" href="' + esc(x.postUrl) + '" target="_blank" rel="noopener">原帖 ↗</a>' : '')
+      + '</div></div>';
+  }
   function queryBody(r, btn){
     var id = String(r[1]);
     var src = r[2]===0 ? 'jidi' : (r[2]===1 ? 'xdgamer' : '');
@@ -866,14 +934,37 @@ const html = `<!DOCTYPE html>
         }
         var secs = j.sections, out = '';
         if(secs && secs.length){
-          /* ── 机地：只看 sections，items 不列（避免 MOD 冒充本体） ── */
-          var body = null;
-          secs.forEach(function(s){ if(s.key === 'body') body = s; });
-          var bn = body ? (body.count || 0) : 0;
-          msg.textContent = bn ? ('机地本体专区 ' + bn + ' 条') : '机地本体专区为空';
-          out += '<div class="none">机地本体：' + (bn
-            ? ('<b>' + bn + ' 条</b> —— 链接在源站话题页的资源区，需点进源站查看')
-            : '<b>该话题的「本体」专区没有条目</b>') + '</div>';
+          /* ── 机地：v10.80 直链直出 ──
+             旧口径「只报条数、链接需点进源站」的理由（items 混流）早在 v10.27 就被
+             flatFrom 的 section 字段解决 —— 接口本来就把直链取回来了，是前端没渲染。
+             按 section==='body' 过滤 = 纯本体；上游异常（限流/改版）如实放大。 */
+          var errs = [];
+          secs.forEach(function(s){ if(s.error) errs.push((s.name || s.key) + '：' + s.error); });
+          var bodySec = null;
+          secs.forEach(function(s){ if(s.key === 'body') bodySec = s; });
+          var bodyItems = (j.items || []).filter(function(x){
+            return x && x.section === 'body' && (x.real || x.serverUrl);
+          });
+          var bn = bodyItems.length;
+          msg.textContent = bn ? ('机地本体直链 ' + bn + ' 条') : '机地本体专区这次没能取回直链';
+          out = bodyItems.slice(0, 20).map(jidiItemHtml).join('');
+          if(bodyItems.length > 20){
+            out += '<div class="more"><span>仅显示前 20 条 · 本次取回 <b>' + bodyItems.length + '</b> 条直链</span></div>';
+          }
+          if(!bn){
+            /* ★ error 在场时**不许**说「专区没有条目」—— 那是没证实的话（可能只是被限流）；
+               只有上游正常应答且 count=0 才能下这个结论（「如实」不加分词）。 */
+            out += '<div class="none">' + (errs.length
+              ? '这次没能取回直链 —— 原因见下方异常说明'
+              : (bodySec && bodySec.count
+                ? ('本体专区有 <b>' + bodySec.count + '</b> 条，但这次没能取回直链 —— 可稍后重试，或直接去源站看')
+                : '该话题的「本体」专区没有条目')) + '</div>';
+          }
+          if(errs.length){
+            out += '<div class="more" style="border-color:#F3DFA8;background:#FFF9E8;color:#7A5A12">'
+              + '<span><b>上游异常（如实转报）</b>：' + esc(errs.join(' · '))
+              + ' —— 稍后重试或去源站</span></div>';
+          }
           out += '<div class="none" style="margin-top:5px">源站分区：'
             + secs.map(function(s){ return esc(s.name || s.key) + ' ' + (s.count || 0); }).join(' · ') + '</div>';
           out += '<div style="margin-top:8px"><a class="lnk" href="'
@@ -1061,22 +1152,38 @@ const html = `<!DOCTYPE html>
     });
   });
 
-  /* ── v10.79：数据分析视图 ──
-     用户口径：「增加一个模块，数据分析模块，后续我将从此进行提取热游、新游补充或者推荐」。
-     三个榜全部**现算自同一份 D**（与名单同源同口径），每条可点开查看弹窗；
-     「复制 TSV」给后续提取用（名称/id/热度/大小/更新时间/来源，Tab 分隔）。 */
-  var anaBuilt = false;
-  function anaRow(r, i, valTxt){
-    return '<div class="ana-it" data-ai="' + i + '">'
+  /* ── v10.80：数据分析视图（v2）──
+     v10.79 用户口径：「增加一个模块，数据分析模块，后续我将从此进行提取热游、新游补充或者推荐」。
+     v10.80 增量（用户口径：「字段跟更新时间等，并且不一样的筛选条件（时间对比等）」）：
+       ① 数据新鲜度行：builtAt + 每日 09:30 随 daily-sync 自动重生成说明；
+       ② 独立筛选条：平台（端游/手游）+ 来源（机地/XD）+ 时间范围（近 7/30/90 天有更新）；
+       ③ 时间对比卡：近 7 天 vs 前 7 天、近 30 天 vs 前 30 天 的新增环比（对环比箭头：
+          涨用 --c-ok 绿、跌用 --c-danger 红 —— 不是股票涨跌语境，绿=变多）；
+       ④ 榜行字段加富：来源 tag + 副字段（热游榜带更新时间、最新榜带热度、推荐位带日期）；
+       ⑤ 筛选变化即时重算（v10.79 是进视图只算一次）。
+     三榜仍全部**现算自同一份 D**（与名单同源同口径）；TSV 10 列口径不变。 */
+  var AF = { kind:'all', src:'all', range:0 };
+  var ANA = { hot:[], neu:[], rec:[] };
+  function anaOk(r){
+    if(AF.kind === 'pc' && r[2] === 2) return false;
+    if(AF.kind === 'mob' && r[10] !== 1) return false;
+    if(AF.src === 'jidi' && r[2] !== 0) return false;
+    if(AF.src === 'xd' && r[2] !== 1) return false;
+    return true;
+  }
+  function anaRow(b, r, i, valTxt, subTxt){
+    return '<div class="ana-it" data-b="' + b + '" data-ai="' + i + '">'
       + '<span class="rk' + (i < 3 ? ' top' : '') + '">' + (i + 1) + '</span>'
       + '<span class="tt" title="' + esc(r[0]) + '">' + esc(r[0]) + '</span>'
+      + '<span class="tg"><span class="tag ' + (SRC_CLS[r[2]] || 'mh') + '">' + (SRC_NAME[r[2]] || '?') + '</span></span>'
+      + (subTxt ? '<span class="sub">' + subTxt + '</span>' : '')
       + '<span class="hv">' + valTxt + '</span></div>';
   }
   function tsvOf(list){
     /* ★ \\t / \\n 双反斜杠：这段在 gen 的模板串里，单写 \n 会被 gen 提前转义成真实换行，
        把产物里的字符串字面量劈成跨行 ⇒ 页面 JS 直接 SyntaxError（整页脚本瘫痪） */
     return ['名称\\tid\\t来源\\t热度\\t大小\\t更新时间\\t本体\\t修改器\\tMOD\\t存档'].concat(list.map(function(r){
-      return [r[0], r[1], SRC_NAME[r[2]] || '?', r[4], r[3], fmtTs(r[5]), (BODY_TXT[r[6]] || BODY_TXT[0])[1],
+      return [r[0], r[1], SRC_NAME[r[2]] || '?', r[4], r[3], fmtDate(r[5]), (BODY_TXT[r[6]] || BODY_TXT[0])[1],
         r[9], r[7], r[8]].join('\\t');
     })).join('\\n');
   }
@@ -1093,50 +1200,103 @@ const html = `<!DOCTYPE html>
     try { document.execCommand('copy'); } catch(_e){}
     document.body.removeChild(ta);
   }
-  function buildAna(){
-    if(anaBuilt) return;
-    anaBuilt = true;
-    var now = Date.now(), WEEK = 7 * 86400000;
-    var nHot = 0, nNew = 0, nRec = 0, nRes = 0, nBodyOk = 0;
-    var hot = [], neu = [], rec = [];
+  /* 时间对比卡：近 N 天 vs 前 N 天 的新增（按更新时间字段 r[5]），
+     环比箭头对当前平台/来源筛选生效 —— 时间窗口是对比的本体，不吃 range 筛选。 */
+  function cmpCard(label, days, now){
+    var W = days * 86400000, cur = 0, prev = 0;
     for(var i = 0; i < R.length; i++){
       var r = R[i];
+      if(!anaOk(r) || r[5] <= 0) continue;
+      if(r[5] >= now - W) cur++;
+      else if(r[5] >= now - 2 * W) prev++;
+    }
+    var p = prev ? Math.round((cur - prev) * 100 / prev) : null;
+    var arrow = p == null ? '' : (p >= 0
+      ? ' <span class="up">↑' + p + '%</span>' : ' <span class="dn">↓' + (-p) + '%</span>');
+    return '<div class="cmp">' + label + '新增<b>' + cur.toLocaleString('en-US') + '</b>款'
+      + '<span class="mono dim">（前一期 ' + prev.toLocaleString('en-US') + '）</span>' + arrow + '</div>';
+  }
+  function buildAna(){
+    var now = Date.now();
+    var pool = R.filter(anaOk);
+    var kW = (AF.range || 0) * 86400000;
+    var inRange = function(r){ return !kW || r[5] >= now - kW; };
+    var nHot = 0, nNew = 0, nRec = 0, nRes = 0, nBodyOk = 0;
+    for(var i = 0; i < pool.length; i++){
+      var r = pool[i];
       if(r[4] > 0) nHot++;
-      if(r[5] >= now - WEEK) nNew++;
+      if(r[5] >= now - 7 * 86400000) nNew++;
       if(r[7] || r[8] || r[9]) nRes++;
       if(r[6] === 1) nBodyOk++;
-      /* 推荐位 = 四条件占满：本体可下 ∩ MOD ∩ 修改器 ∩ 存档（与主站「四条件游戏表」同判据） */
-      if(r[6] === 1 && r[7] > 0 && r[8] > 0 && r[9] > 0){ nRec++; if(rec.length < 20) rec.push(r); }
     }
-    hot = R.filter(function(r){ return r[4] > 0; }).sort(function(a, b){ return b[4] - a[4]; }).slice(0, 20);
-    neu = R.filter(function(r){ return r[5] > 0; }).sort(function(a, b){ return b[5] - a[5]; }).slice(0, 20);
+    var hot = pool.filter(function(r){ return r[4] > 0 && inRange(r); })
+      .sort(function(a, b){ return b[4] - a[4]; }).slice(0, 20);
+    var neu = pool.filter(function(r){ return r[5] > 0 && inRange(r); })
+      .sort(function(a, b){ return b[5] - a[5]; }).slice(0, 20);
+    /* 推荐位 = 四条件占满：本体可下 ∩ MOD ∩ 修改器 ∩ 存档（与主站「四条件游戏表」同判据），
+       占满里按热度取前 20 —— 「占满里最值得推的」，不是「占满里最新的」。
+       ★ 判据串全页只此一处（反证 T 靠「恰好打坏这一处」验证 J10，出现两次会让命中数失配）。 */
+    var recFull = pool.filter(function(r){
+      return r[6] === 1 && r[7] > 0 && r[8] > 0 && r[9] > 0;
+    });
+    var rec = recFull.filter(inRange).sort(function(a, b){ return b[4] - a[4]; }).slice(0, 20);
+    nRec = recFull.length;
+    ANA = { hot: hot, neu: neu, rec: rec };
+    $('#anaFresh').innerHTML = '数据更新至 <b>' + (fmtDate(D.builtAt) || '—') + '</b>（每日 09:30 随 daily-sync 自动重生成）';
     $('#anaKpi').innerHTML = [
-      ['总条目', R.length], ['有热度', nHot], ['近 7 天有更新', nNew],
+      ['总条目', pool.length], ['有热度', nHot], ['近 7 天有更新', nNew],
       ['有三类资源 ≥1', nRes], ['本体实测可下', nBodyOk], ['四条件占满', nRec],
     ].map(function(k){
       return '<div class="ana-kpi">' + k[0] + '<b>' + k[1] + '</b></div>';
     }).join('');
+    $('#anaCmp').innerHTML = cmpCard('近 7 天', 7, now) + cmpCard('近 30 天', 30, now);
     $('#anaHot').innerHTML = hot.length ? hot.map(function(r, i){
-      return anaRow(r, i, fmtHot(r[4]));
-    }).join('') : '<div class="ana-empty">没有热度数据</div>';
+      return anaRow('hot', r, i, fmtHot(r[4]), fmtDate(r[5]));
+    }).join('') : '<div class="ana-empty">当前筛选下没有热度数据</div>';
     $('#anaNew').innerHTML = neu.length ? neu.map(function(r, i){
-      return anaRow(r, i, fmtTs(r[5]));
-    }).join('') : '<div class="ana-empty">没有更新时间数据</div>';
+      return anaRow('neu', r, i, fmtDate(r[5]) || '—', r[4] ? r[4].toLocaleString('en-US') : '');
+    }).join('') : '<div class="ana-empty">当前筛选下没有更新时间数据</div>';
     $('#anaRec').innerHTML = rec.length ? rec.map(function(r, i){
-      return anaRow(r, i, fmtSize(r[3]));
-    }).join('') : '<div class="ana-empty">暂无四条件占满的条目</div>';
-    /* 榜内点击 → 打开同一份查看弹窗（行引用直接闭包传递，不走索引防排序漂移） */
-    var bindList = function(box, list){
-      var items = box.querySelectorAll('.ana-it');
-      for(var i = 0; i < items.length; i++){
-        (function(el, r){ el.addEventListener('click', function(){ openDlg(r); }); })(items[i], list[i]);
-      }
-    };
-    bindList($('#anaHot'), hot); bindList($('#anaNew'), neu); bindList($('#anaRec'), rec);
-    $('#cpHot').addEventListener('click', function(){ copyText(tsvOf(hot), this); });
-    $('#cpNew').addEventListener('click', function(){ copyText(tsvOf(neu), this); });
-    $('#cpRec').addEventListener('click', function(){ copyText(tsvOf(rec), this); });
+      return anaRow('rec', r, i, r[3] || '—', fmtDate(r[5]));
+    }).join('') : '<div class="ana-empty">当前筛选下暂无四条件占满的条目</div>';
   }
+  /* v10.80：榜单点击 / 复制 TSV 全部走**事件委托**（绑一次）——
+     buildAna 现在随筛选反复重算，逐元素 addEventListener 会越绑越多（内存泄漏 + 重复弹窗）。 */
+  $('#anaCard').addEventListener('click', function(e){
+    var t = e.target;
+    if(!t || !t.closest) return;
+    var cp = t.closest('.cp');
+    if(cp){
+      if(cp.id === 'cpHot') copyText(tsvOf(ANA.hot), cp);
+      else if(cp.id === 'cpNew') copyText(tsvOf(ANA.neu), cp);
+      else if(cp.id === 'cpRec') copyText(tsvOf(ANA.rec), cp);
+      return;
+    }
+    var it = t.closest('.ana-it');
+    if(it){
+      var list = ANA[it.getAttribute('data-b')] || [];
+      var r = list[Number(it.getAttribute('data-ai'))];
+      if(r) openDlg(r);
+    }
+  });
+  function anaSeg(sel, key){
+    document.querySelector(sel).addEventListener('click', function(e){
+      var b = e.target && e.target.closest ? e.target.closest('button[data-v]') : null;
+      if(!b) return;
+      AF[key] = b.dataset.v;
+      document.querySelectorAll(sel + ' button').forEach(function(x){ x.classList.toggle('on', x === b); });
+      buildAna();
+    });
+  }
+  anaSeg('#anaKind', 'kind'); anaSeg('#anaSrc', 'src');
+  $('#anaRange').addEventListener('change', function(e){ AF.range = Number(e.target.value) || 0; buildAna(); });
+  $('#anaReset').addEventListener('click', function(){
+    AF = { kind:'all', src:'all', range:0 };
+    document.querySelectorAll('#anaKind button').forEach(function(x){ x.classList.toggle('on', x.dataset.v === 'all'); });
+    document.querySelectorAll('#anaSrc button').forEach(function(x){ x.classList.toggle('on', x.dataset.v === 'all'); });
+    $('#anaRange').value = '0';
+    buildAna();
+  });
   document.querySelectorAll('#viewTabs button').forEach(function(b){
     b.addEventListener('click', function(){
       document.querySelectorAll('#viewTabs button').forEach(function(x){

@@ -114,8 +114,10 @@ console.log('\n── F 页面钩子 ──');
 ['data-sort="hot"', 'data-sort="ts"', 'data-sort="size"', 'data-sort="name"',
   'data-sort="mod"', 'data-sort="saves"', 'data-sort="trainers"', 'data-sort="body"',
 ].forEach((h, i) => ok(`F1.${i + 1} 可排序表头 ${h}`, HTML.includes(h)));
-ok('F2 筛选：平台三档 + 资源六档',
-  (HTML.match(/<button data-v="(all|pc|mob|any|mod|saves|trainers|body)"/g) || []).length === 9,
+/* ★ v10.80：分析模块的筛选条（anaKind all/pc/mob + anaSrc all）也是 data-v 按钮，
+   与名单筛选同款 ⇒ 计数 9 → 13（anaSrc 的 jidi/xd 不在正则白名单里，不计）。 */
+ok('F2 筛选：平台三档 + 资源六档（名单 9）+ 分析筛选条 4 档（v10.80）',
+  (HTML.match(/<button data-v="(all|pc|mob|any|mod|saves|trainers|body)"/g) || []).length === 13,
   String((HTML.match(/<button data-v="(all|pc|mob|any|mod|saves|trainers|body)"/g) || []).length) + ' 个');
 ok('F3 搜索框 #q 存在', HTML.includes('id="q"'));
 ok('F4 弹窗骨架 #mask / #dlg / #qBody 存在',
@@ -304,6 +306,24 @@ ok('J8 ★ server.js gzip 直出中间件：accept-encoding 判定 + 穿越防�
   gzipIdx >= 0 && staticIdx > gzipIdx
   && srv.includes("Content-Encoding', 'gzip'")
   && srv.includes('startsWith(PUB_ROOT + path.sep)'), 'gzip@' + gzipIdx + ' < static@' + staticIdx);
+
+/* ── J13/J14：v10.80 ──
+ * 用户口径①：「为什么获取不到」—— 根因是**接口早就把机地本体直链取回来了**（flatFrom 每条
+ *   item 都带 section 字段，v10.27 就有），是前端老口径「只报条数、不列链接」的注释没跟上代码。
+ *   J13 守三层：section 过滤在场（不许 MOD 冒充本体）· 直链卡渲染函数在场 · 上游 error 如实放大。
+ * 用户口径②：分析模块加字段/更新时间/时间对比筛选 —— J14 守四个钩子 + 对比卡分支 +
+ *   「即时重算」（anaBuilt 单次守卫必须消失，否则筛选点了没反应）。 */
+ok('J13 ★ v10.80 机地本体直链直出：items 按 section===body 过滤 + 直链卡（jidiItemHtml）+ 上游 error 如实放大',
+  HTML.includes("x.section === 'body'")
+  && HTML.includes('function jidiItemHtml')
+  && HTML.includes('上游异常（如实转报）')
+  && HTML.includes("x.real || x.serverUrl"));
+ok('J14 ★ v10.80 分析模块 v2：新鲜度行 + 独立筛选（平台/来源/时间范围）+ 时间对比卡 + 筛选即时重算',
+  HTML.includes('id="anaFresh"') && HTML.includes('id="anaKind"') && HTML.includes('id="anaSrc"')
+  && HTML.includes('id="anaRange"') && HTML.includes('id="anaCmp"') && HTML.includes('id="anaReset"')
+  && HTML.includes('每日 09:30 随 daily-sync 自动重生成')
+  && /cmpCard\('近 7 天', 7, now\)/.test(HTML) && /cmpCard\('近 30 天', 30, now\)/.test(HTML)
+  && !HTML.includes('anaBuilt'));
 
 console.log(`\n── roster：${pass} / ${pass + fail} 通过${fail ? `（失败 ${fail}）` : ''} ──`);
 process.exit(fail ? 1 : 0);
