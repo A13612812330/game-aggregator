@@ -292,7 +292,7 @@
      （标签 90 + 容量 36 + 日期 74 + 间隙 14 ≈ 214），硬挤会溢出卡片；换行后第一行放
      「类型 + 容量」、第二行放「日期」。★ 换行使高度变成 2 行 ⇒ `min-height` 与骨架
      `.sk-tx` 必须按**两行的实测值**给（各断点要分开，见铁律 130）。 */
-  .rk-card .bd .s{display:flex;align-items:center;flex-wrap:wrap;gap:7px 7px;font-size:11px;color:var(--c-t3);min-width:0;min-height:17px}
+  .rk-card .bd .s{display:flex;align-items:center;flex-wrap:wrap;gap:7px 7px;font-size:11px;color:var(--c-t3);min-width:0;min-height:22px}
   .rk-card .bd .s .tag{flex:none;max-width:60%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     background:#EEF2FA;color:#4A5771;font-weight:650;padding:2px 8px;border-radius:6px}
   .rk-card .bd .s .sz{flex:none;font-family:var(--font-num);font-weight:700;color:#5B6B8C}
@@ -323,7 +323,20 @@
      ★ 两个数都是**浏览器实测值**，不许按 CSS 算式推（「类型」标签自带 padding，
        信息行实际高会大于 `min-height`）；由浏览器套件 P17 逐断点跨层对照守着。 */
   .rk-skel-card{display:flex;flex-direction:column;min-width:0}
-  .rk-skel-card .sk-tx{height:66px;border-radius:0 0 var(--cd-r) var(--cd-r)}
+  /* ★★ v10.77：**三档**骨架高（都是浏览器实测值，v10.77 探针逐个断点量的）。
+     为什么从两档变三档：信息行加了日期项后，**卡片窄到一定程度它会换成两行**
+     ⇒ `.bd` 高度随之从 63 跳到 88，而骨架是定值 ⇒ 断点必须落在换行临界之下。
+     ▪ ≥1101px：单行，真卡 `.bd` 实测 **63.14** ⇒ 63
+     ▪ ≤1100px：两行，实测 **87.73** ⇒ 88
+     ▪ ≤760px：两列 + 小一号字号，两行实测 **84.47** ⇒ 84
+     ★★ 临界的**实测**位置：视口 1100（内容宽 180）= 两行 / 1110（182）= 单行
+       ⇒ 三项自然宽 ≈181px，断点正好卡在 1100 这个整数上（见下面那条 media）。 */
+  .rk-skel-card .sk-tx{height:63px;border-radius:0 0 var(--cd-r) var(--cd-r)}
+  @media(max-width:1100px){
+    .rk-skel-card .sk-tx{height:88px}
+    /* 信息行两行时底高要跟着抬 —— 否则「三项都缺」的卡片这一行只有 22px 高，同排参差。 */
+    .rk-grid .rk-card .bd .s{min-height:46px}
+  }
 
   /* ============ 🔍 搜索弹窗（命令面板式） ============ */
   .smask{position:fixed;inset:0;background:rgba(9,14,30,.55);z-index:120;opacity:0;transition:.2s;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);pointer-events:none}
@@ -1991,13 +2004,14 @@
     .rk-grid > .rk-card:nth-child(n+7),
     .rk-grid > .rk-skel-card:nth-child(n+7){display:none}
     .rk-grid .rk-card .bd{padding:8px 10px 10px;gap:5px}
-    /* ★ v10.76：桌面给信息行加了 `min-height`（防缺字段的卡片塌行），移动端字号小一号 ⇒ 同步。
-       ★★ v10.77：移动端信息行会**换行成两行**（三项装不下，见 `.bd .s` 的 `flex-wrap` 注释）
-       ⇒ 底高按两行给。两处必须一起改：只改桌面会让移动端「缺字段卡」矮一截，同排参差。 */
-    .rk-grid .rk-card .bd .s{min-height:32px}
+    /* ★★ v10.77：移动端信息行**换行成两行**（三项装不下，见 `.bd .s` 的 `flex-wrap` 注释），
+       且字号小一号 ⇒ 底高按两行的实测值给（44.59 ⇒ 45）。
+       与上面 `@media(max-width:1100px)` 那条是**同一件事的两个档**，只改一边会让同排参差。 */
+    .rk-grid .rk-card .bd .s{min-height:45px}
     /* ★ v10.76：骨架文字区在移动端也要跟着 `.bd` 收。写在内联 style 里做不到这件事
-       —— 那正是 P17 在移动端红掉暴露出来的缺陷。 */
-    .rk-skel-card .sk-tx{height:62px}
+       —— 那正是 P17 在移动端红掉暴露出来的缺陷。
+       ★★ v10.77：84 = 窄屏真卡 `.bd` 的**实测值**（84.47）。 */
+    .rk-skel-card .sk-tx{height:84px}
     .rk-grid .rk-card .th .no{min-width:21px;height:21px;font-size:11.5px;left:7px;top:7px;padding:0 6px}
     .rk-grid .rk-card .th .du{font-size:9px;padding:2px 6px;right:7px;top:7px}
     .rk-grid .rk-card .bd .t{font-size:12.5px}
@@ -2703,6 +2717,8 @@
         <button class="mini-btn" id="calBtn" style="flex:1;background:#fff;color:var(--c-t2);border-color:var(--c-border2)">校准续跑</button>
       </div>
       <button class="mini-btn" id="jidiBtn" style="background:rgba(230,65,93,.07);border-color:rgba(230,65,93,.3);color:var(--c-jidi)">⇅ 同步机地话题入本地库</button>
+      <a class="mini-btn" href="/roster/" target="_blank" rel="noopener"
+        style="display:block;text-align:center;background:#fff;color:var(--c-t2);border-color:var(--c-border2);text-decoration:none">📋 完整名单 · Roster（2.1 万款体检表）↗</a>
       <div class="idx-bar" id="idxBar"><i id="idxBarI"></i></div>
 </div>
 
@@ -3579,6 +3595,8 @@ function renderSide() {
         <button class="mini-btn" id="calBtn" style="flex:1;background:#fff;color:var(--c-t2);border-color:var(--c-border2)">校准续跑</button>
       </div>
       <button class="mini-btn" id="jidiBtn" style="background:rgba(230,65,93,.07);border-color:rgba(230,65,93,.3);color:var(--c-jidi)">⇅ 同步机地话题入本地库</button>
+      <a class="mini-btn" href="/roster/" target="_blank" rel="noopener"
+        style="display:block;text-align:center;background:#fff;color:var(--c-t2);border-color:var(--c-border2);text-decoration:none">📋 完整名单 · Roster（2.1 万款体检表）↗</a>
       <div class="idx-bar" id="idxBar"><i id="idxBarI"></i></div>
       <div class="idx-tip" id="idxTip"></div>
     </details>

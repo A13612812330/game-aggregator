@@ -540,8 +540,22 @@ async function stepJidi(ctx) {
  *  ★ 上限 500 条：积压更多时次日继续滚动补，不让每日任务变成小时级。
  *  实测口径：60 条 / 65 秒；索引重建 1.3s（17,177 款）。
  */
-async function stepSteamreq(ctx) {
-  const LIMIT = 500;
+/** 10) roster 名单页重生成（v10.79，用户口径：「roster 挂进每日自动重生成」）。
+ *  放在**最后**：吃当天全部同步完的数据。产物双副本 + .gz 由 gen 脚本自己管（含旧归档清理 KEEP=7）。 */
+async function stepRoster(ctx) {
+  const r = await runProc(process.execPath,
+    [path.join('tools', 'gen-roster.js'), '--stamp', new Date().toISOString().slice(0, 10)],
+    { timeoutMs: 300000 });
+  if (!r.ok) {
+    return { status: 'fail', detail: 'EXIT ' + r.code + '：' + String(r.stderr || r.stdout).trim().slice(0, 120) };
+  }
+  const m = /合计\s*(\d+)\s*行/.exec(String(r.stdout || ''));
+  const gz = fs.existsSync(path.join(ROOT, 'public', 'roster', 'index.html.gz'));
+  if (!m || !gz) return { status: 'fail', detail: '脚本成功但产物校验不过（行数/gz 缺失）' };
+  return { status: 'ok', detail: '重生成 ' + m[1] + ' 行 · 双副本+gz 就绪（/roster/ 即生效）' };
+}
+
+async function stepSteamreq(ctx) {  const LIMIT = 500;
   const before = readProduct('spec-req');
 
   const r1 = await runProc(process.execPath,
@@ -627,6 +641,8 @@ const STEP_DEFS = [
   /* ★ v10.39 新增：接上「配置要求」的每日增量（ROADMAP 1-B）。
      放在**最后**：它依赖 8 步跑完后的最新端游库（新入库的游戏才有 appid 可抓）。 */
   { key: 'steamreq', label: '配置要求预热', fn: stepSteamreq, write: true },
+  /* ★ v10.79：roster 每日自动重生成（用户口径）。放最后 —— 吃完当天全部数据再出页。 */
+  { key: 'roster', label: 'roster 名单页重生成', fn: stepRoster, write: true },
 ];
 
 function parseArgs(argv) {

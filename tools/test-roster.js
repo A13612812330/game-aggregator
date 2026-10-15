@@ -240,9 +240,42 @@ ok('J4 列显隐：4 列开关 + localStorage 记忆（读写都 try/catch）+ C
   && HTML.includes("localStorage.getItem('roster-hide-cols'")
   && HTML.includes("localStorage.setItem('roster-hide-cols'")
   && /#tbTable\.c-src th:nth-child\(3\)/.test(HTML));
-ok('J5 弹窗双栏网格 + 头部元信息行（dMeta）',
-  /class="dlg-grid"/.test(HTML) && /class="colA"/.test(HTML) && /class="colB"/.test(HTML)
-  && HTML.includes('id="dMeta"') && /@media\(min-width:720px\)/.test(HTML));
+ok('J5 ★ v10.79 弹窗内容层 = 主站 dlpop 同构：模块页签（本体/修改器/MOD/存档四签带徽标）+ 面板切换 + dMeta',
+  HTML.includes("['body', '📥 本体', bt[1], bodyPane]")
+  && HTML.includes("['tr', '⚔ 修改器'") && HTML.includes("['m', '🧩 MOD'") && HTML.includes("['sv', '💾 存档'")
+  && /class="dpane on" data-p="body"/.test(HTML)
+  && HTML.includes("x.classList.toggle('on', x.dataset.p === t)")
+  && /class="dlmod" id="dTabs"/.test(HTML)
+  && HTML.includes('id="dMeta"'));
+ok('J10 ★ v10.79 数据分析模块：视图切换 + KPI + 三榜（热游/最新补充/四条件占满）+ 复制 TSV',
+  HTML.includes('id="viewTabs"') && HTML.includes('id="anaCard"') && HTML.includes('id="anaKpi"')
+  && HTML.includes('id="anaHot"') && HTML.includes('id="anaNew"') && HTML.includes('id="anaRec"')
+  && HTML.includes('四条件占满') && HTML.includes('r[6] === 1 && r[7] > 0 && r[8] > 0 && r[9] > 0')
+  && (HTML.match(/copyText\(tsvOf/g) || []).length === 3);
+ok('J11 ★ v10.79 每日重生成配套：gen 脚本旧归档清理（KEEP=7，只删 docs/reports 可再生归档，不碰 public）',
+  (() => {
+    const gsrc = fs.readFileSync(GEN, 'utf8');
+    const m = /const KEEP = (\d+);/.exec(gsrc);
+    if (!m || Number(m[1]) !== 7) return false;
+    const cleanSeg = gsrc.slice(gsrc.indexOf('const KEEP'));
+    return cleanSeg.includes('unlinkSync')                 // 真在删
+      && cleanSeg.includes("path.join(ROOT, 'docs', 'reports')")  // 只扫归档目录
+      && !/WEB|public/.test(cleanSeg);                     // 不碰线上短链落点
+  })());
+ok('J11b daily-sync 已挂 roster 步骤（每日自动重生成，write 步骤 ⇒ --dry 自动跳过）',
+  (() => {
+    const s = fs.readFileSync(path.join(ROOT, 'tools', 'daily-sync.js'), 'utf8');
+    return /key: 'roster', label: 'roster 名单页重生成'/.test(s) && s.includes('async function stepRoster')
+      && s.includes('gen-roster.js') && s.includes('--stamp');
+  })());
+ok('J12 ★ v10.79 产物内嵌 JS 语法可解析（gen 模板串里的 \\n 会被提前转义劈断字符串字面量 ⇒ 整页瘫痪；node --check 查不到内嵌层）',
+  (() => {
+    const vm = require('vm');
+    try {
+      for (const m of HTML.matchAll(/<script>([\s\S]*?)<\/script>/g)) new vm.Script(m[1]);
+      return true;
+    } catch (e) { console.log('    [' + String(e.message).slice(0, 60) + ']'); return false; }
+  })());
 ok('J6 ★ 资源弹窗直达参数是 dl=body（旧写法 dl=1 一直靠服务端兜底活着，不许回归）',
   HTML.includes("'&dl=body'") && !HTML.includes('&dl=1'));
 ok('J9 ★ v10.78b 弹窗壳对齐主站 dlpop：760 宽 / 80vh 上限 / 入场动画 / blur(3) 遮罩 / 28px 方形关闭钮 / 头部图标',

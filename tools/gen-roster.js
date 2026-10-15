@@ -341,8 +341,49 @@ const html = `<!DOCTYPE html>
   #dlg .hd .dmeta{display:flex;gap:9px;align-items:center;flex-wrap:wrap;font-size:11.5px;font-weight:600;
     color:var(--c-t3);margin-top:3px}
   #dlg .hd .dmeta a{font-weight:700;color:var(--c-primary);text-decoration:none}
-  .dlg-grid{display:grid;grid-template-columns:1fr;gap:14px}
-  @media(min-width:720px){.dlg-grid{grid-template-columns:minmax(250px,330px) 1fr}}
+  /* ── v10.79：弹窗内容层对齐主站「网盘下载弹窗」的模块页签（.dlmod/.dlm 同款）──
+     壳（v10.78b）只对齐了外观；这里把「双栏 sec」改成「页签 + 面板」：
+     本体 / 修改器 / MOD / 存档 四签恒显（带计数徽标），点签切面板 —— 与主站资源弹窗同构。 */
+  .dlmod{display:flex;gap:6px;padding:11px 15px 0;border-bottom:1px solid var(--c-border);flex:none;
+    overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .dlmod::-webkit-scrollbar{display:none}
+  .dlm{font:inherit;font-size:12px;font-weight:750;color:var(--c-t2);background:#F3F5FA;
+    border:1px solid var(--c-border);border-bottom:0;border-radius:9px 9px 0 0;padding:7px 12px;
+    margin-bottom:-1px;cursor:pointer;white-space:nowrap;flex:none;display:inline-flex;align-items:center;gap:5px}
+  .dlm:hover{border-color:var(--c-border2);color:var(--c-t1)}
+  .dlm.on{color:var(--c-primary);background:#fff;border-color:var(--c-border);border-bottom:1px solid #fff;
+    box-shadow:inset 0 -2px 0 var(--c-primary)}
+  .dlm i{font-style:normal;font-family:var(--font-num);font-size:10.5px;font-weight:800;color:var(--c-t3);
+    background:#fff;border-radius:999px;padding:1px 6px;border:1px solid var(--c-border)}
+  .dlm.on i{color:var(--c-primary);border-color:rgba(46,107,255,.3)}
+  .dpane{display:none;padding:12px 15px}
+  .dpane.on{display:block}
+  /* ── v10.79：视图切换（名单 ⇄ 数据分析）+ 分析区 ── */
+  .vt{display:inline-flex;background:#fff;border:1px solid var(--c-border2);border-radius:8px;overflow:hidden;margin-right:8px}
+  .vt button{border:0;background:#fff;padding:6px 11px;font:inherit;font-size:12px;font-weight:750;
+    color:var(--c-t2);cursor:pointer;white-space:nowrap}
+  .vt button.on{background:var(--c-primary);color:#fff}
+  .ana-kpis{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .ana-kpi{background:#F7F9FC;border:1px solid var(--c-border);border-radius:10px;padding:8px 13px;
+    font-size:11px;color:var(--c-t3);min-width:104px}
+  .ana-kpi b{display:block;font:800 20px/1.25 var(--font-num);color:var(--c-t1)}
+  .ana-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:900px){.ana-grid{grid-template-columns:1fr}}
+  .ana-col{border:1px solid var(--c-border);border-radius:10px;padding:10px 12px;background:#fff;min-width:0}
+  .ana-col>h4{margin:0 0 6px;font-size:12.5px;font-weight:800;display:flex;align-items:center;gap:8px}
+  .ana-col>h4 .cp{margin-left:auto;font:inherit;font-size:10.5px;font-weight:750;color:var(--c-primary);
+    background:var(--c-primary-soft);border:0;border-radius:6px;padding:3px 8px;cursor:pointer}
+  .ana-col>h4 .cp:hover{filter:brightness(.96)}
+  .ana-it{display:flex;gap:8px;align-items:center;padding:5px 2px;border-bottom:1px dashed var(--c-border);
+    cursor:pointer;font-size:12px}
+  .ana-it:last-child{border-bottom:0}
+  .ana-it:hover{background:#FAFBFE}
+  .ana-it .rk{flex:none;width:18px;height:18px;display:grid;place-items:center;font:800 10.5px/1 var(--font-num);
+    color:var(--c-t3);background:#F3F5FA;border:1px solid var(--c-border);border-radius:5px}
+  .ana-it .rk.top{color:#fff;background:var(--c-primary);border-color:var(--c-primary)}
+  .ana-it .tt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:650}
+  .ana-it .hv{flex:none;font:800 10.5px/1.6 var(--font-num);color:var(--c-t2)}
+  .ana-empty{color:var(--c-t3);font-size:12px;padding:8px 2px}
   @media(max-width:760px){
     .wrap{padding:10px 10px 50px}
     .nm{max-width:170px}
@@ -421,7 +462,11 @@ const html = `<!DOCTYPE html>
     <button class="btn" id="reset">重置</button>
   </div>
 
-  <div class="card">
+  <div class="vt" id="viewTabs" role="group" aria-label="视图切换">
+    <button data-v="tbl" class="on">📋 名单</button>
+    <button data-v="ana">📊 数据分析</button>
+  </div>
+  <div class="card" id="tblCard">
     <table id="tbTable">
       <thead>
         <tr>
@@ -451,12 +496,31 @@ const html = `<!DOCTYPE html>
       </div>
     </div>
   </div>
+
+  <div class="card" id="anaCard" hidden>
+    <div class="ana-kpis" id="anaKpi"></div>
+    <div class="ana-grid">
+      <div class="ana-col">
+        <h4>🔥 热游 Top 20<button class="cp" id="cpHot" type="button">复制 TSV</button></h4>
+        <div id="anaHot"></div>
+      </div>
+      <div class="ana-col">
+        <h4>🆕 最新补充 Top 20<button class="cp" id="cpNew" type="button">复制 TSV</button></h4>
+        <div id="anaNew"></div>
+      </div>
+      <div class="ana-col">
+        <h4>⭐ 推荐位 · 四条件占满<button class="cp" id="cpRec" type="button">复制 TSV</button></h4>
+        <div id="anaRec"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="mask"><div id="dlg">
   <div class="hd"><span class="ic">📥</span><div class="tt"><h3 id="dTitle">-</h3><div class="dmeta" id="dMeta"></div></div><button id="dClose" title="关闭">✕</button></div>
   <div class="acts" id="dActs" hidden></div>
-  <div class="bd" id="dBody"></div>
+  <div class="dlmod" id="dTabs" hidden></div>
+  <div class="bd" id="dBody" style="padding:0"></div>
   <div class="ft"><span class="dim" id="dHint"></span></div>
 </div></div>
 
@@ -703,21 +767,20 @@ const html = `<!DOCTYPE html>
   }
   /* 每类最多列 SEC_MAX 条（v10.66 用户口径：「每个最多显示5条」）。
      ★ 超额时**必须给出「还有 N 条」与去处** —— 只截断不说明，用户会以为这就是全部
-       （本项目里「静默截断」是一类事故模式，如熔断误判那例）。 */
-  function secHtml(head, arr, moreHref){
-    if(!arr || !arr.length) return '<div class="sec"><h4><span class="bar"></span>' + head
-      + ' <span class="n">0 条</span></h4><div class="none">本游戏没有这一类资源</div></div>';
+       （本项目里「静默截断」是一类事故模式，如熔断误判那例）。
+     v10.79：页签化后不再自带 h4 小节头（页签本身就是头），只出面板内容。 */
+  function secInner(arr, moreHref){
+    if(!arr || !arr.length) return '<div class="none">本游戏没有这一类资源</div>';
     var shown = arr.slice(0, SEC_MAX);
     var rest = arr.length - shown.length;
-    var h = '<div class="sec"><h4><span class="bar"></span>' + head
-      + ' <span class="n">' + arr.length + ' 条</span></h4>' + shown.map(itemHtml).join('');
+    var h = shown.map(itemHtml).join('');
     if(rest > 0){
       h += '<div class="more"><span>仅显示前 ' + SEC_MAX + ' 条 · 本类共收录 <b>' + arr.length + '</b> 条</span>'
         + (moreHref ? '<a class="lnk" href="' + esc(moreHref) + '" target="_blank" rel="noopener">还有 '
             + '<b>' + rest + '</b> 条，去详情页看全部 ↗</a>' : '<span class="dim">（更多见源站）</span>')
         + '</div>';
     }
-    return h + '</div>';
+    return h;
   }
   var curRow = null;
   function openDlg(r){
@@ -744,22 +807,30 @@ const html = `<!DOCTYPE html>
       + (r[3] ? '<span class="mono">' + esc(r[3]) + '</span>' : '')
       + (r[12] ? '<a href="' + esc(r[12]) + '" target="_blank" rel="noopener">源站 ↗</a>' : '')
       + (r[11] ? '<a href="' + esc(r[11]) + '" target="_blank" rel="noopener">封面 ↗</a>' : '');
-    /* v10.78：双栏网格 —— 窄栏=本体+实时查询（一屏看完结论），宽栏=三类资源（纵向长列表）。
-       ≥720px 双栏，小屏退回单栏（本体在上）。各字段 id（bodyBox/qBody/qBodyMsg）不变。 */
-    var bodySec = '<div class="sec"><h4><span class="bar"></span>本体 '
-      + '<span class="st ' + bt[0] + '">' + bt[1] + '</span>'
-      + (r[3] ? ' <span class="n">' + esc(r[3]) + '</span>' : '') + '</h4>'
+    /* v10.79：弹窗内容层与主站「网盘下载弹窗」同构 —— 模块页签（本体/修改器/MOD/存档，
+       恒显四签带计数徽标）+ 点签切面板。壳样式 v10.78b 已对齐，这里对齐信息结构。
+       字段 id（bodyBox/qBody/qBodyMsg）不变。 */
+    var bodyPane = '<div class="dpane on" data-p="body">'
+      + '<div style="margin-bottom:8px">本体状态 <span class="st ' + bt[0] + '">' + bt[1] + '</span>'
+      + (r[3] ? ' <span class="mono dim" style="font-size:11px">' + esc(r[3]) + '</span>' : '') + '</div>'
       + '<div id="bodyBox">' + (r[6]
           ? '<div class="none">来自 v10.57 的逐款实测结论（源站声明值）。</div>'
           : '<div class="none">本地没有这一款的实测结果。</div>') + '</div>'
       + '<div style="margin-top:7px"><button class="btn solid" id="qBody">实时查询本体（打源站，约 2–8 秒）</button>'
       + '<span class="dim" id="qBodyMsg" style="margin-left:9px"></span></div></div>';
-    $('#dBody').innerHTML = '<div class="dlg-grid"><div class="colA">' + bodySec + '</div>'
-      + '<div class="colB">'
-      + secHtml('修改器', g && g.tr, lk.tab('modifier'))
-      + secHtml('MOD', g && g.m, lk.tab('mod'))
-      + secHtml('存档', g && g.sv, lk.tab('save'))
-      + '</div></div>';
+    var panes = [
+      ['body', '📥 本体', bt[1], bodyPane],
+      ['tr', '⚔ 修改器', g && g.tr ? g.tr.length : 0, '<div class="dpane" data-p="tr">' + secInner(g && g.tr, lk.tab('modifier')) + '</div>'],
+      ['m', '🧩 MOD', g && g.m ? g.m.length : 0, '<div class="dpane" data-p="m">' + secInner(g && g.m, lk.tab('mod')) + '</div>'],
+      ['sv', '💾 存档', g && g.sv ? g.sv.length : 0, '<div class="dpane" data-p="sv">' + secInner(g && g.sv, lk.tab('save')) + '</div>'],
+    ];
+    var tabsEl = $('#dTabs');
+    tabsEl.hidden = false;
+    tabsEl.innerHTML = panes.map(function(p, i){
+      return '<button class="dlm' + (i ? '' : ' on') + '" data-t="' + p[0] + '">' + p[1]
+        + ' <i>' + p[2] + '</i></button>';
+    }).join('');
+    $('#dBody').innerHTML = panes.map(function(p){ return p[3]; }).join('');
     $('#dHint').textContent = '每类最多显示 ' + SEC_MAX + ' 条，更多在站内详情页 · 数据源：本地库（MOD / 存档 / 修改器 与详情页同源）';
     $('#mask').classList.add('on');
     var qb = $('#qBody');
@@ -977,6 +1048,107 @@ const html = `<!DOCTYPE html>
     applyCols();
   });
 
+  /* ── v10.79：弹窗模块页签切换（事件委托，绑一次） ── */
+  $('#dTabs').addEventListener('click', function(e){
+    var b = e.target && e.target.closest ? e.target.closest('.dlm') : null;
+    if(!b) return;
+    var t = b.dataset.t;
+    document.querySelectorAll('#dTabs .dlm').forEach(function(x){
+      x.classList.toggle('on', x === b);
+    });
+    document.querySelectorAll('#dBody .dpane').forEach(function(x){
+      x.classList.toggle('on', x.dataset.p === t);
+    });
+  });
+
+  /* ── v10.79：数据分析视图 ──
+     用户口径：「增加一个模块，数据分析模块，后续我将从此进行提取热游、新游补充或者推荐」。
+     三个榜全部**现算自同一份 D**（与名单同源同口径），每条可点开查看弹窗；
+     「复制 TSV」给后续提取用（名称/id/热度/大小/更新时间/来源，Tab 分隔）。 */
+  var anaBuilt = false;
+  function anaRow(r, i, valTxt){
+    return '<div class="ana-it" data-ai="' + i + '">'
+      + '<span class="rk' + (i < 3 ? ' top' : '') + '">' + (i + 1) + '</span>'
+      + '<span class="tt" title="' + esc(r[0]) + '">' + esc(r[0]) + '</span>'
+      + '<span class="hv">' + valTxt + '</span></div>';
+  }
+  function tsvOf(list){
+    /* ★ \\t / \\n 双反斜杠：这段在 gen 的模板串里，单写 \n 会被 gen 提前转义成真实换行，
+       把产物里的字符串字面量劈成跨行 ⇒ 页面 JS 直接 SyntaxError（整页脚本瘫痪） */
+    return ['名称\\tid\\t来源\\t热度\\t大小\\t更新时间\\t本体\\t修改器\\tMOD\\t存档'].concat(list.map(function(r){
+      return [r[0], r[1], SRC_NAME[r[2]] || '?', r[4], r[3], fmtTs(r[5]), (BODY_TXT[r[6]] || BODY_TXT[0])[1],
+        r[9], r[7], r[8]].join('\\t');
+    })).join('\\n');
+  }
+  function copyText(s, btn){
+    var done = function(){ var o = btn.textContent; btn.textContent = '✓ 已复制'; setTimeout(function(){ btn.textContent = o; }, 1200); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(s).then(done, function(){ fallbackCopy(s); done(); });
+    } else { fallbackCopy(s); done(); }
+  }
+  function fallbackCopy(s){
+    var ta = document.createElement('textarea');
+    ta.value = s; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch(_e){}
+    document.body.removeChild(ta);
+  }
+  function buildAna(){
+    if(anaBuilt) return;
+    anaBuilt = true;
+    var now = Date.now(), WEEK = 7 * 86400000;
+    var nHot = 0, nNew = 0, nRec = 0, nRes = 0, nBodyOk = 0;
+    var hot = [], neu = [], rec = [];
+    for(var i = 0; i < R.length; i++){
+      var r = R[i];
+      if(r[4] > 0) nHot++;
+      if(r[5] >= now - WEEK) nNew++;
+      if(r[7] || r[8] || r[9]) nRes++;
+      if(r[6] === 1) nBodyOk++;
+      /* 推荐位 = 四条件占满：本体可下 ∩ MOD ∩ 修改器 ∩ 存档（与主站「四条件游戏表」同判据） */
+      if(r[6] === 1 && r[7] > 0 && r[8] > 0 && r[9] > 0){ nRec++; if(rec.length < 20) rec.push(r); }
+    }
+    hot = R.filter(function(r){ return r[4] > 0; }).sort(function(a, b){ return b[4] - a[4]; }).slice(0, 20);
+    neu = R.filter(function(r){ return r[5] > 0; }).sort(function(a, b){ return b[5] - a[5]; }).slice(0, 20);
+    $('#anaKpi').innerHTML = [
+      ['总条目', R.length], ['有热度', nHot], ['近 7 天有更新', nNew],
+      ['有三类资源 ≥1', nRes], ['本体实测可下', nBodyOk], ['四条件占满', nRec],
+    ].map(function(k){
+      return '<div class="ana-kpi">' + k[0] + '<b>' + k[1] + '</b></div>';
+    }).join('');
+    $('#anaHot').innerHTML = hot.length ? hot.map(function(r, i){
+      return anaRow(r, i, fmtHot(r[4]));
+    }).join('') : '<div class="ana-empty">没有热度数据</div>';
+    $('#anaNew').innerHTML = neu.length ? neu.map(function(r, i){
+      return anaRow(r, i, fmtTs(r[5]));
+    }).join('') : '<div class="ana-empty">没有更新时间数据</div>';
+    $('#anaRec').innerHTML = rec.length ? rec.map(function(r, i){
+      return anaRow(r, i, fmtSize(r[3]));
+    }).join('') : '<div class="ana-empty">暂无四条件占满的条目</div>';
+    /* 榜内点击 → 打开同一份查看弹窗（行引用直接闭包传递，不走索引防排序漂移） */
+    var bindList = function(box, list){
+      var items = box.querySelectorAll('.ana-it');
+      for(var i = 0; i < items.length; i++){
+        (function(el, r){ el.addEventListener('click', function(){ openDlg(r); }); })(items[i], list[i]);
+      }
+    };
+    bindList($('#anaHot'), hot); bindList($('#anaNew'), neu); bindList($('#anaRec'), rec);
+    $('#cpHot').addEventListener('click', function(){ copyText(tsvOf(hot), this); });
+    $('#cpNew').addEventListener('click', function(){ copyText(tsvOf(neu), this); });
+    $('#cpRec').addEventListener('click', function(){ copyText(tsvOf(rec), this); });
+  }
+  document.querySelectorAll('#viewTabs button').forEach(function(b){
+    b.addEventListener('click', function(){
+      document.querySelectorAll('#viewTabs button').forEach(function(x){
+        x.classList.toggle('on', x === b);
+      });
+      var ana = b.dataset.v === 'ana';
+      $('#tblCard').hidden = ana;
+      $('#anaCard').hidden = !ana;
+      if(ana) buildAna();
+    });
+  });
+
   /* ── 初始载入：先吃 URL hash（外部进来的定位），再同步控件，再首绘 ── */
   readHash(); syncUI(); applyCols(); markSort(); render();
   window.__ROSTER__ = { data:D, view:function(){ return V; }, filter:F };
@@ -1000,3 +1172,20 @@ const MB = (Buffer.byteLength(html) / 1048576).toFixed(2);
 console.log(`[roster] 产出 ${path.relative(ROOT, OUT)}  ${MB} MB`);
 console.log(`[roster] 产出 ${path.relative(ROOT, WEB)}  ${MB} MB（线上短链 /roster/）`);
 console.log(`[roster] 产出 ${path.relative(ROOT, WEB)}.gz  ${(gzBuf.length / 1048576).toFixed(2)} MB（gzip 直出用）`);
+
+/* ★ v10.79：归档只保留最近 KEEP 份 —— daily-sync 每日自动重生成后，不清理的话
+   docs/reports 每天净增 ~20MB（html + json 快照）。只删本脚本自己的两种**可再生**产物，
+   public/roster 覆盖写不在其列；KEEP 份内的新旧都不动（test-roster/counterproof 读最新一份）。 */
+const KEEP = 7;
+const repDir = path.join(ROOT, 'docs', 'reports');
+for (const pat of [/^gamehub-roster-(\d{4}-\d{2}-\d{2})\.html$/, /^_roster-(\d{4}-\d{2}-\d{2})\.json$/]) {
+  const olds = fs.readdirSync(repDir)
+    .map((f) => { const m = pat.exec(f); return m ? { f, d: m[1] } : null; })
+    .filter(Boolean)
+    .sort((a, b) => (a.d < b.d ? 1 : -1))
+    .slice(KEEP);
+  for (const x of olds) {
+    fs.unlinkSync(path.join(repDir, x.f));
+    console.log(`[roster] 清理旧归档 ${x.f}（保留最近 ${KEEP} 份）`);
+  }
+}
