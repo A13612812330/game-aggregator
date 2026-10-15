@@ -24,8 +24,12 @@
  */
 
 /* ★ v10.76：展示位随卡片改「3 列 × 3 行」而变成 14（轮播 5 + 卡片 9）。
+   ★★ v10.77：卡片改「**5 列 × 3 行 = 15**」（用户口径「参考这个…每一行都铺满而不是遗漏（三行）」）
+   ⇒ 展示位变成 **20**（轮播 5 + 卡片 15）。
+   ★ 这是**桌面口径**：窄屏（≤760px）由 CSS 的 `nth-child(n+7)` 把卡片收到 6 张（2 列 × 3 行），
+     但服务端与骨架仍按 20 备货 —— 窄屏要的是「少显示」，不是「少取数」。
    这个数只在这里定义一处，服务端 meta 与前端分段都从这里取。 */
-const RANK_SHOW_N = 14; // 首页榜单总展示数（轮播 5 + 卡片 9）
+const RANK_SHOW_N = 20; // 首页榜单总展示数（轮播 5 + 卡片 15）
 const RANK_CAR_N = 5;   // 轮播位条数
 
 /* ★ v10.75：非游戏条目判据**合并到单一真源** `data/rank-merge.js`。
@@ -38,7 +42,7 @@ const { TOOL_RE, coverScore } = require('./rank-merge');
  *
  * @param {Array} list 源站榜单（已映射本地库字段、已重编号）
  * @param {Array} all  本地库全量（`gamesDb.all()`）
- * @param {number} [n] 目标条数，默认 `RANK_SHOW_N`（v10.76 = 14）
+ * @param {number} [n] 目标条数，默认 `RANK_SHOW_N`（v10.77 = 20）
  * @returns {{list:Array, filled:number, srcN:number}}
  *   list  —— 定长（最多 n）的展示列表；补位条目标 `filled:true`
  *   filled —— 补了几条（0 = 源站本来就够，前端据此决定要不要显示「含库内补位」说明）
