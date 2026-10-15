@@ -34,13 +34,18 @@ const BASE = process.env.BASE || 'http://127.0.0.1:8123';
 /* ★ v10.76：本层不是「只读渲染」——P17 要做**跨层对照**（源码字面值 vs 实测值），
    所以需要主源文本。这也是「骨架高 = 真卡高」这条承诺唯一能被机器守住的方式。 */
 const srcIdx = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
-/* ★★ v10.76：卡片 6 → **9** 张（用户口径「轮播图下需要的是 9 个卡片」）。
-   ⇒ 桌面 3 列 = 3 行；移动 2 列 = **5 行**（末行只有 1 张 —— 9 是奇数，这是必然的，
-     不是布局 bug；套件按 5 行判，免得下轮有人当成缺陷去「修」）。 */
+/* ★★ v10.77：卡片改 **5 列 × 3 行 = 15**（用户口径「参考这个 [截图] + 每一行都铺满而不是遗漏
+   （三行）」）；窄屏 2 列 × 3 行 = **6**（多出的 9 张由 CSS `nth-child(n+7)` 隐藏 ——
+   条数池仍是桌面口径 15，所以 DOM 里 cards.length 仍是 15，**可见数**才分档）。
+   ⇒ v10.76 的「轮播限宽」三件套（P14 限宽 / P15 居中 / P16 高度上界）随用户「轮播图回退到
+     上一步」**整体撤销**，只留一条 P14（轮播恢复**通栏**，宽 == 内容区宽）守回退不漂。 */
 const VIEWPORTS = [
-  { key: '桌面 1440×1000', w: 1440, h: 1000, colN: 3, rowN: 3, carCap: 'narrow' },
-  { key: '移动 390×844', w: 390, h: 844, colN: 2, rowN: 5, carCap: 'fill' },
+  { key: '桌面 1440×1000', w: 1440, h: 1000, colN: 5, rowN: 3, skelIdx: 0 },
+  { key: '中间 880×900', w: 880, h: 900, colN: 5, rowN: 3, skelIdx: 1 },
+  { key: '移动 390×844', w: 390, h: 844, colN: 2, rowN: 3, skelIdx: 2 },
 ];
+/* 窄屏可见卡片数（CSS 隐藏第 7 张往后）；桌面/中间档 = 全量 */
+const visCardN = (v) => (v.w <= 760 ? 6 : 15);
 
 /* 取样：只读**渲染结果**，不读源码（这层的价值就在于此） */
 const PROBE = () => {
@@ -60,9 +65,16 @@ const PROBE = () => {
       natAR: i.naturalWidth && i.naturalHeight ? +(i.naturalWidth / i.naturalHeight).toFixed(3) : null,
       boxAR: br && br.height ? +(br.width / br.height).toFixed(3) : null,
       hidden: i.style.visibility === 'hidden',
+      /* ★ v10.77：**所在盒**是否可见（display:none 的祖先 ⇒ rect 全 0）——
+         这才是「用户看不看得到」的真值；`i.style.visibility` 只看内联样式，照不出 CSS 隐藏。 */
+      boxHidden: !br || br.width === 0 || br.height === 0,
     };
   });
   const cards = [...document.querySelectorAll('#rankList .rk-grid .rk-card')];
+  /* ★★ v10.77：几何统计只算**可见卡** —— 窄屏 `nth-child(n+7)` 隐藏的卡 rect 全 0
+     （top 全相同），混进来会把 rowN 数成 4、lineCounts 数成 [2,2,2,9]（实测假红）。
+     cardInfo / cardN（DOM 总数）仍用全量 —— P8 的「角标连续 6…20」要验池子完整。 */
+  const vis = cards.filter((c) => { const b = c.getBoundingClientRect(); return b.width > 0 && b.height > 0; });
   const car = document.querySelector('#rankList .rk-car');
   const cur = car ? car.querySelector('.slide.cur') : null;
   return {
@@ -71,15 +83,27 @@ const PROBE = () => {
     carN: document.querySelectorAll('#rankList .rk-car .slide').length,
     cardN: cards.length,
     cardColN: (() => {
-      if (!cards.length) return 0;
-      const t0 = Math.round(cards[0].getBoundingClientRect().top);
-      return cards.filter((c) => Math.round(c.getBoundingClientRect().top) === t0).length;
+      if (!vis.length) return 0;
+      const t0 = Math.round(vis[0].getBoundingClientRect().top);
+      return vis.filter((c) => Math.round(c.getBoundingClientRect().top) === t0).length;
     })(),
-    rowN: new Set(cards.map((c) => Math.round(c.getBoundingClientRect().top))).size,
-    cardW: cards[0] ? R(cards[0]).w : null,
-    cardH: cards[0] ? R(cards[0]).h : null,
+    rowN: new Set(vis.map((c) => Math.round(c.getBoundingClientRect().top))).size,
+    /* ★★ v10.77「每一行都铺满」的可测形式：按 top 分组数每行卡片数，每行都必须 == 列数。
+       （宽屏 5 列 × 3 行 ⇒ [5,5,5]；窄屏隐藏后 2 列 × 3 行 ⇒ [2,2,2]。
+         任何一行少一张（比如末行 4/5、[5,5,4]）在这里都会被照出来。） */
+    lineCounts: (() => {
+      const m = new Map();
+      for (const c of vis) {
+        const t = Math.round(c.getBoundingClientRect().top);
+        m.set(t, (m.get(t) || 0) + 1);
+      }
+      return [...m.values()];
+    })(),
+    visCardN: vis.length,
+    cardW: vis[0] ? R(vis[0]).w : null,
+    cardH: vis[0] ? R(vis[0]).h : null,
     /* ★ v10.76：`.bd` 实测高 —— 与骨架里的字面值做**跨层对照**（P17）。 */
-    bdH: cards[0] && cards[0].querySelector('.bd') ? R(cards[0].querySelector('.bd')).h : null,
+    bdH: vis[0] && vis[0].querySelector('.bd') ? R(vis[0].querySelector('.bd')).h : null,
     /* ★ v10.76：轮播尺寸与居中量（用户口径「轮播图太大了」的可测形式）。
        居中量的参照物取**同区的整宽块** `.rk-grid`（不写死 1196/22 这类数）。 */
     carW: car ? R(car).w : null,
@@ -103,6 +127,8 @@ const PROBE = () => {
       no: (c.querySelector('.th .no') || {}).textContent || '',
       dual: !!c.querySelector('.th .du'),
     })),
+    /* ★ v10.77：日期项文本样本（P7b 用；「2026-10-15」→ 页面上是「2026/10/15」） */
+    dtSamples: cards.map((c) => ((c.querySelector('.bd .s .dt') || {}).textContent || '').trim()).filter(Boolean),
     /* 轮播当前张：图文一致性 */
     curTxt: cur ? ((cur.querySelector('.info .t') || {}).textContent || '') : '',
     curImg: cur ? ((cur.querySelector('img') || {}).getAttribute ? cur.querySelector('img').getAttribute('src') : '') : '',
@@ -110,6 +136,9 @@ const PROBE = () => {
     imgs: flat,
     imgOk: flat.filter((x) => x.ok).length,
     imgVisible: flat.filter((x) => x.ok && !x.hidden).length,
+    /* ★★ v10.77：**可见**图（隐藏卡里的 img 不触发 load，不能进等待与破图判据） */
+    visImgs: flat.filter((x) => !x.boxHidden),
+    visImgOk: flat.filter((x) => !x.boxHidden && x.ok).length,
     /* 比例不符的图（「被压缩 / 被裁」的可测形式） */
     arBad: flat.filter((x) => x.ok && x.natAR != null && x.boxAR != null && Math.abs(x.natAR - x.boxAR) > 0.05),
   };
@@ -138,23 +167,33 @@ function chk(name, ok, extra) {
       /* 切到「人气榜」—— 双源融合档，这是本轮的样板屏（recent 是单源） */
       await p.click('[data-p="hot"]');
       await sleep(4000);
-      /* 等所有榜单图**真的**有结果（onload 或 onerror）——
-         不等就会把「还没加载」当成「加载失败」，得到假红。 */
+      /* 等所有**可见**榜单图真的有结果（onload 或 onerror）——
+         不等就会把「还没加载」当成「加载失败」，得到假红。
+         ★★ v10.77 坑（诊断脚本实测 3m9s 挂死在这里）：窄屏 `nth-child(n+7)` 把 9 张卡
+           display:none 之后，**隐藏容器里的 `<img>` 不会触发 load/error**
+           ⇒ 上一版「等全部 img」的 promise 永远 pending ⇒ CDP `callFunctionOn`
+             等到 protocolTimeout（180s）才炸。
+         ⇒ 只等**可见**图：轮播 5 + 可见卡 6 = 11 张。隐藏卡的图不是用户看到的，
+           不该等、也不该进「破图」判据（P2 同步改为只判可见图）。 */
       await p.evaluate(() => Promise.all([...document.querySelectorAll('#rankList img')]
+        .filter((i) => i.getBoundingClientRect().width > 0)
         .map((i) => (i.complete ? 1 : new Promise((res) => { i.onload = i.onerror = res; })))));
       await sleep(500);
       const r = await p.evaluate(PROBE);
 
       /* ---- P 阳性对照 ---- */
-      chk('P1 ★★ 阳性对照：接口有数据且页面真渲染出轮播 + 卡片（否则下面全是假红）',
-        list.length >= 14 && r.carN === 5 && r.cardN === 9,
-        '接口 ' + list.length + ' 条 · 轮播 ' + r.carN + ' 张 / 卡片 ' + r.cardN + ' 张');
+      /* ★★ v10.77：可见数分档（桌面/中间 15、窄屏 6），DOM 总数恒 15（窄屏靠 CSS 隐藏）。 */
+      chk('P1 ★★ 阳性对照：接口有数据且页面真渲染出轮播 + 卡片（可见 ' + visCardN(v) + ' 张）',
+        list.length >= 20 && r.carN === 5 && r.cardN === 15 && r.visCardN === visCardN(v),
+        '接口 ' + list.length + ' 条 · 轮播 ' + r.carN + ' / DOM 卡片 ' + r.cardN
+          + ' / 可见 ' + r.visCardN);
 
-      /* ---- P2 封面图真的加载成功（本轮修的核心） ---- */
-      chk('P2 ★★ 榜单封面图**全部真实加载成功**（naturalWidth > 0，不许有破图）',
-        r.imgs.length >= 14 && r.imgOk === r.imgs.length,
-        r.imgOk + '/' + r.imgs.length + ' 张成功' + (r.imgOk < r.imgs.length
-          ? '｜失败：' + r.imgs.filter((x) => !x.ok).map((x) => x.src.slice(-40)).join(' , ') : ''));
+      /* ---- P2 封面图真的加载成功（v10.75 修的核心，本轮仍守） ----
+         ★★ v10.77 只判**可见图**（隐藏卡的 img 不触发 load，等不到也不能算破图）。 */
+      chk('P2 ★★ 可见封面图**全部真实加载成功**（naturalWidth > 0，不许有破图）',
+        r.visImgs.length >= 11 && r.visImgOk === r.visImgs.length,
+        r.visImgOk + '/' + r.visImgs.length + ' 张成功' + (r.visImgOk < r.visImgs.length
+          ? '｜失败：' + r.visImgs.filter((x) => !x.ok).map((x) => x.src.slice(-40)).join(' , ') : ''));
       /* ★★ P3 「不压缩图片」的可测形式：每张图的**原始宽高比** == 它所在展示框的宽高比。
          差 > 0.05 ⇒ 一定有裁切或拉压（`object-fit:cover` 下就是裁）。
          ★ 这条是离线层**测不到**的：`coverScore` 只能按 URL 形状猜，猜不出真实尺寸。 */
@@ -169,17 +208,32 @@ function chk(name, ok, extra) {
         r.imgs.filter((x) => x.ok).every((x) => x.natAR != null && Math.abs(x.natAR - 2.14) < 0.05),
         r.imgs.filter((x) => x.ok).map((x) => x.nat).slice(0, 12).join(' '));
 
-      /* ---- P5 卡片结构 ---- */
-      chk('P5 ★★ 卡片列数 = ' + v.colN + '（3 列是本轮「放大」的直接来源）',
+      /* ---- P5/P6/P6b 卡片结构（v10.77：5 列 × 3 行 + 每行铺满） ---- */
+      chk('P5 ★★ 卡片列数 = ' + v.colN + '（' + (v.w <= 760 ? '2 列是窄屏口径' : '5 列照参考图') + '）',
         r.cardColN === v.colN, '首行 ' + r.cardColN + ' 张');
-      chk('P6 ★ 卡片排成 ' + v.rowN + ' 行（9 张 ÷ ' + v.colN + ' 列）',
+      chk('P6 ★ 卡片排成 ' + v.rowN + ' 行（' + visCardN(v) + ' 张 ÷ ' + v.colN + ' 列）',
         r.rowN === v.rowN, '行数 ' + r.rowN);
-      /* ★★ P7 用户原话「显示内容游戏名 + 游戏标签 + 游戏大小**即可**」——「即可」是上界 */
-      chk('P7 ★★ 卡片信息行只有「分类标签 + 容量」（+ 游戏名 = 拍板三样，多一个都不行）',
+      /* ★★ P6b 本轮用户口径的核心句：「**每一行都铺满而不是遗漏（三行）**」。
+         ⚠️ 单看「行数 == 3」照不出 [5,5,4] 这种**末行缺一张**的半行 ——
+           行数仍是 3、比例判据也照不出（少一张不改变任何比例）。
+         所以必须有「每行数量 == 列数」这条**逐行**判据。 */
+      chk('P6b ★★ **每一行都铺满**（每行卡片数 == 列数，行分布 [' + r.lineCounts.join(',') + ']）',
+        r.lineCounts.length === v.rowN && r.lineCounts.every((n) => n === v.colN),
+        '行分布 ' + JSON.stringify(r.lineCounts) + '（要求 ' + v.colN + ' × ' + v.rowN + '）');
+      /* ★★ P7 v10.77：信息行改三项（类型 · 大小 · 日期）——用户在参考图拍板后追加日期。
+         「上界」语义不变：只允许这四类（lib 是补位标记），多出来的类都算越界。
+         dt 的中文标签**不许出现**（dateLabel 是混合语义，见 D23）——
+         那条由静态层 D23 守（本层 DOM 里渲染的是图标 + 值）。 */
+      chk('P7 ★★ 卡片信息行只含「类型 · 大小 · 日期」（+ 补位标记 lib；多一个类都不行）',
         r.cardInfo.length > 0 && r.cardInfo.every((c) =>
-          c.kids.length <= 2 && c.kids.every((k) => k === 'tag' || k === 'sz')),
+          c.kids.length <= 3 && c.kids.every((k) => k === 'tag' || k === 'sz' || k === 'dt' || k === 'lib')),
         '子元素类样本=' + JSON.stringify(r.cardInfo.slice(0, 2).map((c) => c.kids))
           + ' 名称样本="' + (r.cardInfo[0] || {}).name + '"');
+      /* ★ P7b 日期项真的在渲染（≥ 1 张卡有 dt 且值为「年/月/日」形状）——
+         防止「允许 dt」被理解成「dt 从没出现」。 */
+      chk('P7b ★ 日期项真实渲染（≥ 1 张卡有 `.dt` 且值为数字形状）',
+        r.cardInfo.some((c) => c.kids.includes('dt')) && r.dtSamples.some((t) => /\d{4}\/\d{1,2}\/\d{1,2}/.test(t)),
+        '样本=' + JSON.stringify(r.dtSamples.slice(0, 3)));
       chk('P8 ★ 卡片名次角标连续 ' + (r.carN + 1) + '…' + (r.carN + r.cardN),
         r.cardInfo.map((c) => c.no).join(',') === Array.from({ length: r.cardN }, (_, i) => r.carN + 1 + i).join(','),
         '角标=' + r.cardInfo.map((c) => c.no).join(','));
@@ -212,62 +266,39 @@ function chk(name, ok, extra) {
         const cardDualN = r.cardInfo.filter((c) => c.dual).length;
         const listDual = list.length;
         chk('P12 ★ 双源徽标数与数据一致（接口 dual ' + dualN + ' 条；卡片侧 ' + cardDualN + ' 个）',
-          listDual >= 14, 'dual=' + dualN + '（轮播 5 张内的 dual 不在卡片统计里，属预期）');
+          listDual >= 20, 'dual=' + dualN + '（轮播 5 张内的 dual 不在卡片统计里，属预期）');
       }
 
       /* ---- P13 无横向溢出 ---- */
       chk('P13 ★ 无横向溢出（文档宽 ≤ 视口宽 + 1px）', r.docScrollW <= v.w + 1,
         'doc ' + r.docScrollW + ' vs vp ' + v.w);
 
-      /* ---- P14/P15/P16 ★★ v10.76：轮播「太大」的量化修复 ---- */
-      /* 用户原话：「**轮播图太大了，优化下**」。
-         改前桌面实测 **1196×559**（全宽 ⇒ 高度吃满整个首屏，一条卡片都露不出来）；
-         改后 `--car-max-w:810px` + `aspect-ratio` ⇒ **810×379**。
-         ★ 判据用「上界 + 居中」两条，不写死 810 —— 810 是**调到好看为止的参数**，
-           不是协议；协议是「明显小于内容区宽度」+「居中」+「比例不变」。
-         ★⚠️ 必须同时守「不许回到通栏」：有人删掉 `width:min(100%,var(--car-max-w))`
-           就会回到 1196，那时这条要能红。 */
-      {
-        /* ★⚠️ P14 必须**分档判**（第一版写成「一律比内容区窄 40px」⇒ 移动端假红）：
-           桌面（内容区 ~1196）→ 上限 810 **真的生效**，轮播应当明显窄于内容区；
-           移动（内容区 ~350）→ `width:min(100%,810px)` 落到 `100%`，**本来就该撑满**
-             （没有 810 的空间可用）⇒ 那时正确的判据是「打满内容区」，不是「比内容区窄」。
-           ★ 这正是「把拍板目标当成全局等式」的经典错误：同一个 CSS 值在不同断点
-             表达的是两件事，判据也得跟着分档。 */
-        const cw = r.contentW;
-        if (v.carCap === 'narrow') {
-          chk('P14 ★★ 轮播被**限宽**（宽 ≤ 811px 且明显窄于内容区 ' + cw + 'px —— 不许回到通栏）',
-            r.carW != null && r.carW <= 811 && r.carW < cw - 40,
-            '实测 ' + r.carW + '×' + r.carH + '（内容区 ' + cw + '）');
-        } else {
-          chk('P14 ★★ 轮播在窄屏**打满内容区**（' + cw + 'px —— 上限 810 在这里不生效，是预期）',
-            r.carW != null && Math.abs(r.carW - cw) <= 2,
-            '实测 ' + r.carW + '×' + r.carH + '（内容区 ' + cw + '）');
-        }
-        chk('P15 ★ 轮播在内容区**居中**（左右留白差 ≤ 2px）',
-          r.carSideGap != null && Math.abs(r.carSideGap.l - r.carSideGap.r) <= 2,
-          '左 ' + (r.carSideGap && r.carSideGap.l) + ' / 右 ' + (r.carSideGap && r.carSideGap.r));
-        /* ★ 高度上界：379（桌面）/ 164（移动）—— 余量给到 400 / 190。
-           ⚠️ 这条**不能**写成「高度 ≈ 某个值」：高度是派生的（宽 ÷ 2.14），
-             写成等式会在任何一次限宽微调时假红；上界 + P3 的比例判据合起来才是完整约束。 */
-        const hMax = v.w === 1440 ? 400 : 190;
-        chk('P16 ★★ 轮播高度 ≤ ' + hMax + 'px（改前桌面是 559px —— 这就是「太大」的量级）',
-          r.carH != null && r.carH <= hMax, '实测 ' + r.carH + 'px');
-      }
+      /* ---- P14 ★★ v10.77：轮播**回退限宽**（用户原话「轮播图回退到上一步」）----
+         v10.76 的限宽/居中/高度上界三条（P14 限宽、P15 居中、P16 上界）整体撤销。
+         ★ 但「回退」也要有判据守着 —— 否则下轮有人把 `width:min(100%,…)` 又加回来，
+           或回退只回退一半（比如删了变量、留了 margin:auto），这里都要能红。
+         判据：轮播宽 == 内容区宽（±2px），左右留白都为 0 —— 这就是「回到 v10.75 的通栏」。 */
+      chk('P14 ★★ 轮播恢复**通栏**（宽 == 内容区 ' + r.contentW + 'px，左右留白为 0）',
+        r.carW != null && r.contentW != null && Math.abs(r.carW - r.contentW) <= 2
+          && r.carSideGap != null && r.carSideGap.l <= 2 && r.carSideGap.r <= 2,
+        '实测 ' + r.carW + '×' + r.carH + '（内容区 ' + r.contentW + '；左 ' + (r.carSideGap && r.carSideGap.l)
+          + ' / 右 ' + (r.carSideGap && r.carSideGap.r) + '）');
 
       /* ---- P17 ★★ 跨层一致性：源码里的骨架字面值 vs 真实 `.bd` 实测高 ----
          守的是 v10.30 就定下的「骨架高 = 真卡高」。★ 为什么必须**跨层**判：
-           · 静态层只能看到「源码里写着 66px」，看不到真实 `.bd` 有多高；
+           · 静态层只能看到「源码里写着 63px」，看不到真实 `.bd` 有多高；
            · 浏览器层只看渲染，看不到骨架的字面值（骨架在加载完成后已被替换掉）。
-         ⇒ 两边各出一半，差 > 2px 即红。v10.76 就是靠这条发现字面值还是旧的 61px（真值 65.61）。 */
+         ⇒ 两边各出一半，差 > 2px 即红。
+         ★★ v10.77：断点从两处变**三处** —— 信息行加第三项（日期）后，桌面 5 列卡宽
+           从 ~389 掉到 ~228，信息行在 1100/1110px 之间从单行变两行 ⇒ `.bd` 有
+           63（>1100）/ 88（761–1100）/ 84（≤760）三个实测值。VIEWPORTS 的 skelIdx 与
+           CSS 书写顺序一一对应（matchAll 出现顺序）。 */
       {
-        /* 骨架文字区现在有两个断点值（桌面 66 / 移动 61，都写在 CSS 类里）。
-           按**出现顺序**取：第一条是桌面，第二条是移动（与媒体查询的书写顺序一致）。 */
         const skels = [...srcIdx.matchAll(/\.rk-skel-card \.sk-tx\{height:(\d+)px/g)].map((m) => Number(m[1]));
-        const skelH = v.carCap === 'narrow' ? skels[0] : skels[1];
+        const skelH = skels[v.skelIdx];
         chk('P17 ★★ 骨架文字区字面值 == 真实 `.bd` 实测高（差 ≤ 2px，防「改了 CSS 忘了改骨架」）',
-          skels.length === 2 && skelH > 0 && r.bdH != null && Math.abs(skelH - r.bdH) <= 2,
-          '骨架 ' + (skelH || '?') + 'px / 实测 .bd ' + r.bdH + 'px（两处断点 ' + skels.join('/') + '）');
+          skels.length === 3 && skelH > 0 && r.bdH != null && Math.abs(skelH - r.bdH) <= 2,
+          '骨架 ' + (skelH || '?') + 'px / 实测 .bd ' + r.bdH + 'px（三处断点 ' + skels.join('/') + '）');
       }
 
       await p.close();

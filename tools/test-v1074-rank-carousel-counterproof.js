@@ -159,14 +159,40 @@ const CASES = [
     need: ['D4', 'D5'],
   },
   {
-    label: '⑫ 卡片列数退回 4 列（3 列才是 v10.75「卡片放大」的来源：列越少每列越宽）',
+    label: '⑫ 卡片列数退回 3 列（5 列才是 v10.77 照参考图的拍板；v10.75/76 的 3 列已废止）',
     file: 'public/index.html',
-    /* ★ v10.76：锚点跟着 `gap` 一起从 14px 改成 12px（用户那句「稍微优化下大小」）。
-       ⚠️ 这类「实现改了、反证锚点没跟着改」的失配会被下面的**靶子存在性预检**拦住，
-          但它拦住的方式是「整轮反证白跑」⇒ 改 CSS 里有反证锚点的规则时，顺手改锚点。 */
-    break: (s) => s.replace('.rk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}',
-      '.rk-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}   /* 反证：退回 4 列 */'),
+    /* ★ v10.77：锚点跟着列数改 5（这类「实现改了、反证锚点没跟着改」的失配会被
+       下面的**靶子存在性预检**拦住，但拦住的方式是「整轮反证白跑」⇒ 改有锚点的规则时顺手改锚点）。 */
+    break: (s) => s.replace('.rk-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}',
+      '.rk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}   /* 反证：退回 3 列 */'),
     need: ['D10'],
+  },
+  {
+    /* ★★ v10.77 新增：轮播「回退限宽」是用户口径，必须守得住 ——
+       有人把 v10.76 的限宽写法加回来，D10b 要能红。 */
+    label: '㉑ ★★ 轮播限宽加回来（用户已拍板回退通栏；`--car-max-w` / `width:min(100%,…)` 不许复活）',
+    file: 'public/index.html',
+    break: (s) => s.replace('.rk-car{position:relative;aspect-ratio:var(--cover-ar)',
+      '.rk-car{position:relative;width:min(100%,var(--car-max-w));aspect-ratio:var(--cover-ar)')
+      .replace(':root{', ':root{--car-max-w:810px;'),
+    need: ['D10b'],
+  },
+  {
+    /* ★★ v10.77 新增：窄屏「每行铺满」靠 nth-child(n+7) 隐藏 —— 删掉它 ⇒ [2,2,3] 半行。 */
+    label: '㉒ ★★ 窄屏隐藏规则被删（第 7 张起不隐藏 ⇒ 2 列下出现 8 张的半行）',
+    file: 'public/index.html',
+    /* ★ 锚点用**正则 + \r?\n**：主源是 CRLF，写死 \n 的字面锚点永远不命中
+       （实测假报「锚点没命中」，白跑一轮才定位到这里）。 */
+    break: (s) => s.replace(/\.rk-grid > \.rk-card:nth-child\(n\+7\),\r?\n\s*\.rk-grid > \.rk-skel-card:nth-child\(n\+7\)\{display:none\}/,
+      '/* 反证：窄屏隐藏规则被删 */'),
+    need: ['D22'],
+  },
+  {
+    /* ★★ v10.77 新增：日期项写死中文语义标签（dateLabel 是混合语义 ⇒ XD 档失实）。 */
+    label: '㉓ ★★ 卡片日期项写死「发行日期」标签（XD 侧那其实是更新日期 ⇒ 失实）',
+    file: 'public/index.html',
+    break: (s) => s.replace('class="dt">${RK_IC_CLOCK}${esc(dt)}<', 'class="dt">发行日期：${esc(dt)}<'),
+    need: ['D23'],
   },
   {
     label: '⑭ ★★ 移动端写死轮播高度（height 会连宽度一起扭曲，且可能溢出父容器）',
@@ -215,8 +241,9 @@ const CASES = [
     /* ★★ 对应 v10.76 由**浏览器套件 P17 照出来的真缺陷**：
        文字区原来是 JS 里的一个内联字面值 ⇒ `.bd` 在移动端有自己的内边距/字号覆盖
        （实测桌面 65.61px / 移动 61px）⇒ 一个值必然只对一侧，实测「桌面对上了、移动差 4.6px」。
-       打坏方式 = 删掉移动端那处断点覆盖。 */
-    break: (s) => s.replace('    .rk-skel-card .sk-tx{height:61px}',
+       打坏方式 = 删掉移动端那处断点覆盖。
+       ★ v10.77：移动端值 61 → **84**（信息行加日期项后重测），锚点跟着改。 */
+    break: (s) => s.replace('    .rk-skel-card .sk-tx{height:84px}',
       '    /* 反证：移动端漏了断点值 */'),
     need: ['D16'],
   },

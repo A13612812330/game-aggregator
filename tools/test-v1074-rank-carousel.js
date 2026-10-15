@@ -143,11 +143,14 @@ chk('A12 ★ 本地库为空 ⇒ 返回源站那几条，不崩、也不报错',
 const r5 = rf.fillRank(null, null);
 chk('A13 ★ 两个入参都是 null ⇒ 空数组返回，不抛', Array.isArray(r5.list) && r5.list.length === 0);
 
-/* ★★ v10.76：展示总数 11 → **14**（用户口径「轮播图下需要的是 9 个卡片」⇒ 卡片 3 行 × 3 列 = 9）。
+/* ★★ v10.77：展示总数 14 → **20**（用户口径「每一行都铺满而不是遗漏（三行）」＋参考图 5 列
+   ⇒ 卡片 3 行 × 5 列 = 15，轮播 5 ⇒ 总 20）。
+   ★ 窄屏可见 6 张（2 列 × 3 行）是 **CSS 的 `nth-child(n+7)` 隐藏**，不是把池子改小 ——
+     所以这里的 20 仍是**桌面口径**，窄屏那条另有断言（D22）。
    这里钉**字面值**（不是 `=== rf.RANK_SHOW_N`）—— 它就是「拍板数」本身，
    写成同义反复等于不守（改数时不会红）。 */
-chk('A14 ★★ 常量口径：RANK_SHOW_N=' + N + ' · RANK_CAR_N=5（' + N + ' = 轮播 5 + 卡片 3 行 × 3 列 = 9）',
-  rf.RANK_SHOW_N === 14 && rf.RANK_CAR_N === 5,
+chk('A14 ★★ 常量口径：RANK_SHOW_N=' + N + ' · RANK_CAR_N=5（' + N + ' = 轮播 5 + 卡片 3 行 × 5 列 = 15）',
+  rf.RANK_SHOW_N === 20 && rf.RANK_CAR_N === 5,
   rf.RANK_SHOW_N + ' / ' + rf.RANK_CAR_N + '（卡片位 ' + (N - rf.RANK_CAR_N) + '）');
 
 /* A15 真库池子可用性 —— 补位池在真实数据上确实够用（不依赖网络，只读本地库） */
@@ -309,11 +312,17 @@ chk('D9 ★★ 分段用常量 `RK_CAR_N`（不是写死的 5）—— 服务端
    v10.74 的「放大」= 卡片仍是**横条**、把封面从 42px 加到 72px；
    v10.75 的「放大」= 卡片改**上图下文竖卡**、封面**占满卡宽**（3 列时约 389px），
    并把 4 列收成 3 列。继续守「封面 72px」会在新结构下**恒红**，而且红得没有意义。 */
-/* ★ v10.76：`gap` 14 → 12（用户那句「稍微优化下大小」落地为「间距与文字区各收一档」）。
-   列数仍是 3 —— 守点与 v10.75 一致（列越少每列越宽，这是「放大封面」的来源）；
-   整条规则仍然**逐字**匹配，所以间距被改回去也会红。 */
-chk('D10 ★★ 桌面 `.rk-grid` 是 3 列（4 → 3 列是 v10.75「放大」的来源：列越少每列越宽）',
-  /\.rk-grid\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\);gap:12px\}/.test(idx));
+/* ★★ v10.77：列数 3 → **5**（用户给了参考图，口径是「照参考图 + 每一行都铺满」）。
+   ★ 这条守的是「列数这条**规则本身**仍在源码里」—— 5 是拍板值，改回去就要红。
+   ★ 但「每行真的铺满」不靠这里判：静态层看不到渲染结果，
+     那是浏览器套件 P5/P6/P8 与 `test-v1075-rank-cards` 的 `sLineN` 的职责（行内卡片数 == 列数）。
+   ★ 同时守**轮播不许再回到限宽**（D10b）：v10.76 的 `--car-max-w:810px` 已被用户要求回退。 */
+chk('D10 ★★ 桌面 `.rk-grid` 是 5 列（v10.77 照参考图；v10.75/76 的 3 列已被取代）',
+  /\.rk-grid\{display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\);gap:12px\}/.test(idx));
+chk('D10b ★★ 轮播已**回退限宽**（不许残留 `--car-max-w` / `width:min(100%,…) / margin:0 auto`）',
+  !/--car-max-w/.test(idxC) &&
+  /\.rk-car\{position:relative;aspect-ratio:var\(--cover-ar\)/.test(idx) &&
+  !/\.rk-car\{position:relative;width:min\(100%,/.test(idxC));
 chk('D11 ★★ 卡片是「上图下文」竖卡 + 封面**占满卡宽**（v10.74 的横条 72px 封面已被取代）',
   /\.rk-card\{display:flex;flex-direction:column/.test(idx) &&
   /\.rk-card \.th\{position:relative;width:100%;aspect-ratio:var\(--cover-ar\)/.test(idx));
@@ -380,20 +389,48 @@ chk('D15 ★ 自动播放有纪律：固定间隔常量 + 悬停暂停 + 页面�
 /* ★★ v10.75：真卡高度不再是定值（`aspect-ratio` 按容器宽算）⇒ **骨架也不能再写死 px**。
    判据从「等于 200px / 61px」改为「与真卡**同结构**」：图区用同一个 `--cover-ar`、文字区固定高。
    守的还是同一件事（骨架→真卡不抖），换的是表达方式 —— 写死 px 在改比例那一刻就失准了。 */
-/* ★★ v10.76：骨架文字区从「JS 内联 style 的 64px」改成 **CSS 类 `.sk-tx`（两处断点）**。
-   为什么必须改（是**测试照出来的真缺陷**，不是重构冲动）：`.bd` 在移动端有自己的
-   内边距/字号覆盖 ⇒ 真卡高桌面 65.61px、移动 61px，一个内联字面值必然只对一侧 ——
-   实测就是「桌面 66 对上了、移动差 4.6px」⇒ 骨架→真卡那一瞬移动端会跳 4.6px。
-   ★ 断言只守**结构**（类 + 两处断点 + 图区同比例），**具体的数值不在这里守** ——
+/* ★★ v10.77：断点从**两处变三处**（多了一个 761–1100px 的中间档）。
+   为什么多一档（这又是**实测照出来的**，不是设计出来的）：v10.77 信息行加了第三项（日期），
+   桌面 5 列后卡宽从 ~389 掉到 ~228 ⇒ 信息行在**某个视口宽度**上从单行变两行，
+   `.bd` 实测高因此有 **63（单行）/ 88（两行）/ 84（窄屏两行·字号更小）** 三个值。
+   实测把换行临界夹在 **1100 / 1110px 之间**（内容宽 180 换行、182 单行）⇒ 断点落 1100px。
+   ★ 断言只守**结构**（类 + **三处**断点 + 图区同比例），**具体的数值不在这里守** ——
      数值由浏览器套件 P17 逐断点**跨层对照真实 `.bd` 实测高**（差 > 2px 即红）。
      这样分工的原因：静态层看不到真实高度，把数值写死在这里只会变成「抄一遍自己」。 */
-chk('D16 ★★ 骨架与真卡**同结构**（图区 `aspect-ratio:var(--cover-ar)` + 文字区走 `.sk-tx` 类，两处断点）',
+chk('D16 ★★ 骨架与真卡**同结构**（图区 `aspect-ratio:var(--cover-ar)` + 文字区走 `.sk-tx` 类，三处断点）',
   /aspect-ratio:var\(--cover-ar\);border-radius:var\(--cd-r\) var\(--cd-r\) 0 0/.test(idx) &&
   /\.rk-skel-card \.sk-tx\{height:\d+px/.test(idx) &&
-  (idx.match(/\.rk-skel-card \.sk-tx\{height:\d+px/g) || []).length === 2 &&
+  (idx.match(/\.rk-skel-card \.sk-tx\{height:\d+px/g) || []).length === 3 &&
   !/<div class="rk-skel" style="height:200px/.test(idx));
 chk('D17 ★★ 移动端卡片区是 2 列网格（不是横滑单行）',
   /\.rk-grid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\);gap:10px\}/.test(idx));
+/* ★★ v10.77 新增：窄屏「每一行都铺满」的落地方式 —— **隐藏第 7 张往后**（不是留半行空格）。
+   ★ 为什么必须隐藏而不是「少取几条」：条数常量是**桌面口径**（15），
+     前端只拿到一份 list ⇒ 窄屏想只显示 6 张，只能在 CSS 层收。
+   ★ 这条同时守**骨架**（`.rk-skel-card`）—— 只隐藏真卡会让加载态露出 4 个孤零零的骨架格。 */
+chk('D22 ★★ 窄屏隐藏第 7 张往后的卡片与骨架（保证 2 列 × 3 行铺满，不留半行）',
+  /\.rk-grid > \.rk-card:nth-child\(n\+7\)/.test(idx) &&
+  /\.rk-grid > \.rk-skel-card:nth-child\(n\+7\)\{display:none\}/.test(idx) &&
+  !/\.rk-grid > \.rk-card:nth-child\(n\+7\)[\s\S]{0,200}?@media[\s\S]{0,40}?min-width/.test(idx));
+/* ★★ v10.77 新增：信息行要含三项（类型 · 大小 · 日期）。
+   ★ 日期项的**标签不许带中文语义词** —— `it.dateLabel` 是**混合语义**
+     （XD `/update/` 侧是「更新日期」、机地热榜侧是「发行日期」），
+     写死「发行日期」在 XD 档就是失实。所以只允许「图标 + 值」。
+   ★★ 这条连红两次，两次都是**作用域**问题（一个假红一个假绿），如实记：
+     ① 第一版负向跑在未剥注释的 `idx` ⇒ 被解释这条口径的注释骗（铁律 126）；
+     ② 第二版跑在 `idxC` 仍红 —— 因为**详情页实现里「发行日期 / 更新日期」是合法的**
+        （`d.releaseDate` 是真发行日期、`d.updateLabel` 是真更新日期），
+        整份文件级的负向判据天然假红。
+     ⇒ 必须**收窄到目标段**：只看 `rankCard` 的函数体（铁律 81：作用域既会假红也会假绿）。
+       ★ 顺带守「卡片段不许出现语义词」，而**详情页那两处一个都不许动**。 */
+{
+  const cardBody = bodyOf(idxC, 'rankCard');
+  chk('D23 ★★ 卡片信息行含日期项、且卡片段**不写死中文语义标签**（dateLabel 是混合语义）',
+    /it\.dateLabel/.test(cardBody) &&
+    /class="dt"/.test(cardBody) &&
+    !/发行日期/.test(cardBody) && !/更新日期/.test(cardBody),
+    'rankCard 段长 ' + cardBody.length + ' 字符；含 dt=' + /class="dt"/.test(cardBody));
+}
 /* ★★ v10.75 新增守点：移动端**不许再写死轮播高度**。
    ⚠️ 危害比「高度被写回定值」大得多 —— 实测反证（390 视口，动态注入 height 看 rect）：
        无 height → `.rk-car` **350×164**（撑满内容区）
@@ -462,8 +499,11 @@ chk('E2 ★★ 五页都有轮播样式（`.rk-car{` + `.rk-car .slide.cur{`）'
   readAll((s) => /\.rk-car\{position:relative/.test(s) && /\.rk-car \.slide\.cur\{opacity:1/.test(s)));
 chk('E3 ★★ 五页都不再有 champHtml / .rk-champ（负向：旧实现不许在任何一页残留）',
   readAll((s) => !/function champHtml\s*\(/.test(s) && !/\.rk-champ/.test(s)));
-chk('E4 ★ 五页都是 4 列网格 + 补位标记样式',
-  readAll((s) => /repeat\(4,minmax\(0,1fr\)\)/.test(s) && /\.rk-card\.libsrc\{border-style:dashed/.test(s)));
+/* ★ v10.77：列数口径从 4（v10.74）→ 3（v10.75/76）→ **5**（本轮照参考图）。
+   这条守的是**五页同步**，列数本身由 D10 守 —— 但两处必须**同一个数**，
+   否则「主源 5 列 / 派生页 3 列」这种漂移没人照得出来。 */
+chk('E4 ★★ 五页都是 5 列网格 + 补位标记样式（列数与主源 D10 必须一致）',
+  readAll((s) => /repeat\(5,minmax\(0,1fr\)\)/.test(s) && /\.rk-card\.libsrc\{border-style:dashed/.test(s)));
 chk('E5 ★ 五页都同步了 ≤880 档的顶栏收窄（否则派生页在该档仍溢出）',
   readAll((s) => /\.top-search\{min-width:0;padding:7px 10px\}/.test(s)));
 /* ★ 负向：派生页不该有 #rankStage（那是首页专属节点）——

@@ -57,10 +57,22 @@
  *          ⚠️ 这个缺陷**本套件照不出来**（它只测当前这一档的几何），
  *             判据在浏览器套件 `test-v1075-rank-cards.js` 的 **Q 段**（四档逐档点击比对）。
  *
+ * ★★ v10.77（本次）：用户原话「**轮播图回退到上一步**」＋「下面的卡片参考 [截图]，
+ *   并且我需要**每一行都铺满而不是遗漏（三行）**」（拍板：窄屏 2 列×3 行=6、
+ *   信息行=类型·大小·日期、保留白卡框）。⇒ 口径再重定一次（仍是「先实测再定」）：
+ *       ① 轮播**回退限宽**：`--car-max-w` 整体撤销 ⇒ 桌面回到通栏 **1196×559**。
+ *          A②b 上界 400 → 600（限宽废止后 559 是拍板值，不是回归）。
+ *       ② 卡片 9 张 3 列 → **15 张 5 列 3 行**（轮播 5 + 卡片 15 = 展示 **20** 个）。
+ *          窄屏 2 列 ⇒ **可见 6 张 = 3 行**（池子仍 15，第 7 张起 CSS `nth-child(n+7)` 隐藏
+ *          —— cardN 判池子、rowN/行分布判**可见卡**；隐藏卡 rect 全 0，混进统计会假红）。
+ *       ③ 信息行两枚 → **三枚**（类型 · 大小 · 日期；dateLabel 是混合语义，中文标签由 D23 守）。
+ *       ④ hero 桌面 1232 / 平板 982 / 移动 851（均比 v10.76 低 —— 5 列卡更扁）；
+ *          首条 1558 / 1352 / 1169 ⇒ 闸 1620 / 1420 / 1250。
+ *
  * 负向守卫（打坏必变红，对应实现见 test-v1074 反证套件）：
- *   · `.rk-grid` 从 `repeat(3,…)` 改回 `repeat(4,…)`              ⇒ B③「桌面 3 列」红
+ *   · `.rk-grid` 从 `repeat(5,…)` 改回 `repeat(3,…)`              ⇒ B③「桌面 5 列」红
  *   · `.rk-car` 去掉 `aspect-ratio` 改回写死高度                    ⇒ A② 红（比例不等）
- *   · `.zh` 卡片信息行里多塞一个字段（如评分）                      ⇒ B⑥ 红
+ *   · 信息行里多塞一个字段（如评分）                                ⇒ B⑥ 红
  *   · 移动端 `.rk-grid` 改回 flex 横滑                              ⇒ E③ 红
  *   · `.rk-car .slide.cur` 改回 `.on`                               ⇒ B④ 红（`.on` 被 rankMark 占用）
  *   · 删掉 `.cat-row .statline{flex:none;…}`                        ⇒ E①② 红
@@ -69,8 +81,9 @@
  *   照抄 ⇒ 任何人做一次正常微调这里就红，防线变噪音；取目标+余量 ⇒ 只有真退回
  *   「占满一屏」才红。余量的现实来源是字体替换与**数据换行**（榜单标题每档长短都不同）。
  *   v10.75 的拍板目标是「轮播按原图比例自适应（桌面约 560px）」：实测 hero 1175 ⇒ 闸 1250。
- *   v10.76 的拍板目标是「轮播收到 810×379 + 卡片 9 张」：实测 hero 1284 ⇒ 闸 1350（余量 +66），
- *   hero 再涨 66px（≈ 再多加半行卡片）就红；轮播上界收到 400（实测 379，余量 +21）。
+ *   v10.76 的拍板目标是「轮播收到 810×379 + 卡片 9 张」：实测 hero 1284 ⇒ 闸 1350（余量 +66）。
+ *   v10.77 的拍板目标是「轮播通栏 + 卡片 15 张 5 列」：实测 hero 1232 ⇒ 闸 1300（余量 +68），
+ *   轮播上界回到 600（实测 559，余量 +41）。
  *
  * 跑法：node tools/test-home-fold.js     （需服务在 8123；约 25 s）
  */
@@ -89,7 +102,14 @@ const VIEWPORTS = [
      列表首条 1610 → 闸 1700。
      ★ 余量取 ~5–8%：漂移来源是字体替换与**数据换行**（榜单标题每档长短都不同），
        以及「类型」标签在个别条目上换行。 */
-  { key: '桌面 1440×1000', w: 1440, h: 1000, heroMax: 1350, carMax: 400, cardHMax: 290, cardN: 9, colN: 3, rowN: 3, rowMax: 64, foldMin: 3, firstTopMax: 1700 },
+  /* ★★ v10.77 阈值重定（**先实测再定**）：限宽回退 ⇒ 桌面轮播 559 → 上界 600；
+     卡片 **15 张 / 5 列 / 3 行**（照参考图）；卡高 172 → 闸 190；首条 1558 → 闸 1620；
+     hero 1232 → 闸 1300（再涨 68px≈2 行就红）。
+     平板：轮播 359 → 上界 400 不动（内容区 776 ÷ 2.14，810 上限不生效）；卡高 156 → 175；首条 1352 → 1420。
+     移动：轮播 164 → 190 不动；**可见 6 张 / 2 列 / 3 行**（池子仍 15，第 7 张起 CSS 隐藏）；
+     卡高 165（信息行两行）→ 闸 175；首条 1169 → 1250。
+     ★ 余量取 ~4–6%：漂移来源是字体替换与**数据换行**（榜单标题每档长短都不同）。 */
+  { key: '桌面 1440×1000', w: 1440, h: 1000, heroMax: 1300, carMax: 600, cardHMax: 190, cardN: 15, colN: 5, rowN: 3, rowMax: 64, foldMin: 3, firstTopMax: 1620 },
   /* ★★ 平板 820×900 这一档守的是**断点区间**（`≤760` 紧凑 / `761~1060` 单列桌面语言 / `>1060` 两栏），
      不是第三个尺寸 —— 只测 1440 与 390 会永远漏掉中间档（v10.70 的横向溢出、
      v10.74 又冒出来的顶栏溢出都只存在于这一档）。
@@ -97,13 +117,13 @@ const VIEWPORTS = [
      ★ v10.76：本档轮播 359px（776 内容区 ÷ 2.14，**没有触发 810 上限**）——
        这正是「限宽」在窄屏自动失效的证据：判据是 `width:min(100%,810px)`，
        不是给桌面写死 810。 */
-  { key: '平板 820×900', w: 820, h: 900, heroMax: 1130, carMax: 400, cardHMax: 215, cardN: 9, colN: 3, rowN: 3, rowMax: 64, foldMin: 3, firstTopMax: 1520 },
-  /* 移动档：轮播 164px（由 `aspect-ratio` 算出，不写死）、卡片走 2 列 ⇒ **9 张 = 5 行**
-     （9 是奇数，末行只有 1 张 —— 这是拍板数的必然结果，不是布局缺陷，B① 按 5 行判）。
-     ★ `firstTopMax` 1490 > 视口 844 —— 这一条在移动端**已不是「必须进首屏」**，
-       而是「hero 不许再涨」（实测 1399）。首屏的内容保证由 foldMin 那条负。
+  { key: '平板 820×900', w: 820, h: 900, heroMax: 1130, carMax: 600, cardHMax: 175, cardN: 15, colN: 5, rowN: 3, rowMax: 64, foldMin: 3, firstTopMax: 1420 },
+  /* 移动档：轮播 164px（由 `aspect-ratio` 算出，不写死）、卡片走 2 列 ⇒ **可见 6 张 = 3 行**
+     （池子仍 15 张，第 7 张起被 CSS `nth-child(n+7)` 隐藏 —— cardN 判池子、rowN 判可见行）。
+     ★ `firstTopMax` 1250 > 视口 844 —— 这一条在移动端**已不是「必须进首屏」**，
+       而是「hero 不许再涨」（实测 1169）。首屏的内容保证由 foldMin 那条负。
        为什么不删：删了就没人拦「有人把移动 hero 又加高 200px」。 */
-  { key: '移动 390×844', w: 390, h: 844, heroMax: 1140, carMax: 190, cardHMax: 165, cardN: 9, colN: 2, rowN: 5, rowMax: 66, foldMin: 5, firstTopMax: 1490 },
+  { key: '移动 390×844', w: 390, h: 844, heroMax: 1140, carMax: 190, cardHMax: 175, cardN: 15, colN: 2, rowN: 3, rowMax: 66, foldMin: 5, firstTopMax: 1250 },
 ];
 
 const PROBE = () => {
@@ -118,7 +138,11 @@ const PROBE = () => {
      三个数全错、且**全绿** —— 这就是「喂错样本 ⇒ 假绿」，2026-10 首次踩到。 */
   const rows = [...document.querySelectorAll('#libList > .row-card')].map((e) => R(e));
   const seps = [...document.querySelectorAll('#libList > .date-sep')];
-  const rankCards = [...document.querySelectorAll('#rankList .rk-grid .rk-card')];
+  /* ★★ v10.77：几何统计只算**可见卡** —— 窄屏 `nth-child(n+7)` 隐藏的 9 张卡 rect 全 0
+     （top 全是 0），混进 cardTops 会把行数判成 4、出现 [0,0,…] 假行（实测假红）。
+     cardN（池子总数）仍取**全量** —— B① 要验「池子 15 张没被裁掉」。 */
+  const allRankCards = [...document.querySelectorAll('#rankList .rk-grid .rk-card')];
+  const rankCards = allRankCards.filter((c) => { const b = c.getBoundingClientRect(); return b.width > 0 && b.height > 0; });
   const grid = document.querySelector('#rankList .rk-grid');
   /* ★ v10.74：轮播 —— 张数 / 当前张 / `cur` 与 `on` 各自的计数（见下方 B④ 的用意）。 */
   const slides = [...document.querySelectorAll('#rankList .rk-car .slide')];
@@ -173,7 +197,7 @@ const PROBE = () => {
     carOnN: slides.filter((s) => s.classList.contains('on')).length,
     carInFold: curSlide ? inFold(curSlide) : false,
     cardTops: rankCards.map((c) => Math.round(c.getBoundingClientRect().top)),
-    cardN: rankCards.length,
+    cardN: allRankCards.length,
     cardH: rankCards[0] ? Math.round(rankCards[0].getBoundingClientRect().height) : null,
     /* 列数用**首行卡数**判，而不是读 `grid-template-columns` —— 后者是写法，
        落点才是效果（改字号/封面尺寸也可能把卡挤到第二行）。 */
@@ -285,9 +309,13 @@ function chk(name, ok, extra) {
          判据取**信息行的直接子元素类名**（`.s > *`），不数文字 ——
          文字会被「标题里本来就有数字」这类情况骗到（如「红色警戒2」）。
          ★ 必须有 `length >= 1` 前置：`every` 在空数组上恒真，否则「整行删空」也算通过。 */
-      chk('B  ⑥ ★★ 卡片信息行只有「分类标签 + 容量」两枚（+ 游戏名 = 用户拍板的三样，「即可」是上界）',
-        r.cardTxt && r.cardTxt.kids.length >= 1 && r.cardTxt.kids.length <= 2
-          && r.cardTxt.kids.every((c) => c === 'tag' || c === 'sz'),
+      /* ★★ v10.77 B⑥：信息行改**三项**（类型 · 大小 · 日期 —— 用户在参考图拍板后追加日期）。
+         「上界」语义不变：只允许 tag / sz / dt / lib（lib 是补位标记）四类，多出来的类都算越界。
+         ★ dt 的中文语义词（发行/更新日期）不许出现在卡片段 —— dateLabel 是混合语义，
+           那条由静态层 D23 守（收窄在 rankCard 函数体里判）。 */
+      chk('B  ⑥ ★★ 卡片信息行只有「类型 · 大小 · 日期」三枚（+ 补位标记 lib；多一个类都不行）',
+        r.cardTxt && r.cardTxt.kids.length >= 1 && r.cardTxt.kids.length <= 3
+          && r.cardTxt.kids.every((c) => c === 'tag' || c === 'sz' || c === 'dt' || c === 'lib'),
         '名称「' + (r.cardTxt ? r.cardTxt.name : '—') + '」子元素类=' + JSON.stringify(r.cardTxt ? r.cardTxt.kids : null));
       /* ★★ v10.75 新增 B⑦：用户原话「**放大适配游戏大图而不是压缩游戏图片**」——
          「不压缩」在数值上就是「封面框比例 == 原图比例」。

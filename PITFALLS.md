@@ -10,7 +10,7 @@
 
 ---
 
-## ★ 铁律速查（1–138）
+## ★ 铁律速查（1–141）
 
 > 从 `.workbuddy/memory/MEMORY.md` 迁出（2026-10-10）。那个文件有 3,000 字硬上限，
 > 而 40 条铁律占了近一半篇幅 ⇒ 加上「坐标 / 线上入口 / 待办」就装不下（实测 3,505 字，被
@@ -1136,6 +1136,29 @@
       这本身就是结论（新增 PITFALLS 这条的直接原因）。
     ★ 同族：铁律 122（批次里的红必须单跑复现再定性）—— 那条讲「先确认不是抖动」，这条讲
       「确认不是抖动之后，**再确认是谁坏了**」。
+
+139. ★★ **CSS 隐藏容器里的 `<img>` 不触发 load/error ⇒ 「等全部图」的 promise 永远 pending**
+    （v10.77 实测，症状是 `FATAL ProtocolError: Runtime.callFunctionOn timed out`，等满
+    **180 秒** protocolTimeout 才炸 —— 一次跑了 3m9s 才暴露）。
+    背景：窄屏 `nth-child(n+7)` 把 9 张卡 `display:none` 之后，套件里
+    `Promise.all([...imgs].map(i => i.complete ? 1 : new Promise(i.onload = i.onerror = res)))`
+    永远挂起 —— **隐藏容器里的图不进渲染树，load 事件不来**（桌面档全可见时没事，
+    所以这条只在「隐藏 + 等加载」组合出现）。
+    ⇒ 等待与「破图」判据都**只针对可见图**（`getBoundingClientRect().width > 0`）；
+    隐藏卡的图不是用户看到的，既不该等、也不该算破图。
+
+140. ★★ **CSS 隐藏的卡片 rect 全 0（top 全是 0）⇒ 几何统计必须先过滤可见卡**
+    （v10.77 实测：窄屏 `rowN` 判成 4、`lineCounts = [2,2,2,9]` —— 9 张隐藏卡的 top 全 0，
+    被当成第 4 行；而它上一秒在 rank-cards 套件里是绿的同一段代码）。
+    ⇒ 凡是按 `getBoundingClientRect().top` 分组/去重的统计，一律先过滤
+    `width > 0 && height > 0`；**池子总数**（cardN / DOM 数）才用全量 ——
+    两个口径各守各的（「池子没被裁」与「可见的铺满」是两件事）。
+
+141. ★ **往文件里写含反引号/反斜杠的文本，别走 `bash` 双引号包裹的 `node -e`**
+    （v10.77 实测：`\`sniffBuffer\`` 与 `\`AskUserQuestion\`` 被 bash 当**命令替换执行**
+    （`command not found` 后替换为空），`\\r?\\n` 里的 `\\r` 被吃成**真实回车**把一行劈成两半）。
+    ⇒ 一律用 Write/Edit 工具或 here-doc 落盘；用 bash 时检查输出里有没有
+    `command not found` —— 有就是文本被吃，**不能只看退出码 0**。
 
 ---
 
