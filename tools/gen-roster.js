@@ -262,35 +262,52 @@ const html = `<!DOCTYPE html>
     background:#FCFDFF;font-size:12px;color:var(--c-t2)}
   .foot .sp{margin-left:auto;display:flex;gap:8px;align-items:center}
   .empty{padding:46px 16px;text-align:center;color:var(--c-t3)}
-  #mask{position:fixed;inset:0;background:rgba(14,20,38,.5);backdrop-filter:blur(2px);z-index:100;display:none;
-    align-items:center;justify-content:center;padding:22px}
-  #mask.on{display:flex}
-  #dlg{background:#fff;border-radius:14px;width:min(940px,100%);max-height:88vh;display:flex;flex-direction:column;
-    box-shadow:var(--shadow-lg);overflow:hidden}
-  #dlg .hd{padding:14px 18px;border-bottom:1px solid var(--c-border);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-  #dlg .hd h3{margin:0;font-size:15.5px;font-weight:800;flex:1;min-width:200px}
-  #dlg .bd{padding:14px 18px;overflow-y:auto}
-  #dlg .ft{padding:11px 18px;border-top:1px solid var(--c-border);display:flex;gap:9px;align-items:center;background:#FCFDFF}
+  /* ── v10.78b：弹窗壳对齐主站「网盘下载弹窗」.dlpop（用户口径：「弹窗同项目的下载弹窗样式」）──
+   * 遮罩 rgba(12,18,38,.5)+blur(3px) · 盒 min(760px,100%) / max-height min(80vh,760px) ·
+   * ★ 常驻 flex + opacity/pointer-events 开关 —— display:none→flex 切换会吞掉入场动画，
+   *   主站 .dlpop 就是这个模式；入场 translateY(12px) scale(.985) → 原位，cubic-bezier(.2,.8,.3,1)。 */
+  #mask{position:fixed;inset:0;background:rgba(12,18,38,.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);z-index:100;
+    display:flex;align-items:center;justify-content:center;padding:22px;opacity:0;pointer-events:none;transition:.18s}
+  #mask.on{opacity:1;pointer-events:auto}
+  #dlg{background:#fff;border-radius:14px;width:min(760px,100%);max-height:min(80vh,760px);display:flex;flex-direction:column;
+    box-shadow:0 14px 40px rgba(18,26,51,.14);overflow:hidden;
+    transform:translateY(12px) scale(.985);opacity:0;transition:.2s cubic-bezier(.2,.8,.3,1)}
+  #mask.on #dlg{transform:none;opacity:1}
+  #dlg .hd{padding:14px 15px 12px;border-bottom:1px solid var(--c-border);display:flex;align-items:flex-start;gap:10px;flex:none}
+  #dlg .hd .ic{font-size:19px;line-height:1.2;flex:none}
+  #dlg .hd h3{margin:0;font-size:15px;font-weight:800;line-height:1.35;color:var(--c-t1)}
+  /* 关闭钮 = 主站 .dlpop-x：28×28 方形浅灰钮（原来是一颗带文字的关闭按钮） */
+  #dClose{flex:none;width:28px;height:28px;border:0;border-radius:8px;display:grid;place-items:center;font-size:14px;
+    color:var(--c-t3);background:#F3F5F9;cursor:pointer;transition:.14s;padding:0;font:inherit}
+  #dClose:hover{background:#E6E9F0;color:var(--c-t1)}
+  #dlg .bd{padding:12px 15px;overflow-y:auto;flex:1}
+  #dlg .ft{padding:10px 15px 13px;border-top:1px solid var(--c-border);flex:none;display:flex;gap:9px;align-items:center;
+    font-size:11px;line-height:1.7;color:var(--c-t3);background:#fff}
   .sec{margin-bottom:16px}
   .sec>h4{margin:0 0 8px;font-size:12.5px;font-weight:800;display:flex;align-items:center;gap:8px}
-  .sec>h4 .bar{width:3px;height:13px;border-radius:2px;background:var(--c-primary);display:inline-block}
+  /* ★ v10.78b：.bar 与顶部筛选工具条的通用 .bar 同名 —— 那条的 padding/border/box-shadow
+     会渗进来把 3×13 细竖条撑成方块，这里显式清零 */
+  .sec>h4 .bar{width:3px;height:13px;border-radius:2px;background:var(--c-primary);display:inline-block;
+    padding:0;border:0;box-shadow:none;flex:none}
   .sec>h4 .n{font-family:var(--font-num);font-size:11px;color:var(--c-t3);font-weight:700}
   /* ★ v10.66：弹窗的动作条（跳站内详情页 / 直接开资源弹窗）。
      为什么单独一行常驻在正文之上：正文会随分类长短滚动，按钮放正文里会被滚走。 */
-  .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:11px 18px;border-bottom:1px solid var(--c-border);background:#F7F9FF}
+  .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 15px;border-bottom:1px solid var(--c-border);background:#fff}
   .acts .dim{font-size:11px}
   /* ★ v10.66：每类最多列 SEC_MAX 条；超出折成一行「还有 N 条」+ 去详情页看全部。
      弹窗定位是**摘要**（一眼看清这游戏有什么），全量在站内详情页的资源模块里。 */
   .more{margin-top:3px;font-size:11.5px;color:var(--c-t2);background:#F4F7FE;border:1px dashed #D6E2FF;
     border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .more b{font-family:var(--font-num);color:var(--c-primary)}
-  .it{border:1px solid var(--c-border);border-radius:9px;padding:9px 11px;margin-bottom:7px;background:#FDFDFF}
+  /* v10.78b：资源行/链接钮对齐主站弹窗 .svf 卡与 .svf .k a —— 白卡 radius 10 ·
+     链接钮 11px/750 · radius 7 · padding 5px 9px；直链 = 主站 .pri（蓝底白字） */
+  .it{border:1px solid var(--c-border);border-radius:10px;padding:9px 10px;margin-bottom:7px;background:#fff}
   .it .t1{font-weight:650;font-size:12.5px;margin-bottom:5px;word-break:break-all}
   .it .meta{font-size:11px;color:var(--c-t3);margin-bottom:6px;font-family:var(--font-num)}
   .it .ls{display:flex;gap:6px;flex-wrap:wrap}
-  .lnk{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;
-    background:#EEF3FF;color:#1B4FD8;border:1px solid #D6E2FF}
-  .lnk.direct{background:#E8F6EC;color:#0F7A34;border-color:#C7E9D2}
+  .lnk{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:750;padding:5px 9px;border-radius:7px;
+    background:#F7F9FC;color:var(--c-t2);border:1px solid var(--c-border);text-decoration:none}
+  .lnk.direct{background:var(--c-primary);color:#fff;border-color:transparent}
   .lnk:hover{filter:brightness(.96)}
   .none{color:var(--c-t3);font-size:12px;padding:6px 0}
   .spin{display:inline-block;width:12px;height:12px;border:2px solid #D8DEEC;border-top-color:var(--c-primary);
@@ -320,11 +337,10 @@ const html = `<!DOCTYPE html>
   #tbTable.c-ts th:nth-child(6),#tbTable.c-ts td:nth-child(6){display:none}
   /* ── v10.78：弹窗双栏网格 —— 窄栏=本体+实时查询，宽栏=三类资源。
      只在 ≥720px 开双栏；小屏退回单栏（顺序：本体在上）。 */
-  #dlg .hd .tt{flex:1;min-width:200px;min-width:0}
-  #dlg .hd .dmeta{display:flex;gap:9px;align-items:center;flex-wrap:wrap;font-size:11px;
-    color:var(--c-t3);margin-top:4px}
-  #dlg .hd .dmeta a{font-weight:700}
-  #dlg .hd h3{flex:none}
+  #dlg .hd .tt{flex:1;min-width:0}
+  #dlg .hd .dmeta{display:flex;gap:9px;align-items:center;flex-wrap:wrap;font-size:11.5px;font-weight:600;
+    color:var(--c-t3);margin-top:3px}
+  #dlg .hd .dmeta a{font-weight:700;color:var(--c-primary);text-decoration:none}
   .dlg-grid{display:grid;grid-template-columns:1fr;gap:14px}
   @media(min-width:720px){.dlg-grid{grid-template-columns:minmax(250px,330px) 1fr}}
   @media(max-width:760px){
@@ -438,7 +454,7 @@ const html = `<!DOCTYPE html>
 </div>
 
 <div id="mask"><div id="dlg">
-  <div class="hd"><div class="tt"><h3 id="dTitle">-</h3><div class="dmeta" id="dMeta"></div></div><button class="btn" id="dClose">关闭 ✕</button></div>
+  <div class="hd"><span class="ic">📥</span><div class="tt"><h3 id="dTitle">-</h3><div class="dmeta" id="dMeta"></div></div><button id="dClose" title="关闭">✕</button></div>
   <div class="acts" id="dActs" hidden></div>
   <div class="bd" id="dBody"></div>
   <div class="ft"><span class="dim" id="dHint"></span></div>

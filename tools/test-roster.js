@@ -245,6 +245,16 @@ ok('J5 弹窗双栏网格 + 头部元信息行（dMeta）',
   && HTML.includes('id="dMeta"') && /@media\(min-width:720px\)/.test(HTML));
 ok('J6 ★ 资源弹窗直达参数是 dl=body（旧写法 dl=1 一直靠服务端兜底活着，不许回归）',
   HTML.includes("'&dl=body'") && !HTML.includes('&dl=1'));
+ok('J9 ★ v10.78b 弹窗壳对齐主站 dlpop：760 宽 / 80vh 上限 / 入场动画 / blur(3) 遮罩 / 28px 方形关闭钮 / 头部图标',
+  HTML.includes('width:min(760px,100%)')
+  && HTML.includes('max-height:min(80vh,760px)')
+  && /#mask\{[^}]*rgba\(12,18,38,\.5\)/.test(HTML)
+  && HTML.includes('backdrop-filter:blur(3px)')
+  && /#dlg\{[^}]*translateY\(12px\) scale\(\.985\)/.test(HTML)
+  && /#mask\.on #dlg\{transform:none;opacity:1\}/.test(HTML)
+  && /#dClose\{[^}]*width:28px;height:28px/.test(HTML)
+  && HTML.includes('class="hd"><span class="ic">📥</span>')
+  && !HTML.includes('关闭 ✕'));
 /* J7/J8 是构建与部署层的产物契约（产物 HTML 之外），反证不打这里 —— 存在性直接验。 */
 const GZP = WEBP + '.gz';
 const gzSz = fs.existsSync(GZP) ? fs.statSync(GZP).size : 0;
