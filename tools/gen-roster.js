@@ -6,6 +6,17 @@
  *     是否有本体/修改器/mod/存档，以及我还需要一个按钮能够点击查看对应的链接（弹窗），
  *     然后能够以更新时间/热度进排序」
  *
+ * v10.78（2026-10-15，用户拍板「全做 + 弹窗单独优化布局样式」）：
+ *   ① 数据刷新到当日 daily-sync；
+ *   ② 游戏列加封面缩略图（loading=lazy 懒加载、破图 capture 阶段隐藏、窄屏整列隐藏）；
+ *   ③ 搜索输入 180ms 防抖 —— 原版每敲一键就全量扫 2.3 万行 + 中文 localeCompare 排序；
+ *   ④ 筛选/排序/页码/页大小写进 URL hash（history.replaceState，刷新不丢、可直接分享定位）；
+ *   ⑤ 列显隐开关（来源/大小/热度/更新时间，localStorage 记忆，try/catch 包 file:// 场景）；
+ *   ⑥ 弹窗改双栏网格（窄栏=本体+实时查询，宽栏=修改器/MOD/存档）+ 头部元信息行；
+ *   ⑦ 资源弹窗直达参数 dl=1 → dl=body（旧值靠服务端兜底活着，写明写对）；
+ *   ⑧ 同步产出 .gz（server.js 零依赖 zlib 直出 —— 部署载荷没有 node_modules，
+ *     加 compression 包会牵动部署链，内置 zlib 零成本）。
+ *
  * ★ 数据来源**全部复用既有模块**，不自己写匹配（铁律：不手写已有能力覆盖的功能）：
  *     · 端游名单 + 热度(score/hot/size/时间) → data/games.json（19,497 条原始记录）
  *     · 手游名单 + 关联端游 id                → data/mobilehub.js#all()（3,339 条）
@@ -27,6 +38,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 
 const ROOT = path.join(__dirname, '..');
 const gi = (k, d) => { const i = process.argv.indexOf(k); return i >= 0 ? process.argv[i + 1] : d; };
@@ -284,6 +296,37 @@ const html = `<!DOCTYPE html>
   .spin{display:inline-block;width:12px;height:12px;border:2px solid #D8DEEC;border-top-color:var(--c-primary);
     border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
   @keyframes sp{to{transform:rotate(360deg)}}
+  /* ── v10.78：封面缩略图 ──
+   * 破图不写内联 onerror（模板串里转义引号极易踩坑），改 document 捕获阶段统一兜：
+   * error 事件不冒泡，必须 capture=true 才接得住资源加载失败。 */
+  .gcell{display:flex;align-items:center;gap:9px;min-width:0}
+  .gcell .gtx{min-width:0;display:flex;flex-direction:column;gap:1px}
+  .cv{width:46px;height:31px;object-fit:cover;border-radius:6px;flex:none;
+    background:#EDF0F6;border:1px solid var(--c-border)}
+  .cv.bad{display:none}
+  .cvph{width:46px;height:31px;flex:none;display:flex;align-items:center;justify-content:center;
+    font-size:12px;color:#B6BCC9;background:#F4F6FA;border:1px solid var(--c-border);border-radius:6px}
+  /* ── v10.78：列显隐（「藏一列」用 display:none，nth-child 序号不变，不用重排 JS） ── */
+  .coldrop{position:relative}
+  .colpop{display:none;position:absolute;right:0;top:calc(100% + 6px);background:#fff;
+    border:1px solid var(--c-border2);border-radius:9px;box-shadow:var(--shadow-lg);
+    padding:8px 12px;z-index:40;min-width:132px}
+  .colpop.open{display:block}
+  .colpop label{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--c-t2);
+    padding:4px 2px;cursor:pointer;white-space:nowrap}
+  #tbTable.c-src th:nth-child(3),#tbTable.c-src td:nth-child(3),
+  #tbTable.c-size th:nth-child(4),#tbTable.c-size td:nth-child(4),
+  #tbTable.c-hot th:nth-child(5),#tbTable.c-hot td:nth-child(5),
+  #tbTable.c-ts th:nth-child(6),#tbTable.c-ts td:nth-child(6){display:none}
+  /* ── v10.78：弹窗双栏网格 —— 窄栏=本体+实时查询，宽栏=三类资源。
+     只在 ≥720px 开双栏；小屏退回单栏（顺序：本体在上）。 */
+  #dlg .hd .tt{flex:1;min-width:200px;min-width:0}
+  #dlg .hd .dmeta{display:flex;gap:9px;align-items:center;flex-wrap:wrap;font-size:11px;
+    color:var(--c-t3);margin-top:4px}
+  #dlg .hd .dmeta a{font-weight:700}
+  #dlg .hd h3{flex:none}
+  .dlg-grid{display:grid;grid-template-columns:1fr;gap:14px}
+  @media(min-width:720px){.dlg-grid{grid-template-columns:minmax(250px,330px) 1fr}}
   @media(max-width:760px){
     .wrap{padding:10px 10px 50px}
     .nm{max-width:170px}
@@ -291,6 +334,7 @@ const html = `<!DOCTYPE html>
     .kpi{width:100%;justify-content:space-between;gap:8px}
     thead th,tbody td{padding:6px 7px}
     .hidesm{display:none}
+    .cv,.cvph{display:none}   /* 窄屏两列就够挤了，封面整列退场 */
   }
 </style>
 </head>
@@ -349,11 +393,20 @@ const html = `<!DOCTYPE html>
     <select id="pageSz">
       <option>100</option><option selected>200</option><option>500</option><option>1000</option>
     </select>
+    <div class="coldrop">
+      <button class="btn" id="colBtn" aria-haspopup="true">列 ▾</button>
+      <div class="colpop" id="colPop" role="group" aria-label="列显隐（选择保留哪些列）">
+        <label><input type="checkbox" data-c="src" checked> 来源</label>
+        <label><input type="checkbox" data-c="size" checked> 大小</label>
+        <label><input type="checkbox" data-c="hot" checked> 热度</label>
+        <label><input type="checkbox" data-c="ts" checked> 更新时间</label>
+      </div>
+    </div>
     <button class="btn" id="reset">重置</button>
   </div>
 
   <div class="card">
-    <table>
+    <table id="tbTable">
       <thead>
         <tr>
           <th class="no" style="width:56px">#</th>
@@ -385,7 +438,7 @@ const html = `<!DOCTYPE html>
 </div>
 
 <div id="mask"><div id="dlg">
-  <div class="hd"><h3 id="dTitle">-</h3><button class="btn" id="dClose">关闭 ✕</button></div>
+  <div class="hd"><div class="tt"><h3 id="dTitle">-</h3><div class="dmeta" id="dMeta"></div></div><button class="btn" id="dClose">关闭 ✕</button></div>
   <div class="acts" id="dActs" hidden></div>
   <div class="bd" id="dBody"></div>
   <div class="ft"><span class="dim" id="dHint"></span></div>
@@ -511,8 +564,13 @@ const html = `<!DOCTYPE html>
       var bt = BODY_TXT[r[6]] || BODY_TXT[0];
       h += '<tr>'
         + '<td class="dim mono">' + (i+1) + '</td>'
-        + '<td><span class="nm" title="' + esc(r[0]) + '">' + esc(r[0]) + '</span>'
-          + '<span class="dim mono" style="font-size:10.5px">' + esc(String(r[1])) + '</span></td>'
+        + '<td><div class="gcell">'
+          + (r[11]
+            ? '<img class="cv" loading="lazy" alt="" src="' + esc(r[11]) + '">'
+            : '<span class="cvph">▶</span>')
+          + '<div class="gtx"><span class="nm" title="' + esc(r[0]) + '">' + esc(r[0]) + '</span>'
+          + '<span class="dim mono" style="font-size:10.5px">' + esc(String(r[1])) + '</span></div>'
+        + '</div></td>'
         + '<td><span class="tag ' + (SRC_CLS[r[2]]||'mh') + '">' + (SRC_NAME[r[2]]||'?') + '</span>'
           + (r[10] ? ' <span class="tag mob">可手游</span>' : '') + '</td>'
         + '<td>' + fmtSize(r[3]) + '</td>'
@@ -534,9 +592,61 @@ const html = `<!DOCTYPE html>
     document.querySelectorAll('#tb button[data-id]').forEach(function(x){
       x.addEventListener('click', function(){ openDlg(V[Number(x.dataset.i)]); });
     });
+    writeHash();
   }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
     return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+
+  /* 破图兜底：error 事件不冒泡，必须 capture 才接得住；统一在这里处理，
+     不写内联 onerror（模板串里转义引号是重灾区）。 */
+  document.addEventListener('error', function(e){
+    if(e.target && e.target.tagName === 'IMG' && e.target.classList.contains('cv')){
+      e.target.classList.add('bad');
+    }
+  }, true);
+
+  /* ── URL hash 状态（v10.78）：刷新不丢、可分享定位 ──
+   * 写：render() 是唯一出口（所有交互最终都走它），history.replaceState 不产生
+   *   历史记录噪音，也不触发 hashchange（无回环）。
+   * 读：只在初始载入与外部 hashchange 时走；所有取值过白名单，脏 hash 不炸页面。 */
+  function writeHash(){
+    var h = [];
+    if(F.q) h.push('q=' + encodeURIComponent(F.q));
+    if(F.kind.length) h.push('kind=' + F.kind.join(','));
+    if(F.res.length) h.push('res=' + F.res.join(','));
+    if(F.resMode !== 'all') h.push('mode=' + F.resMode);
+    if(F.sort !== 'hot'){ h.push('sort=' + F.sort); h.push('dir=' + F.dir); }
+    else if(F.dir !== -1) h.push('dir=' + F.dir);
+    if(F.page !== 1) h.push('page=' + F.page);
+    if(F.size !== 200) h.push('size=' + F.size);
+    var s = h.length ? '#' + h.join('&') : '';
+    try { history.replaceState(null, '', location.pathname + location.search + s); } catch(_e){}
+  }
+  function readHash(){
+    var h = location.hash.replace(/^#/, '');
+    if(!h) return;
+    h.split('&').forEach(function(kv){
+      var i = kv.indexOf('='); if(i < 0) return;
+      var k = kv.slice(0, i), v = kv.slice(i + 1);
+      if(k === 'q') F.q = decodeURIComponent(v);
+      else if(k === 'kind') F.kind = v.split(',').filter(function(x){ return x === 'pc' || x === 'mob'; });
+      else if(k === 'res') F.res = v.split(',').filter(function(x){
+        return x === 'any' || x === 'mod' || x === 'saves' || x === 'trainers' || x === 'body'; });
+      else if(k === 'mode' && (v === 'all' || v === 'any')) F.resMode = v;
+      else if(k === 'sort' && ['name','src','size','hot','ts','body','mod','saves','trainers'].indexOf(v) >= 0) F.sort = v;
+      else if(k === 'dir' && (v === '1' || v === '-1')) F.dir = Number(v);
+      else if(k === 'page' && /^[1-9][0-9]*$/.test(v)) F.page = Number(v);
+      else if(k === 'size' && ['100','200','500','1000'].indexOf(v) >= 0) F.size = Number(v);
+    });
+  }
+  function syncUI(){
+    $('#q').value = F.q;
+    $('#resMode').value = F.resMode;
+    $('#pageSz').value = String(F.size);
+    syncSeg('#segKind','kind','all'); syncSeg('#segRes','res','all');
+    markSort();
+  }
+  window.addEventListener('hashchange', function(){ readHash(); syncUI(); render(); });
 
   /* ── 弹窗 ── */
   var CAT_NAME = { m:'MOD', sv:'存档', tr:'修改器' };
@@ -551,7 +661,9 @@ const html = `<!DOCTYPE html>
       var base = SITE + '/?open=' + encodeURIComponent(id);
       return {
         detail: base,
-        pop: base + '&dl=1',
+        /* ★ v10.78：dl=1 是旧写法 —— 服务端 DL_UNI_KEYS 不含 1，一直靠「非法值兜底 body」
+           活着；写明写对，不依赖兜底。 */
+        pop: base + '&dl=body',
         tab: function(k){ return base + '&dl=' + k; },
         direct: true,
       };
@@ -608,7 +720,17 @@ const html = `<!DOCTYPE html>
       : '<a class="btn solid" href="' + esc(lk.detail) + '" target="_blank" rel="noopener">在站内搜索这款 ↗</a>'
         + '<span class="dim">手游中心独有条目，本地库没有同款记录 ⇒ 走站内搜索</span>';
     var bt = BODY_TXT[r[6]] || BODY_TXT[0];
-    var h = '<div class="sec"><h4><span class="bar"></span>本体 '
+    /* v10.78：头部元信息行 —— 原来单独一个「端游库」小节只为了摆 id/源站/封面三个字段，
+       占一整屏行高；收进标题下面一行。 */
+    $('#dMeta').innerHTML =
+      '<span class="tag ' + (SRC_CLS[r[2]] || 'mh') + '">' + (SRC_NAME[r[2]] || '?') + '</span>'
+      + '<span class="mono">' + esc(String(r[1])) + '</span>'
+      + (r[3] ? '<span class="mono">' + esc(r[3]) + '</span>' : '')
+      + (r[12] ? '<a href="' + esc(r[12]) + '" target="_blank" rel="noopener">源站 ↗</a>' : '')
+      + (r[11] ? '<a href="' + esc(r[11]) + '" target="_blank" rel="noopener">封面 ↗</a>' : '');
+    /* v10.78：双栏网格 —— 窄栏=本体+实时查询（一屏看完结论），宽栏=三类资源（纵向长列表）。
+       ≥720px 双栏，小屏退回单栏（本体在上）。各字段 id（bodyBox/qBody/qBodyMsg）不变。 */
+    var bodySec = '<div class="sec"><h4><span class="bar"></span>本体 '
       + '<span class="st ' + bt[0] + '">' + bt[1] + '</span>'
       + (r[3] ? ' <span class="n">' + esc(r[3]) + '</span>' : '') + '</h4>'
       + '<div id="bodyBox">' + (r[6]
@@ -616,14 +738,12 @@ const html = `<!DOCTYPE html>
           : '<div class="none">本地没有这一款的实测结果。</div>') + '</div>'
       + '<div style="margin-top:7px"><button class="btn solid" id="qBody">实时查询本体（打源站，约 2–8 秒）</button>'
       + '<span class="dim" id="qBodyMsg" style="margin-left:9px"></span></div></div>';
-    h += '<div class="sec"><h4><span class="bar"></span>端游库</h4>'
-      + '<div class="none"><span class="mono">' + esc(String(r[1])) + '</span>'
-      + (r[12] ? ' · <a href="' + esc(r[12]) + '" target="_blank" rel="noopener">源站详情页 ↗</a>' : '')
-      + (r[11] ? ' · <a href="' + esc(r[11]) + '" target="_blank" rel="noopener">封面 ↗</a>' : '') + '</div></div>';
-    h += secHtml('修改器', g && g.tr, lk.tab('modifier'));
-    h += secHtml('MOD', g && g.m, lk.tab('mod'));
-    h += secHtml('存档', g && g.sv, lk.tab('save'));
-    $('#dBody').innerHTML = h;
+    $('#dBody').innerHTML = '<div class="dlg-grid"><div class="colA">' + bodySec + '</div>'
+      + '<div class="colB">'
+      + secHtml('修改器', g && g.tr, lk.tab('modifier'))
+      + secHtml('MOD', g && g.m, lk.tab('mod'))
+      + secHtml('存档', g && g.sv, lk.tab('save'))
+      + '</div></div>';
     $('#dHint').textContent = '每类最多显示 ' + SEC_MAX + ' 条，更多在站内详情页 · 数据源：本地库（MOD / 存档 / 修改器 与详情页同源）';
     $('#mask').classList.add('on');
     var qb = $('#qBody');
@@ -751,7 +871,14 @@ const html = `<!DOCTYPE html>
   $('#resMode').addEventListener('change', function(e){
     F.resMode = e.target.value === 'any' ? 'any' : 'all'; F.page = 1; render();
   });
-  $('#q').addEventListener('input', function(e){ F.q = e.target.value; F.page = 1; render(); });
+  /* 搜索防抖（v10.78）：全量扫 2.3 万行 + zh localeCompare 排序不能每键一次；
+     停止输入 180ms 后才真正筛。 ★ 捕获的是「最后一次的值」，不是累加。 */
+  var debT = 0;
+  $('#q').addEventListener('input', function(e){
+    var v = e.target.value;
+    clearTimeout(debT);
+    debT = setTimeout(function(){ F.q = v; F.page = 1; render(); }, 180);
+  });
   $('#pageSz').addEventListener('change', function(e){ F.size = Number(e.target.value)||200; F.page = 1; render(); });
   $('#reset').addEventListener('click', function(){
     F.q=''; F.kind=[]; F.res=[]; F.resMode='all'; F.sort='hot'; F.dir=-1; F.page=1;
@@ -802,7 +929,40 @@ const html = `<!DOCTYPE html>
       + ' 款 · 修改器 ' + M.cover.trainers + ' 款';
   }
 
-  markSort(); render();
+  /* ── 列显隐（v10.78）：来源/大小/热度/更新时间 四列可藏，localStorage 记忆 ──
+   * 藏列用 table class（display:none），nth-child 序号不受影响，JS 不参与重排。
+   * localStorage 在 file:// 某些隐私模式下会抛，读写都 try/catch —— 藏不成就当无记忆。 */
+  var COLS = ['src', 'size', 'hot', 'ts'];
+  var HIDE = {};
+  try {
+    (JSON.parse(localStorage.getItem('roster-hide-cols') || '[]')).forEach(function(c){
+      if(COLS.indexOf(c) >= 0) HIDE[c] = 1;
+    });
+  } catch(_e){}
+  function applyCols(){
+    var t = $('#tbTable');
+    COLS.forEach(function(c){ t.classList.toggle('c-' + c, !!HIDE[c]); });
+    document.querySelectorAll('#colPop input').forEach(function(i){
+      i.checked = !HIDE[i.dataset.c];
+    });
+  }
+  $('#colBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    $('#colPop').classList.toggle('open');
+  });
+  document.addEventListener('click', function(e){
+    if(!e.target.closest || !e.target.closest('.coldrop')) $('#colPop').classList.remove('open');
+  });
+  $('#colPop').addEventListener('change', function(e){
+    var c = e.target.dataset && e.target.dataset.c;
+    if(!c || COLS.indexOf(c) < 0) return;
+    if(e.target.checked) delete HIDE[c]; else HIDE[c] = 1;
+    try { localStorage.setItem('roster-hide-cols', JSON.stringify(Object.keys(HIDE))); } catch(_e){}
+    applyCols();
+  });
+
+  /* ── 初始载入：先吃 URL hash（外部进来的定位），再同步控件，再首绘 ── */
+  readHash(); syncUI(); applyCols(); markSort(); render();
   window.__ROSTER__ = { data:D, view:function(){ return V; }, filter:F };
 })();
 </script>
@@ -813,9 +973,14 @@ fs.writeFileSync(OUT, html);
 /* ★ v10.66：同时产出一份到 public/roster/index.html —— 这是**线上稳定短链**的落点
    （`https://<站点>/roster/`，目录自动吃 index.html）。
    为什么要进 public：站点静态根就是 public（server.js 里 express.static('public')），
-   放别处访问不到；覆盖式部署也不需要额外的路由。 */
+   放别处访问不到；覆盖式部署也不需要额外的路由。
+ * ★ v10.78：再产出一份 .gz —— server.js 有零依赖 gzip 直出中间件（accept-encoding 带
+   gzip 且 .gz 真实存在才命中），10.8MB 的 HTML 走传输压缩。.gz 的唯一生产者就是这里。 */
 fs.mkdirSync(path.dirname(WEB), { recursive: true });
 fs.writeFileSync(WEB, html);
+const gzBuf = zlib.gzipSync(Buffer.from(html), { level: 9 });
+fs.writeFileSync(WEB + '.gz', gzBuf);
 const MB = (Buffer.byteLength(html) / 1048576).toFixed(2);
 console.log(`[roster] 产出 ${path.relative(ROOT, OUT)}  ${MB} MB`);
 console.log(`[roster] 产出 ${path.relative(ROOT, WEB)}  ${MB} MB（线上短链 /roster/）`);
+console.log(`[roster] 产出 ${path.relative(ROOT, WEB)}.gz  ${(gzBuf.length / 1048576).toFixed(2)} MB（gzip 直出用）`);

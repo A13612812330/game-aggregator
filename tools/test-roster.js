@@ -215,5 +215,52 @@ ok('I11 线上短链落点已产出 public/roster/index.html', fs.existsSync(WEB
 ok('I12 ★ 短链落点与归档产物逐字节一致（两份不能各自漂移）',
   fs.existsSync(WEBP) && fs.readFileSync(WEBP, 'utf8') === HTML, fs.existsSync(WEBP) ? '同字节' : '缺文件');
 
+console.log('\n── J v10.78 前端优化（封面/防抖/hash/列显隐/弹窗网格/gz）──');
+/* 用户口径（2026-10-15）：「全做 + 弹窗单独优化布局样式」。
+ * 这一段守同类静默事故：功能「看起来在」但关键机制被删/漂移时不报错 ——
+ *   防抖丢了 = 每键全量扫（卡但不报错）；hash 丢了 = 刷新即丢状态（丢但不报错）；
+ *   .gz 丢了 = 线上传输退回 10.8MB（慢但不报错）。 */
+/* J1 ★ 防抖机制：判「先 clearTimeout 再 setTimeout 统一进 render」，**不钉 180ms**
+ *   —— 时长是实现偏好（反证 Q 专门守这条：180→200 必须仍绿）。 */
+ok('J1 ★ 搜索防抖（clearTimeout + setTimeout 统一出口，不再每键全量扫）',
+  /debT = setTimeout\(function\(\)\{ F\.q = v; F\.page = 1; render\(\); \}/.test(HTML)
+  && HTML.includes('clearTimeout(debT)')
+  && !HTML.includes("function(e){ F.q = e.target.value; F.page = 1; render(); }"));
+ok('J2 URL hash 状态：读写 + replaceState（不产生历史噪音）+ hashchange 外部同步 + 白名单',
+  (HTML.match(/writeHash/g) || []).length >= 2
+  && HTML.includes('history.replaceState')
+  && HTML.includes("window.addEventListener('hashchange'")
+  && /k === 'res'\) F\.res = v\.split\(','\)\.filter/.test(HTML));
+ok('J3 封面缩略图：lazy 懒加载 + capture 阶段破图兜底 + 窄屏整列隐藏',
+  HTML.includes('loading="lazy"') && HTML.includes("class=\"cv\"")
+  && /addEventListener\('error',[\s\S]*?true\)/.test(HTML)
+  && /\.cv,\.cvph\{display:none\}/.test(HTML));
+ok('J4 列显隐：4 列开关 + localStorage 记忆（读写都 try/catch）+ CSS 藏列规则',
+  (HTML.match(/data-c="(src|size|hot|ts)"/g) || []).length === 4
+  && HTML.includes("localStorage.getItem('roster-hide-cols'")
+  && HTML.includes("localStorage.setItem('roster-hide-cols'")
+  && /#tbTable\.c-src th:nth-child\(3\)/.test(HTML));
+ok('J5 弹窗双栏网格 + 头部元信息行（dMeta）',
+  /class="dlg-grid"/.test(HTML) && /class="colA"/.test(HTML) && /class="colB"/.test(HTML)
+  && HTML.includes('id="dMeta"') && /@media\(min-width:720px\)/.test(HTML));
+ok('J6 ★ 资源弹窗直达参数是 dl=body（旧写法 dl=1 一直靠服务端兜底活着，不许回归）',
+  HTML.includes("'&dl=body'") && !HTML.includes('&dl=1'));
+/* J7/J8 是构建与部署层的产物契约（产物 HTML 之外），反证不打这里 —— 存在性直接验。 */
+const GZP = WEBP + '.gz';
+const gzSz = fs.existsSync(GZP) ? fs.statSync(GZP).size : 0;
+ok('J7 .gz 产物存在且在合理区间（缺了=线上退回 10.8MB 明文）',
+  gzSz > 1048576 && gzSz < 3145728, (gzSz / 1048576).toFixed(2) + ' MB');
+const genSrc = fs.readFileSync(GEN, 'utf8');
+ok('J7b gen 脚本产 .gz（gzipSync，level 9）—— .gz 的唯一生产者',
+  genSrc.includes('zlib.gzipSync(Buffer.from(html)') && genSrc.includes("WEB + '.gz'"));
+const srv = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
+/* ★ 锚点不跨行（server.js 行尾可能是 CRLF，钉 \n 会被反咬成假红），分段 include + 顺序比下标。 */
+const gzipIdx = srv.indexOf("if (!/\\bgzip\\b/.test(String(req.headers['accept-encoding'] || ''))");
+const staticIdx = srv.indexOf("app.use(express.static(");
+ok('J8 ★ server.js gzip 直出中间件：accept-encoding 判定 + 穿越防护 + 在 express.static 之前',
+  gzipIdx >= 0 && staticIdx > gzipIdx
+  && srv.includes("Content-Encoding', 'gzip'")
+  && srv.includes('startsWith(PUB_ROOT + path.sep)'), 'gzip@' + gzipIdx + ' < static@' + staticIdx);
+
 console.log(`\n── roster：${pass} / ${pass + fail} 通过${fail ? `（失败 ${fail}）` : ''} ──`);
 process.exit(fail ? 1 : 0);

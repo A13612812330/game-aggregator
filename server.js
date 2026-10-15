@@ -5,6 +5,8 @@
  *      /           静态站点 public/
  */
 const path = require('path');
+const fs = require('fs');
+const zlib = require('zlib');
 const { spawn } = require('child_process');
 const express = require('express');
 const jidi = require('./fetchers/jidi');
@@ -115,6 +117,31 @@ app.use(express.json({ limit: '12mb' }));
 
 // 默认首页 = 单页聚合主站 public/index.html（内容库合并 + 聚合搜索）
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+/* ---------- 静态 gzip 直出（v10.78，零依赖） ----------
+ * 为什么不用 compression 包：部署载荷不带 node_modules（依赖由宿主环境装），
+ * 新增 npm 依赖会牵动整条部署链；zlib 是 Node 内置模块，零成本。
+ * 命中条件（三条同时满足）：GET · accept-encoding 带 gzip · 同名 .gz 文件真实存在。
+ * ★ .gz 的唯一生产者是 tools/gen-roster.js（构建期预压缩），服务端不做实时压缩 ——
+ *   「存在才直出」避免任何路径拼接歧义，未命中一律放行给 express.static。
+ * ★ 只有 roster 页有 .gz（10.8MB → 传输约 2MB）；其余文件零影响。 */
+const PUB_ROOT = path.join(__dirname, 'public');
+app.use((req, res, next) => {
+  if (req.method !== 'GET') return next();
+  if (!/\bgzip\b/.test(String(req.headers['accept-encoding'] || ''))) return next();
+  let p;
+  try { p = decodeURIComponent(req.path); } catch (_) { return next(); }
+  if (p.endsWith('/')) p += 'index.html';
+  const raw = path.join(PUB_ROOT, p);
+  if (!raw.startsWith(PUB_ROOT + path.sep)) return next();   // 路径穿越防护
+  const gz = raw + '.gz';
+  fs.stat(gz, (err, st) => {
+    if (err || !st.isFile()) return next();
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Content-Encoding', 'gzip');
+    res.setHeader('Vary', 'Accept-Encoding');
+    fs.createReadStream(gz).pipe(res);
+  });
+});
 app.use(express.static(path.join(__dirname, 'public')));
 // 旧版多页路由收敛：home/search/library 已并入单页主站,老链接 301 至首页
 app.get(['/home.html', '/search.html', '/library.html'], (_req, res) => res.redirect(301, '/'));
@@ -381,7 +408,7 @@ app.get('/api/category', async (req, res) => {
 });
 
 // 动态生成"离线快照版 HTML"—— server 端实时抓取 + base64 注入,直接返回可双击保存的完整 HTML
-const fs = require('fs');
+// （fs / zlib 已在文件顶部统一 require —— v10.78 前这里曾重复 require('fs')，已收敛）
 app.get('/snapshot.html', async (req, res) => {
   try {
     const feed = await jidi.feed().catch(() => []);
