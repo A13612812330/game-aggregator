@@ -462,6 +462,10 @@ const saves = require('./data/saves');
 const savesYx = require('./data/savesYx');
 /* ★ v10.47：两个「有真实下载链」的新来源 + 按游戏聚合层 */
 const gt = require('./data/gtrainers');
+/* ★ v10.81：FLiNG 修改器直链（官网自托管文件，经流代理绕 Referer 防盗链） */
+const flingdl = require('./data/flingdl');
+/* ★ v10.81：Thunderstore MOD 直链（门 1：MOD 唯一的自托管直链源，无防盗链） */
+const tsmods = require('./data/tsmods');
 /* ★ v10.58：FR（FearlessRevolution）已摘除。理由：整站在 CF managed challenge 后面（只能有头浏览器
    + 页面上下文 fetch）、阶段② 须一次跑完 ≈3.5h，而 GTrainers 已覆盖同类需求且纯 HTTP 直连。
    ★ 摘除前实测：data/fr.json **从未产出** ⇒ fromFr() 贡献 0 条 ⇒ 零用户可见损失。
@@ -903,11 +907,85 @@ app.get('/api/trainers/match', (req, res) => {
   }
   res.json({
     ok: true, t, id, count: list.length,
-    items: list.map((x) => ({
-      name: x.name, zh: x.zh, version: x.version, source: x.source,
-      libId: x.libId, libTitle: x.libTitle,
-    })),
+    items: list.map((x) => {
+      /* ★ v10.81：fling 条目挂流代理直链（flingdl.attach 返回 [{kind,url,file}]） */
+      const dl = flingdl.attach(x);
+      return {
+        name: x.name, zh: x.zh, version: x.version, source: x.source,
+        origin: x.origin, officialUrl: x.officialUrl,
+        libId: x.libId, libTitle: x.libTitle,
+        ...(dl ? { dl } : {}),
+      };
+    }),
   });
+});
+
+/* ★ v10.81：Thunderstore MOD 直链 —— GET /api/ts/mods?id=<libId>&t=<名>&limit=N
+ *   MOD 页签第四路：机地帖（网盘）之外唯一的**自托管直链**源。按 libId 精确命中；
+ *   ?t= 只做 gamesDb 一跳解析（修好的那个 search().items）。 */
+app.get('/api/ts/mods', (req, res) => {
+  let id = String(req.query.id || '').trim();
+  const t = String(req.query.t || '').trim();
+  if (!id && t) {
+    const g = (gamesDb.search(t, 1).items || [])[0];
+    if (g) id = g.id;
+  }
+  const limit = Math.min(60, Math.max(1, parseInt(req.query.limit, 10) || 20));
+  const g = id ? tsmods.byLib(id) : [];
+  res.json({
+    ok: true, id, t, count: g.length,
+    community: g.length ? (tsmods.RAW.games.find((x) => x.libId === id) || {}).community || '' : '',
+    items: tsmods.slim(id, limit),
+  });
+});
+
+/* ★ v10.81：FLiNG 修改器文件流代理 —— GET /api/dl/fling?u=<zip 路径或完整 URL>
+ *   为什么必须代理：FLiNG trainer-files 有 Referer 防盗链（实测无 Referer 403），
+ *   浏览器从本站点过去必被拦 ⇒ 服务端带 Referer 取流回传。
+ *   ★ 入参白名单（防 SSRF）：路径必须以 /wp-content/uploads/ 开头且无 '..'；
+ *     完整 URL 只认 flingtrainer.com / archive.flingtrainer.com 且在 /files/ 或 /wp-content/ 下。 */
+app.get('/api/dl/fling', async (req, res) => {
+  const u = String(req.query.u || '');
+  let target = null;
+  if (u.startsWith('/') && u.includes('/wp-content/uploads/') && !u.includes('..')) {
+    target = 'https://flingtrainer.com' + u;
+  } else {
+    /* ★ query 传进来时 Express 已解码 ⇒ archive 直链含空格，不能用 \S+（实测 400 假红） */
+    const m = u.match(/^https:\/\/(archive\.)?flingtrainer\.com\/(files|wp-content)\/.+\.(zip|rar|exe)$/i);
+    if (m && !u.includes('..')) target = u;
+  }
+  if (!target) return res.status(400).json({ ok: false, error: 'bad u (白名单外)' });
+  try {
+    const up = await fetch(target, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125.0 Safari/537.36',
+        Referer: 'https://flingtrainer.com/',
+      },
+      signal: AbortSignal.timeout(30000),
+    });
+    if (!up.ok || !up.body) {
+      return res.status(502).json({ ok: false, error: 'upstream HTTP ' + up.status });
+    }
+    const fname = decodeURIComponent((target.split('/').pop() || 'fling-trainer.zip'));
+    res.setHeader('Content-Type', up.headers.get('content-type') || 'application/octet-stream');
+    const len = up.headers.get('content-length');
+    if (len) res.setHeader('Content-Length', len);
+    res.setHeader('Content-Disposition', 'attachment; filename="' + fname.replace(/"/g, '') + '"');
+    const reader = up.body.getReader();
+    req.on('close', () => { try { reader.cancel(); } catch (e) { /* 已结束 */ } });
+    reader.closed.catch(() => { /* 上游断流：req 已挂 close 兜底，不致崩进程 */ });
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!res.write(value)) {
+        await new Promise((r) => res.once('drain', r));
+      }
+    }
+    res.end();
+  } catch (e) {
+    if (!res.headersSent) res.status(502).json({ ok: false, error: String(e.message || e).slice(0, 120) });
+    else try { res.end(); } catch (e2) { /* 已断开 */ }
+  }
 });
 
 /* ================= 🔧 MOD / 修改器（机地社区帖 · 带网盘直链） =================
@@ -1107,7 +1185,10 @@ app.get('/api/res/game', (req, res) => {
   let id = String(req.query.id || '').trim();
   const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 60));
   if (!id && t) {
-    const g = gamesDb.search(t, 1)[0];
+    /* ★ v10.81 修复：gamesDb.search() 返回 {q,count,items,topScore}（v10.62 四库统一改造后），
+     *   老代码 `search(t,1)[0]` 对对象取 [0] 恒 undefined ⇒ 纯名字查询永远空。
+     *   前端弹窗一直 id+t 双发所以没炸；roster / 外部直调 ?t= 才会踩到。 */
+    const g = (gamesDb.search(t, 1).items || [])[0];
     if (g) id = g.id;
   }
   const out = { ok: true, id, t, counts: { mod: 0, saves: 0, trainers: 0 }, items: { mod: [], saves: [], trainers: [] } };

@@ -270,6 +270,12 @@ const SUITES = [
    * ★ 本套件是**纯离线层**（造假数据 + 假文本，不打源站、不碰端口）；
    *   真渲染与真图片由 `test-v1075-rank-cards.js`（BROWSER 层）守。 */
   'test-v1075-rank-source.js',
+  /* ★ v10.81 新增：直链改造防线（静态离线）——
+   *   ① res/game ?t= 修复（gamesDb.search() 返回对象，老 [0] 写法恒空）
+   *   ② FLiNG 修改器直链：产物形状 / 流代理 + SSRF 白名单 / trainers match 挂 dl
+   *   ③ Thunderstore MOD 直链：产物形状 / /api/ts/mods / 禁用 v1 全量端点（门 1 铁律）
+   *   ④ 前端接线：第四路 ts / 角标计数 / TS 段位置 / GCM 分治文案 / 空态守卫 */
+  'test-v1081-dl.js',
 ];
 
 /* ============================================================================

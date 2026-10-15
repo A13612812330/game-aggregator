@@ -6300,16 +6300,18 @@ async function dlUniLoad(k) {
       st.cnt.body = d.links;
     } else if (k === 'mod' || k === 'modifier') {
       /* ★ v10.53：修改器页签多取一路 **GTrainers**（聚合层）—— 见 dlUniFetchGt 注释。
-         `mod` 页签不取：聚合层的 mod 分区本来就只有机地社区帖一个来源（GT 只进存档/修改器）。 */
-      const [community, gcm, gtr] = await Promise.all([
+         ★ v10.81：mod 页签多取一路 **Thunderstore**（/api/ts/mods）—— 机地帖全是网盘口令，
+         TS 是 MOD 唯一的自托管直链源（官方 CDN，无防盗链，302 直达 zip）。 */
+      const [community, gcm, gtr, ts] = await Promise.all([
         dlUniFetchMods(st.ctx, k),
         k === 'modifier' ? dlUniFetchGcm(st.ctx) : Promise.resolve([]),
         k === 'modifier' ? dlUniFetchGt(st.ctx, 'trainers') : Promise.resolve([]),
+        k === 'mod' ? dlUniFetchTs(st.ctx) : Promise.resolve([]),
       ]);
-      st.data[k] = { community, gcm, gtr };
-      /* 角标 = 三个来源之和。★ v10.53 起这个数**与卡面 chip / 首页筛选完全同源**
-         （都出自 data/res-groups.js），不会再出现「卡上写 3、点进去 1 条」。 */
-      st.cnt[k] = community.count + gcm.length + gtr.length;
+      st.data[k] = { community, gcm, gtr, ts };
+      /* 角标 = 各来源之和。★ v10.53 起这个数**与卡面 chip / 首页筛选完全同源**；
+         ★ v10.81：mod 页签角标加 TS 直链数（新增来源必须计数，否则「卡上写 0、点进来有货」）。 */
+      st.cnt[k] = community.count + gcm.length + gtr.length + ts.length;
     } else {
       /* ★ v10.46：存档 = 两条线并行取（文件 / 位置），互不阻塞 ——
          某一条挂了另一条照样能画，不会出现「文件接口慢就把整页卡在加载态」。
@@ -6459,12 +6461,16 @@ function dlResSection(items, cat) {
     dlResRowsHtml(items, cat) + '</div>';
 }
 
-/** ②b 修改器模块的第三方段落：Game Cheats Manager 元数据（**没有下载地址**） */
+/** ②b 修改器模块的第三方段落：Game Cheats Manager 元数据（**没有下载地址**）
+ *  ★ v10.81：id 也带上 —— 只发 t 时走 lookup 模糊兜底，直开参数（?open=&dl=modifier）
+ *    的场景下标题匹配可能落空 ⇒ GCM 段空 ⇒ FLiNG 直链按钮跟着消失（本轮探针实拍踩到）。 */
 async function dlUniFetchGcm(ctx) {
   const t = String(ctx.title || '').trim();
-  if (t.length < 2) return [];
+  const id = String(ctx.id || '').trim();
+  if (!t && !id) return [];
   try {
-    const j = await fetch(api('/api/trainers/match?t=' + encodeURIComponent(t))).then((r) => r.json());
+    const qs = (id ? 'id=' + encodeURIComponent(id) + '&' : '') + (t ? 't=' + encodeURIComponent(t) : '');
+    const j = await fetch(api('/api/trainers/match?' + qs)).then((r) => r.json());
     return (j && j.items) || [];
   } catch (e) { return []; }
 }
@@ -6497,6 +6503,20 @@ async function dlUniFetchGt(ctx, cat) {
     const j = await fetch(api('/api/res/game?' + qs)).then((r) => r.json());
     const items = (j && j.items && j.items[cat]) || [];
     return items.filter((x) => x && x.src === 'gt');
+  } catch (e) { return []; }
+}
+
+/** ★ v10.81：MOD 页签的 **Thunderstore** 直链（第四路）。
+ *  与 dlUniFetchGt 同策略：失败/空返回 []，不把整页拖成错误页。 */
+async function dlUniFetchTs(ctx) {
+  const id = String(ctx.id || '').trim();
+  const t = String(ctx.title || '').trim();
+  if (!id && !t) return [];
+  try {
+    const qs = 'limit=20' + (id ? '&id=' + encodeURIComponent(id) : '') +
+      (t ? '&t=' + encodeURIComponent(t) : '');
+    const j = await fetch(api('/api/ts/mods?' + qs)).then((r) => r.json());
+    return (j && j.items) || [];
   } catch (e) { return []; }
 }
 
@@ -6689,11 +6709,30 @@ function dlUniPaintMod(d, kind) {
   const out = [];
   /* 模块说明先摆出来：「修改器」与「Mod」的风险差异是用户决策要用到的信息 */
   if (M.hint) out.push('<div class="dl-note" style="margin:0 0 8px">' + esc(M.hint) + '</div>');
+  /* ★ v10.81：Thunderstore 直链段（MOD 页签专属）—— 排在机地帖**之前**：
+     能直接下载的排在要跳网盘的前面（「内容排在出口之前」同一逻辑的镜像应用）。 */
+  if (kind === 'mod' && (d.ts || []).length) {
+    out.push('<div class="dl-agg"><div class="dl-note">另有 <b>' + d.ts.length +
+      '</b> 个来自 <b>Thunderstore</b> 的 MOD（<b>官方 CDN 直链 zip</b>，免注册、免网盘客户端）' +
+      ' · <a href="https://thunderstore.io/" target="_blank" rel="noopener">thunderstore.io ↗</a></div>' +
+      d.ts.map((x) => {
+        const links = (x.links || []).filter((l) => l.url);
+        const ks = links.map((l, i) => '<a' + (i === 0 ? ' class="pri"' : '') +
+          ' href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer">' +
+          (i === 0 ? '⬇ ' : '') + esc(l.label || '下载') + ' ↗</a>');
+        if (x.page) ks.push('<a class="src" href="' + esc(x.page) + '" target="_blank" rel="noopener noreferrer">源站 ↗</a>');
+        return '<div class="d-dl-it"><span class="k gt">TS</span>' +
+          '<span class="bd"><span class="t" title="' + esc(x.title || '') + '">' + esc(x.title || '') + '</span>' +
+          '<span class="m">' + esc(x.srcLabel || 'Thunderstore') + (x.note ? ' · ' + esc(x.note) : '') + '</span>' +
+          '<span class="dl-res-lk">' + ks.join('') + '</span></span></div>';
+      }).join('') + '</div>');
+  }
   if (!c.items.length) {
     /* ★ v10.53：机地没有、但聚合层有 GTrainers 时**不能**说「没有收录」——
-       下面的 GT 段马上就会列出条目，空态文案会自相矛盾（实测踩到的正是这一格）。 */
+       下面的 GT 段马上就会列出条目，空态文案会自相矛盾（实测踩到的正是这一格）。
+       ★ v10.81：同理不能忽略 Thunderstore 段（mod 页签）。 */
     out.push('<div class="dlpop-empty">这款游戏在<span style="white-space:nowrap">机地社区</span>没有收录 ' + M.nm +
-      (gtr.length ? '' : '<br><span style="font-size:11.5px">可以点下面的按钮到机地 MOD / 修改器区自己搜</span>') +
+      (gtr.length || (d.ts || []).length ? '' : '<br><span style="font-size:11.5px">可以点下面的按钮到机地 MOD / 修改器区自己搜</span>') +
       '</div>');
   } else {
     out.push('<div class="dl-note">机地社区共 <b>' + c.count + '</b> 条 ' + M.nm +
@@ -6704,19 +6743,31 @@ function dlUniPaintMod(d, kind) {
         ' 条未展示，去机地搜「' + esc(nm) + '」看全部</div>');
     }
   }
-  /* 修改器模块的第三方段落：GCM 元数据**没有下载地址**，与「能点开的社区帖」视觉上必须分开 */
+  /* 修改器模块的第三方段落：★ v10.81 分治 —— FLiNG 条目现在带**官方文件直链**（流代理，
+     绕 Referer 防盗链），能下的与「只确认版本」的必须分开说，不许再说「一律不含下载地址」。 */
   if (kind === 'modifier' && (d.gcm || []).length) {
-    out.push('<div class="dl-gcm"><div class="dl-note">另有 <b>' + d.gcm.length +
-      '</b> 个第三方修改器来源（Game Cheats Manager 元数据，<b>不含下载地址</b>，仅供确认「有没有 / 什么版本」）' +
+    const gcm = d.gcm;
+    const nDl = gcm.filter((it) => (it.dl || []).length).length;
+    out.push('<div class="dl-gcm"><div class="dl-note">另有 <b>' + gcm.length +
+      '</b> 个第三方修改器来源' + (nDl
+        ? '，其中 <b>' + nDl + '</b> 个<b>风灵月影（FLiNG）官方文件可直下</b>（免注册、免网盘客户端）'
+        : '（Game Cheats Manager 元数据，<b>不含下载地址</b>，仅供确认「有没有 / 什么版本」）') +
       ' · <a href="' + D_GCM_URL + '" target="_blank" rel="noopener">打开 GCM 下载页 ↗</a></div>' +
-      d.gcm.map((it) => {
+      gcm.map((it) => {
         const src = it.source || 'gcm';
         const nmz = it.zh || it.name || '';
         const en = (it.name && it.name !== nmz) ? it.name : '';
         const meta = [en, it.version ? 'v ' + it.version : ''].filter(Boolean).join(' · ');
+        /* ★ v10.81：FLiNG 直链按钮 —— 与 dlResRowsHtml 的通道行同款样式（铁律 17）；
+           href 是本站流代理 /api/dl/fling?u=…（服务端带 Referer 取流），不是源站直链。 */
+        const ks = (it.dl || []).map((l, i) => '<a' + (i === 0 ? ' class="pri"' : '') +
+          ' href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer"' +
+          ' title="' + esc(l.file || 'FLiNG 修改器文件') + '">' + (i === 0 ? '⬇ ' : '') +
+          esc(l.kind || '下载') + ' ↗</a>');
         return '<div class="df-row"><span class="ix">·</span><span class="bd">' +
           '<span class="t"><span class="tagx">' + esc(D_TR_SRC[src] || src) + '</span>' + esc(nmz) + '</span>' +
-          (meta ? '<span class="m">' + esc(meta) + '</span>' : '') + '</span></div>';
+          (meta ? '<span class="m">' + esc(meta) + '</span>' : '') +
+          (ks.length ? '<span class="dl-res-lk">' + ks.join('') + '</span>' : '') + '</span></div>';
       }).join('') + '</div>');
   }
   /* ★ v10.53：聚合层的 GTrainers 段（排在 GCM 段之后、模块出口链接**之前**）——
