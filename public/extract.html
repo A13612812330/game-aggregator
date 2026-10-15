@@ -6335,9 +6335,12 @@ function dlUniPaintMod(d, kind) {
   if (!c.items.length) {
     /* ★ v10.53：机地没有、但聚合层有 GTrainers 时**不能**说「没有收录」——
        下面的 GT 段马上就会列出条目，空态文案会自相矛盾（实测踩到的正是这一格）。
-       ★ v10.81：同理不能忽略 Thunderstore 段（mod 页签）。 */
+       ★ v10.81：同理不能忽略 Thunderstore 段（mod 页签）。
+       ★ P1b：同理不能忽略 GCM 段（修改器页签）—— 实拍踩到：机地空但 CheatScript
+       外链 1 条在场，空态却说「没有收录 修改器」⇒ 自相矛盾。 */
+    const hasOther = gtr.length || (d.ts || []).length || (kind === 'modifier' && (d.gcm || []).some((it) => (it.dl || []).length));
     out.push('<div class="dlpop-empty">这款游戏在<span style="white-space:nowrap">机地社区</span>没有收录 ' + M.nm +
-      (gtr.length || (d.ts || []).length ? '' : '<br><span style="font-size:11.5px">可以点下面的按钮到机地 MOD / 修改器区自己搜</span>') +
+      (hasOther ? '，但<b>下方有可直下的来源</b>' : '<br><span style="font-size:11.5px">可以点下面的按钮到机地 MOD / 修改器区自己搜</span>') +
       '</div>');
   } else {
     out.push('<div class="dl-note">机地社区共 <b>' + c.count + '</b> 条 ' + M.nm +
@@ -6349,13 +6352,19 @@ function dlUniPaintMod(d, kind) {
     }
   }
   /* 修改器模块的第三方段落：★ v10.81 分治 —— FLiNG 条目现在带**官方文件直链**（流代理，
-     绕 Referer 防盗链），能下的与「只确认版本」的必须分开说，不许再说「一律不含下载地址」。 */
+     绕 Referer 防盗链），能下的与「只确认版本」的必须分开说，不许再说「一律不含下载地址」。
+     ★ P1b：the_cheat_script 条目带**外链**（MEGA/Yandex，ext:true，新标签直开）——
+     不是 CDN 直链也**不许冒充**，文案按 ext 分开数、分开说。 */
   if (kind === 'modifier' && (d.gcm || []).length) {
     const gcm = d.gcm;
-    const nDl = gcm.filter((it) => (it.dl || []).length).length;
+    const nFling = gcm.filter((it) => (it.dl || []).some((l) => !l.ext)).length;
+    const nExt = gcm.filter((it) => (it.dl || []).some((l) => l.ext)).length;
+    const nDl = nFling + nExt;
     out.push('<div class="dl-gcm"><div class="dl-note">另有 <b>' + gcm.length +
       '</b> 个第三方修改器来源' + (nDl
-        ? '，其中 <b>' + nDl + '</b> 个<b>风灵月影（FLiNG）官方文件可直下</b>（免注册、免网盘客户端）'
+        ? '，其中 ' + (nFling ? '<b>' + nFling + '</b> 个<b>风灵月影（FLiNG）官方文件可直下</b>（免注册、免网盘客户端）' : '')
+          + (nFling && nExt ? '；' : '')
+          + (nExt ? '<b>' + nExt + '</b> 个 CheatScript 表格<b>外链可直开</b>（MEGA / Yandex，免提取码）' : '')
         : '（Game Cheats Manager 元数据，<b>不含下载地址</b>，仅供确认「有没有 / 什么版本」）') +
       ' · <a href="' + D_GCM_URL + '" target="_blank" rel="noopener">打开 GCM 下载页 ↗</a></div>' +
       gcm.map((it) => {
@@ -6363,12 +6372,12 @@ function dlUniPaintMod(d, kind) {
         const nmz = it.zh || it.name || '';
         const en = (it.name && it.name !== nmz) ? it.name : '';
         const meta = [en, it.version ? 'v ' + it.version : ''].filter(Boolean).join(' · ');
-        /* ★ v10.81：FLiNG 直链按钮 —— 与 dlResRowsHtml 的通道行同款样式（铁律 17）；
-           href 是本站流代理 /api/dl/fling?u=…（服务端带 Referer 取流），不是源站直链。 */
+        /* ★ v10.81：FLiNG 直链按钮（href=本站流代理）+ P1b 外链按钮（ext ⇒ href=外链本体、
+           ↗ 直开标记）—— 与 dlResRowsHtml 的通道行同款样式（铁律 17）。 */
         const ks = (it.dl || []).map((l, i) => '<a' + (i === 0 ? ' class="pri"' : '') +
           ' href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer"' +
-          ' title="' + esc(l.file || 'FLiNG 修改器文件') + '">' + (i === 0 ? '⬇ ' : '') +
-          esc(l.kind || '下载') + ' ↗</a>');
+          ' title="' + esc(l.file || l.kind || '修改器文件') + '">' + (l.ext ? '↗ ' : (i === 0 ? '⬇ ' : '')) +
+          esc(l.kind || '下载') + '</a>');
         return '<div class="df-row"><span class="ix">·</span><span class="bd">' +
           '<span class="t"><span class="tagx">' + esc(D_TR_SRC[src] || src) + '</span>' + esc(nmz) + '</span>' +
           (meta ? '<span class="m">' + esc(meta) + '</span>' : '') +

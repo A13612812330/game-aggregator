@@ -464,6 +464,8 @@ const savesYx = require('./data/savesYx');
 const gt = require('./data/gtrainers');
 /* ★ v10.81：FLiNG 修改器直链（官网自托管文件，经流代理绕 Referer 防盗链） */
 const flingdl = require('./data/flingdl');
+/* ★ v10.81/P1b：TheCheatScript 外链（MEGA/Yandex 等，ext ⇒ 前端新标签直开，非流代理） */
+const tcsdl = require('./data/tcsdl');
 /* ★ v10.81：Thunderstore MOD 直链（门 1：MOD 唯一的自托管直链源，无防盗链） */
 const tsmods = require('./data/tsmods');
 /* ★ v10.58：FR（FearlessRevolution）已摘除。理由：整站在 CF managed challenge 后面（只能有头浏览器
@@ -908,8 +910,10 @@ app.get('/api/trainers/match', (req, res) => {
   res.json({
     ok: true, t, id, count: list.length,
     items: list.map((x) => {
-      /* ★ v10.81：fling 条目挂流代理直链（flingdl.attach 返回 [{kind,url,file}]） */
-      const dl = flingdl.attach(x);
+      /* ★ v10.81：fling 条目挂流代理直链（flingdl.attach 返回 [{kind,url,file}]）；
+       * ★ P1b：the_cheat_script 条目挂外链（tcsdl.attach 返回 [{kind,url,ext:true}]）。
+       *   两个源 origin 互斥，先到先得即可。 */
+      const dl = flingdl.attach(x) || tcsdl.attach(x);
       return {
         name: x.name, zh: x.zh, version: x.version, source: x.source,
         origin: x.origin, officialUrl: x.officialUrl,

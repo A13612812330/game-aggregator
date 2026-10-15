@@ -52,8 +52,8 @@ ok('流代理带 Referer 取上游（防盗链绕行的正体）',
   /Referer: 'https:\/\/flingtrainer\.com\/'/.test(SRV));
 ok('上游 hard timeout 30s（铁律：一侧源站必须硬超时）',
   /AbortSignal\.timeout\(30000\)/.test(SRV));
-ok('trainers/match 给条目挂 dl（前端 GCM 段的输入）',
-  SRV.includes('const dl = flingdl.attach(x);') && SRV.includes('...(dl ? { dl } : {})'));
+ok('trainers/match 给条目挂 dl（fling 流代理 || tcs 外链，前端 GCM 段的输入）',
+  SRV.includes('const dl = flingdl.attach(x) || tcsdl.attach(x);') && SRV.includes('...(dl ? { dl } : {})'));
 ok('trainers/match 下发 origin/officialUrl（前端分治文案要认 origin）',
   SRV.includes('origin: x.origin, officialUrl: x.officialUrl'));
 ok('fetcher 产出物包含 zip/rar/exe 过滤（死 token 空 path 不落库）',
@@ -93,11 +93,16 @@ ok('TS 段源码位置在机地帖渲染之前（能直下的排前面）',
   IDX.indexOf("if (kind === 'mod' && (d.ts || []).length)")
     < IDX.indexOf('out.push(dlModRowsHtml(c.items, kind))'));
 ok('GCM 段分治文案：有 FLiNG 直链时不再说「一律不含下载地址」',
-  IDX.includes("风灵月影（FLiNG）官方文件可直下") && IDX.includes('const nDl = gcm.filter((it) => (it.dl || []).length).length;'));
-ok('空态守卫：机地没有但 TS/GT 有时不许说「没有收录」（v10.53 同坑不再踩）',
-  /\(gtr\.length \|\| \(d\.ts \|\| \[\]\)\.length \? '' :/.test(IDX));
-ok('FLiNG 按钮带文件名 title（title="' + ' 语法锚）',
-  IDX.includes("esc(l.file || 'FLiNG 修改器文件')"));
+  IDX.includes("风灵月影（FLiNG）官方文件可直下") && IDX.includes('const nFling = gcm.filter((it) => (it.dl || []).some((l) => !l.ext)).length;'));
+ok('★ P1b TCS 外链：ext 分开数、分开说（不许冒充 CDN 直链）',
+  IDX.includes('const nExt = gcm.filter((it) => (it.dl || []).some((l) => l.ext)).length;')
+  && IDX.includes('外链可直开') && IDX.includes('免提取码'));
+ok('★ P1b TCS 按钮：ext ⇒ ↗ 直开标记 + title 回退到 kind',
+  IDX.includes("(l.ext ? '↗ ' : (i === 0 ? '⬇ ' : ''))") && IDX.includes('esc(l.file || l.kind || \'修改器文件\')'));
+ok('空态守卫：机地没有但 TS/GT/GCM 有直链时不许说「没有收录」（v10.53 同坑不再踩，P1b 补 GCM）',
+  /const hasOther = gtr\.length \|\| \(d\.ts \|\| \[\]\)\.length \|\| \(kind === 'modifier' && \(d\.gcm \|\| \[\]\)\.some/.test(IDX));
+ok('按钮 title 不再写死「FLiNG 修改器文件」（回退链 file→kind→通用）',
+  IDX.includes("esc(l.file || 'FLiNG 修改器文件')") === false && IDX.includes("esc(l.file || l.kind || '修改器文件')"));
 
 console.log(`\n${pass} / ${pass + fail}`);
 if (fail) process.exit(1);

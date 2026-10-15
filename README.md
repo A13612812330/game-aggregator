@@ -881,11 +881,16 @@ python tools/clean-excel.py       # 读 E:/新建文件夹/基础测试数据.xl
 终态：**252 款游戏 · 2,870 个包**（每社区 Top 20）→ Mod 页签第四路 TS 段（排在机地帖**之前**
 —— 能直下的排前面）+ 角标计数 + 空态守卫。⑤ **顺带修第二个真 bug**：`dlUniFetchGcm` 只发
 `t=` 不发 `id=` —— 直开参数（`?open=&dl=modifier`）场景 `ctx.title` 未解析 ⇒ GCM 段空 ⇒
-FLiNG 按钮消失（行为探针实拍踩到的假绿链）。⑥ **防线**：新套件 `test-v1081-dl.js` **25/25**
+FLiNG 按钮消失（行为探针实拍踩到的假绿链）。⑥ **P1b TheCheatScript（用户拍板「先做」当轮补齐）**：
+thecheatscript.com **不自托管**（实测外链全是 MEGA / Yandex）⇒ 做不了流代理，消费形态 =
+**新标签直开**（免提取码免客户端，前端 `ext:true` 渲染「↗ 直开」，不冒充 CDN 直链）；
+抓取器 `fetch-tcs-dl.js`（host 白名单）终态 **1,847 页 · withDl 1,838（99.5%）· 外链 2,316 条 · err 0**；
+顺带修第三个渲染矛盾：机地空态与 CheatScript 外链并存时自相矛盾 ⇒ 空态守卫补 GCM 段
+（改为「但下方有可直下的来源」）。⑦ **防线**：新套件 `test-v1081-dl.js` **27/27**
 （登记 SUITES；一条负向断言先被 fetcher 注释咬红 ⇒ 剥注释再判，铁律 126 再现）· 行为探针
-`_probe-v1081-dl.js` **11/11**（★ 跨域验证必须在 Node 侧，页内 fetch 被 CORS 咬死）· 反证
-roster 26/26 · pages-sync 54/54 · 四张派生页重建 + 前置闸全过。⑦ **未提交/未发布**（见顶部）；
-FLiNG noDl 180 页 = 源站下架如实落库；the_cheat_script 1,847 条未抓（可按同套路补）。
+`_probe-v1081-dl.js` **14/14**（★ 跨域验证必须在 Node 侧，页内 fetch 被 CORS 咬死）· 反证
+roster 26/26 · pages-sync 54/54 · 四张派生页重建 + 前置闸全过。⑧ 发布/推送见顶部；
+FLiNG noDl 180 页 = 源站下架如实落库；TCS noDl 9 页同。
 详见 [v10.81](docs/versions/v10.81.md)。
 
 ### ★ v10.80 增量（2026-10-15）—— roster 弹窗「机地本体**直链直出**」（修「为什么获取不到」）+ 数据分析 **v2**（筛选 / 时间对比 / 新鲜度）
