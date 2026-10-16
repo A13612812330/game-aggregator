@@ -1083,9 +1083,10 @@ const GN = require(path.join(root, 'data', 'game-name'));
     count(idx, /dlUniFetchGt\(st\.ctx, /g) === 2,
     `实际 ${count(idx, /dlUniFetchGt\(st\.ctx, /g)} 处`);
 
-  /* ② 角标：改成「之和」，与卡面 chip 同源 */
-  t('★★ v10.53：修改器角标 = 机地 + GCM + GT 三者之和',
-    /st\.cnt\[k\] = community\.count \+ gcm\.length \+ gtr\.length;/.test(idx));
+  /* ② 角标：改成「之和」，与卡面 chip 同源
+     ★ v10.81 起公式加 TS：mod 页签 = 机地 + GCM + GT + TS（modifier 页签 ts 为空数组，公式共用） */
+  t('★★ v10.53：修改器角标 = 机地 + GCM + GT 三者之和（v10.81 起 + TS 第四路）',
+    /st\.cnt\[k\] = community\.count \+ gcm\.length \+ gtr\.length \+ ts\.length;/.test(idx));
   t('★★ v10.53：存档角标 = 游侠文件 + GT 文件（**不含**位置条数，位置在右上角弹窗里）',
     /st\.cnt\.save = files\.count \+ gts\.length;/.test(idx));
   t('★ v10.53：存档三路也是**并行**取（`Promise.all`，任一路慢/挂不拖着整页）',
@@ -1131,8 +1132,8 @@ const GN = require(path.join(root, 'data', 'game-name'));
   t('★★ v10.53：存档空态判据放宽成「两路都没有」，`!items.length` 分支**不再提前 return**',
     !/if \(!items\.length\) \{[\s\S]{0,260}body\.innerHTML = out\.join\(''\);\s*\n\s*return;/.test(
       idx.split('function dlUniPaintSave(')[1] || ''));
-  t('★★ v10.53：机地空态在 `gtr.length` 时**不再**提示「到机地 MOD / 修改器区自己搜」（会和下面的 GT 段自相矛盾）',
-    /\(gtr\.length \? '' : '<br><span style="font-size:11\.5px">可以点下面的按钮到机地 MOD \/ 修改器区自己搜<\/span>'\)/.test(idx));
+  t('★★ v10.53：机地空态在 `gtr.length` 时**不再**提示「到机地 MOD / 修改器区自己搜」（会和下面的 GT 段自相矛盾；v10.81 起收成 hasOther 守卫，含 ts/gcm 外链）',
+    /const hasOther = gtr\.length \|\| \(d\.ts \|\| \[\]\)\.length \|\| \(kind === 'modifier' && \(d\.gcm \|\| \[\]\)\.some\(/.test(idx));
   t('★ v10.53：游侠空态在 `gts.length` 时**不再**追「去存档库按名搜」（同上，GT 段就在下面）',
     /\(gts\.length \? '' : '<br><span style="font-size:11\.5px">存档区按游戏名匹配/.test(idx));
   t('★ v10.53：存档页头数字含 GT（`items.length + gts.length`）—— 与角标、与卡面 chip 三处同数',

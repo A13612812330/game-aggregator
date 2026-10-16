@@ -80,10 +80,11 @@ console.log('\n=== ③ ★ --dry 必须拦住每一个有写副作用的步骤 =
   const writes = DS.STEP_DEFS.filter((d) => d.write);
   const reads = DS.STEP_DEFS.filter((d) => !d.write);
 
-  // ★ 用精确值而不是 >=7：漏标一个 write 标记就等于「那步在 --dry 下会真跑」，
-  //   而 `>=7` 恰好漏掉这种情况（write 少一个、read 多一个，总数仍是 8）。
+  // ★ 用精确值而不是 >=8：漏标一个 write 标记就等于「那步在 --dry 下会真跑」，
+  //   而 `>=8` 恰好漏掉这种情况（write 少一个、read 多一个，总数仍是 9）。
   //   增删步骤时必须同步改这一行 —— 这是刻意的：改步骤却不改守护清单，就该红。
-  eq(writes.length, 8, 'STEP_DEFS 恰好 8 个有写副作用的步骤（9 步里的 health 是只读）');
+  //   ★ v10.79 加 roster（roster 名单页重生成）⇒ write 8→9；v10.83 同步本行（此前漏改躺红 4 版）。
+  eq(writes.length, 9, 'STEP_DEFS 恰好 9 个有写副作用的步骤（11 步里 health/sources 只读）');
   eq(reads.length + writes.length, DS.STEP_DEFS.length, 'read + write 覆盖全部步骤（没有漏标的）');
 
   for (const d of writes) {

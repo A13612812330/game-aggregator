@@ -943,7 +943,9 @@ app.get('/api/ts/mods', (req, res) => {
   });
 });
 
-/* ★ v10.81：FLiNG 修改器文件流代理 —— GET /api/dl/fling?u=<zip 路径或完整 URL>
+/* ★ v10.83 实测记录：曾在此加 /api/mx/mods（Modrinth 补充源），实测 0 产出
+ *   （Modrinth 是纯 MC 生态平台，搜索描述命中会混入 MC 模组 —— 见 v10.83.md）⇒ 撤下。
+ * ★ v10.81：FLiNG 修改器文件流代理 —— GET /api/dl/fling?u=<zip 路径或完整 URL>
  *   为什么必须代理：FLiNG trainer-files 有 Referer 防盗链（实测无 Referer 403），
  *   浏览器从本站点过去必被拦 ⇒ 服务端带 Referer 取流回传。
  *   ★ 入参白名单（防 SSRF）：路径必须以 /wp-content/uploads/ 开头且无 '..'；

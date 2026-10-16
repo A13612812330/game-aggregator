@@ -104,5 +104,5 @@ ok('空态守卫：机地没有但 TS/GT/GCM 有直链时不许说「没有收�
 ok('按钮 title 不再写死「FLiNG 修改器文件」（回退链 file→kind→通用）',
   IDX.includes("esc(l.file || 'FLiNG 修改器文件')") === false && IDX.includes("esc(l.file || l.kind || '修改器文件')"));
 
-console.log(`\n${pass} / ${pass + fail}`);
-if (fail) process.exit(1);
+console.log(`\n通过 ${pass} / ${pass + fail}`);
+if (fail) process.exitCode = 1;

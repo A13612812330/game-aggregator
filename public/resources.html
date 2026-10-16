@@ -6301,17 +6301,20 @@ async function dlUniLoad(k) {
     } else if (k === 'mod' || k === 'modifier') {
       /* ★ v10.53：修改器页签多取一路 **GTrainers**（聚合层）—— 见 dlUniFetchGt 注释。
          ★ v10.81：mod 页签多取一路 **Thunderstore**（/api/ts/mods）—— 机地帖全是网盘口令，
-         TS 是 MOD 唯一的自托管直链源（官方 CDN，无防盗链，302 直达 zip）。 */
-      const [community, gcm, gtr, ts] = await Promise.all([
+         TS 是 MOD 主力自托管直链源（官方 CDN，无防盗链，302 直达 zip）。
+         ★ v10.83：再加一路 **Modrinth**（/api/mx/mods）—— TS 的补充源（CDN 直链，覆盖面薄）。 */
+      const [community, gcm, gtr, ts, mx] = await Promise.all([
         dlUniFetchMods(st.ctx, k),
         k === 'modifier' ? dlUniFetchGcm(st.ctx) : Promise.resolve([]),
         k === 'modifier' ? dlUniFetchGt(st.ctx, 'trainers') : Promise.resolve([]),
         k === 'mod' ? dlUniFetchTs(st.ctx) : Promise.resolve([]),
+        k === 'mod' ? dlUniFetchMx(st.ctx) : Promise.resolve([]),
       ]);
-      st.data[k] = { community, gcm, gtr, ts };
+      st.data[k] = { community, gcm, gtr, ts, mx };
       /* 角标 = 各来源之和。★ v10.53 起这个数**与卡面 chip / 首页筛选完全同源**；
-         ★ v10.81：mod 页签角标加 TS 直链数（新增来源必须计数，否则「卡上写 0、点进来有货」）。 */
-      st.cnt[k] = community.count + gcm.length + gtr.length + ts.length;
+         ★ v10.81：mod 页签角标加 TS 直链数（新增来源必须计数，否则「卡上写 0、点进来有货」）。
+         ★ v10.83：加 MX 数。 */
+      st.cnt[k] = community.count + gcm.length + gtr.length + ts.length + mx.length;
     } else {
       /* ★ v10.46：存档 = 两条线并行取（文件 / 位置），互不阻塞 ——
          某一条挂了另一条照样能画，不会出现「文件接口慢就把整页卡在加载态」。
@@ -6516,6 +6519,19 @@ async function dlUniFetchTs(ctx) {
     const qs = 'limit=20' + (id ? '&id=' + encodeURIComponent(id) : '') +
       (t ? '&t=' + encodeURIComponent(t) : '');
     const j = await fetch(api('/api/ts/mods?' + qs)).then((r) => r.json());
+    return (j && j.items) || [];
+  } catch (e) { return []; }
+}
+
+/** ②d Modrinth 直链（v10.83）：/api/mx/mods —— 与 dlUniFetchTs 同构的补充源。 */
+async function dlUniFetchMx(ctx) {
+  const id = String(ctx.id || '').trim();
+  const t = String(ctx.title || '').trim();
+  if (!id && !t) return [];
+  try {
+    const qs = 'limit=10' + (id ? '&id=' + encodeURIComponent(id) : '') +
+      (t ? '&t=' + encodeURIComponent(t) : '');
+    const j = await fetch(api('/api/mx/mods?' + qs)).then((r) => r.json());
     return (j && j.items) || [];
   } catch (e) { return []; }
 }
@@ -6727,13 +6743,30 @@ function dlUniPaintMod(d, kind) {
           '<span class="dl-res-lk">' + ks.join('') + '</span></span></div>';
       }).join('') + '</div>');
   }
+  /* ★ v10.83：Modrinth 补充直链段（MOD 页签）—— 只在有条目时展示（非 MC 游戏多数为空）。 */
+  if (kind === 'mod' && (d.mx || []).length) {
+    out.push('<div class="dl-agg"><div class="dl-note">另有 <b>' + d.mx.length +
+      '</b> 个来自 <b>Modrinth</b> 的 MOD（<b>CDN 直链</b>，免注册、免网盘客户端）' +
+      ' · <a href="https://modrinth.com/" target="_blank" rel="noopener">modrinth.com ↗</a></div>' +
+      d.mx.map((x) => {
+        const links = (x.links || []).filter((l) => l.url);
+        const ks = links.map((l, i) => '<a' + (i === 0 ? ' class="pri"' : '') +
+          ' href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer">' +
+          (i === 0 ? '⬇ ' : '') + esc(l.label || '下载') + ' ↗</a>');
+        if (x.page) ks.push('<a class="src" href="' + esc(x.page) + '" target="_blank" rel="noopener noreferrer">源站 ↗</a>');
+        return '<div class="d-dl-it"><span class="k gt">MX</span>' +
+          '<span class="bd"><span class="t" title="' + esc(x.title || '') + '">' + esc(x.title || '') + '</span>' +
+          '<span class="m">' + esc(x.srcLabel || 'Modrinth') + (x.note ? ' · ' + esc(x.note) : '') + '</span>' +
+          '<span class="dl-res-lk">' + ks.join('') + '</span></span></div>';
+      }).join('') + '</div>');
+  }
   if (!c.items.length) {
     /* ★ v10.53：机地没有、但聚合层有 GTrainers 时**不能**说「没有收录」——
        下面的 GT 段马上就会列出条目，空态文案会自相矛盾（实测踩到的正是这一格）。
        ★ v10.81：同理不能忽略 Thunderstore 段（mod 页签）。
        ★ P1b：同理不能忽略 GCM 段（修改器页签）—— 实拍踩到：机地空但 CheatScript
        外链 1 条在场，空态却说「没有收录 修改器」⇒ 自相矛盾。 */
-    const hasOther = gtr.length || (d.ts || []).length || (kind === 'modifier' && (d.gcm || []).some((it) => (it.dl || []).length));
+    const hasOther = gtr.length || (d.ts || []).length || (d.mx || []).length || (kind === 'modifier' && (d.gcm || []).some((it) => (it.dl || []).length));
     out.push('<div class="dlpop-empty">这款游戏在<span style="white-space:nowrap">机地社区</span>没有收录 ' + M.nm +
       (hasOther ? '，但<b>下方有可直下的来源</b>' : '<br><span style="font-size:11.5px">可以点下面的按钮到机地 MOD / 修改器区自己搜</span>') +
       '</div>');

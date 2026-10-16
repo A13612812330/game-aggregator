@@ -5687,7 +5687,8 @@ async function dlUniLoad(k) {
     } else if (k === 'mod' || k === 'modifier') {
       /* ★ v10.53：修改器页签多取一路 **GTrainers**（聚合层）—— 见 dlUniFetchGt 注释。
          ★ v10.81：mod 页签多取一路 **Thunderstore**（/api/ts/mods）—— 机地帖全是网盘口令，
-         TS 是 MOD 唯一的自托管直链源（官方 CDN，无防盗链，302 直达 zip）。 */
+         TS 是 MOD 唯一的自托管直链源（官方 CDN，无防盗链，302 直达 zip）。
+         ★ v10.83：曾试接 Modrinth 作第五路，实测 0 产出（纯 MC 生态，见 v10.83.md）⇒ 撤下。 */
       const [community, gcm, gtr, ts] = await Promise.all([
         dlUniFetchMods(st.ctx, k),
         k === 'modifier' ? dlUniFetchGcm(st.ctx) : Promise.resolve([]),
