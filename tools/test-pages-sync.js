@@ -91,6 +91,15 @@ for (const p of PAGES) {
     '顶栏含五个入口（首页 / 手机专区 / 端游资源 / 解包匹配 / 解压助手）');
   ok(!/id="navHome"[^>]*href="#/.test(txt), '★ 顶栏「首页」是真链接而非死锚点（历史坑）');
 
+  /* ★ v10.82：body 必须带 data-page 标记 —— 主源脚本的 IS_SUB_PAGE（body[data-page] 非空）
+   *   决定「🏠 首页」是回顶部还是真跳转 /。emulator/resources 一直带标记，
+   *   unpack/extract 的构建脚本漏了 ⇒ 点首页被 preventDefault 拦成回顶部（点了没反应）。
+   *   派生页永远不是首页 ⇒ 五张页都必须有标记。 */
+  const bodyTag = txt.match(/<body([^>]*)>/);
+  ok(!!bodyTag && /data-page="[^"]+"/.test(bodyTag[1]),
+    '★ body 带 data-page 标记（IS_SUB_PAGE 依赖，漏标 ⇒ 首页按钮失效）',
+    bodyTag ? 'body 标签：' + bodyTag[0].slice(0, 60) : '找不到 <body> 标签');
+
   /* ③ 通用脚本的 DOM 依赖：搜索弹层缺了会整段脚本中断 */
   ok(/id="searchInput"/.test(txt), '含搜索弹层 #searchInput（通用脚本依赖）');
   ok(/id="mask"/.test(txt), '含遮罩 #mask');

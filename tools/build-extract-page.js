@@ -314,7 +314,9 @@ const out = [
   CSS_EXTRA,
   '</style>',
   '</head>',
-  '<body>',
+  // ★ v10.82：body 必须带 data-page 标记 —— 首页脚本用 IS_SUB_PAGE（body[data-page] 非空）
+  //   区分「回顶部」与「真跳转 /」；漏标 ⇒ 点「🏠 首页」被 preventDefault 拦成回顶部（无效）。
+  '<body data-page="extract">',
   '',
   '<!-- ===== 顶栏（从主源 public/index.html 抽取，勿直接改这里） ===== -->',
   topbar,
