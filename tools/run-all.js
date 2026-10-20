@@ -289,6 +289,8 @@ const SUITES = [
   'test-v1087-admin.js',
   /* ★ v10.88 FitGirl 下载源解析（三形态内联 fixture）+ 真后台骨架 + 备注端��契约 */
   'test-v1088-admin.js',
+  'test-v1089-admin-domains.js',
+  'test-v1089-fg-parts-ui.js',
 ];
 
 /* ============================================================================

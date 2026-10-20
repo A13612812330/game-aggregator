@@ -562,14 +562,27 @@ app.post('/api/admin/note', (req, res) => {
  * GET /api/admin/log?limit= → 最近 N 条管理操作（写接口，设防） */
 app.get('/api/admin/overview', (_req, res) => {
   const all = gamesDb.all();
+  const ms = mods.stats();
+  const sv = saves.stats();
   res.json({
     ok: true,
     cold: coldHide.stats(all),
     lib: gamesDb.stats(),
     notes: { count: gameNotes.count() },
-    mods: mods.stats(),
+    /* ★ v10.88.2：六个资源域的条目数（左栏角标）。数字全部**现算**，不写死 ——
+     *   mods/saves/fitgirl/ts 的产物每天都在刷新，写死会在下一轮变成谎报。 */
+    domains: {
+      mod: (ms.byKind || {}).mod || 0,
+      modifier: trainers.stats().total || 0,
+      modifierExtra: (ms.byKind || {}).modifier || 0,
+      save: sv.inPcLib || 0,
+      cloud: sv.withCloud || 0,
+      fitgirl: fitgirl.stats().entryTotal || 0,
+      ts: tsmods.stats().packages || 0,
+    },
+    mods: ms,
     trainers: trainers.stats(),
-    saves: saves.stats(),
+    saves: sv,
     gt: gt.stats(),
     fitgirl: fitgirl.stats(),
     tsmods: tsmods.stats(),
@@ -636,6 +649,91 @@ app.get('/api/admin/game', (req, res) => {
       /* tsmods.byLib 返回的是**原始包**（字段与展示层不对齐），走官方 slim（与 /api/ts/mods 同形） */
       tsmods: byLibBoth((k) => tsmods.slim(k, 8)),
     },
+  });
+});
+
+/* ── ★ v10.88.2 GET /api/admin/res?kind=fitgirl|ts&q=&page=&size= ──
+ * 后台「按资源类型分开管理」的两路补位。
+ *
+ * 【为什么只补这两个】mod / modifier / save / cloud 四个域**不新增端点** ——
+ *   已有 `/api/mods/list`、`/api/trainers/list`、`/api/saves/list` 都带 q/limit/offset，
+ *   且行里本来就有 `libId`（= 游戏主键）。再造一份统一端点等于同一语义两份实现，
+ *   将来两处口径漂移比没有端点更难查（铁律：同一语义一份实现）。
+ *   只有 FitGirl 与 Thunderstore 原本是「按 libId 反查」形态（`byGame` / `byLib`），
+ *   没有扁平列表 ⇒ 只有这两路需要在这里补。
+ *
+ * 【以游戏为主键】每行统一带 `gameId`（端游库 id）+ `gameTitle`。
+ *   这是「六个域分开管、但都以游戏为主键」的落点：前端六个视图共用同一个编辑弹窗、
+ *   同一条游戏跳转，不需要为每个域各写一套关联逻辑。
+ *
+ * 【管理侧私有】这个端点只服务 /admin ⇒ 走 adminGuard（铁律 161：别因为「数据本来公开」
+ *   就当它不需要鉴权 —— 管理视图会持续加私有字段，每次加都要重新审一遍有没有必要公开）。
+ */
+const ADMIN_RES_KINDS = ['fitgirl', 'ts'];
+app.get('/api/admin/res', (req, res) => {
+  if (!adminGuard(req, res)) return;
+  const kind = String(req.query.kind || '').trim();
+  if (!ADMIN_RES_KINDS.includes(kind)) {
+    return res.status(400).json({ ok: false, error: 'kind 只支持 ' + ADMIN_RES_KINDS.join(' / ') });
+  }
+  const q = String(req.query.q || '').trim().toLowerCase();
+  const size = Math.min(200, Math.max(1, parseInt(req.query.size, 10) || 50));
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+
+  /* 游戏名只查一次（ts 域 4,331 个包全指同几百款游戏，逐行查库是白烧 CPU） */
+  const titleCache = new Map();
+  const gameTitle = (gid) => {
+    const k = String(gid || '');
+    if (titleCache.has(k)) return titleCache.get(k);
+    let t = '';
+    try { const g = gamesDb.byIdGet(k); t = (g && (g.title || g.name)) || ''; } catch (e) { /* 库未起不阻塞 */ }
+    titleCache.set(k, t);
+    return t;
+  };
+
+  let rows = [];
+  if (kind === 'fitgirl') {
+    for (const gid of Object.keys(fitgirl.RAW.byGame || {})) {
+      for (const it of (fitgirl.RAW.byGame[gid] || [])) {
+        rows.push({
+          rowId: it.slug, gameId: gid, gameTitle: gameTitle(gid),
+          title: it.title || it.slug, date: it.date || '', src: 'FitGirl',
+          extra: { adult: !!it.adult },
+          links: [{ label: 'Repack 页', url: it.url }],
+        });
+      }
+    }
+    rows.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  } else {
+    for (const g of (tsmods.RAW.games || [])) {
+      for (const p of (g.packages || [])) {
+        rows.push({
+          rowId: p.ns + '/' + p.name, gameId: g.libId, gameTitle: gameTitle(g.libId) || g.title || '',
+          title: p.name, date: '', src: 'Thunderstore · ' + (p.ns || ''),
+          extra: { version: p.version, downloads: p.downloads, size: p.size },
+          links: [
+            { label: '直链 zip', url: p.url },
+            { label: '包详情', url: 'https://thunderstore.io/package/' + p.ns + '/' + p.name + '/' },
+          ],
+        });
+      }
+    }
+    /* 排序按「游戏分组」而不是纯下载量：Thunderstore 每个社区都带一个 `BepInExPack`
+     * 依赖包（3,300 万下载），纯按 downloads 排会让前几页全是同一个包名，
+     * 管理时看不出「哪款游戏挂了哪些包」。组内再按下载量降序。 */
+    rows.sort((a, b) => String(a.gameTitle).localeCompare(String(b.gameTitle), 'zh')
+      || (b.extra.downloads || 0) - (a.extra.downloads || 0));
+  }
+
+  if (q) {
+    rows = rows.filter((r) => (r.title + ' ' + r.gameTitle + ' ' + r.rowId).toLowerCase().includes(q));
+  }
+  const total = rows.length;
+  res.json({
+    ok: true, kind, q, total, page, size,
+    pages: Math.max(1, Math.ceil(total / size)),
+    /* 未匹配到端游库的行 gameId 可能为空/不在库 —— 如实透出，不假装每条都能跳游戏 */
+    items: rows.slice((page - 1) * size, page * size),
   });
 });
 

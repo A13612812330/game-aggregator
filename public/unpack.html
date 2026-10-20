@@ -2202,6 +2202,34 @@
      两段都是「机地之外的来源」，排版意图一致；类名分开是因为语义不同
      （一个明确**没有**下载链，另一个**有**真直链），将来要分别调样式时不用先拆类。 */
   .dl-gcm,.dl-agg{margin-top:14px;padding-top:11px;border-top:1px dashed var(--c-border2)}
+  /* ★ v10.89 FitGirl 分卷清单（行内展开，默认收起）
+     ★ 为什么要分层而不平铺：同一游戏常有多个**产物组** —— 主包、另一版本（如 UNCENSORED
+       216 卷 vs 原版 39 卷）、可选附件（bonus soundtrack / 语言包）。平铺会让用户把变体分卷
+       混进主包一起下，结果不是缺文件就是下重。
+     ★ 为什么给「镜站切换」而不是全列：datanodes / fuckingfast / filekeeper 是同一套分卷的
+       三份镜像（实测 564 条链接里 2/3 是重复），全列等于把冗余放大三倍。选一个站复制即可。 */
+  .fgp{margin:2px 0 10px;padding:10px 12px;background:#F8FAFF;border:1px solid #DCE6FB;border-radius:10px}
+  .fgp .h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:7px}
+  .fgp .h b{font-size:12.5px;color:var(--c-t1)}
+  .fgp .h .mut{font-size:11px;color:var(--c-t3)}
+  .fgp .set{border-top:1px dashed #DCE6FB;padding:8px 0}
+  .fgp .set:first-of-type{border-top:0;padding-top:2px}
+  .fgp .set .r1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .fgp .set .k{flex:none;font:800 10px/1.6 var(--font-num);padding:1px 6px;border-radius:5px;background:#E8EFFD;color:#2F6FED}
+  .fgp .set .k.v{background:#FDECEC;color:#B4232A}
+  .fgp .set .k.o{background:#EEF2F7;color:#475569}
+  .fgp .set .n{font-size:12px;font-weight:700;color:var(--c-t1);max-width:290px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fgp .set .q{font-size:11px;color:var(--c-t3)}
+  .fgp .set .hst{display:flex;gap:4px;flex-wrap:wrap}
+  .fgp .set .hst button{font-size:10.5px;padding:2px 7px;border:1px solid var(--c-border);border-radius:6px;
+    background:#fff;cursor:pointer;color:var(--c-t2);font-family:var(--font-num)}
+  .fgp .set .hst button.on{background:var(--c-primary);border-color:var(--c-primary);color:#fff;font-weight:700}
+  .fgp .set .cp{font-size:10.5px;font-weight:750;color:var(--c-primary);background:var(--c-primary-soft);
+    border:1px solid #C9DCFF;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit}
+  .fgp .set .cp:hover{background:var(--c-primary);color:#fff}
+  .fgp .warn{font-size:11px;color:#B45309;margin-top:6px;line-height:1.7}
+  .fgp .ctn{font-size:11.5px;color:var(--c-t2);line-height:1.85}
+  .fgp .ctn a{font-weight:750;color:var(--c-primary);margin-right:8px}
   .dlpop .emu-loading{padding:22px 4px;text-align:center;font-size:12.5px;color:var(--c-t2)}
   .dlpop .emu-empty{padding:20px 4px;text-align:center;font-size:12.5px;line-height:1.8;color:var(--c-t3)}
   .dl-note+.dl-sv-list{margin-top:9px}
@@ -6224,6 +6252,9 @@ function dlUniPaintFg(fg) {
       + '<span class="dl-res-lk">'
       + '<a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">↗ 打开 Repack 页</a>'
       + '<a href="#" data-fg-magnet="' + esc(it.slug) + '">⧉ 复制磁力</a>'
+      /* ★ v10.89：分卷清单按需展开（点开才拉 /api/fitgirl/parts）——
+         不铺在首屏：磁力是主路径，分卷是「非 BT 下载 / 只想下某几个分卷」时的备选。 */
+      + '<a href="#" data-fg-parts="' + esc(it.slug) + '">▸ 分卷清单</a>'
       + '</span></span></div>';
   }).join('');
   const sec = document.createElement('div');
@@ -6260,6 +6291,113 @@ document.addEventListener('click', async (e) => {
     a.textContent = '✗ ' + String((er && er.message) || er).slice(0, 20);
   }
   setTimeout(() => { a.textContent = old; }, 2500);
+});
+
+/* ★ v10.89 FitGirl 分卷清单：行内展开 + 按镜站「复制全部」
+ * 【为什么按需】一次全量不可行 —— 库里 5,813 个 repack、平均几十卷，等于十几万条 URL；
+ *   服务端 `/api/fitgirl/parts` 单篇解析 + 24h 缓存，只有用户真点开才付这个成本。
+ * 【为什么分组】主包 / 变体 / 可选附件（见 .fgp 样式注释），平铺会让人把变体分卷混进主包。
+ * 【为什么只给一个镜站】三站是同一套分卷的镜像，复制一份就够；换站不重开、不重拉接口。
+ * ★ 失败必须说清是哪一种：`mode=none`（这篇没下载区）/ 404（不在白名单）/ 网络 ——
+ *   三种都见过，统一写「加载失败」等于把「本来就没有」误报成「坏了」。 */
+const FG_PARTS = Object.create(null);   /* slug → 接口原始回包（切站/重开不重复请求） */
+
+function fgPartsHtml(j) {
+  const sets = j.sets || [];
+  const warn = (j.warnings || []).length
+    ? '<div class="warn">⚠ ' + esc(j.warnings.join('；')) + '</div>' : '';
+  const head = '<div class="h"><b>分卷清单</b><span class="mut">'
+    + (j.mode === 'container'
+      ? '镜像清单页形态'
+      : (sets.length + ' 组 · 主包 ' + ((j.stats || {}).mainParts || 0) + ' 卷（单站口径）'))
+    + ' · ' + (j.cached ? '缓存' : '现抓') + '</span></div>';
+  if (j.mode === 'container') {
+    const cs = (j.containers || []).map((c) =>
+      '<a href="' + esc(c.url) + '" target="_blank" rel="noopener noreferrer">↗ ' + esc(c.host) + '</a>').join('');
+    return '<div class="fgp">' + head + '<div class="ctn">这篇 repack 没有在页面直列分卷，只给了镜像清单页'
+      + '（JDownloader / Mipony 能直接吃整份清单）：<br>' + (cs || '（未识别到清单页，请走上方磁力）')
+      + '</div>' + warn + '</div>';
+  }
+  const rows = sets.map((s, si) => {
+    const hosts = s.hosts || [];
+    const btns = hosts.map((h, i) => '<button type="button" data-h="' + esc(h) + '"'
+      + ' class="' + (i === 0 ? 'on' : '') + '">' + esc(h.replace(/\.(to|co|net)$/i, '')) + '</button>').join('');
+    const k = s.kind === 'main' ? '主包' : (s.kind === 'variant' ? '变体' : '可选');
+    const kcls = s.kind === 'main' ? '' : (s.kind === 'variant' ? 'v' : 'o');
+    return '<div class="set" data-s="' + si + '" data-h="' + esc(hosts[0] || '') + '">'
+      + '<div class="r1"><span class="k ' + kcls + '">' + k + '</span>'
+      + '<span class="n" title="' + esc(s.label || s.prefix || '') + '">' + esc(s.label || s.prefix || '分卷组') + '</span>'
+      + '<span class="q">' + s.parts + ' 卷</span>'
+      + (hosts.length > 1 ? '<span class="hst">' + btns + '</span>' : '<span class="q">' + esc(hosts[0] || '—') + '</span>')
+      + '<span class="cp" data-cp="' + si + '">⧉ 复制全部 ' + s.parts + ' 条</span>'
+      + '</div></div>';
+  }).join('');
+  return '<div class="fgp">' + head + rows + warn + '</div>';
+}
+
+async function fgToggleParts(a) {
+  const slug = a.dataset.fgParts;
+  const row = a.closest('.df-row');
+  if (!row) return;
+  const nxt = row.nextElementSibling;
+  if (nxt && nxt.classList.contains('fgp')) { nxt.remove(); a.textContent = '▸ 分卷清单'; return; }
+  const old = a.textContent;
+  a.textContent = '… 解析中';
+  try {
+    if (!FG_PARTS[slug]) {
+      const r = await fetch(api('/api/fitgirl/parts?slug=' + encodeURIComponent(slug)));
+      const j = await r.json().catch(() => ({ ok: false, error: 'HTTP ' + r.status }));
+      if (!j.ok) throw new Error(j.error || ('HTTP ' + r.status));
+      FG_PARTS[slug] = j;
+    }
+    const box = document.createElement('div');
+    box.innerHTML = fgPartsHtml(FG_PARTS[slug]);
+    const el = box.firstElementChild;
+    el.dataset.slug = slug;
+    row.insertAdjacentElement('afterend', el);
+    a.textContent = '▴ 收起清单';
+  } catch (er) {
+    a.textContent = old;
+    const box = document.createElement('div');
+    box.className = 'fgp';
+    box.innerHTML = '<div class="h"><b>分卷清单</b></div><div class="ctn">这篇没有可解析的分卷清单：'
+      + esc(String((er && er.message) || er)) + '。可直接用上面的磁力，或打开 Repack 页看原站。</div>';
+    row.insertAdjacentElement('afterend', box);
+  }
+}
+
+/* 分卷清单的三类交互（事件委托：块是动态插入的，重绘不重复绑） */
+document.addEventListener('click', async (e) => {
+  const t = e.target;
+  const a = t.closest && t.closest('[data-fg-parts]');
+  if (a) { e.preventDefault(); fgToggleParts(a); return; }
+
+  const hb = t.closest && t.closest('.fgp .hst button');
+  if (hb) {
+    const set = hb.closest('.set');
+    set.dataset.h = hb.dataset.h;
+    set.querySelectorAll('.hst button').forEach((b) => b.classList.toggle('on', b === hb));
+    return;
+  }
+
+  const cp = t.closest && t.closest('.fgp .cp');
+  if (cp) {
+    const box = cp.closest('.fgp');
+    const set = cp.closest('.set');
+    const j = FG_PARTS[box.dataset.slug];
+    if (!j || !set) return;
+    const s = (j.sets || [])[+set.dataset.s] || {};
+    const list = (((s.byHost || {})[set.dataset.h]) || []).map((x) => x.url);
+    if (!list.length) { cp.textContent = '✗ 该站无链接'; setTimeout(() => { cp.textContent = '⧉ 复制全部 ' + (s.parts || 0) + ' 条'; }, 2000); return; }
+    const txt = list.join('\n');
+    try {
+      await navigator.clipboard.writeText(txt);
+      cp.textContent = '✓ 已复制 ' + list.length + ' 条';
+    } catch (ce) {
+      window.prompt('自动复制不可用，请手动复制（每行一个分卷 URL）：', txt);
+    }
+    setTimeout(() => { cp.textContent = '⧉ 复制全部 ' + (s.parts || list.length) + ' 条'; }, 2600);
+  }
 });
 
 /** 社区帖行（Mod / 修改器共用）

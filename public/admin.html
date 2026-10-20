@@ -30,6 +30,9 @@ button{font-family:inherit}
 .nav a:hover{background:var(--side2);color:#fff}
 .nav a.on{background:#1d4ed8;color:#fff;font-weight:600}
 .nav .sec{color:#4b5563;font-size:10.5px;letter-spacing:1px;padding:14px 12px 6px}
+/* 左栏条目数角标：右对齐、等宽数字。数字全部由 overview 的 domains 现算（不写死） */
+.nav a .n{margin-left:auto;font-size:10.5px;color:#64748b;font-variant-numeric:tabular-nums;font-weight:600}
+.nav a.on .n{color:#c7d7fe}
 .side-foot{padding:12px 14px;border-top:1px solid #1f2937;font-size:11.5px;color:#64748b;line-height:1.7}
 .side-foot b{color:#94a3b8;font-weight:600}
 
@@ -94,6 +97,9 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
 .cv{width:38px;height:50px;border-radius:6px;object-fit:cover;background:#eef2f7;display:block}
 .tt{font-weight:600;max-width:330px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tt small{display:block;font-weight:400;color:var(--sub);font-size:10.5px;font-family:Consolas,monospace;margin-top:1px}
+/* 资源管理表里的「游戏」列：可点开编辑弹窗（资源 → 游戏主键回溯） */
+.lnk{color:var(--acc);cursor:pointer;font-weight:600;border-bottom:1px dashed transparent}
+.lnk:hover{border-bottom-color:var(--acc)}
 .bdg{display:inline-block;padding:1px 7px;border-radius:999px;font-size:10.5px;font-weight:600;white-space:nowrap}
 .b-hide{background:var(--dan-bg);color:var(--dan)} .b-vis{background:var(--ok-bg);color:var(--ok)}
 .b-cold{background:#f1f5f9;color:#475569} .b-xd{background:#eef2ff;color:#4338ca} .b-jd{background:#fff7ed;color:#c2410c}
@@ -172,10 +178,17 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
     <nav class="nav" id="nav">
       <div class="sec">总览</div>
       <a data-v="dash" class="on"><i>▦</i>仪表盘</a>
-      <div class="sec">数据</div>
-      <a data-v="games"><i>▤</i>游戏库</a>
-      <a data-v="res"><i>◇</i>资源覆盖</a>
+      <div class="sec">游戏</div>
+      <a data-v="games"><i>▤</i>游戏库<b class="n" id="nGame">—</b></a>
+      <div class="sec">资源管理 · 按类型分开</div>
+      <a data-v="rm-mod"><i>◈</i>MOD 帖<b class="n" id="nMod">—</b></a>
+      <a data-v="rm-modifier"><i>⚔</i>修改器<b class="n" id="nModifier">—</b></a>
+      <a data-v="rm-save"><i>▣</i>存档位置<b class="n" id="nSave">—</b></a>
+      <a data-v="rm-cloud"><i>☁</i>云存档<b class="n" id="nCloud">—</b></a>
+      <a data-v="rm-fitgirl"><i>⛃</i>FitGirl 资源包<b class="n" id="nFitgirl">—</b></a>
+      <a data-v="rm-ts"><i>⬢</i>Thunderstore<b class="n" id="nTs">—</b></a>
       <div class="sec">运维</div>
+      <a data-v="res"><i>◇</i>资源覆盖</a>
       <a data-v="log"><i>≡</i>操作日志</a>
       <a data-v="set"><i>⚙</i>设置</a>
     </nav>
@@ -266,6 +279,34 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
         <span class="sp"></span>
         <button class="btn sm" id="pgPrev" onclick="page(-1)">上一页</button>
         <button class="btn sm" id="pgNext" onclick="page(1)">下一页</button>
+      </div>
+    </section>
+
+    <!-- ═══ 资源管理（六个域共用这一个壳，列定义 / 数据源 / 动作按 kind 现算）═══
+         为什么六个域共用一个 section：它们的**骨架完全一样**（工具栏 + 表格 + 分页），
+         差别只在「列定义 + 取数端点 + 行动作」。六份几乎相同的 HTML 会立刻漂移
+         （改了一处分页样式，另外五处留在旧样式上）⇒ 用 kind 驱动渲染，骨架只此一份。 -->
+    <section class="view" id="view-resm">
+      <div class="tools">
+        <input type="text" id="rq" placeholder="搜索条目 / 游戏名 / 包名（回车搜索）">
+        <button class="btn pri" onclick="resmSearch()">搜索</button>
+        <select id="rSrc" onchange="resmReload()" style="display:none"></select>
+        <span class="sp" style="flex:1"></span>
+        <span class="mut" id="rmHint"></span>
+        <button class="btn sm" onclick="resmReload()">刷新</button>
+      </div>
+      <div class="tblwrap">
+        <table>
+          <thead><tr id="rmHead"></tr></thead>
+          <tbody id="rmRows"></tbody>
+        </table>
+        <div class="empty" id="rmEmpty" style="display:none">没有符合条件的条目</div>
+      </div>
+      <div class="pager">
+        <span id="rmInfo">—</span>
+        <span class="sp"></span>
+        <button class="btn sm" onclick="resmPage(-1)">上一页</button>
+        <button class="btn sm" onclick="resmPage(1)">下一页</button>
       </div>
     </section>
 
@@ -379,7 +420,21 @@ const $ = (id) => document.getElementById(id);
 const LIMIT = 50;
 let offset = 0, total = 0, cur = null, curItem = null, segOp = 'clear';
 let showCold = false, onlyNote = false;
-const VIEWS = { dash: ['仪表盘', '总览 / 数据健康'], games: ['游戏库', '数据 / 2 万条全量池'], res: ['资源覆盖', '数据 / 七路资源'], log: ['操作日志', '运维 / 留痕'], set: ['设置', '运维 / 配置与边界'] };
+const VIEWS = {
+  dash: ['仪表盘', '总览 / 数据健康'],
+  games: ['游戏库', '游戏 / 2 万条全量池'],
+  /* ★ v10.88.2 六个资源域各占一个侧栏条目，视觉上是六个独立页面（标题/列/筛选都不同），
+   *   骨架共用 `#view-resm` 一份（见 RM 表注释）。 */
+  'rm-mod': ['MOD 帖', '资源管理 / 机地聚合 · 按游戏归属'],
+  'rm-modifier': ['修改器', '资源管理 / CE · 风灵月影 · 机地帖'],
+  'rm-save': ['存档位置', '资源管理 / 路径 + 注册表'],
+  'rm-cloud': ['云存档', '资源管理 / Steam 云 · 游侠'],
+  'rm-fitgirl': ['FitGirl 资源包', '资源管理 / Repack 档'],
+  'rm-ts': ['Thunderstore', '资源管理 / 社区 MOD 直链'],
+  res: ['资源覆盖', '运维 / 七路资源'],
+  log: ['操作日志', '运维 / 留痕'],
+  set: ['设置', '运维 / 配置与边界'],
+};
 
 function toast(msg) {
   const t = $('toast'); t.textContent = msg; t.classList.add('on');
@@ -445,13 +500,21 @@ function go(v) {
   const [t, c] = VIEWS[v] || VIEWS.dash;
   $('vTitle').textContent = t; $('vCrumb').textContent = c;
   document.querySelectorAll('.nav a').forEach((a) => a.classList.toggle('on', a.dataset.v === v));
-  document.querySelectorAll('.view').forEach((s) => s.classList.toggle('on', s.id === 'view-' + v));
+  /* 六个资源域共用 `#view-resm` 一个 section ⇒ section id 不能直接用视图名 */
+  const secId = 'view-' + (v.indexOf('rm-') === 0 ? 'resm' : v);
+  document.querySelectorAll('.view').forEach((s) => s.classList.toggle('on', s.id === secId));
   if (location.hash.slice(1) !== v) history.replaceState(null, '', '#' + v);
   if (v === 'dash') loadStats();
   if (v === 'games') reload(true);
   if (v === 'res') loadRes();
   if (v === 'log') { loadLog(); loadSetLog(); }
   if (v === 'set') { loadSetLog(); }
+  if (v.indexOf('rm-') === 0) {
+    rmKind = v.slice(3); rmOff = 0;
+    /* 直接以 #rm-xxx 进站时仪表盘没跑过 ⇒ 左栏角标还是「—」，补一次 overview（不阻塞表格） */
+    if ($('nMod').textContent === '—') loadStats();
+    resmReload();
+  }
 }
 document.querySelectorAll('.nav a').forEach((a) => a.addEventListener('click', () => go(a.dataset.v)));
 
@@ -477,6 +540,15 @@ async function loadStats() {
   $('stats').innerHTML = cards.map((x) =>
     '<div class="card stat ' + x[2] + '"><span>' + x[0] + '</span><b>' + x[1] + '</b><em>' + x[3] + '</em></div>').join('');
   $('fNotes').textContent = nf((j.notes || {}).count);
+  /* 左栏六个资源域的角标 —— 数字来自服务端现算的 domains（不写死） */
+  const dm = j.domains || {};
+  $('nGame').textContent = nf((l || {}).total);
+  $('nMod').textContent = nf(dm.mod);
+  $('nModifier').textContent = nf((dm.modifier || 0) + (dm.modifierExtra || 0));
+  $('nSave').textContent = nf(dm.save);
+  $('nCloud').textContent = nf(dm.cloud);
+  $('nFitgirl').textContent = nf(dm.fitgirl);
+  $('nTs').textContent = nf(dm.ts);
 
   const pct = (n) => Math.max(1, Math.min(100, (n / (c.total || 1)) * 100));
   $('barVis').style.width = pct(c.visible) + '%'; $('vvVis').textContent = nf(c.visible);
@@ -579,6 +651,181 @@ async function reload(resetPage) {
 function page(d) { offset = Math.max(0, offset + d * LIMIT); reload(); }
 function applySearch() { offset = 0; reload(); }
 $('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') applySearch(); });
+
+/* ═══════════ 资源管理：六个域 · 都以游戏为主键 ═══════════
+ *
+ * 【设计取舍】六个域**共用一套渲染器**，差异全部收进 `RM[kind]` 的四个字段：
+ *   `url`  取数端点（mod/modifier/save/cloud 复用现有公开列表端点，fitgirl/ts 用 /api/admin/res）
+ *   `cols` 中间列的表头与宽度
+ *   `norm` 把该源的行归一成 `{gameId, gameTitle, title, cells[], links[]}`
+ *   `src`  可选：多来源切换（只有「修改器」是两源：CE/风灵月影 与 机地帖）
+ * ⇒ 加第七个域只需要往 RM 里加一项，不改渲染器、不改 HTML。
+ *
+ * 【为什么 gameId 是第一列】用户口径「都以游戏为主键」：任何一条资源都能回答
+ *   「它属于哪款游戏」，点游戏名直接打开该游戏的编辑弹窗（同一个弹窗、同一份备注与上下架）。
+ *   ⚠️ 未匹配的行 `gameId` 为空 —— 如实显示「未匹配」，不假装能跳转（管理的第一价值是看清缺口）。
+ */
+const RM_LIMIT = 50;
+let rmKind = 'mod', rmOff = 0, rmQ = '', rmTotal = 0;
+
+const RM = {
+  mod: {
+    cols: [['作者', '110px'], ['热度', '70px'], ['更新', '86px']],
+    url: (q, off) => '/api/mods/list?kind=mod&limit=' + RM_LIMIT + '&offset=' + off + (q ? '&q=' + encodeURIComponent(q) : ''),
+    norm: (x) => ({
+      gameId: x.libId, gameTitle: x.libTitle || x.game, title: x.title,
+      cells: [esc(x.author || '—'), nf(x.pv), ago(x.ut || x.ct)],
+      links: x.url ? [{ label: '原帖', url: x.url }] : [],
+    }),
+  },
+  modifier: {
+    src: [['trainers', 'CE / 风灵月影（库内匹配）'], ['jidi', '机地修改器帖']],
+    cols: [['来源', '150px'], ['补充', '110px'], ['操作', '96px']],
+    url: (q, off, src) => (src === 'jidi'
+      ? '/api/mods/list?kind=modifier&limit=' + RM_LIMIT + '&offset=' + off + (q ? '&q=' + encodeURIComponent(q) : '')
+      : '/api/trainers/list?limit=' + RM_LIMIT + '&offset=' + off + (q ? '&q=' + encodeURIComponent(q) : '')),
+    norm: (x, src) => (src === 'jidi'
+      ? {
+        gameId: x.libId, gameTitle: x.libTitle || x.game, title: x.title,
+        cells: ['机地帖', '热度 ' + nf(x.pv)],
+        links: x.url ? [{ label: '原帖', url: x.url }] : [],
+      }
+      : {
+        gameId: x.libId, gameTitle: x.libTitle || x.name, title: x.zh || x.name,
+        cells: [esc(x.source || '—'), 'v' + esc(x.version || '—')],
+        links: x.officialUrl ? [{ label: '官方页', url: x.officialUrl }] : [],
+      }),
+  },
+  save: {
+    cols: [['存档路径', '86px'], ['注册表', '76px'], ['云存档', '92px'], ['Steam', '92px']],
+    url: (q, off) => '/api/saves/list?stats=all&limit=' + RM_LIMIT + '&offset=' + off + (q ? '&q=' + encodeURIComponent(q) : ''),
+    norm: (x) => ({
+      gameId: x.libId, gameTitle: x.title || x.name, title: x.title || x.name,
+      cells: [nf((x.paths || []).length), nf((x.regs || []).length),
+        ((x.cloud || []).join(' / ') || '—'), esc(x.steamId || '—')],
+      links: [],
+    }),
+  },
+  cloud: {
+    cols: [['云平台', '110px'], ['存档路径', '86px'], ['Steam', '92px']],
+    url: (q, off) => '/api/saves/list?stats=all&cloud=1&limit=' + RM_LIMIT + '&offset=' + off + (q ? '&q=' + encodeURIComponent(q) : ''),
+    norm: (x) => ({
+      gameId: x.libId, gameTitle: x.title || x.name, title: x.title || x.name,
+      cells: [((x.cloud || []).join(' / ') || '—'), nf((x.paths || []).length), esc(x.steamId || '—')],
+      links: [],
+    }),
+  },
+  fitgirl: {
+    cols: [['日期', '96px'], ['标记', '70px']],
+    /* 这两个域原本只有「按 libId 反查」，没有扁平列表 ⇒ 走 /api/admin/res（需令牌） */
+    url: (q, off) => '/api/admin/res?kind=fitgirl&size=' + RM_LIMIT + '&page=' + (Math.floor(off / RM_LIMIT) + 1) + (q ? '&q=' + encodeURIComponent(q) : ''),
+    norm: (x) => ({
+      gameId: x.gameId, gameTitle: x.gameTitle, title: x.title,
+      cells: [esc(String(x.date || '').slice(0, 10) || '—'),
+        (x.extra && x.extra.adult) ? '<span class="bdg b-hide">18+</span>' : '<span class="mut">—</span>'],
+      links: x.links || [],
+    }),
+  },
+  ts: {
+    cols: [['社区', '170px'], ['版本', '80px'], ['下载量', '80px']],
+    url: (q, off) => '/api/admin/res?kind=ts&size=' + RM_LIMIT + '&page=' + (Math.floor(off / RM_LIMIT) + 1) + (q ? '&q=' + encodeURIComponent(q) : ''),
+    norm: (x) => ({
+      gameId: x.gameId, gameTitle: x.gameTitle, title: x.title,
+      cells: [esc(String((x.src || '').replace('Thunderstore · ', '')) || '—'),
+        esc((x.extra || {}).version || '—'), nf((x.extra || {}).downloads)],
+      links: x.links || [],
+    }),
+  },
+};
+
+/* 点资源行的游戏 → 打开**同一个**编辑弹窗。
+ * 为什么绕一次 openEdit：弹窗吃的是 `window.__items[i]` 那种完整库行（含 hot/genres/aliases…），
+ * 资源行只有 gameId。与其为六个域各写一套「游戏摘要渲染」，不如拿库内真值补齐后复用 ——
+ * 代价是点击时多一次 /api/admin/game 请求（弹窗自己还会再拉一次），换来六个域零分叉。 */
+async function openGameById(gid, title) {
+  if (!gid) return toast('该条目未匹配到游戏，无法跳转');
+  const j = await api('/api/admin/game?id=' + encodeURIComponent(gid));
+  if (!j.ok) return toast('游戏不在库内：' + (title || gid));
+  const st = j.state || {};
+  window.__items = window.__items || [];
+  const idx = window.__items.length;
+  window.__items.push(Object.assign({}, j.game, { note: st.note, hidden: st.hidden, cold: st.cold }));
+  openEdit(idx);
+}
+
+function resmReset() { rmOff = 0; rmQ = ''; $('rq').value = ''; resmReload(); }
+function resmSearch() { rmOff = 0; rmQ = $('rq').value.trim(); resmReload(); }
+function resmPage(d) {
+  const nx = rmOff + d * RM_LIMIT;
+  if (nx < 0 || nx >= rmTotal) return;
+  rmOff = nx; resmReload();
+}
+$('rq').addEventListener('keydown', (e) => { if (e.key === 'Enter') resmSearch(); });
+
+async function resmReload() {
+  const def = RM[rmKind];
+  if (!def) return;
+  /* 多来源切换（只有「修改器」用得到）：选项静态声明在 def.src，不动态猜 */
+  const sel = $('rSrc');
+  if (def.src) {
+    if (sel.dataset.kind !== rmKind) {
+      sel.innerHTML = def.src.map(([k, l]) => '<option value="' + esc(k) + '">' + esc(l) + '</option>').join('');
+      sel.dataset.kind = rmKind;
+      sel.value = def.src[0][0];
+    }
+    sel.style.display = '';
+  } else { sel.style.display = 'none'; }
+  const src = def.src ? sel.value : '';
+
+  $('rmHead').innerHTML = '<th>游戏（主键）</th><th>条目</th>'
+    + def.cols.map(([n, w]) => '<th' + (w ? ' style="width:' + w + '"' : '') + '>' + esc(n) + '</th>').join('')
+    + '<th style="width:120px">操作</th>';
+  $('rmRows').innerHTML = '<tr><td colspan="' + (def.cols.length + 3) + '" class="mut" style="padding:18px">加载中…</td></tr>';
+
+  const j = await api(def.url(rmQ, rmOff, src));
+  if (!j.ok) {
+    const msg = j.needAuth ? '需要令牌（线上在右上角填）' : (j.error || '加载失败');
+    $('rmRows').innerHTML = '<tr><td colspan="' + (def.cols.length + 3) + '" class="mut" style="padding:18px">' + esc(msg) + '</td></tr>';
+    $('rmEmpty').style.display = 'none';
+    $('rmInfo').textContent = '—';
+    return;
+  }
+  rmTotal = j.total || 0;
+  const items = (j.items || []).map((x) => def.norm(x, src));
+  if (!items.length) {
+    $('rmRows').innerHTML = '';
+    $('rmEmpty').style.display = 'block';
+    $('rmEmpty').textContent = '没有符合条件的条目' + (rmQ ? '（搜索词：' + rmQ + '）' : '');
+  } else {
+    $('rmEmpty').style.display = 'none';
+    $('rmRows').innerHTML = items.map((r, i) => {
+      /* 游戏列：有 gameId 就可点（打开编辑弹窗）；没有就如实写「未匹配」 */
+      const gameCell = r.gameId
+        ? '<span class="lnk" data-gid="' + esc(r.gameId) + '" data-gt="' + esc(r.gameTitle || '') + '">'
+          + esc(r.gameTitle || r.gameId) + '</span><small>' + esc(r.gameId) + '</small>'
+        : '<span class="mut">未匹配</span>';
+      const links = (r.links || []).map((l) =>
+        '<a class="btn sm" style="margin-right:4px" href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer">' + esc(l.label) + ' ↗</a>').join('');
+      return '<tr>'
+        + '<td>' + gameCell + '</td>'
+        + '<td><div class="tt" title="' + esc(r.title) + '">' + esc(r.title || '—') + '</div></td>'
+        + r.cells.map((c) => '<td class="mut">' + c + '</td>').join('')
+        + '<td>' + (links || '<span class="mut">—</span>') + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+  const from = rmTotal ? rmOff + 1 : 0, to = Math.min(rmOff + items.length, rmTotal);
+  $('rmInfo').textContent = '共 ' + nf(rmTotal) + ' 条 · 当前 ' + nf(from) + '–' + nf(to)
+    + (rmQ ? ' · 搜索「' + rmQ + '」' : '');
+  $('rmHint').textContent = '每一条都锚定游戏 id';
+}
+
+/* 游戏列点击（事件委托：行是动态渲染的，重绘不重复绑） */
+document.addEventListener('click', (e) => {
+  const s = e.target.closest && e.target.closest('.lnk[data-gid]');
+  if (!s) return;
+  openGameById(s.dataset.gid, s.dataset.gt);
+});
 function toggleNote() { onlyNote = !onlyNote; $('cNote').classList.toggle('on', onlyNote); offset = 0; reload(); }
 function toggleCold() { showCold = !showCold; $('cCold').classList.toggle('on', showCold); toast(showCold ? '冷门行已显示（筛选中标注）' : '冷门行仍全部列出，仅切换高亮'); }
 
