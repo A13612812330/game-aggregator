@@ -37,6 +37,39 @@ const WITH_BROWSER = process.argv.includes('--browser');
  *   验证「没登记的套件会被抓出来」不需要把 41 套断言全跑一遍。 */
 const GUARD_ONLY = process.argv.includes('--guard-only');
 
+/* ★ 2026-10-20：取分函数 `pickScore` 的自检。
+ *   理由：这个「分数被明细行顶掉」的坑**已经复发两次**（v10.44 一次、v10.90 一次，
+ *   第二次的表现是「合计失败数 -985」）。改它就等于改所有防线的成绩口径，
+ *   所以给它一组**真实收尾样本**，改完当场能验，不必等 3 分钟全量跑。
+ *   用法：`node tools/run-all.js --selftest-parse` */
+if (process.argv.includes('--selftest-parse')) {
+  const CASES = [
+    /* 第 2 次真凶：明细行里的 6334 / 5335 被当成成绩 */
+    ['PASS  存档角标与列表同口径（6334 / 5335）\n====\n结果：73 通过 / 0 失败', 73, 73],
+    /* 第 1 次真凶：`42 通过 / 0 失败` 认不出，取到明细 8/8 */
+    ['PASS  多标签游戏共享至少一个标签 8/8\n✅  42 通过 / 0 失败', 42, 42],
+    ['前置闸：3 / 3 通过\n====\n通过 310/310（失败 0）', 310, 310],
+    ['结果：125 / 126 通过', 125, 126],
+    /* 汇总行不在末尾（test-alias-guard 的真实形态） */
+    ['结果：7 / 7 通过\n样例映射 → 3 / 4\n又一行 9 / 10', 7, 7],
+    ['passed 17 / 17', 17, 17],
+    /* 有真失败时总数必须 = 通过 + 失败 */
+    ['结果: 80 通过 / 3 失败', 80, 83],
+    /* 什么都不像 ⇒ 认得出来「认不出」 */
+    ['hello world\nno numbers here', null, null],
+  ];
+  let bad = 0;
+  for (const [out, ep, et] of CASES) {
+    const r = pickScore(out);
+    const ok = r.p === ep && r.t === et;
+    if (!ok) bad++;
+    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${JSON.stringify(out.split('\n').pop())} ⇒ ${r.p}/${r.t}` +
+      (ok ? '' : `  （期望 ${ep}/${et}）`));
+  }
+  console.log(`\n取分自检：${CASES.length - bad} / ${CASES.length} 通过`);
+  process.exit(bad ? 1 : 0);
+}
+
 /* 套件清单 —— 新增一个就往这里加一个。
  * 判据不是「有没有用浏览器」，而是「要不要人盯着」（下面这些都无需交互、秒级出结果）。
  * ⚠️ 其中 test-emulator-page.js 用 jsdom 从 http://127.0.0.1:8123 加载真实页面，
@@ -290,6 +323,9 @@ const SUITES = [
   /* ★ v10.88 FitGirl 下载源解析（三形态内联 fixture）+ 真后台骨架 + 备注端��契约 */
   'test-v1088-admin.js',
   'test-v1089-admin-domains.js',
+  /* ★ v10.90：后台重排（页面管理 / 游戏库资料 / 四模块 / 资源覆盖分类 / 令牌体验）。
+   *   需要 8124 实例在跑（C 段走 HTTP 实测）；没有实例时 C 段会红，这是正确的红。 */
+  'test-v1090-admin-console.js',
   'test-v1089-fg-parts-ui.js',
 ];
 
@@ -534,6 +570,66 @@ const missing = [];
 const noExit = [];
 /* 收尾格式不合约定（成绩只能从明细里猜）的套件 —— 2026-10-09 新增，见下面的取成绩段落 */
 const warnFmt = [];
+/* ★ 2026-10-20：汇总行「两个数字写反」的单独一栏。
+   实测全量跑出过 `通过 10719 / 失败 -985` —— **失败数是负数**。
+   负数意味着某个套件的 `p`（通过）和 `t`（总数）被交换了，
+   而 `fail += (t - p)` 就把负值带进合计。
+   危害不是"数字难看"，而是**「失败」这一栏彻底失去信息量**：
+   真有 1 条失败时，-985 只会变成 -984，没人看得出变化。
+   ⇒ 夹住（总数不可能小于通过数）+ 点名，不静默修正。 */
+const warnOrder = [];
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 从一份套件输出里取「通过数 / 总数」
+ *
+ * ★★ 这个函数被改过两次，两次都是**同一个失败模式**：分数被一行明细顶掉。
+ *   第 1 次（2026-10-09）：`test-related-dl.js` 收尾写成 `✅  42 通过 / 0 失败`，
+ *     数字中间夹着「通过」，`\d+\s*\/\s*\d+` 匹配不上 ⇒ 取到了明细里的 `8/8`，
+ *     整套少算 34 条。当时补了「从整份输出倒着找汇总行」，**没补「这种写法要认得」**。
+ *   第 2 次（2026-10-20）：合计打出 **「失败 -985」**（负数）才暴露 ——
+ *     真凶是 `test-v1089-admin-domains.js` 的一行明细：
+ *       `PASS  存档角标与列表同口径（6334 / 5335 …）`
+ *     它以 `PASS` 开头（命中 `/pass/i`）、又带 `6334 / 5335`（命中 `\d+/\d+`），
+ *     而真正的收尾 `结果：73 通过 / 0 失败` 反而认不出 ⇒ 分数被那行明细顶掉，
+ *     `t < p` 于是让**合计失败数变成负数**。
+ *   ⇒ 现在：① 明细行（PASS/FAIL/× 开头）不参与取分；
+ *            ② 认 `n 通过 / m 失败`（总数 = n+m）、`通过 n/m`、`n/m 通过`、`passed n/m`；
+ *            ③ 仍认不出才退回老行为并记 warnings；
+ *            ④ `t < p` 一律夹住（总数不可能小于通过数）。
+ *   `--selftest-parse` 用真实样本跑一遍这个函数（见下），免得第三次复发。
+ * ═════════════════════════════════════════════════════════════════════════ */
+/* 函数声明（不是 const 箭头）—— `--selftest-parse` 在文件顶部就调用 pickScore，
+   写成 const 会撞 TDZ（实测 `Cannot access 'isDetailLine' before initialization`）。 */
+function isDetailLine(l) { return /^\s*(?:PASS|FAIL)\b|^\s*[×✗]\s/.test(l); }
+function pickScore(out) {
+  const lines = String(out || '').split(/\r?\n/).filter((l) => l.trim());
+  const SUMMARY = /(\d+)\s*\/\s*(\d+)/;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const L = lines[i];
+    if (isDetailLine(L)) continue;
+    /* `73 通过 / 0 失败` —— 两个数字是「通过数 / 失败数」，不是「通过 / 总数」 */
+    const a = L.match(/(\d+)\s*(?:条)?\s*通过\s*\/\s*(\d+)\s*(?:条)?\s*失败/);
+    if (a) return { p: Number(a[1]), t: Number(a[1]) + Number(a[2]), from: 'summary' };
+    /* `通过 80/80` · `通过：80 / 80` · `80/80 通过` · `passed 17 / 17` */
+    const b = L.match(/通过\s*[:：]?\s*(\d+)\s*\/\s*(\d+)/)
+      || L.match(/(\d+)\s*\/\s*(\d+)\s*(?:项)?\s*通过/)
+      || L.match(/\b(?:passed|pass)\s*[:：]?\s*(\d+)\s*\/\s*(\d+)/i)
+      || L.match(/(\d+)\s*\/\s*(\d+)\s*(?:passed|pass)\b/i);
+    if (b) return { p: Number(b[1]), t: Number(b[2]), from: 'summary' };
+    /* 极少数套件收尾只写 `结果：126 / 126`（不含「通过」二字）—— 记下继续往上找更明确的 */
+    if (/(?:结果|合计|总计|summary)/i.test(L) && SUMMARY.test(L)) {
+      const c = L.match(SUMMARY);
+      return { p: Number(c[1]), t: Number(c[2]), from: 'summary' };
+    }
+  }
+  /* 退回老行为（兼容还没改成约定格式的套件），但**记一笔** */
+  const mAll = String(out || '').match(/^.*(\d+)\s*\/\s*(\d+).*$/gm) || [];
+  if (mAll.length) {
+    const last = mAll[mAll.length - 1].match(SUMMARY);
+    return { p: Number(last[1]), t: Number(last[2]), from: 'fallback', sample: mAll[mAll.length - 1].trim().slice(0, 60) };
+  }
+  return { p: null, t: null, from: 'none' };
+}
 
 /**
  * 套件是否**把退出码挂在失败数上**。
@@ -650,24 +746,19 @@ for (const s of TO_RUN) {
    *     ② 认不出汇总行时，**把「该套件收尾格式不合约定」记进 warnings** ——
    *        不静默降级，否则这个坑下次换个套件还会原样复现。
    */
-  const lines = out.split(/\r?\n/).filter((l) => l.trim());
-  const SUMMARY = /(\d+)\s*\/\s*(\d+)/;
-  let picked = null;
-  for (let i = lines.length - 1; i >= 0; i--) {
-    if (SUMMARY.test(lines[i]) && /通过|失败|pass|fail/i.test(lines[i])) { picked = lines[i].match(SUMMARY); break; }
-  }
-  let p = null, t = null;
-  if (picked) { p = Number(picked[1]); t = Number(picked[2]); }
-  else {
+  const sc = pickScore(out);
+  let p = sc.p, t = sc.t;
+  if (sc.from === 'fallback') {
     /* 退回老行为（兼容还没改成约定格式的套件），但**记一笔** */
-    const mAll = out.match(/^.*(\d+)\s*\/\s*(\d+).*$/gm) || [];
-    if (mAll.length) {
-      const last = mAll[mAll.length - 1].match(SUMMARY);
-      p = Number(last[1]); t = Number(last[2]);
-      warnFmt.push(`${s}（收尾 12 行内没有「… 通过 …」形态的汇总行，成绩取自：${mAll[mAll.length - 1].trim().slice(0, 60)}）`);
-    }
+    warnFmt.push(`${s}（收尾没有「… 通过 …」形态的汇总行，成绩取自：${sc.sample}）`);
   }
-  if (p != null) { pass += p; fail += (t - p); }
+  if (p != null) {
+    if (t < p) {
+      warnOrder.push(`${s}（通过 ${p} / 总数 ${t} —— 两个数字疑似在收尾行里写反）`);
+      t = p;
+    }
+    pass += p; fail += (t - p);
+  }
   if (code !== 0) crashed.push(`${s} (exit ${code})`);
 
   if (!QUIET) {
@@ -695,9 +786,14 @@ if (warnFmt.length) {
   warnFmt.forEach((w) => console.log(`   · ${w}`));
   console.log('   ⇒ 把该套件末尾改成「通过 n/m」或「n / m 通过」（同行含「通过」）');
 }
+if (warnOrder.length) {
+  console.log(`⚠️ 收尾汇总行的两个数字顺序可疑（已按「总数=通过数」夹住，不会污染合计）：`);
+  warnOrder.forEach((w) => console.log(`   · ${w}`));
+  console.log('   ⇒ 收尾只写「通过 n/m」；别写「A 通过 / B 失败」这种中间夹字的形态');
+}
 console.log(`${'#'.repeat(52)}`);
 
-if (fail || crashed.length || missing.length || noExit.length || warnFmt.length) {
+if (fail || crashed.length || missing.length || noExit.length || warnFmt.length || warnOrder.length) {
   console.log(`\n⚠️ ${WITH_BROWSER ? '两层防线' : '静态防线'}未全绿 —— 先修这里，别急着跑线上验收。`);
   process.exit(1);
 }

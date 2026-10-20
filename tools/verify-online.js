@@ -209,6 +209,13 @@ function chk(ok, name, extra) {
   for (const [u, label] of [
     ['/api/admin/game?id=xd-1', '/api/admin/game（含 state.note）'],
     ['/api/library/browse?admin=1&limit=1', '/api/library/browse?admin=1（行回填 note）'],
+    /* ★ v10.90 新增的三条管理端点，同样是「无令牌必须 403」：
+     *   · verify 是鉴权探针 —— 它若公开，前端就永远看不出令牌到底有没有被接受；
+     *   · profile GET 会回 raw（爬虫原值）+ state.note，属管理侧数据；
+     *   · coverage 回的是缺口清单与各源命中集合，比「计数」细一级。 */
+    ['/api/admin/verify', '/api/admin/verify（鉴权探针）'],
+    ['/api/admin/profile?id=xd-1', '/api/admin/profile（raw + state）'],
+    ['/api/admin/coverage?module=base&limit=1', '/api/admin/coverage（缺口清单）'],
   ]) {
     const r = await api(u);
     chk(r.s === 403, `[接口] ★ 无令牌 ${label} ⇒ 403（备注不公网可读）`, 'status ' + r.s);

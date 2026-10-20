@@ -4,12 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GameHub 管理后台</title>
+<!-- 内联 favicon：不引外部文件、也不让 /favicon.ico 404 在控制台留一条红 -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232563eb'/%3E%3Ctext x='16' y='22' font-size='17' font-family='Segoe UI,sans-serif' font-weight='700' fill='white' text-anchor='middle'%3EG%3C/text%3E%3C/svg%3E">
 <style>
 :root{
   --bg:#f4f6f9; --card:#fff; --line:#e3e8ef; --txt:#1c2330; --sub:#5b6675;
   --pri:#2563eb; --pri-bg:#eff6ff; --ok:#16a34a; --ok-bg:#f0fdf4;
   --warn:#d97706; --warn-bg:#fffbeb; --dan:#dc2626; --dan-bg:#fef2f2;
   --chip:#f1f5f9; --sh:0 1px 3px rgba(16,24,40,.08); --sh2:0 12px 40px rgba(16,24,40,.18);
+  --acc:#2563eb;
   --side:#111827; --side2:#1f2937;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -155,6 +158,53 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
 .log-row .t{color:var(--sub);font-variant-numeric:tabular-nums;font-size:11.5px}
 .code{font-family:Consolas,monospace;font-size:11.5px;background:var(--chip);border-radius:6px;padding:1px 6px}
 
+/* ═══ v10.90 固定行高列表（页面管理 / 游戏库共用） ═══
+ * 用户口径「固定每一行的高度」：行高钉在 56px，图片 42px，标题单行省略。
+ * 为什么不用 min-height：内容长短不一时 min-height 会被撑开（长标题换行 ⇒ 行高跳动），
+ * 表格看起来像被随机拉伸；height + overflow:hidden 才是真的等高。 */
+.fxrow td{height:56px;padding:4px 10px;overflow:hidden}
+.fxrow .cv{width:42px;height:42px;border-radius:7px}
+.fxrow .tt{max-width:430px}
+.idcol{font-family:Consolas,monospace;font-size:11.5px;color:var(--sub);white-space:nowrap}
+
+/* 页码条：可输入跳转 + 附近页 */
+.pgbar{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.pgbar .sp{flex:1}
+.pgbar input{width:58px;padding:5px 6px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;text-align:center;outline:none;font-variant-numeric:tabular-nums}
+.pgbar input:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.pgn{min-width:29px;height:28px;padding:0 7px;border:1px solid var(--line);background:#fff;border-radius:8px;font-size:12.5px;cursor:pointer;color:var(--txt);font-variant-numeric:tabular-nums}
+.pgn:hover{border-color:var(--pri);color:var(--pri)}
+.pgn.on{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:700}
+.pgdot{color:#94a3b8;padding:0 1px}
+
+/* 表单输入（资料弹窗） */
+.fld input[type=text],.fld input[type=number],.fld input[type=date]{width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:9px;font:13px/1.5 inherit;outline:none;background:#fff}
+.fld input:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.fld .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fld .ln{display:flex;gap:6px;align-items:center}
+.ovr{display:inline-block;font-size:10px;color:#a16207;background:#fefce8;border-radius:5px;padding:0 5px;margin-left:5px;vertical-align:1.5px;font-weight:700}
+
+/* 鉴权横幅：令牌缺失/无效时说人话（原来只给一张空表） */
+.authbar{display:none;align-items:center;gap:9px;background:var(--dan-bg);border:1px solid #fecaca;color:var(--dan);border-radius:10px;padding:9px 13px;font-size:12.5px;margin-bottom:12px}
+.authbar.on{display:flex}
+.authbar .sp{flex:1}
+
+/* 资源覆盖：按模块分类的卡片 */
+.mgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
+.mcard{border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:var(--sh);padding:13px 15px}
+.mcard .hd{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.mcard .hd b{font-size:14px}
+.mcard .hd em{font-style:normal;font-size:11.5px;color:var(--sub);font-variant-numeric:tabular-nums}
+.mcard .miss{margin-top:9px;border-top:1px dashed var(--line);padding-top:7px}
+.miss-item{display:flex;align-items:center;gap:8px;padding:2px 0;font-size:12px;min-width:0}
+.miss-item img{width:24px;height:24px;border-radius:5px;object-fit:cover;background:#eef2f7;flex:0 0 auto}
+.miss-item .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* 模块子源切换条 */
+.mtabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.mtab{padding:6px 13px;border-radius:9px;border:1px solid var(--line);background:#fff;font-size:12.5px;cursor:pointer;color:var(--sub)}
+.mtab.on{background:var(--pri-bg);border-color:#bfdbfe;color:var(--pri);font-weight:700}
+
 @media (max-width:900px){
   .side{position:static;width:100%;flex-direction:row;align-items:center;overflow-x:auto}
   .brand{border:0;padding:12px 14px;white-space:nowrap}
@@ -178,15 +228,19 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
     <nav class="nav" id="nav">
       <div class="sec">总览</div>
       <a data-v="dash" class="on"><i>▦</i>仪表盘</a>
-      <div class="sec">游戏</div>
+      <div class="sec">爬虫</div>
+      <a data-v="pages"><i>⛁</i>页面管理<b class="n" id="nPages">—</b></a>
+      <div class="sec">数据</div>
       <a data-v="games"><i>▤</i>游戏库<b class="n" id="nGame">—</b></a>
-      <div class="sec">资源管理 · 按类型分开</div>
-      <a data-v="rm-mod"><i>◈</i>MOD 帖<b class="n" id="nMod">—</b></a>
-      <a data-v="rm-modifier"><i>⚔</i>修改器<b class="n" id="nModifier">—</b></a>
-      <a data-v="rm-save"><i>▣</i>存档位置<b class="n" id="nSave">—</b></a>
-      <a data-v="rm-cloud"><i>☁</i>云存档<b class="n" id="nCloud">—</b></a>
-      <a data-v="rm-fitgirl"><i>⛃</i>FitGirl 资源包<b class="n" id="nFitgirl">—</b></a>
-      <a data-v="rm-ts"><i>⬢</i>Thunderstore<b class="n" id="nTs">—</b></a>
+      <!-- ★ v10.90：模块只剩四类（本体 / MOD / 修改器 / 存档）。
+           原来 FitGirl 与 Thunderstore 各占一个侧栏条目 ⇒ 侧栏七条资源 + 两个运维，
+           用户口径「页面管理有点乱」。它们本质是**本体**与**MOD**的一个来源，
+           收进模块后由页内的「子源」切换条区分（不影响分页语义，见 RM 注释）。 -->
+      <div class="sec">模块 · 以游戏为主键</div>
+      <a data-v="m-base"><i>⛃</i>本体<b class="n" id="nBase">—</b></a>
+      <a data-v="m-mod"><i>◈</i>MOD<b class="n" id="nMod">—</b></a>
+      <a data-v="m-trainer"><i>⚔</i>修改器<b class="n" id="nTrainer">—</b></a>
+      <a data-v="m-save"><i>▣</i>存档<b class="n" id="nSave">—</b></a>
       <div class="sec">运维</div>
       <a data-v="res"><i>◇</i>资源覆盖</a>
       <a data-v="log"><i>≡</i>操作日志</a>
@@ -203,17 +257,76 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
       <h2 id="vTitle">仪表盘</h2>
       <span class="crumb" id="vCrumb">总览 / 数据健康</span>
       <span class="sp"></span>
+      <!-- ★ v10.90：令牌条改造 —— ① 保存后**回填**（原来立刻清空，原文再也看不到）；
+           ② 👁 可切换明文；③ 保存时立刻打 /api/admin/verify 给绿/红结论。 -->
       <div class="tk" title="线上管理写操作需要令牌；本机 8123/8124 直连免令牌">
         <span class="tkdot" id="tkDot"></span>
         <input id="tkInput" type="password" placeholder="管理令牌（线上需填）" autocomplete="off">
+        <button class="btn sm" id="tkEye" onclick="toggleTk()" title="显示 / 隐藏令牌">👁</button>
         <button class="btn sm" onclick="saveToken()">保存</button>
       </div>
       <a class="btn sm" href="/" target="_blank" rel="noopener">打开主站 ↗</a>
     </header>
 
-    <!-- ═══ 仪表盘 ═══ -->
+    <!-- ★ v10.90 鉴权横幅：令牌缺失/无效时在**内容区**说清楚，
+         而不是只把表格留空（原来的表现是「填了令牌还是什么都没有」）。 -->
+    <div class="authbar" id="authBar">
+      <b>未授权</b><span id="authMsg">线上需要管理令牌才能看管理数据。</span>
+      <span class="sp"></span>
+      <button class="btn sm" onclick="focusTok()">去填令牌</button>
+    </div>
+
+    <!-- ═══ 页面管理（爬取条目清单）═══
+         与「游戏库」的分工：这里管**爬回来的原始内容**（标题/封面/热度/平台链接），
+         游戏库管**整理后的资料**（简介/类型/厂商/发售日/别名）。
+         两者写同一份 data/game-profile.json 的不同字段（见 data/game-profile.js）。 -->
+    <section class="view" id="view-pages">
+      <div class="tools">
+        <input type="text" id="pq" placeholder="搜索游戏名 / 游戏ID（回车搜索）">
+        <button class="btn pri" onclick="pagesSearch()">搜索</button>
+        <select id="pSrc" onchange="pagesReload(true)">
+          <option value="">全部平台</option>
+          <option value="xd">XDGAME</option>
+          <option value="jidi">机地</option>
+        </select>
+        <select id="pSort" onchange="pagesReload(true)">
+          <option value="updated">按更新时间</option>
+          <option value="hot">按热度</option>
+          <option value="title">按游戏名</option>
+        </select>
+        <span class="sp" style="flex:1"></span>
+        <span class="mut" id="pInfo">—</span>
+        <button class="btn sm" onclick="pagesReload()">刷新</button>
+      </div>
+      <div class="tblwrap">
+        <table>
+          <thead><tr>
+            <th style="width:58px">封面</th>
+            <th>游戏名</th>
+            <th style="width:150px">游戏ID</th>
+            <th style="width:92px">平台</th>
+            <th style="width:82px">热度</th>
+            <th style="width:92px">更新</th>
+            <th style="width:84px">操作</th>
+          </tr></thead>
+          <tbody id="pRows"></tbody>
+        </table>
+        <div class="empty" id="pEmpty" style="display:none">没有符合条件的内容</div>
+      </div>
+      <div class="pager pgbar" id="pPgBar"></div>
+    </section>
+
+    <!-- ═══ 仪表盘（爬虫可视化 · 分模块）═══
+         用户口径「仪表盘主要用于管理爬虫可视化，且分模块查看」⇒ 顶部一排模块 chip，
+         选「总览」时四张模块卡全出，选具体模块只留那一张（其余数据不再请求）。 -->
     <section class="view on" id="view-dash">
+      <div class="tools">
+        <div class="chips" id="dashChips"></div>
+        <span class="sp" style="flex:1"></span>
+        <span class="mut" id="dashInfo">—</span>
+      </div>
       <div class="grid g6" id="stats"></div>
+      <div class="mgrid" id="dashMods" style="margin-top:13px"></div>
       <div class="panel">
         <div class="ph"><h3>库构成与冷门口径</h3><span class="sp"></span><span class="mut" id="dashBuilt">—</span></div>
         <div class="pb">
@@ -229,7 +342,11 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
       </div>
     </section>
 
-    <!-- ═══ 游戏库 ═══ -->
+    <!-- ═══ 游戏库（管理游戏资料）═══
+         与「页面管理」的区别：这里看的是**资料完整度**，不是抓取量。
+         列 = 封面 / 游戏名 / ID / 平台 / 资料(7 项里填了几项) / 状态 / 操作。
+         点「资料」开资料弹窗（简介/类型/厂商/发行/发售日/别名/封面），
+         与页面管理的爬虫字段弹窗写同一份覆盖文件，互不覆盖。 -->
     <section class="view" id="view-games">
       <div class="tools">
         <input type="text" id="q" placeholder="搜索标题 / 别名 / id（回车搜索）">
@@ -255,42 +372,40 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
           <span class="chip" id="cCold" onclick="toggleCold()">🌙 显示冷门</span>
         </div>
         <span class="sp" style="flex:1"></span>
+        <span class="mut" id="gInfo">—</span>
         <button class="btn sm" onclick="reload()">刷新</button>
       </div>
       <div class="tblwrap">
         <table>
           <thead><tr>
-            <th style="width:44px"></th>
-            <th>游戏</th>
-            <th style="width:74px">来源</th>
-            <th style="width:64px">热度</th>
-            <th style="width:92px">更新</th>
-            <th style="width:96px">资源</th>
-            <th style="width:72px">状态</th>
-            <th style="width:124px">备注</th>
-            <th style="width:96px">操作</th>
+            <th style="width:58px">封面</th>
+            <th>游戏名</th>
+            <th style="width:148px">游戏ID</th>
+            <th style="width:88px">平台</th>
+            <th style="width:92px">资料</th>
+            <th style="width:88px">状态</th>
+            <th style="width:128px">备注</th>
+            <th style="width:84px">操作</th>
           </tr></thead>
           <tbody id="rows"></tbody>
         </table>
         <div class="empty" id="rowsEmpty" style="display:none">没有符合条件的游戏</div>
       </div>
-      <div class="pager">
-        <span id="pgInfo">—</span>
-        <span class="sp"></span>
-        <button class="btn sm" id="pgPrev" onclick="page(-1)">上一页</button>
-        <button class="btn sm" id="pgNext" onclick="page(1)">下一页</button>
-      </div>
+      <div class="pager pgbar" id="gPgBar"></div>
     </section>
 
     <!-- ═══ 资源管理（六个域共用这一个壳，列定义 / 数据源 / 动作按 kind 现算）═══
-         为什么六个域共用一个 section：它们的**骨架完全一样**（工具栏 + 表格 + 分页），
-         差别只在「列定义 + 取数端点 + 行动作」。六份几乎相同的 HTML 会立刻漂移
-         （改了一处分页样式，另外五处留在旧样式上）⇒ 用 kind 驱动渲染，骨架只此一份。 -->
+    <!-- ═══ 资源管理（四个模块共用这一个壳，子源 / 列定义由 RM 现算）═══
+         为什么四类共用一个 section：骨架完全一样（工具栏 + 子源切换 + 表格 + 分页），
+         差别只在「子源列表 + 列定义 + 取数端点」。四份近乎相同的 HTML 会立刻漂移。
+         ★ 为什么子源不做「全部合并」一档：两个源的字段与排序键都不同
+           （MOD 帖按 pv、Thunderstore 按 downloads），合并后只能客户端拼接，
+           分页语义会失真（第 2 页的 50 条不是全局第 51–100 条）。宁可不给这一档。 -->
     <section class="view" id="view-resm">
+      <div class="mtabs" id="rmTabs"></div>
       <div class="tools">
         <input type="text" id="rq" placeholder="搜索条目 / 游戏名 / 包名（回车搜索）">
         <button class="btn pri" onclick="resmSearch()">搜索</button>
-        <select id="rSrc" onchange="resmReload()" style="display:none"></select>
         <span class="sp" style="flex:1"></span>
         <span class="mut" id="rmHint"></span>
         <button class="btn sm" onclick="resmReload()">刷新</button>
@@ -302,28 +417,27 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
         </table>
         <div class="empty" id="rmEmpty" style="display:none">没有符合条件的条目</div>
       </div>
-      <div class="pager">
-        <span id="rmInfo">—</span>
-        <span class="sp"></span>
-        <button class="btn sm" onclick="resmPage(-1)">上一页</button>
-        <button class="btn sm" onclick="resmPage(1)">下一页</button>
-      </div>
+      <div class="pager pgbar" id="rmPgBar"></div>
     </section>
 
-    <!-- ═══ 资源覆盖 ═══ -->
+    <!-- ═══ 资源覆盖（按模块分类看）═══
+         用户口径：「资源覆盖我想分类查看而不是单一查看数据源」⇒ 一张模块卡一片区域，
+         卡内列子源命中率，卡下列「这一模块一款都没有」的游戏（可点进游戏库）。
+         比原来七根条多的信息是**缺口清单** —— 那才是能直接安排抓取工作的东西。 -->
     <section class="view" id="view-res">
-      <div class="panel">
-        <div class="ph"><h3>七路资源覆盖</h3><span class="sp"></span><span class="mut">命中 / 总量 · 匹配率</span></div>
-        <div class="pb" id="resBars"></div>
+      <div class="tools">
+        <div class="chips" id="resChips"></div>
+        <span class="sp" style="flex:1"></span>
+        <span class="mut" id="resInfo">—</span>
+        <button class="btn sm" onclick="loadRes()">刷新</button>
       </div>
+      <div class="mgrid" id="resCards"></div>
       <div class="panel">
-        <div class="ph"><h3>说明</h3></div>
+        <div class="ph"><h3>口径说明</h3></div>
         <div class="pb mut" style="line-height:1.9">
-          · <b>MOD / 修改器 / 存档</b>：来自机地帖聚合层（resGroups），与卡面 chip 同源。<br>
-          · <b>FLiNG / TCS</b>：修改器直链源，FLiNG 走流代理、TCS 为外链。<br>
-          · <b>GTrainers</b>：第三方修改器站，直链可下。<br>
-          · <b>FitGirl</b>：Repack 本体档，匹配率受目录覆盖上限约束（长尾独立游戏常无 Repack）。<br>
-          · <b>Thunderstore</b>：社区 MOD，仅覆盖有对应社区的游戏。
+          · <b>分母</b>是端游库全量（含被隐藏的冷门条目）—— 冷门不等于没有资源，用它当分母才看得见长尾缺口。<br>
+          · <b>命中</b>按各源自己的索引现算（FitGirl 的 byGame / Thunderstore 的 libId / 机地聚合层的 libIds），不逐款反查。<br>
+          · <b>缺口</b>= 该模块所有子源都没命中过的游戏，按热度降序取前 30 条。
         </div>
       </div>
     </section>
@@ -345,6 +459,7 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
           <div class="kv" style="line-height:2">
             <div><i>本机</i>8123 / 8124 直连免令牌（回环 + 本地 Host + 无转发头 三条件同时成立）</div>
             <div><i>线上</i>需在右上角填 <span class="code">X-Admin-Token</span>，存浏览器本地</div>
+            <div><i>查看已填令牌</i>点顶栏 <b>👁</b> 切明文；保存时会调 <span class="code">/api/admin/verify</span> 当场判定有效/无效</div>
             <div><i>令牌源</i>环境变量 <span class="code">GAMEHUB_ADMIN_TOKEN</span> &gt; <span class="code">data/admin-token.json</span>（不入库，随发布上线）</div>
             <div><i>当前</i><span id="setTok">未填写</span></div>
           </div>
@@ -353,9 +468,11 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
       <div class="panel">
         <div class="ph"><h3>数据边界（重要）</h3></div>
         <div class="pb mut" style="line-height:1.95">
-          · 线上容器的 <span class="code">data/</span> 会在<b>每次发布</b>时被本地载荷覆盖 ⇒ 线上做的豁免与备注<b>不跨发布保留</b>。<br>
+          · 线上容器的 <span class="code">data/</span> 会在<b>每次发布</b>时被本地载荷覆盖 ⇒ 线上做的豁免、备注、资料覆盖<b>不跨发布保留</b>。<br>
           · 需要长期保留的管理动作，请在本地实例（8123/8124）做，再发布。<br>
           · 备注存 <span class="code">data/game-notes.json</span>；豁免存 <span class="code">data/hide-overrides.json</span>（已 gitignore）。<br>
+          · <b>资料覆盖存 <span class="code">data/game-profile.json</span></b>（不入库）：页面管理改的标题/封面/热度/链接、游戏库改的简介/类型/厂商/发售日/别名都在这里，<b>不回写爬虫产物</b>。<br>
+          · 资料覆盖<b>只改展示，不参与匹配</b> —— 改标题不会影响已匹配的 MOD / 修改器 / 存档归属。<br>
           · 所有管理写操作都会追加到 <span class="code">data/admin-log.jsonl</span>（谁/何时/对哪条/回环还是令牌）。
         </div>
       </div>
@@ -412,6 +529,86 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
     </div>
   </div>
 </div>
+<!-- ═══ 资料 / 爬虫字段弹窗（页面管理 + 游戏库共用一套表单）═══
+     两个页面写的是同一份 data/game-profile.json，只是各暴露一组字段：
+       页面管理 → 标题 / 封面 / 热度 / 平台链接（爬回来的东西）
+       游戏库   → 标题 / 封面 / 简介 / 类型 / 厂商 / 发行 / 发售日 / 别名（整理后的资料）
+     留空 = 删掉该字段的覆盖，回到爬虫值（表单上方用「人改」角标标出当前哪些字段被覆盖过）。 -->
+<div class="mask" id="pmask" onclick="if(event.target===this)closeProf()">
+  <div class="modal" style="max-width:760px">
+    <div class="mh">
+      <img id="pfCover" alt="">
+      <div style="min-width:0">
+        <h3 id="pfTitle">—</h3>
+        <div class="meta" id="pfMeta"></div>
+      </div>
+      <span class="sp"></span>
+      <button class="mclose" onclick="closeProf()">✕</button>
+    </div>
+    <div class="mb" style="grid-template-columns:1fr">
+      <div class="mcol">
+        <div class="fld">
+          <label>游戏名 <span id="pfTitleOvr"></span></label>
+          <input type="text" id="pfTitleIn" placeholder="留空 = 用爬虫抓到的标题">
+        </div>
+        <div class="fld">
+          <label>封面图 URL <span id="pfCoverOvr"></span></label>
+          <div class="ln">
+            <input type="text" id="pfCoverIn" placeholder="留空 = 用爬虫抓到的封面">
+            <button class="btn sm" onclick="pfPreview()">预览</button>
+          </div>
+          <div class="hint">外链即可；主站列表与详情页都用这张</div>
+        </div>
+        <div class="fld" id="pfCrawl">
+          <div class="row2">
+            <div><label>热度 <span id="pfHotOvr"></span></label><input type="number" id="pfHotIn" min="0" placeholder="爬取值"></div>
+            <div><label>平台链接 <span id="pfUrlOvr"></span></label><input type="text" id="pfUrlIn" placeholder="爬取值"></div>
+          </div>
+        </div>
+        <div class="fld" id="pfData1">
+          <label>简介 <span id="pfIntroOvr"></span></label>
+          <textarea id="pfIntroIn" placeholder="留空 = 用爬虫抓到的介绍"></textarea>
+        </div>
+        <div class="fld" id="pfData2">
+          <label>类型标签 <span id="pfGenresOvr"></span></label>
+          <input type="text" id="pfGenresIn" placeholder="动作, 角色扮演（逗号分隔）">
+        </div>
+        <div class="fld" id="pfData3">
+          <div class="row2">
+            <div><label>厂商 <span id="pfDevOvr"></span></label><input type="text" id="pfDevIn" placeholder="Developer"></div>
+            <div><label>发行 <span id="pfPubOvr"></span></label><input type="text" id="pfPubIn" placeholder="Publisher"></div>
+          </div>
+        </div>
+        <div class="fld" id="pfData4">
+          <div class="row2">
+            <div><label>发售日 <span id="pfDateOvr"></span></label><input type="date" id="pfDateIn"></div>
+            <div><label>别名 <span id="pfAliasOvr"></span></label><input type="text" id="pfAliasIn" placeholder="多个用逗号分隔"></div>
+          </div>
+        </div>
+        <div class="fld" id="pfData5">
+          <label>备注（管理标注，不影响抓取与搜索）</label>
+          <textarea id="pfNote" placeholder="例如：等更新 / 封面错 / 已人工核对 / 别名待补"></textarea>
+          <div class="hint">存 data/game-notes.json，与资料覆盖分开记</div>
+        </div>
+        <div class="fld" id="pfSegWrap">
+          <label>列表状态</label>
+          <div class="seg" id="pfSeg">
+            <button data-op="clear">跟随规则</button>
+            <button data-op="show">强制显示</button>
+            <button data-op="hide">强制隐藏</button>
+          </div>
+          <div class="hint" id="pfSegHint">跟随规则 = 按冷门口径自动判定</div>
+        </div>
+      </div>
+    </div>
+    <div class="mf">
+      <span class="stat-line" id="pfStat"></span>
+      <span class="sp"></span>
+      <button class="btn" onclick="closeProf()">关闭</button>
+      <button class="btn pri" onclick="saveProf()">保存</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -421,17 +618,15 @@ const LIMIT = 50;
 let offset = 0, total = 0, cur = null, curItem = null, segOp = 'clear';
 let showCold = false, onlyNote = false;
 const VIEWS = {
-  dash: ['仪表盘', '总览 / 数据健康'],
-  games: ['游戏库', '游戏 / 2 万条全量池'],
-  /* ★ v10.88.2 六个资源域各占一个侧栏条目，视觉上是六个独立页面（标题/列/筛选都不同），
-   *   骨架共用 `#view-resm` 一份（见 RM 表注释）。 */
-  'rm-mod': ['MOD 帖', '资源管理 / 机地聚合 · 按游戏归属'],
-  'rm-modifier': ['修改器', '资源管理 / CE · 风灵月影 · 机地帖'],
-  'rm-save': ['存档位置', '资源管理 / 路径 + 注册表'],
-  'rm-cloud': ['云存档', '资源管理 / Steam 云 · 游侠'],
-  'rm-fitgirl': ['FitGirl 资源包', '资源管理 / Repack 档'],
-  'rm-ts': ['Thunderstore', '资源管理 / 社区 MOD 直链'],
-  res: ['资源覆盖', '运维 / 七路资源'],
+  dash: ['仪表盘', '总览 / 爬虫与数据健康'],
+  pages: ['页面管理', '爬虫 / 抓取条目 · 可编辑'],
+  games: ['游戏库', '数据 / 游戏资料'],
+  /* ★ v10.90：模块只剩四类，骨架共用 `#view-resm` 一份，子源在页内切换（见 RM 注释）。 */
+  'm-base': ['本体', '模块 / FitGirl Repack · 以游戏为主键'],
+  'm-mod': ['MOD', '模块 / 机地 MOD 帖 · Thunderstore'],
+  'm-trainer': ['修改器', '模块 / CE · 风灵月影 · 机地修改器帖'],
+  'm-save': ['存档', '模块 / 存档位置 · 云存档'],
+  res: ['资源覆盖', '运维 / 按模块分类'],
   log: ['操作日志', '运维 / 留痕'],
   set: ['设置', '运维 / 配置与边界'],
 };
@@ -461,18 +656,47 @@ function ago(t) {
   return Math.round(d / 30) + ' 个月前';
 }
 
-/* ═══════════ 鉴权（头优先，403 降级一次） ═══════════ */
-function tok() { return localStorage.getItem('gh_admin_token') || ''; }
-function saveToken() {
+/* ═══════════ 鉴权（头优先，403 降级一次） ═══════════
+ * ★ v10.90 三个修正，都来自「已填写令牌不能查看」这条反馈：
+ *   ① `saveToken()` 原来保存后立刻把输入框清空 ⇒ 令牌原文再也看不到（只能看到前 6 位）。
+ *      现在**回填**，并给一个 👁 切换明文；
+ *   ② 保存时同步打 `/api/admin/verify` ⇒ 立刻给「令牌有效 / 无效」的结论，
+ *      而不是让用户对着空表格猜；
+ *   ③ 任何管理请求 403 的时候，在内容区顶部挂一条横幅说清楚原因
+ *      （原来只有空表格 + console 一条 403，肉眼根本看不到）。 */
+const TKEY = 'gh_admin_token';
+function tok() { return localStorage.getItem(TKEY) || ''; }
+function tokMask(t) { return t ? t.slice(0, 6) + '…' : ''; }
+function toggleTk() {
+  const i = $('tkInput');
+  i.type = i.type === 'password' ? 'text' : 'password';
+  $('tkEye').textContent = i.type === 'password' ? '👁' : '🙈';
+}
+function focusTok() { $('tkInput').focus(); $('tkInput').select(); }
+function showAuth(msg) { $('authMsg').textContent = msg; $('authBar').classList.add('on'); }
+function hideAuth() { $('authBar').classList.remove('on'); }
+
+async function saveToken() {
   const v = $('tkInput').value.trim();
-  if (v) localStorage.setItem('gh_admin_token', v); else localStorage.removeItem('gh_admin_token');
-  $('tkInput').value = ''; paintTok(); toast(v ? '令牌已保存' : '令牌已清除');
-  reload(); loadLog(); loadSetLog();
+  if (v) localStorage.setItem(TKEY, v); else localStorage.removeItem(TKEY);
+  $('tkInput').value = tok();          /* ← 回填：已填写的令牌要能查看 */
+  paintTok();
+  if (!v) { hideAuth(); toast('令牌已清除'); return; }
+  const j = await api('/api/admin/verify');
+  if (j.ok) { hideAuth(); toast('令牌有效（' + (j.via || '?') + '）'); }
+  else {
+    /* 点了保存 ≠ 令牌可用：红灯 + 横幅，别让绿点撒谎 */
+    $('tkDot').className = 'tkdot off';
+    showAuth('令牌无效：服务端没有接受它。请核对设置页的令牌来源（env 或 data/admin-token.json）。');
+    toast('令牌无效');
+  }
+  reload(); pagesReload(); loadLog(); loadSetLog();
 }
 function paintTok() {
   const on = !!tok();
   $('tkDot').className = 'tkdot ' + (on ? 'on' : 'off');
-  $('setTok').textContent = on ? '已填写（' + tok().slice(0, 6) + '…）' : '未填写（本机直连无需）';
+  $('setTok').textContent = on ? '已填写（' + tokMask(tok()) + '，点 👁 可查看全文）' : '未填写（本机直连无需）';
+  if (!on) $('tkInput').placeholder = '管理令牌（线上必填 · 本机免填）';
 }
 async function api(path, opt) {
   const t = tok();
@@ -491,34 +715,64 @@ async function api(path, opt) {
     return j;
   };
   const j = await send(false);
-  if (!j.ok && j.needAuth && t) return send(true);
+  if (!j.ok && j.needAuth) {
+    /* 有令牌才降级重试（query / body 两条通道，防反代剥头） */
+    if (t) {
+      const j2 = await send(true);
+      if (j2.ok) { hideAuth(); return j2; }
+    }
+    showAuth(t
+      ? '令牌没有被接受（HTTP 403）。请核对令牌是否与线上 data/admin-token.json 一致。'
+      : '这条数据需要管理令牌。请把令牌填到右上角并点保存。');
+    return j;
+  }
+  hideAuth();
   return j;
 }
 
 /* ═══════════ 视图切换 ═══════════ */
 function go(v) {
+  /* 旧链接（#rm-mod / #rm-ts …）现在没有对应视图 ⇒ 回落仪表盘，
+   * 否则 secId 匹配不到任何 section，整页变成空白（看起来像"后台坏了"）。 */
+  if (!VIEWS[v]) v = 'dash';
   const [t, c] = VIEWS[v] || VIEWS.dash;
   $('vTitle').textContent = t; $('vCrumb').textContent = c;
   document.querySelectorAll('.nav a').forEach((a) => a.classList.toggle('on', a.dataset.v === v));
-  /* 六个资源域共用 `#view-resm` 一个 section ⇒ section id 不能直接用视图名 */
-  const secId = 'view-' + (v.indexOf('rm-') === 0 ? 'resm' : v);
+  /* 四个模块共用 `#view-resm` 一个 section ⇒ section id 不能直接用视图名 */
+  const secId = 'view-' + (v.indexOf('m-') === 0 ? 'resm' : v);
   document.querySelectorAll('.view').forEach((s) => s.classList.toggle('on', s.id === secId));
   if (location.hash.slice(1) !== v) history.replaceState(null, '', '#' + v);
   if (v === 'dash') loadStats();
+  if (v === 'pages') pagesReload(true);
   if (v === 'games') reload(true);
   if (v === 'res') loadRes();
   if (v === 'log') { loadLog(); loadSetLog(); }
   if (v === 'set') { loadSetLog(); }
-  if (v.indexOf('rm-') === 0) {
-    rmKind = v.slice(3); rmOff = 0;
-    /* 直接以 #rm-xxx 进站时仪表盘没跑过 ⇒ 左栏角标还是「—」，补一次 overview（不阻塞表格） */
-    if ($('nMod').textContent === '—') loadStats();
+  if (v.indexOf('m-') === 0) {
+    rmMod = v.slice(2); rmSrc = ''; rmOff = 0;
+    /* 直接以 #m-xxx 进站时仪表盘没跑过 ⇒ 左栏角标还是「—」，补一次 overview（不阻塞表格） */
+    if ($('nBase').textContent === '—') loadStats();
     resmReload();
   }
 }
 document.querySelectorAll('.nav a').forEach((a) => a.addEventListener('click', () => go(a.dataset.v)));
 
-/* ═══════════ 仪表盘 ═══════════ */
+/* ═══════════ 仪表盘（爬虫可视化 · 分模块） ═══════════ */
+const MODS = [
+  { key: 'base', label: '本体', icon: '⛃', sources: 'FitGirl Repack' },
+  { key: 'mod', label: 'MOD', icon: '◈', sources: '机地 MOD 帖 · Thunderstore' },
+  { key: 'trainer', label: '修改器', icon: '⚔', sources: 'CE/风灵月影 · 机地帖 · GTrainers' },
+  { key: 'save', label: '存档', icon: '▣', sources: '存档位置 · 云存档' },
+];
+let dashMod = 'all';
+
+function paintDashChips() {
+  const opt = [['all', '总览']].concat(MODS.map((m) => [m.key, m.label]));
+  $('dashChips').innerHTML = opt.map(([k, l]) =>
+    '<span class="chip' + (dashMod === k ? ' on' : '') + '" onclick="dashPick(\'' + k + '\')">' + esc(l) + '</span>').join('');
+}
+function dashPick(k) { dashMod = k; paintDashChips(); paintDashMods(); }
+
 async function loadStats() {
   const j = await api('/api/admin/overview');
   if (!j.ok) { $('stats').innerHTML = '<div class="card stat"><span>统计加载失败</span><b>—</b></div>'; return; }
@@ -531,24 +785,22 @@ async function loadStats() {
     ['豁免', nf((c.overrideShow || 0) + (c.overrideHide || 0)), '', '手改 ' + (c.overrideShow || 0) + ' 显 / ' + (c.overrideHide || 0) + ' 藏'],
     ['备注', nf((j.notes || {}).count), '', '管理标注'],
     ['双源覆盖', nf(l.dual), 'pri', '机地 ∩ XD'],
-    ['MOD', nf((j.mods || {}).matched), '', '匹配 ' + ((j.mods || {}).matchedRate || 0) + '%'],
-    ['修改器', nf((j.trainers || {}).matched), '', 'GT + FLiNG'],
-    ['存档', nf((j.saves || {}).matched), '', '游侠云存档'],
-    ['FitGirl', nf((j.fitgirl || {}).matchedGames), '', 'Repack 档'],
-    ['Thunderstore', nf((j.tsmods || {}).matched), '', '社区 MOD'],
+    ['资料覆盖', nf(((j.profile || {}).games) || 0), '', '人工改过 ' + nf(((j.profile || {}).games) || 0) + ' 款'],
   ];
   $('stats').innerHTML = cards.map((x) =>
     '<div class="card stat ' + x[2] + '"><span>' + x[0] + '</span><b>' + x[1] + '</b><em>' + x[3] + '</em></div>').join('');
   $('fNotes').textContent = nf((j.notes || {}).count);
-  /* 左栏六个资源域的角标 —— 数字来自服务端现算的 domains（不写死） */
+  /* 左栏角标 —— 数字全部来自服务端现算的 domains（不写死）。
+   * ★ v10.90 四模块合并口径：本体 = FitGirl 条目；MOD = MOD 帖 + Thunderstore 包；
+   *   修改器 = CE/风灵月影 + 机地修改器帖；存档 = 存档位置 + 云存档。 */
   const dm = j.domains || {};
   $('nGame').textContent = nf((l || {}).total);
-  $('nMod').textContent = nf(dm.mod);
-  $('nModifier').textContent = nf((dm.modifier || 0) + (dm.modifierExtra || 0));
-  $('nSave').textContent = nf(dm.save);
-  $('nCloud').textContent = nf(dm.cloud);
-  $('nFitgirl').textContent = nf(dm.fitgirl);
-  $('nTs').textContent = nf(dm.ts);
+  $('nPages').textContent = nf((l || {}).total);
+  $('nBase').textContent = nf(dm.fitgirl);
+  $('nMod').textContent = nf((dm.mod || 0) + (dm.ts || 0));
+  $('nTrainer').textContent = nf((dm.modifier || 0) + (dm.modifierExtra || 0));
+  $('nSave').textContent = nf((dm.save || 0) + (dm.cloud || 0));
+  $('dashInfo').textContent = '统计时间 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false });
 
   const pct = (n) => Math.max(1, Math.min(100, (n / (c.total || 1)) * 100));
   $('barVis').style.width = pct(c.visible) + '%'; $('vvVis').textContent = nf(c.visible);
@@ -568,25 +820,88 @@ async function loadStats() {
     const p = t ? Math.round((m / t) * 100) : 0;
     return '<div class="bar"><div class="nm">' + esc(nm) + '</div><div class="track"><div class="fill" style="width:' + Math.max(1, p) + '%"></div></div><div class="vv">' + p + '% · ' + nf(m) + '/' + nf(t) + '</div></div>';
   }).join('');
+
+  paintDashChips();
+  paintDashMods();
 }
 
-/* ═══════════ 资源覆盖 ═══════════ */
+/* 分模块爬虫卡：每个模块一张（总览四张，选中某模块只请求那一张）。
+ * 数据来自 /api/admin/coverage（服务端现算命中集合 + 缺口），不额外造端点。 */
+async function paintDashMods() {
+  const box = $('dashMods');
+  if (!box) return;
+  const list = dashMod === 'all' ? MODS : MODS.filter((m) => m.key === dashMod);
+  box.innerHTML = list.map((m) => '<div class="mcard" id="dc-' + m.key + '"><div class="mut">' + esc(m.label) + ' 加载中…</div></div>').join('');
+  for (const m of list) {
+    const j = await api('/api/admin/coverage?module=' + m.key + '&limit=0');
+    const el = $('dc-' + m.key);
+    if (!el) continue;
+    if (!j.ok) { el.innerHTML = '<div class="mut">' + esc(j.needAuth ? '需要令牌' : (j.error || '加载失败')) + '</div>'; continue; }
+    const rows = (j.sources || []).map((s) => {
+      const p = Math.min(100, s.rate || 0);
+      return '<div class="bar" style="grid-template-columns:96px 1fr 78px;padding:5px 0">'
+        + '<div class="nm" style="font-size:12px">' + esc(s.label) + '</div>'
+        + '<div class="track"><div class="fill" style="width:' + Math.max(1, p) + '%"></div></div>'
+        + '<div class="vv" style="font-size:11.5px">' + nf(s.matched) + ' 款</div></div>';
+    }).join('');
+    el.innerHTML = '<div class="hd"><b>' + m.icon + ' ' + esc(m.label) + '</b><em>覆盖率 ' + (j.rate || 0) + '%</em>'
+      + '<span class="sp" style="flex:1"></span><em>缺 ' + nf(j.missingTotal) + '</em></div>'
+      + rows
+      + '<div class="miss"><div class="mut" style="font-size:11.5px">命中 ' + nf(j.covered) + ' / ' + nf(j.total)
+      + ' 款 · 缺口 <b style="color:#b45309">' + nf(j.missingTotal) + '</b> 款'
+      + ' · 数据 ' + (j.builtAt ? ago(j.builtAt) : '—')
+      + (j.missingTotal ? ' <a href="#" onclick="go(\'res\');return false">看缺口 →</a>' : '') + '</div></div>';
+  }
+}
+
+/* ═══════════ 资源覆盖（按模块分类） ═══════════ */
+const RES_ORDER = ['base', 'mod', 'trainer', 'save'];
+let resMod = 'all';
+
+function paintResChips() {
+  const opt = [['all', '全部模块']].concat(MODS.map((m) => [m.key, m.label]));
+  $('resChips').innerHTML = opt.map(([k, l]) =>
+    '<span class="chip' + (resMod === k ? ' on' : '') + '" onclick="resPick(\'' + k + '\')">' + esc(l) + '</span>').join('');
+}
+function resPick(k) { resMod = k; paintResChips(); loadRes(); }
+
 async function loadRes() {
-  const j = await api('/api/admin/overview');
-  if (!j.ok) { $('resBars').innerHTML = '<div class="mut">加载失败</div>'; return; }
-  const total = (j.lib || {}).total || 1;
-  const srcs = [
-    ['MOD（机地聚合）', (j.mods || {}).libGames || (j.mods || {}).matched, total],
-    ['修改器（GT + FLiNG）', (j.trainers || {}).libGames || (j.trainers || {}).matched, total],
-    ['云存档（游侠）', (j.saves || {}).libGames || (j.saves || {}).matched, total],
-    ['GTrainers 直链', (j.gt || {}).matched, total],
-    ['FitGirl Repack', (j.fitgirl || {}).matchedGames, total],
-    ['Thunderstore MOD', (j.tsmods || {}).matched, total],
-  ];
-  $('resBars').innerHTML = srcs.map(([nm, m, t]) => {
-    const p = Math.min(100, Math.round(((m || 0) / (t || 1)) * 100));
-    return '<div class="bar"><div class="nm">' + esc(nm) + '</div><div class="track"><div class="fill" style="width:' + Math.max(1, p) + '%"></div></div><div class="vv">' + nf(m) + ' · ' + p + '%</div></div>';
-  }).join('');
+  paintResChips();
+  const list = resMod === 'all' ? RES_ORDER : [resMod];
+  $('resCards').innerHTML = list.map((k) => '<div class="mcard" id="rc-' + k + '"><div class="mut">加载中…</div></div>').join('');
+  $('resInfo').textContent = '—';
+  let grand = 0;
+  for (const k of list) {
+    const m = MODS.find((x) => x.key === k) || { label: k };
+    const j = await api('/api/admin/coverage?module=' + k + '&limit=20');
+    const el = $('rc-' + k);
+    if (!el) continue;
+    if (!j.ok) { el.innerHTML = '<div class="hd"><b>' + esc(m.label) + '</b></div><div class="mut">' + esc(j.needAuth ? '需要令牌' : (j.error || '加载失败')) + '</div>'; continue; }
+    grand += j.missingTotal || 0;
+    const bars = (j.sources || []).map((s) => {
+      const p = Math.min(100, s.rate || 0);
+      return '<div class="bar" style="grid-template-columns:112px 1fr 118px;padding:5px 0;font-size:12.5px">'
+        + '<div class="nm">' + esc(s.label) + '</div>'
+        + '<div class="track"><div class="fill" style="width:' + Math.max(1, p) + '%"></div></div>'
+        + '<div class="vv">' + p + '% · ' + nf(s.matched) + ' 款 / ' + nf(s.entries) + ' 条</div></div>';
+    }).join('');
+    const miss = (j.missing || []).length
+      ? (j.missing || []).map((g) =>
+        '<div class="miss-item">'
+        + (g.cover ? '<img loading="lazy" src="' + esc(g.cover) + '" alt="" onerror="this.style.visibility=\'hidden\'">' : '<img alt="">')
+        + '<span class="t" title="' + esc(g.title) + '">' + esc(g.title || g.id) + '</span>'
+        + '<span class="mut" style="font-size:11px">' + esc(g.id) + '</span>'
+        + '<span class="mut" style="font-size:11px">热 ' + nf(g.hot) + '</span></div>').join('')
+      : '<div class="mut" style="font-size:12px">这一模块没有缺口</div>';
+    el.innerHTML = '<div class="hd"><b>' + esc(m.label) + '</b><em>覆盖 ' + (j.rate || 0) + '%</em>'
+      + '<span class="sp" style="flex:1"></span><em>数据 ' + (j.builtAt ? ago(j.builtAt) : '—') + ' · 缺口 ' + nf(j.missingTotal) + ' 款</em></div>'
+      + bars
+      + '<div class="miss"><div class="mut" style="font-size:11.5px;margin-bottom:4px">'
+      + '一款都没有的游戏（按热度前 ' + (j.missing || []).length + '）</div>' + miss + '</div>';
+  }
+  $('resInfo').textContent = resMod === 'all'
+    ? '四模块合计缺口 ' + nf(grand) + ' 款（同一款游戏可能在多个模块都缺）'
+    : '缺口 ' + nf(grand) + ' 款';
 }
 
 /* ═══════════ 游戏库列表 ═══════════ */
@@ -602,13 +917,99 @@ function qs() {
   return '/api/library/browse?' + p.toString();
 }
 
+/* ═══════════ 分页条（页面管理 / 游戏库 / 模块共用） ═══════════
+ * 用户口径「页面跳转可以填写跳转以及附近页面跳转」：
+ *   上一页 / 附近至多 5 个页码 / 下一页 + 「跳至 [ ] 页」输入框（回车即跳）。
+ * 为什么不做全量页码：19,703 条 = 395 页，全渲染出来是一堵按钮墙，
+ * 而管理场景真正会用的就是「附近几页」和「直接跳某一页」。 */
+function pagerHtml(total, limit, off) {
+  const pages = Math.max(1, Math.ceil(total / limit));
+  const cur = Math.min(pages, Math.floor(off / limit) + 1);
+  const near = new Set([1, pages]);
+  for (let d = -2; d <= 2; d++) { const n = cur + d; if (n >= 1 && n <= pages) near.add(n); }
+  const sorted = [...near].sort((a, b) => a - b);
+  let h = '<button class="btn sm" data-pg="' + (cur - 1) + '"' + (cur <= 1 ? ' disabled' : '') + '>上一页</button>';
+  let prev = 0;
+  for (const n of sorted) {
+    if (prev && n - prev > 1) h += '<span class="pgdot">…</span>';
+    h += '<button class="pgn' + (n === cur ? ' on' : '') + '" data-pg="' + n + '">' + n + '</button>';
+    prev = n;
+  }
+  h += '<button class="btn sm" data-pg="' + (cur + 1) + '"' + (cur >= pages ? ' disabled' : '') + '>下一页</button>';
+  h += '<span style="margin-left:10px">共 ' + nf(total) + ' 条 · ' + cur + ' / ' + pages + ' 页</span>';
+  h += '<span class="sp"></span><span>跳至</span><input type="number" min="1" max="' + pages
+    + '" placeholder="' + cur + '" data-pgjump><span>页</span><button class="btn sm" data-pgok>跳转</button>';
+  return h;
+}
+function bindPager(el, total, limit, fn) {
+  if (!el) return;
+  el.querySelectorAll('[data-pg]').forEach((b) => {
+    b.onclick = () => { const p = Number(b.dataset.pg); if (!p || p < 1) return; fn(p); };
+  });
+  const inp = el.querySelector('[data-pgjump]');
+  const ok = el.querySelector('[data-pgok]');
+  const pages = Math.max(1, Math.ceil(total / limit));
+  const jump = () => { const p = Math.max(1, Math.min(pages, parseInt(inp.value, 10) || 1)); fn(p); };
+  if (ok) ok.onclick = jump;
+  if (inp) inp.onkeydown = (e) => { if (e.key === 'Enter') jump(); };
+}
+const srcBdgOf = (s) => /xd/i.test(String(s || '')) ? '<span class="bdg b-xd">XDGAME</span>' : '<span class="bdg b-jd">机地</span>';
+
+/* ═══════════ 页面管理（爬取条目） ═══════════
+ * 只展示**爬回来的东西**：封面 / 游戏名 / 游戏ID / 平台 / 热度 / 更新。
+ * 行高钉死 56px（.fxrow），「查看」开的是资料弹窗的「爬虫字段」形态。 */
+let pOff = 0, pTotal = 0;
+function pqs() {
+  const p = new URLSearchParams();
+  p.set('scope', 'pc'); p.set('limit', LIMIT); p.set('offset', pOff);
+  p.set('admin', '1'); p.set('cold', '0');
+  p.set('sort', $('pSort').value || 'updated');
+  const q = $('pq').value.trim(); if (q) p.set('q', q);
+  const s = $('pSrc').value; if (s) p.set('asrc', s);
+  return '/api/library/browse?' + p.toString();
+}
+async function pagesReload(resetPage) {
+  if (resetPage) pOff = 0;
+  const j = await api(pqs());
+  if (!j.ok) {
+    $('pRows').innerHTML = '';
+    $('pEmpty').style.display = 'block';
+    $('pEmpty').textContent = '需要令牌或加载失败（' + (j.error || 'HTTP ' + (j.needAuth ? '403' : '?')) + '）';
+    $('pPgBar').innerHTML = '';
+    return;
+  }
+  pTotal = j.total || 0;
+  const items = j.items || [];
+  $('pEmpty').style.display = items.length ? 'none' : 'block';
+  $('pEmpty').textContent = '没有符合条件的内容';
+  $('pRows').innerHTML = items.map((g, i) =>
+    '<tr class="row fxrow" data-i="' + i + '">'
+    + '<td>' + (g.cover ? '<img class="cv" loading="lazy" src="' + esc(g.cover) + '" alt="" onerror="this.style.visibility=\'hidden\'">' : '<div class="cv"></div>') + '</td>'
+    + '<td><div class="tt" title="' + esc(g.title) + '">' + esc(g.title || '—')
+    + ((g.prof || []).length ? '<span class="ovr" title="已人工覆盖：' + esc((g.prof || []).join(' / ')) + '">人改</span>' : '') + '</div></td>'
+    + '<td class="idcol">' + esc(g.id) + '</td>'
+    + '<td>' + srcBdgOf(g.source) + '</td>'
+    + '<td class="mut">' + nf(g.hot) + '</td>'
+    + '<td class="mut">' + ago(g.updatedTs) + '</td>'
+    + '<td><button class="btn sm" onclick="openProf(' + i + ',\'pages\',event)">查看</button></td>'
+    + '</tr>').join('');
+  $('pInfo').textContent = '共 ' + nf(pTotal) + ' 条';
+  $('pPgBar').innerHTML = pagerHtml(pTotal, LIMIT, pOff);
+  bindPager($('pPgBar'), pTotal, LIMIT, (p) => { pOff = (p - 1) * LIMIT; pagesReload(); });
+  window.__pItems = items;
+}
+function pagesSearch() { pOff = 0; pagesReload(); }
+$('pq').addEventListener('keydown', (e) => { if (e.key === 'Enter') pagesSearch(); });
+
+/* ═══════════ 游戏库列表（管游戏资料） ═══════════ */
 async function reload(resetPage) {
   if (resetPage) offset = 0;
   const j = await api(qs());
   if (!j.ok) {
     $('rows').innerHTML = '';
     $('rowsEmpty').style.display = 'block';
-    $('rowsEmpty').textContent = '加载失败：' + (j.error || ('HTTP ' + (j.needAuth ? '403' : '?')) ) + (j.needAuth ? '（线上需在右上角填令牌）' : '');
+    $('rowsEmpty').textContent = '需要令牌或加载失败（' + (j.error || ('HTTP ' + (j.needAuth ? '403' : '?'))) + '）';
+    $('gPgBar').innerHTML = '';
     return;
   }
   total = j.total || 0;
@@ -616,85 +1017,106 @@ async function reload(resetPage) {
   $('rowsEmpty').style.display = items.length ? 'none' : 'block';
   $('rowsEmpty').textContent = '没有符合条件的游戏';
   $('rows').innerHTML = items.map((g, i) => {
-    const res = g.res || {};
-    /* res 的键名来自 resGroups.countsFor：mod / saves / trainers（trainers 是复数，别写成 trainer） */
-    const chips = [
-      res.mod ? '<span class="bdg b-jd" title="MOD">M' + res.mod + '</span>' : '',
-      res.trainers ? '<span class="bdg b-xd" title="修改器">T' + res.trainers + '</span>' : '',
-      res.saves ? '<span class="bdg b-vis" title="存档">S' + res.saves + '</span>' : '',
-    ].filter(Boolean).join(' ');
-    const srcBdg = /xd/i.test(g.source || '') ? '<span class="bdg b-xd">XD</span>' : '<span class="bdg b-jd">机地</span>';
+    const comp = Number(g.comp || 0);
+    const compBdg = '<span class="bdg ' + (comp >= 5 ? 'b-vis' : comp >= 3 ? 'b-cold' : 'b-hide') + '" title="资料 7 项里填了几项">'
+      + comp + '/7</span>';
     const stBdg = g.hidden ? '<span class="bdg b-hide">隐藏</span>' : '<span class="bdg b-vis">可见</span>';
     const coldBdg = g.cold ? ' <span class="bdg b-cold">冷门</span>' : '';
-    return '<tr class="row" data-i="' + i + '">'
+    return '<tr class="row fxrow" data-i="' + i + '">'
       + '<td>' + (g.cover ? '<img class="cv" loading="lazy" src="' + esc(g.cover) + '" alt="" onerror="this.style.visibility=\'hidden\'">' : '<div class="cv"></div>') + '</td>'
-      + '<td><div class="tt" title="' + esc(g.title) + '">' + esc(g.title || '—') + '<small>' + esc(g.id) + '</small></div></td>'
-      + '<td>' + srcBdg + '</td>'
-      + '<td class="mut">' + nf(g.hot) + '</td>'
-      + '<td class="mut">' + ago(g.updatedTs) + '</td>'
-      + '<td>' + (chips || '<span class="mut">—</span>') + '</td>'
+      + '<td><div class="tt" title="' + esc(g.title) + '">' + esc(g.title || '—')
+      + ((g.prof || []).length ? '<span class="ovr" title="已人工覆盖：' + esc((g.prof || []).join(' / ')) + '">人改</span>' : '') + '</div></td>'
+      + '<td class="idcol">' + esc(g.id) + '</td>'
+      + '<td>' + srcBdgOf(g.source) + '</td>'
+      + '<td>' + compBdg + '</td>'
       + '<td>' + stBdg + coldBdg + '</td>'
       + '<td>' + (g.note ? '<span class="bdg b-note" title="' + esc(g.note) + '">' + esc(g.note.slice(0, 8)) + (g.note.length > 8 ? '…' : '') + '</span>' : '<span class="mut">—</span>') + '</td>'
-      + '<td><button class="btn sm" onclick="openEdit(' + i + ',event)">编辑</button></td>'
+      + '<td><button class="btn sm" onclick="openProf(' + i + ',\'games\',event)">资料</button></td>'
       + '</tr>';
   }).join('');
 
   document.querySelectorAll('#rows tr.row').forEach((tr) => {
-    tr.addEventListener('click', () => openEdit(+tr.dataset.i));
+    tr.addEventListener('click', (e) => { if (e.target.closest('button')) return; openProf(+tr.dataset.i, 'games'); });
   });
-  const from = total ? offset + 1 : 0, to = Math.min(offset + items.length, total);
-  $('pgInfo').textContent = '共 ' + nf(total) + ' 条 · 当前 ' + nf(from) + '–' + nf(to);
-  $('pgPrev').disabled = offset <= 0;
-  $('pgNext').disabled = offset + LIMIT >= total;
+  $('gInfo').textContent = '共 ' + nf(total) + ' 条';
+  $('gPgBar').innerHTML = pagerHtml(total, LIMIT, offset);
+  bindPager($('gPgBar'), total, LIMIT, (p) => { offset = (p - 1) * LIMIT; reload(); });
   window.__items = items;
 }
-function page(d) { offset = Math.max(0, offset + d * LIMIT); reload(); }
 function applySearch() { offset = 0; reload(); }
 $('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') applySearch(); });
 
-/* ═══════════ 资源管理：六个域 · 都以游戏为主键 ═══════════
+/* ═══════════ 模块：四类 · 都以游戏为主键 ═══════════
  *
- * 【设计取舍】六个域**共用一套渲染器**，差异全部收进 `RM[kind]` 的四个字段：
- *   `url`  取数端点（mod/modifier/save/cloud 复用现有公开列表端点，fitgirl/ts 用 /api/admin/res）
- *   `cols` 中间列的表头与宽度
- *   `norm` 把该源的行归一成 `{gameId, gameTitle, title, cells[], links[]}`
- *   `src`  可选：多来源切换（只有「修改器」是两源：CE/风灵月影 与 机地帖）
- * ⇒ 加第七个域只需要往 RM 里加一项，不改渲染器、不改 HTML。
+ * ★ v10.90 结构变化：六个域 → **四个模块**，FitGirl 并入「本体」、Thunderstore 并入「MOD」。
+ *   用户口径：「模块类型管理分为本体/MOD/修改器/存档，fitgirl 和 thunderstore 并到对应模块中」。
  *
- * 【为什么 gameId 是第一列】用户口径「都以游戏为主键」：任何一条资源都能回答
- *   「它属于哪款游戏」，点游戏名直接打开该游戏的编辑弹窗（同一个弹窗、同一份备注与上下架）。
- *   ⚠️ 未匹配的行 `gameId` 为空 —— 如实显示「未匹配」，不假装能跳转（管理的第一价值是看清缺口）。
+ * 两层定义（加一个源只动第二层）：
+ *   `RM[模块]`  = { label, srcs: [[子源key, 显示名], …] }   ← 侧栏与页内切换条
+ *   `SRC_DEF[子源]` = { cols, url, norm }                    ← 单源取数与列
+ *   ⇒ 加第五个模块 / 给 MOD 再加一个源，都不用碰渲染器。
+ *
+ * 【为什么子源不提供「全部合并」】MOD 帖按 pv 排、Thunderstore 按 downloads 排，
+ *   两源字段与排序键都不同。合并只能客户端拼，分页语义立刻失真（第 2 页不是全局 51–100 条）。
+ *   宁可不给这一档，也不给一个「翻页会漏数据」的合并视图。
+ *
+ * 【为什么 gameId 是第一列】任何一条资源都能回答「它属于哪款游戏」，
+ *   点游戏名直接打开那款游戏的管理弹窗。⚠️ 未匹配的行如实写「未匹配」，不假装能跳转。
  */
 const RM_LIMIT = 50;
-let rmKind = 'mod', rmOff = 0, rmQ = '', rmTotal = 0;
+let rmMod = 'mod', rmSrc = '', rmOff = 0, rmQ = '', rmTotal = 0;
 
-const RM = {
+const SRC_DEF = {
+  fitgirl: {
+    cols: [['日期', '96px'], ['标记', '70px']],
+    /* FitGirl / Thunderstore 原本只有「按 libId 反查」，没有扁平列表 ⇒ 走 /api/admin/res（需令牌） */
+    url: (q, off) => '/api/admin/res?kind=fitgirl&size=' + RM_LIMIT + '&page=' + (Math.floor(off / RM_LIMIT) + 1) + (q ? '&q=' + encodeURIComponent(q) : ''),
+    norm: (x) => ({
+      gameId: x.gameId, gameTitle: x.gameTitle, title: x.title,
+      cells: [esc(String(x.date || '').slice(0, 10) || '—'),
+        (x.extra && x.extra.adult) ? '<span class="bdg b-hide">18+</span>' : '<span class="mut">—</span>'],
+      links: x.links || [],
+    }),
+  },
   mod: {
     cols: [['作者', '110px'], ['热度', '70px'], ['更新', '86px']],
-    url: (q, off) => '/api/mods/list?kind=mod&limit=' + RM_LIMIT + '&offset=' + off + (q ? '&q=' + encodeURIComponent(q) : ''),
+    /* ★ all=1：把「未匹配到游戏」的条目也列出来 —— 左栏角标数的是全部条目，
+     *   列表若默认只给匹配行，两个数字会差几百条（7,825 vs 7,583），
+     *   而管理最该看见的恰恰是那批没匹配上的。 */
+    url: (q, off) => '/api/mods/list?kind=mod&all=1&limit=' + RM_LIMIT + '&offset=' + off + (q ? '&q=' + encodeURIComponent(q) : ''),
     norm: (x) => ({
       gameId: x.libId, gameTitle: x.libTitle || x.game, title: x.title,
       cells: [esc(x.author || '—'), nf(x.pv), ago(x.ut || x.ct)],
       links: x.url ? [{ label: '原帖', url: x.url }] : [],
     }),
   },
-  modifier: {
-    src: [['trainers', 'CE / 风灵月影（库内匹配）'], ['jidi', '机地修改器帖']],
-    cols: [['来源', '150px'], ['补充', '110px'], ['操作', '96px']],
-    url: (q, off, src) => (src === 'jidi'
-      ? '/api/mods/list?kind=modifier&limit=' + RM_LIMIT + '&offset=' + off + (q ? '&q=' + encodeURIComponent(q) : '')
-      : '/api/trainers/list?limit=' + RM_LIMIT + '&offset=' + off + (q ? '&q=' + encodeURIComponent(q) : '')),
-    norm: (x, src) => (src === 'jidi'
-      ? {
-        gameId: x.libId, gameTitle: x.libTitle || x.game, title: x.title,
-        cells: ['机地帖', '热度 ' + nf(x.pv)],
-        links: x.url ? [{ label: '原帖', url: x.url }] : [],
-      }
-      : {
-        gameId: x.libId, gameTitle: x.libTitle || x.name, title: x.zh || x.name,
-        cells: [esc(x.source || '—'), 'v' + esc(x.version || '—')],
-        links: x.officialUrl ? [{ label: '官方页', url: x.officialUrl }] : [],
-      }),
+  ts: {
+    cols: [['社区', '170px'], ['版本', '80px'], ['下载量', '80px']],
+    url: (q, off) => '/api/admin/res?kind=ts&size=' + RM_LIMIT + '&page=' + (Math.floor(off / RM_LIMIT) + 1) + (q ? '&q=' + encodeURIComponent(q) : ''),
+    norm: (x) => ({
+      gameId: x.gameId, gameTitle: x.gameTitle, title: x.title,
+      cells: [esc(String((x.src || '').replace('Thunderstore · ', '')) || '—'),
+        esc((x.extra || {}).version || '—'), nf((x.extra || {}).downloads)],
+      links: x.links || [],
+    }),
+  },
+  trainers: {
+    cols: [['来源', '150px'], ['版本', '110px']],
+    url: (q, off) => '/api/trainers/list?stats=all&limit=' + RM_LIMIT + '&offset=' + off + (q ? '&q=' + encodeURIComponent(q) : ''),
+    norm: (x) => ({
+      gameId: x.libId, gameTitle: x.libTitle || x.name, title: x.zh || x.name,
+      cells: [esc(x.source || '—'), 'v' + esc(x.version || '—')],
+      links: x.officialUrl ? [{ label: '官方页', url: x.officialUrl }] : [],
+    }),
+  },
+  jidi: {
+    cols: [['来源', '150px'], ['热度', '110px']],
+    url: (q, off) => '/api/mods/list?kind=modifier&all=1&limit=' + RM_LIMIT + '&offset=' + off + (q ? '&q=' + encodeURIComponent(q) : ''),
+    norm: (x) => ({
+      gameId: x.libId, gameTitle: x.libTitle || x.game, title: x.title,
+      cells: ['机地帖', '热度 ' + nf(x.pv)],
+      links: x.url ? [{ label: '原帖', url: x.url }] : [],
+    }),
   },
   save: {
     cols: [['存档路径', '86px'], ['注册表', '76px'], ['云存档', '92px'], ['Steam', '92px']],
@@ -715,33 +1137,18 @@ const RM = {
       links: [],
     }),
   },
-  fitgirl: {
-    cols: [['日期', '96px'], ['标记', '70px']],
-    /* 这两个域原本只有「按 libId 反查」，没有扁平列表 ⇒ 走 /api/admin/res（需令牌） */
-    url: (q, off) => '/api/admin/res?kind=fitgirl&size=' + RM_LIMIT + '&page=' + (Math.floor(off / RM_LIMIT) + 1) + (q ? '&q=' + encodeURIComponent(q) : ''),
-    norm: (x) => ({
-      gameId: x.gameId, gameTitle: x.gameTitle, title: x.title,
-      cells: [esc(String(x.date || '').slice(0, 10) || '—'),
-        (x.extra && x.extra.adult) ? '<span class="bdg b-hide">18+</span>' : '<span class="mut">—</span>'],
-      links: x.links || [],
-    }),
-  },
-  ts: {
-    cols: [['社区', '170px'], ['版本', '80px'], ['下载量', '80px']],
-    url: (q, off) => '/api/admin/res?kind=ts&size=' + RM_LIMIT + '&page=' + (Math.floor(off / RM_LIMIT) + 1) + (q ? '&q=' + encodeURIComponent(q) : ''),
-    norm: (x) => ({
-      gameId: x.gameId, gameTitle: x.gameTitle, title: x.title,
-      cells: [esc(String((x.src || '').replace('Thunderstore · ', '')) || '—'),
-        esc((x.extra || {}).version || '—'), nf((x.extra || {}).downloads)],
-      links: x.links || [],
-    }),
-  },
 };
 
-/* 点资源行的游戏 → 打开**同一个**编辑弹窗。
- * 为什么绕一次 openEdit：弹窗吃的是 `window.__items[i]` 那种完整库行（含 hot/genres/aliases…），
- * 资源行只有 gameId。与其为六个域各写一套「游戏摘要渲染」，不如拿库内真值补齐后复用 ——
- * 代价是点击时多一次 /api/admin/game 请求（弹窗自己还会再拉一次），换来六个域零分叉。 */
+const RM = {
+  base: { label: '本体', srcs: [['fitgirl', 'FitGirl Repack']] },
+  mod: { label: 'MOD', srcs: [['mod', '机地 MOD 帖'], ['ts', 'Thunderstore']] },
+  trainer: { label: '修改器', srcs: [['trainers', 'CE / 风灵月影'], ['jidi', '机地修改器帖']] },
+  save: { label: '存档', srcs: [['save', '存档位置'], ['cloud', '云存档']] },
+};
+
+/* 点资源行的游戏 → 打开编辑弹窗（资源 + 备注 + 上下架）。
+ * 为什么绕一次 openEdit：弹窗吃的是 `window.__items[i]` 那种完整库行，
+ * 资源行只有 gameId。补一次 /api/admin/game 拿库内真值再复用 —— 四个模块零分叉。 */
 async function openGameById(gid, title) {
   if (!gid) return toast('该条目未匹配到游戏，无法跳转');
   const j = await api('/api/admin/game?id=' + encodeURIComponent(gid));
@@ -753,52 +1160,44 @@ async function openGameById(gid, title) {
   openEdit(idx);
 }
 
-function resmReset() { rmOff = 0; rmQ = ''; $('rq').value = ''; resmReload(); }
 function resmSearch() { rmOff = 0; rmQ = $('rq').value.trim(); resmReload(); }
-function resmPage(d) {
-  const nx = rmOff + d * RM_LIMIT;
-  if (nx < 0 || nx >= rmTotal) return;
-  rmOff = nx; resmReload();
-}
+function resmSrcPick(k) { rmSrc = k; rmOff = 0; resmReload(); }
 $('rq').addEventListener('keydown', (e) => { if (e.key === 'Enter') resmSearch(); });
 
 async function resmReload() {
-  const def = RM[rmKind];
+  const mod = RM[rmMod];
+  if (!mod) return;
+  if (!rmSrc || !mod.srcs.some(([k]) => k === rmSrc)) rmSrc = mod.srcs[0][0];
+  const def = SRC_DEF[rmSrc];
   if (!def) return;
-  /* 多来源切换（只有「修改器」用得到）：选项静态声明在 def.src，不动态猜 */
-  const sel = $('rSrc');
-  if (def.src) {
-    if (sel.dataset.kind !== rmKind) {
-      sel.innerHTML = def.src.map(([k, l]) => '<option value="' + esc(k) + '">' + esc(l) + '</option>').join('');
-      sel.dataset.kind = rmKind;
-      sel.value = def.src[0][0];
-    }
-    sel.style.display = '';
-  } else { sel.style.display = 'none'; }
-  const src = def.src ? sel.value : '';
 
+  /* 页内子源切换条（替代原来的 <select>：一屏能看全，不用点开才知道有几个源） */
+  $('rmTabs').innerHTML = mod.srcs.map(([k, l]) =>
+    '<button class="mtab' + (k === rmSrc ? ' on' : '') + '" onclick="resmSrcPick(\'' + k + '\')">' + esc(l) + '</button>').join('');
+
+  const colspan = def.cols.length + 3;
   $('rmHead').innerHTML = '<th>游戏（主键）</th><th>条目</th>'
     + def.cols.map(([n, w]) => '<th' + (w ? ' style="width:' + w + '"' : '') + '>' + esc(n) + '</th>').join('')
     + '<th style="width:120px">操作</th>';
-  $('rmRows').innerHTML = '<tr><td colspan="' + (def.cols.length + 3) + '" class="mut" style="padding:18px">加载中…</td></tr>';
+  $('rmRows').innerHTML = '<tr><td colspan="' + colspan + '" class="mut" style="padding:18px">加载中…</td></tr>';
 
-  const j = await api(def.url(rmQ, rmOff, src));
+  const j = await api(def.url(rmQ, rmOff));
   if (!j.ok) {
     const msg = j.needAuth ? '需要令牌（线上在右上角填）' : (j.error || '加载失败');
-    $('rmRows').innerHTML = '<tr><td colspan="' + (def.cols.length + 3) + '" class="mut" style="padding:18px">' + esc(msg) + '</td></tr>';
+    $('rmRows').innerHTML = '<tr><td colspan="' + colspan + '" class="mut" style="padding:18px">' + esc(msg) + '</td></tr>';
     $('rmEmpty').style.display = 'none';
-    $('rmInfo').textContent = '—';
+    $('rmPgBar').innerHTML = '';
     return;
   }
   rmTotal = j.total || 0;
-  const items = (j.items || []).map((x) => def.norm(x, src));
+  const items = (j.items || []).map((x) => def.norm(x));
   if (!items.length) {
     $('rmRows').innerHTML = '';
     $('rmEmpty').style.display = 'block';
     $('rmEmpty').textContent = '没有符合条件的条目' + (rmQ ? '（搜索词：' + rmQ + '）' : '');
   } else {
     $('rmEmpty').style.display = 'none';
-    $('rmRows').innerHTML = items.map((r, i) => {
+    $('rmRows').innerHTML = items.map((r) => {
       /* 游戏列：有 gameId 就可点（打开编辑弹窗）；没有就如实写「未匹配」 */
       const gameCell = r.gameId
         ? '<span class="lnk" data-gid="' + esc(r.gameId) + '" data-gt="' + esc(r.gameTitle || '') + '">'
@@ -806,7 +1205,7 @@ async function resmReload() {
         : '<span class="mut">未匹配</span>';
       const links = (r.links || []).map((l) =>
         '<a class="btn sm" style="margin-right:4px" href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer">' + esc(l.label) + ' ↗</a>').join('');
-      return '<tr>'
+      return '<tr class="fxrow">'
         + '<td>' + gameCell + '</td>'
         + '<td><div class="tt" title="' + esc(r.title) + '">' + esc(r.title || '—') + '</div></td>'
         + r.cells.map((c) => '<td class="mut">' + c + '</td>').join('')
@@ -814,10 +1213,9 @@ async function resmReload() {
         + '</tr>';
     }).join('');
   }
-  const from = rmTotal ? rmOff + 1 : 0, to = Math.min(rmOff + items.length, rmTotal);
-  $('rmInfo').textContent = '共 ' + nf(rmTotal) + ' 条 · 当前 ' + nf(from) + '–' + nf(to)
-    + (rmQ ? ' · 搜索「' + rmQ + '」' : '');
-  $('rmHint').textContent = '每一条都锚定游戏 id';
+  $('rmHint').textContent = '每一条都锚定游戏 id' + (rmQ ? ' · 搜索「' + rmQ + '」' : '');
+  $('rmPgBar').innerHTML = pagerHtml(rmTotal, RM_LIMIT, rmOff);
+  bindPager($('rmPgBar'), rmTotal, RM_LIMIT, (p) => { rmOff = (p - 1) * RM_LIMIT; resmReload(); });
 }
 
 /* 游戏列点击（事件委托：行是动态渲染的，重绘不重复绑） */
@@ -828,6 +1226,117 @@ document.addEventListener('click', (e) => {
 });
 function toggleNote() { onlyNote = !onlyNote; $('cNote').classList.toggle('on', onlyNote); offset = 0; reload(); }
 function toggleCold() { showCold = !showCold; $('cCold').classList.toggle('on', showCold); toast(showCold ? '冷门行已显示（筛选中标注）' : '冷门行仍全部列出，仅切换高亮'); }
+
+/* ═══════════ 资料 / 爬虫字段弹窗 ═══════════
+ * 一个弹窗两种形态（由 pfMode 决定显示哪些组）：
+ *   pages → 标题 / 封面 / 热度 / 平台链接（爬回来的东西）
+ *   games → 标题 / 封面 / 简介 / 类型 / 厂商 / 发行 / 发售日 / 别名（整理后的资料）
+ * 表单语义：**留空 = 用爬虫值**（提交空字符串 ⇒ 服务端删掉该字段的覆盖）。
+ * 所以输入框只回填「已有的覆盖值」，爬取值放 placeholder —— 用户一眼能看出
+ * 「这一项我改过没有」，也不会因为原样提交一次就把爬虫值冻成人工值。 */
+let pfMode = 'games', pfItem = null, pfData = null, pfOp = 'clear';
+
+const PF_IDS = { title: 'pfTitleIn', cover: 'pfCoverIn', hot: 'pfHotIn', url: 'pfUrlIn', intro: 'pfIntroIn', genres: 'pfGenresIn', developer: 'pfDevIn', publisher: 'pfPubIn', releaseDate: 'pfDateIn', aliases: 'pfAliasIn' };
+const PF_OVR = { title: 'pfTitleOvr', cover: 'pfCoverOvr', hot: 'pfHotOvr', url: 'pfUrlOvr', intro: 'pfIntroOvr', genres: 'pfGenresOvr', developer: 'pfDevOvr', publisher: 'pfPubOvr', releaseDate: 'pfDateOvr', aliases: 'pfAliasOvr' };
+
+function pfShowGroups(mode) {
+  const show = (ids, on) => ids.forEach((id) => { const e = $(id); if (e) e.style.display = on ? '' : 'none'; });
+  show(['pfCrawl'], mode === 'pages');
+  show(['pfData1', 'pfData2', 'pfData3', 'pfData4'], mode === 'games');
+}
+
+async function openProf(i, mode, ev) {
+  if (ev) ev.stopPropagation();
+  const list = mode === 'pages' ? (window.__pItems || []) : (window.__items || []);
+  const g = list[i];
+  if (!g) return;
+  pfMode = mode; pfItem = g; pfData = null; pfOp = 'clear';
+  pfShowGroups(mode);
+  $('pmask').classList.add('on');
+  $('pfCover').src = g.cover || '';
+  $('pfCover').style.visibility = g.cover ? 'visible' : 'hidden';
+  $('pfTitle').textContent = g.title || '—';
+  $('pfMeta').innerHTML = '<span class="code">' + esc(g.id) + '</span>' + srcBdgOf(g.source)
+    + '<span class="mut">' + (mode === 'pages' ? '爬取字段' : '游戏资料') + '</span>';
+  $('pfStat').textContent = '读取中…';
+  /* 先用列表值占位（避免打开瞬间一片空），真值到了再覆盖 */
+  for (const f of Object.keys(PF_IDS)) { const el = $(PF_IDS[f]); if (el) el.value = ''; }
+  $('pfNote').value = g.note || '';
+
+  const j = await api('/api/admin/profile?id=' + encodeURIComponent(g.id));
+  if (!j.ok) { $('pfStat').textContent = '读取失败：' + (j.error || (j.needAuth ? '需要令牌' : '')); return; }
+  pfData = j;
+  pfFill(j);
+  $('pfStat').textContent = '资料 ' + (j.completeness || 0) + '/7 · ' + (mode === 'pages' ? '编辑爬虫字段' : '编辑游戏资料');
+}
+
+/** 回填：输入框放「覆盖值」，placeholder 放「爬取值」 */
+function pfFill(j) {
+  const p = j.profile || {};
+  const raw = j.raw || {};
+  const eff = j.effective || {};
+  const brief = (v) => {
+    const s = Array.isArray(v) ? v.join(', ') : String(v == null ? '' : v);
+    return s.length > 46 ? s.slice(0, 46) + '…' : s;
+  };
+  for (const f of Object.keys(PF_IDS)) {
+    const el = $(PF_IDS[f]); if (!el) continue;
+    const has = p[f] != null;
+    el.value = has ? (Array.isArray(p[f]) ? p[f].join(', ') : String(p[f])) : '';
+    el.placeholder = has ? '' : ('爬取值：' + (brief(raw[f]) || '空——可以在这里补'));
+    const badge = $(PF_OVR[f]);
+    if (badge) badge.innerHTML = has ? '<span class="ovr">人改</span>' : '';
+  }
+  $('pfTitle').textContent = eff.title || '—';
+  $('pfCover').src = eff.cover || '';
+  $('pfCover').style.visibility = eff.cover ? 'visible' : 'hidden';
+  $('pfNote').value = (j.state || {}).note || '';
+  pfOp = (j.state || {}).override || 'clear';
+  paintPfSeg();
+  $('pfSegHint').textContent = (j.state || {}).cold
+    ? '当前规则判定为冷门（hot=0 且非近 90 天新游）⇒ 默认被隐藏'
+    : '当前规则判定为可见';
+}
+
+function pfPreview() {
+  const u = $('pfCoverIn').value.trim();
+  if (!u) { $('pfCover').src = (pfData && pfData.effective || {}).cover || ''; return; }
+  $('pfCover').src = u; $('pfCover').style.visibility = 'visible';
+}
+
+function paintPfSeg() {
+  document.querySelectorAll('#pfSeg button').forEach((b) => b.classList.toggle('on', b.dataset.op === pfOp));
+  $('pfSegHint').textContent = pfOp === 'clear' ? '跟随规则 = 按冷门口径自动判定'
+    : pfOp === 'show' ? '强制显示：即使 hot=0 也出现在列表' : '强制隐藏：无论热度如何都不出现在列表';
+}
+document.querySelectorAll('#pfSeg button').forEach((b) => b.addEventListener('click', () => { pfOp = b.dataset.op; paintPfSeg(); }));
+
+function closeProf() { $('pmask').classList.remove('on'); pfItem = null; pfData = null; }
+
+async function saveProf() {
+  if (!pfItem) return;
+  const id = pfItem.id;
+  const fields = pfMode === 'pages'
+    ? ['title', 'cover', 'hot', 'url']
+    : ['title', 'cover', 'intro', 'genres', 'developer', 'publisher', 'releaseDate', 'aliases'];
+  const patch = {};
+  for (const f of fields) { const el = $(PF_IDS[f]); if (el) patch[f] = el.value; }
+  const note = $('pfNote').value.trim();
+
+  const r1 = await api('/api/admin/profile', { method: 'POST', body: JSON.stringify({ id, patch }) });
+  if (!r1.ok) return toast('资料保存失败：' + (r1.error || (r1.needAuth ? '需要令牌' : '未知')));
+  const r2 = await api('/api/admin/note', { method: 'POST', body: JSON.stringify({ id, note }) });
+  if (!r2.ok) return toast('备注保存失败：' + (r2.error || '未知'));
+  const initOp = (pfData && pfData.state && pfData.state.override) || 'clear';
+  if (pfOp !== initOp) {
+    const r3 = await api('/api/admin/hide-overrides', { method: 'POST', body: JSON.stringify({ id, op: pfOp }) });
+    if (!r3.ok) return toast('状态保存失败：' + (r3.error || '未知'));
+  }
+  toast('已保存' + (r1.touched ? '（改 ' + r1.touched + ' 项）' : '（无变化）'));
+  closeProf();
+  if (pfMode === 'pages') pagesReload(); else reload();
+  loadStats();
+}
 
 /* ═══════════ 编辑弹窗 ═══════════ */
 async function openEdit(i, ev) {
@@ -909,7 +1418,11 @@ function renderRes(j) {
 }
 
 function closeModal() { $('mask').classList.remove('on'); cur = null; curItem = null; }
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if ($('pmask').classList.contains('on')) closeProf();
+  else closeModal();
+});
 
 async function saveAll() {
   if (!curItem) return;

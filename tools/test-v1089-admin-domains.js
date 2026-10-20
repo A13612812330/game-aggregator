@@ -78,42 +78,57 @@ ok(fitgirl.stats().entryTotal > 0, 'A19 fitgirl.entryTotal 可用', fitgirl.stat
 ok(tsmods.stats().packages === tsPkg, 'A20 tsmods.stats().packages 与 RAW 求和一致',
   tsmods.stats().packages + ' vs ' + tsPkg);
 
-/* ═════════ B. 前端：侧栏六域 + 共用渲染器 ═════════ */
-console.log('\n-- B. 前台分域骨架 --');
+/* ═════════ B. 前端：模块骨架 + 共用渲染器 ═════════
+ * ★ v10.90 契约变更（本段随之改判，不是"测试放宽"）：
+ *   用户口径「模块类型管理分为本体/MOD/修改器/存档，fitgirl 和 thunderstore 并到对应模块中」
+ *   ⇒ 侧栏不再是六个 rm-* 条目，而是四个 m-* 模块；子源在页内切换。
+ *   本段守的三件事没变：① 一套渲染器 ② gameId 第一列且非空才可点 ③ 不重复造端点。 */
+console.log('\n-- B. 前台模块骨架 --');
 const NAV = ADMIN.slice(ADMIN.indexOf('<nav class="nav"'), ADMIN.indexOf('</nav>'));
-['rm-mod', 'rm-modifier', 'rm-save', 'rm-cloud', 'rm-fitgirl', 'rm-ts'].forEach((v) => {
+['m-base', 'm-mod', 'm-trainer', 'm-save'].forEach((v) => {
   ok(NAV.includes('data-v="' + v + '"'), 'B1 侧栏有条目 ' + v);
 });
-ok((NAV.match(/data-v="rm-/g) || []).length === 6, 'B2 资源域恰好六个（不多不少）');
-ok(/资源管理 · 按类型分开/.test(NAV), 'B3 侧栏有「按类型分开」分组标题');
+ok((NAV.match(/data-v="m-/g) || []).length === 4, 'B2 模块恰好四类（本体/MOD/修改器/存档）');
+ok(!/data-v="rm-/.test(NAV), 'B2b 侧栏不再有六个 rm-* 旧条目（已并进模块）');
+ok(/模块 · 以游戏为主键/.test(NAV), 'B3 侧栏有「模块 · 以游戏为主键」分组标题');
 
 const VIEWS_IDX = ADMIN.indexOf('const VIEWS = {');
 const VIEWS_BODY = ADMIN.slice(VIEWS_IDX, ADMIN.indexOf('};', VIEWS_IDX));
-['rm-mod', 'rm-modifier', 'rm-save', 'rm-cloud', 'rm-fitgirl', 'rm-ts'].forEach((v) => {
+['m-base', 'm-mod', 'm-trainer', 'm-save'].forEach((v) => {
   ok(VIEWS_BODY.includes("'" + v + "'"), 'B4 VIEWS 有 ' + v + ' 的标题与面包屑');
 });
 
-ok(/id="view-resm"/.test(ADMIN), 'B5 六个域共用一个 section（#view-resm）');
-/* 意图：不许为六个域各复制一份 section。判据直接数「有没有 view-rm-* 这种按域复制的 section」 */
-ok(!/id="view-rm-/.test(ADMIN), 'B6 没有按域复制 section（view-rm-* 应为 0 个）');
-ok((ADMIN.match(/class="view[^"]*"[^>]*id="view-/g) || []).length === 6,
-  'B6b section 恰好 6 个（dash/games/resm/res/log/set）',
+ok(/id="view-resm"/.test(ADMIN), 'B5 四个模块共用一个 section（#view-resm）');
+/* 意图：不许为每个模块各复制一份 section。判据直接数「有没有 view-m-* 这种按模块复制的 section」 */
+ok(!/id="view-m-/.test(ADMIN), 'B6 没有按模块复制 section（view-m-* 应为 0 个）');
+ok((ADMIN.match(/class="view[^"]*"[^>]*id="view-/g) || []).length === 7,
+  'B6b section 恰好 7 个（dash/pages/games/resm/res/log/set）',
   String((ADMIN.match(/class="view[^"]*"[^>]*id="view-/g) || []).length));
-ok(/v\.indexOf\('rm-'\) === 0 \? 'resm' : v/.test(ADMIN),
-  'B7 路由把 rm-* 映射到 view-resm（否则切过去是空白页）');
-ok(/rmKind = v\.slice\(3\)/.test(ADMIN) && /if \(v\.indexOf\('rm-'\) === 0\) \{/.test(ADMIN),
-  'B8 rm-* 切换时同步 rmKind（不同步就会一直显示上一个域）');
+ok(/v\.indexOf\('m-'\) === 0 \? 'resm' : v/.test(ADMIN),
+  'B7 路由把 m-* 映射到 view-resm（否则切过去是空白页）');
+ok(/rmMod = v\.slice\(2\)/.test(ADMIN) && /if \(v\.indexOf\('m-'\) === 0\) \{/.test(ADMIN),
+  'B8 m-* 切换时同步 rmMod（不同步就会一直显示上一个模块）');
 
 const RM_IDX = ADMIN.indexOf('const RM = {');
 const RM_BODY = ADMIN.slice(RM_IDX, ADMIN.indexOf('\n};', RM_IDX));
-['mod', 'modifier', 'save', 'cloud', 'fitgirl', 'ts'].forEach((k) => {
-  ok(new RegExp('\\n  ' + k + ': \\{').test(RM_BODY), 'B9 RM 表定义域 ' + k);
+['base', 'mod', 'trainer', 'save'].forEach((k) => {
+  ok(new RegExp('\\n  ' + k + ': \\{').test(RM_BODY), 'B9 RM 表定义模块 ' + k);
+});
+/* 合并判据：FitGirl 必须挂在「本体」的 srcs 里、Thunderstore 必须挂在「MOD」的 srcs 里 */
+const baseLine = (RM_BODY.match(/\n  base: \{[^\n]*/) || [''])[0];
+const modLine = (RM_BODY.match(/\n  mod: \{[^\n]*/) || [''])[0];
+ok(/fitgirl/.test(baseLine), 'B9b FitGirl 并进「本体」模块');
+ok(/'ts'/.test(modLine), 'B9c Thunderstore 并进「MOD」模块');
+const SRC_IDX = ADMIN.indexOf('const SRC_DEF = {');
+const SRC_BODY = ADMIN.slice(SRC_IDX, ADMIN.indexOf('\n};', SRC_IDX));
+['fitgirl', 'mod', 'ts', 'trainers', 'jidi', 'save', 'cloud'].forEach((k) => {
+  ok(new RegExp('\\n  ' + k + ': \\{').test(SRC_BODY), 'B9d SRC_DEF 定义子源 ' + k);
 });
 ok((ADMIN.match(/async function resmReload/g) || []).length === 1,
-  'B10 只有一个渲染器 resmReload（六份会立刻漂移）');
-ok(/def\.cols\.map/.test(ADMIN) && /def\.norm\(x, src\)/.test(ADMIN),
-  'B11 列与行都由 RM 定义驱动（加第七个域不改渲染器）');
-ok((ADMIN.match(/def\.url\(rmQ, rmOff/g) || []).length >= 1, 'B12 取数端点由 RM.url 提供');
+  'B10 只有一个渲染器 resmReload（四份会立刻漂移）');
+ok(/def\.cols\.map/.test(ADMIN) && /def\.norm\(x\)/.test(ADMIN),
+  'B11 列与行都由 SRC_DEF 驱动（加子源不改渲染器）');
+ok((ADMIN.match(/def\.url\(rmQ, rmOff\)/g) || []).length >= 1, 'B12 取数端点由 SRC_DEF.url 提供');
 
 /* 「以游戏为主键」的落点 */
 ok(/<th>游戏（主键）<\/th>/.test(ADMIN), 'B13 表头第一列写明「游戏（主键）」');
@@ -122,24 +137,28 @@ ok(/r\.gameId\s*\n?\s*\? /.test(ADMIN) || /const gameCell = r\.gameId/.test(ADMI
   'B15 无 gameId 的行走「未匹配」分支（不假装可跳）');
 ok(/function openGameById/.test(ADMIN), 'B16 openGameById 存在（复用同一个编辑弹窗）');
 ok(/window\.__items\.push\(Object\.assign\(\{\}, j\.game/.test(ADMIN),
-  'B17 用库内真值补齐后再复用 openEdit（不为六域各写一套游戏摘要）');
+  'B17 用库内真值补齐后再复用 openEdit（不为四模块各写一套游戏摘要）');
 ok(/closest\('\.lnk\[data-gid\]'\)/.test(ADMIN), 'B18 点击走事件委托（重绘不重复绑）');
 ok(/esc\(r\.gameTitle \|\| r\.gameId\)/.test(ADMIN), 'B19 游戏名经 esc（防标题注入）');
 
 /* 不重复造轮子：四个域必须继续用现有端点 */
-ok(/\/api\/mods\/list\?kind=mod/.test(ADMIN), 'B20 mod 域复用 /api/mods/list');
-ok(/\/api\/trainers\/list\?limit=/.test(ADMIN), 'B21 modifier 域复用 /api/trainers/list');
-ok(/\/api\/saves\/list\?stats=all/.test(ADMIN), 'B22 save 域复用 /api/saves/list');
-ok(/\/api\/saves\/list\?stats=all&cloud=1/.test(ADMIN), 'B23 cloud 域复用 /api/saves/list&cloud=1');
+/* ★ all=1 / stats=all：角标数的是「全部条目」，列表若默认只给匹配行，
+ *   两个数字会差几百条（7,825 vs 7,583）—— 管理页会把它当 bug 报。 */
+ok(/\/api\/mods\/list\?kind=mod&all=1/.test(ADMIN), 'B20 mod 域复用 /api/mods/list（含未匹配）');
+ok(/\/api\/trainers\/list\?stats=all/.test(ADMIN), 'B21 修改器域复用 /api/trainers/list（含未匹配）');
+ok(/\/api\/saves\/list\?stats=all/.test(ADMIN), 'B22 存档域复用 /api/saves/list');
+ok(/\/api\/saves\/list\?stats=all&cloud=1/.test(ADMIN), 'B23 云存档子源复用 /api/saves/list&cloud=1');
 ok(/\/api\/admin\/res\?kind=fitgirl/.test(ADMIN) && /\/api\/admin\/res\?kind=ts/.test(ADMIN),
-  'B24 fitgirl / ts 域走新增端点（这两个原本没有扁平列表）');
+  'B24 fitgirl / ts 子源走新增端点（这两个原本没有扁平列表）');
 
 /* 鉴权提示与分页边界 */
 ok(/needAuth \? '需要令牌/.test(ADMIN), 'B25 403 时提示填令牌（不是空白表）');
-ok(/if \(nx < 0 \|\| nx >= rmTotal\) return;/.test(ADMIN), 'B26 分页越界保护');
-ok(/共 ' \+ nf\(rmTotal\)/.test(ADMIN), 'B27 分页信息用实测 total（不写死）');
+ok(/Math\.max\(1, Math\.min\(pages, parseInt/.test(ADMIN), 'B26 跳页越界被夹到 1..pages');
+ok(/'共 ' \+ nf\(total\)/.test(ADMIN), 'B27 分页信息用实测 total（不写死）');
 
 console.log('\n====');
 console.log('结果: ' + pass + ' 通过 / ' + fail + ' 失败');
-if (fail) { console.log('失败项：\n  - ' + fails.join('\n  - ')); process.exit(1); }
-process.exit(0);
+if (fail) console.log('失败项：\n  - ' + fails.join('\n  - '));
+/* ★ 退出码必须与失败数绑定（run-all 的 exitTiedToFailures 只认这个形态）：
+ *   否则单独跑时红绿不分，反证也验不了这个套件本身是否真的会红。 */
+process.exit(fail ? 1 : 0);

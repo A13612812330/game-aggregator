@@ -330,6 +330,24 @@ app.get('/api/detail/merged', async (req, res) => {
         }
       }
     }
+    /* ★ v10.90：人工资料覆盖层**最后**叠上去 —— 详情页的标题/封面/简介/厂商/发售日
+     *   以管理页填的为准。只在该 URL 推出的库内 id 可信（idOk）时才叠：
+     *   id 不可信时宁可用爬虫原值，也不把 A 游戏的资料贴到 B 游戏上。
+     *   前端靠 `merge.profile` 决定要不要显示「含人工资料」小徽标。 */
+    prov.profile = [];
+    if (idOk) {
+      const p = gameProfile.get(libId);
+      if (p) {
+        if (p.title) merged.title = p.title;
+        if (p.cover) merged.cover = p.cover;
+        if (p.intro) { merged.desc = p.intro; merged.description = p.intro; merged.descFrom = 'profile'; }
+        if (p.developer) merged.developer = p.developer;
+        if (p.publisher) merged.publisher = p.publisher;
+        if (p.releaseDate) merged.releaseDate = p.releaseDate;
+        if ((p.genres || []).length) merged.genres = p.genres;
+        prov.profile = Object.keys(p).filter((k) => k !== 'updatedAt');
+      }
+    }
     res.json({ ok: true, fetchedAt: Date.now(), detail: merged, merge: prov });
   } catch (e) {
     res.status(502).json({ ok: false, error: String((e && e.message) || e) });
@@ -569,13 +587,18 @@ app.get('/api/admin/overview', (_req, res) => {
     cold: coldHide.stats(all),
     lib: gamesDb.stats(),
     notes: { count: gameNotes.count() },
-    /* ★ v10.88.2：六个资源域的条目数（左栏角标）。数字全部**现算**，不写死 ——
-     *   mods/saves/fitgirl/ts 的产物每天都在刷新，写死会在下一轮变成谎报。 */
+    /* ★ v10.90：人工资料覆盖的规模（仪表盘「资料覆盖」卡用），不参与任何判定 */
+    profile: gameProfile.stats(),
+    /* ★ v10.88.2：资源域的条目数（左栏角标）。数字全部**现算**，不写死 ——
+     *   mods/saves/fitgirl/ts 的产物每天都在刷新，写死会在下一轮变成谎报。
+     * ★ v10.90 口径修正：角标 = **条目总数（含未匹配）**，与各模块列表的 total 对齐。
+     *   原来 save 用 `inPcLib`（只算匹配进库的 6,334）而列表显示 6,632（全部），
+     *   同一个东西两个数字，管理页会当成 bug 报 —— 两处必须同一个口径。 */
     domains: {
       mod: (ms.byKind || {}).mod || 0,
       modifier: trainers.stats().total || 0,
       modifierExtra: (ms.byKind || {}).modifier || 0,
-      save: sv.inPcLib || 0,
+      save: sv.total || 0,
       cloud: sv.withCloud || 0,
       fitgirl: fitgirl.stats().entryTotal || 0,
       ts: tsmods.stats().packages || 0,
@@ -591,6 +614,213 @@ app.get('/api/admin/overview', (_req, res) => {
 app.get('/api/admin/log', (req, res) => {
   if (!adminGuard(req, res)) return;
   res.json(readAdminLog(req.query.limit));
+});
+
+/* ── ★ v10.90 GET /api/admin/verify ──
+ * 一个**只回答「你这张令牌算不算数」**的探针。
+ *
+ * 为什么要单独一条：前端「保存令牌」按钮原本只是写 localStorage 就弹「已保存」——
+ * 用户拿着错令牌（或者线上令牌文件没随发布带上）时，页面只会给一张空表，
+ * 没有任何一句话说明是鉴权失败。有了这条，保存时可以**立刻**给出绿/红结论。
+ *
+ * ★ 它自己必须 guarded：否则「有没有令牌」都返回 200，探针就失去了判定意义
+ *   （这也是铁律 161 的同一个坑：能反映权限状态的端点，本身要在护栏里面）。 */
+app.get('/api/admin/verify', (req, res) => {
+  if (!adminGuard(req, res)) return;
+  res.json({ ok: true, via: req._adminVia || 'unknown', at: Date.now() });
+});
+
+/* ── ★ v10.90 GET/POST /api/admin/profile ──
+ * 「页面管理」改爬虫字段、「游戏库」改资料字段，**写的是同一份** data/game-profile.json。
+ *   GET  ?id=<库id>  → { profile: 覆盖差异, effective: 叠加后的展示值, raw: 爬虫原值 }
+ *   POST { id, patch } → 逐字段归一；传空字符串 = 删掉该字段（回到爬虫值）
+ *
+ * ★ 为什么 GET 要同时给 raw 与 effective：管理页必须能显示「这一项被改过，原值是 X」，
+ *   否则人工改三个月后没人知道哪条是抓来的、哪条是自己填的（也就无法回滚）。
+ * ★ 为什么写操作不接受整条记录覆盖：只接受 patch。整条覆盖会把「另一个页面刚改的字段」
+ *   用旧值盖回去（页面管理与游戏库管的是同一份记录的不同字段）。 */
+app.get('/api/admin/profile', (req, res) => {
+  if (!adminGuard(req, res)) return;
+  const id = String(req.query.id || '').trim();
+  const g = id ? gamesDb.byIdGet(id) : null;
+  if (!g) return res.status(404).json({ ok: false, error: '库内无此 id: ' + id });
+  res.json({
+    ok: true, id,
+    fields: gameProfile.FIELDS,
+    profile: gameProfile.get(id),
+    /* 弹窗里的「列表状态」与备注要用真值回填，不能前端猜（铁律 154） */
+    state: (() => {
+      const snap = coldHide.overridesSnapshot();
+      return {
+        cold: coldHide.isCold(g),
+        hidden: coldHide.isHidden(g),
+        override: snap.show.includes(id) ? 'show' : (snap.hide.includes(id) ? 'hide' : 'clear'),
+        note: gameNotes.get(id),
+      };
+    })(),
+    raw: {
+      title: g.title || '', cover: g.cover || '', hot: g.hot || 0, url: g.url || '',
+      intro: g.intro || '', genres: g.genres || [], developer: g.developer || '',
+      publisher: g.publisher || '', releaseDate: g.releaseDate || '', aliases: g.aliases || [],
+    },
+    effective: gameProfile.apply({
+      id: g.id, title: g.title || '', cover: g.cover || '', hot: g.hot || 0, url: g.url || '',
+      intro: g.intro || '', genres: g.genres || [], developer: g.developer || '',
+      publisher: g.publisher || '', releaseDate: g.releaseDate || '', aliases: g.aliases || [],
+    }),
+    completeness: gameProfile.completeness(gameProfile.apply(g)),
+  });
+});
+app.post('/api/admin/profile', (req, res) => {
+  if (!adminGuard(req, res)) return;
+  const b = req.body || {};
+  const id = String(b.id || '').trim();
+  if (!id) return res.status(400).json({ ok: false, error: '缺少 id' });
+  if (!gamesDb.byIdGet(id)) return res.status(404).json({ ok: false, error: '库内无此 id: ' + id });
+  const patch = (b.patch && typeof b.patch === 'object') ? b.patch : {};
+  /* 只认白名单字段（前端传了别的就当没传 —— 不让管理接口成为改库结构的后门） */
+  const clean = {};
+  const dropped = [];
+  for (const k of Object.keys(patch)) {
+    if (gameProfile.FIELDS.includes(k)) clean[k] = patch[k];
+    else dropped.push(k);
+  }
+  let r;
+  try { r = gameProfile.set(id, clean); }
+  catch (e) { return res.status(500).json({ ok: false, error: String((e && e.message) || e) }); }
+  appendAdminLog({
+    ts: new Date().toISOString(), id, title: gamesDb.byIdGet(id).title || id,
+    op: 'profile', via: req._adminVia || '', fields: Object.keys(clean), touched: r.touched,
+    ...(dropped.length ? { dropped } : {}),
+  });
+  res.json({ ok: true, id, profile: r.profile, touched: r.touched, ...(dropped.length ? { dropped } : {}) });
+});
+
+/* ── ★ v10.90 GET /api/admin/coverage?module=base|mod|trainer|save ──
+ * 「运维 → 资源覆盖」从「七个数据源各一根条」改成**按模块分类看**。
+ *
+ * 【为什么不能只看条数】模块条数（MOD 7,825 条）回答不了管理真正要问的问题：
+ *   「库里还有多少款游戏一类资源都没有」。所以这里同时给两样东西：
+ *     · sources[]  每个子源的条目数 / 命中游戏数 / 命中率（分类视角）
+ *     · missing[]  该模块**一款都没有**的游戏（缺口视角，按热度降序前 N）
+ *
+ * 【命中集合怎么建】一律用各源自己的索引，**不逐款游戏反查**：
+ *   trainers.byLib / saves.byLib 是 O(n) 线性过滤，19,703 款逐个调会变成 O(n²)
+ *   （实测会卡住事件循环十几秒）。这里直接拿 ensure() 的 items 建一次 Set。
+ *
+ * 【口径】total = 端游库全量（19,703），**不是**可见数 —— 冷门被隐藏不等于没有资源。
+ */
+const COVERAGE_MODULES = {
+  base: { label: '本体', sources: [['fitgirl', 'FitGirl Repack']] },
+  mod: { label: 'MOD', sources: [['mod', '机地 MOD 帖'], ['ts', 'Thunderstore']] },
+  trainer: { label: '修改器', sources: [['trainers', 'CE / 风灵月影'], ['jidiTrainer', '机地修改器帖'], ['gt', 'GTrainers']] },
+  save: { label: '存档', sources: [['save', '存档位置'], ['cloud', '云存档']] },
+};
+
+/** 建当前进程的命中集合快照（各源数据结构不同，按 key 分支取，不猜字段） */
+function coverageSets() {
+  const s = {};
+  try { s.fitgirl = new Set(Object.keys(fitgirl.RAW.byGame || {})); } catch (e) { s.fitgirl = new Set(); }
+  try { s.mod = resGroups.libIdsFor('mod'); } catch (e) { s.mod = new Set(); }
+  try { s.ts = new Set((tsmods.RAW.games || []).map((g) => g.libId).filter(Boolean)); } catch (e) { s.ts = new Set(); }
+  try { s.jidiTrainer = resGroups.libIdsFor('trainers'); } catch (e) { s.jidiTrainer = new Set(); }
+  try {
+    s.trainers = new Set((trainers.ensure().items || []).map((x) => x.libId).filter(Boolean));
+  } catch (e) { s.trainers = new Set(); }
+  try { s.save = resGroups.libIdsFor('saves'); } catch (e) { s.save = new Set(); }
+  try {
+    const its = saves.ensure().items || [];
+    s.saveOwn = new Set(its.map((x) => x.libId).filter(Boolean));
+    s.cloud = new Set(its.filter((x) => (x.cloud || []).length).map((x) => x.libId).filter(Boolean));
+  } catch (e) { s.saveOwn = new Set(); s.cloud = new Set(); }
+  try { s.gt = new Set((gt.ensure().items || []).map((x) => x.libId).filter(Boolean)); } catch (e) { s.gt = new Set(); }
+  return s;
+}
+
+/** 各子源的命中集合（多个底层来源合并成一个逻辑源） */
+function coverageUnion(key, s) {
+  switch (key) {
+    case 'fitgirl': return s.fitgirl;
+    case 'mod': return s.mod;
+    case 'ts': return s.ts;
+    case 'trainers': return s.trainers;
+    case 'jidiTrainer': return s.jidiTrainer;
+    case 'gt': return s.gt;
+    case 'save': return new Set([...s.save, ...s.saveOwn]);
+    case 'cloud': return s.cloud;
+    default: return new Set();
+  }
+}
+
+app.get('/api/admin/coverage', (req, res) => {
+  if (!adminGuard(req, res)) return;
+  const key = String(req.query.module || 'base').trim();
+  const mod = COVERAGE_MODULES[key];
+  if (!mod) return res.status(400).json({ ok: false, error: 'module 只支持 ' + Object.keys(COVERAGE_MODULES).join(' / ') });
+  const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 30));
+
+  const all = gamesDb.all();
+  const total = all.length;
+  const s = coverageSets();
+
+  /* 模块级「一款都没有」判定：所有子源命中集合的并集 */
+  const covered = new Set();
+  const srcRows = mod.sources.map(([k, label]) => {
+    const set = coverageUnion(k, s);
+    for (const id of set) covered.add(id);
+    return { key: k, label, matched: set.size, rate: total ? Math.round((set.size / total) * 1000) / 10 : 0 };
+  });
+
+  /* 条目数从各源 stats 现算（不写死：产物每天在变） */
+  const ms = mods.stats();
+  const sv = saves.stats();
+  const entries = {
+    fitgirl: (fitgirl.stats() || {}).entryTotal || 0,
+    mod: (ms.byKind || {}).mod || 0,
+    ts: (tsmods.stats() || {}).packages || 0,
+    trainers: (trainers.stats() || {}).total || 0,
+    jidiTrainer: (ms.byKind || {}).modifier || 0,
+    gt: (gt.stats() || {}).total || 0,
+    save: sv.total || 0,
+    cloud: sv.withCloud || 0,
+  };
+  for (const r of srcRows) r.entries = entries[r.key] || 0;
+
+  /* ★ v10.90：每个子源的产物生成时间（爬虫新鲜度）。
+   *   「爬虫可视化」不能只给条数 —— 条数多但两周没更新，和条数少但天天新，
+   *   管理动作完全相反。这里如实给每个源自己的 builtAt（没有就 null，不猜）。 */
+  const builtAt = {
+    fitgirl: (fitgirl.stats() || {}).builtAt,
+    mod: ms.builtAt,
+    ts: (tsmods.stats() || {}).builtAt,
+    trainers: (trainers.stats() || {}).builtAt,
+    jidiTrainer: ms.builtAt,
+    gt: (gt.stats() || {}).builtAt,
+    save: sv.builtAt,
+    cloud: sv.builtAt,
+  };
+  let newest = 0;
+  for (const r of srcRows) {
+    r.builtAt = builtAt[r.key] || null;
+    if (r.builtAt > newest) newest = r.builtAt;
+  }
+
+  const missingAll = all.filter((g) => !covered.has(g.id));
+  const missing = missingAll
+    .slice()
+    .sort((a, b) => (b.hot || 0) - (a.hot || 0))
+    .slice(0, limit)
+    .map((g) => ({ id: g.id, title: g.title, cover: g.cover || '', source: g.source, hot: g.hot || 0 }));
+
+  res.json({
+    ok: true, module: key, label: mod.label,
+    total, covered: covered.size,
+    rate: total ? Math.round((covered.size / total) * 1000) / 10 : 0,
+    sources: srcRows,
+    builtAt: newest || null,
+    missingTotal: missingAll.length,
+    missing,
+  });
 });
 
 /* GET /api/admin/game?id=<库id> — 单游戏详情聚合（管理抽屉唯一数据源）
@@ -628,13 +858,18 @@ app.get('/api/admin/game', (req, res) => {
 
   res.json({
     ok: true,
-    game: {
+    /* ★ v10.90：`game` 是**叠加覆盖值之后**的展示真值（弹窗表单直接吃它）；
+     *   `state.profile` 是覆盖层的原始差异（只含人改过的字段），
+     *   两者分开给，前端才能标出「这一项是人改的，点这里回到爬虫值」。 */
+    game: gameProfile.apply({
       id: g.id, title: g.title, source: g.source, hot: g.hot || 0, score: g.score || null,
       size: g.size || '', dateLabel: g.dateLabel || '', updatedTs: g.updatedTs || null,
       publishTs: g.publishTs || null, genres: g.genres || [], cover: g.cover || '',
       url: g.url || '', jidiUrl: g.jidiUrl || '',
-    },
-    state: { cold: coldHide.isCold(g), hidden: coldHide.isHidden(g), override: ov, resId, resCounts, note: gameNotes.get(g.id) },
+      intro: g.intro || '', developer: g.developer || '', publisher: g.publisher || '',
+      releaseDate: g.releaseDate || '', aliases: g.aliases || [],
+    }),
+    state: { cold: coldHide.isCold(g), hidden: coldHide.isHidden(g), override: ov, resId, resCounts, note: gameNotes.get(g.id), profile: gameProfile.get(g.id) },
     resources: {
       /* resGroups.byLib 内部已做 slimItem 瘦身投影，这里直接用（再 map 一遍是重复劳动） */
       resGroups: {
@@ -827,6 +1062,9 @@ const tsmods = require('./data/tsmods');
 const fitgirl = require('./data/fitgirl'); // ★ v10.86 FitGirl Repack 匹配库（外链档 + magnet 按需现抓）
 const fitgirlParts = require('./data/fitgirl-parts'); // ★ v10.88 下载源解析器（主组/变体/可选附件，跨镜像归并）
 const gameNotes = require('./data/game-notes'); // ★ v10.88 管理备注（后台唯一可编辑内容，不影响抓取与匹配）
+/* ★ v10.90 资料覆盖层：管理页「页面管理 / 游戏库」改的展示字段（标题/封面/热度/简介/厂商…）
+ *   落这里，不回写抓取产物。**只影响输出，不参与匹配**（见 data/game-profile.js 头注释）。 */
+const gameProfile = require('./data/game-profile');
 /* ★ v10.58：FR（FearlessRevolution）已摘除。理由：整站在 CF managed challenge 后面（只能有头浏览器
    + 页面上下文 fetch）、阶段② 须一次跑完 ≈3.5h，而 GTrainers 已覆盖同类需求且纯 HTTP 直连。
    ★ 摘除前实测：data/fr.json **从未产出** ⇒ fromFr() 贡献 0 条 ⇒ 零用户可见损失。
@@ -970,7 +1208,10 @@ function withRes(g) {
      *   （能撞对，但那是运气不是设计）。 */
     if (h) { o.res = h.counts; o.resId = h.id; }
   } catch (e) { /* 聚合层没起来就照旧返回 —— 少一行 chip，不能让整个搜索失败 */ }
-  return o;
+  /* ★ v10.90：最后一步才叠人工覆盖值 —— 上面 resFor / withBh 全部基于**爬虫原始值**，
+   *   所以「改了标题以后资源突然没了」这类事故不会发生（匹配与展示在这里分界）。
+   *   没有覆盖时 apply 原样返回 o，不额外拷贝。 */
+  return gameProfile.apply(o);
 }
 
 /** ★ v10.52：资源计数 + 它的**归属条目 id**。查不到返回 null（而不是 `{0,0,0}`）。
@@ -2478,6 +2719,20 @@ app.get('/api/library/browse', (req, res) => {
     if (conds.length) o.filter = (g) => conds.every((f) => f(g));
   }
 
+  /* ★★ v10.90 修正一个静默 bug：`browse` 从来没有 `q` 参数。
+   *   管理页（页面管理 / 游戏库）的搜索框一直在发 `?q=`，服务端**静默忽略**，
+   *   表现是「搜了没反应、列表还是那 50 条」，而且不报错、分页数字也正常 ——
+   *   这类「参数没人接」的 bug 只能靠实测列表内容发现（本轮就是这么发现的）。
+   *   命中集合复用 `gamesDb.search` 的同一套归一化与打分（不另写一份模糊匹配），
+   *   再与已有筛选**叠加**（不是覆盖 —— 覆盖会让「只看有备注」等条件静默失效）。
+   *   ⚠️ gamesDb.search 返回的是**对象** { q, count, items }，不是数组（铁律 148）。 */
+  const qq = String(req.query.q || '').trim();
+  if (qq) {
+    const hit = new Set((gamesDb.search(qq, 5000).items || []).map((x) => x.id));
+    const prev = o.filter;
+    o.filter = (g) => (!prev || prev(g)) && hit.has(g.id);
+  }
+
   if (scope === 'pc') {
     const r = gamesDb.browse(g, limit, offset, sort, o);
     /* ★ v10.87：`admin=1` → 每行带隐藏态标注（hidden 最终态 / cold 规则命中）。
@@ -2494,6 +2749,11 @@ app.get('/api/library/browse', (req, res) => {
           it.cold = coldHide.isCold(x);
           /* v10.88：备注随行回填（管理页要能看到自己标过什么，不能点进详情才知道） */
           it.note = gameNotes.get(x.id);
+          /* ★ v10.90 游戏库列表要显示「资料填了几项」与「哪些字段是人改的」。
+           *   `it` 已经过 withRes → apply，所以这里算的就是**叠加后**的完整度；
+           *   `_prof` 是 apply 打的覆盖字段清单（公开页不看它）。 */
+          it.comp = gameProfile.completeness(it);
+          it.prof = it._prof || [];
         }
         return it;
       }),

@@ -125,5 +125,7 @@ ok(/navigator\.clipboard\.writeText\(txt\)/.test(HTML) && /window\.prompt\('自�
 
 console.log('\n====');
 console.log('结果: ' + pass + ' 通过 / ' + fail + ' 失败');
-if (fail) { console.log('失败项：\n  - ' + fails.join('\n  - ')); process.exit(1); }
-process.exit(0);
+if (fail) console.log('失败项：\n  - ' + fails.join('\n  - '));
+/* ★ 退出码必须与失败数绑定（run-all 的 exitTiedToFailures 只认这个形态）：
+ *   否则单独跑时红绿不分，反证也验不了这个套件本身是否真的会红。 */
+process.exit(fail ? 1 : 0);

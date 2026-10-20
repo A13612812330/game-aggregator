@@ -142,7 +142,9 @@ ok(/id="mask"/.test(adm) && /id="mNote"/.test(adm) && /id="mSeg"/.test(adm) && /
   'D4 编辑弹窗：遮罩 + 备注 + 状态分段 + 资源区');
 ok(/function saveAll/.test(adm) && /api\/admin\/note/.test(adm) && /api\/admin\/hide-overrides/.test(adm),
   'D5 保存同时走备注与豁免两个端点');
-ok(/res\.trainers/.test(adm), 'D6 资源角标用 countsFor 的 trainers（复数）');
+/* ★ v10.90 契约变更：游戏库列表不再挂资源角标（列改成 封面/游戏名/ID/平台/资料/状态/备注/操作），
+ *   资源计数改到四个模块页按类查看。这里改为守「资料完整度」这个新列 —— 别让 D6 变成僵尸断言。 */
+ok(/comp \+ '\/7/.test(adm), 'D6 游戏库列表用「资料 7 项完整度」替代旧资源角标');
 ok(/function esc\(/.test(adm), 'D7 输出有转义函数（防标题注入）');
 /* 反回归：所有插入标题/备注的地方必须过 esc —— 粗筛「直接拼 g.title」 */
 ok(!/\+\s*g\.title\s*\+/.test(adm) && !/\+\s*x\.note\s*\+/.test(adm),

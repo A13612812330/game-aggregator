@@ -121,8 +121,11 @@ ok(agBody.includes('flingdl.attach') && agBody.includes('tcsdl.attach'),
 
 /* ── F/G. 列表 admin=1 回填 + 池前筛选 ── */
 console.log('\n-- F/G. 列表隐藏态回填 --');
+/* ★ v10.90：不能再用固定字符窗口切 browse（本轮在它前面加了 q 支持，
+ *   窗口被顶出去，F1 会变成「判据永远假」的假红）。改为切到下一个端点起始处。 */
 const brIdx = srv.indexOf("app.get('/api/library/browse'");
-const brBody = srv.slice(brIdx, brIdx + 3600);
+const brNext = srv.indexOf('app.get(', brIdx + 30);
+const brBody = srv.slice(brIdx, brNext > brIdx ? brNext : brIdx + 6000);
 ok(/req\.query\.admin/.test(brBody) && /it\.hidden = coldHide\.isHidden\(x\)/.test(brBody)
   && /it\.cold = coldHide\.isCold\(x\)/.test(brBody),
   'F1 browse admin=1 → 每行 hidden/cold 服务端回填（铁律 154：响应回填不猜）');
