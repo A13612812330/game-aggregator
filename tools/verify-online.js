@@ -174,7 +174,9 @@ function chk(ok, name, extra) {
      ★ 判据语义 = 「线上派生页与本地逐字节相同」。**未发布时它会红，这是正确的红**
        （不是判据坏了）；v10.32 发布后三页 md5 曾全部相等，证明该口径可达。 */
   const md5hex = (s) => require('crypto').createHash('md5').update(s).digest('hex');
-  for (const pg of ['emulator.html', 'unpack.html', 'resources.html', 'admin.html']) {
+  /* ★ v10.89：页面清单补齐到**六页**（extract.html 是第四张派生页，此前一直没进判据）。
+   *   改主源必须重建四张派生页 —— 判据不覆盖就等于「漏了一张也不会有人知道」。 */
+  for (const pg of ['emulator.html', 'unpack.html', 'resources.html', 'extract.html', 'admin.html']) {
     let body = null, st = 0;
     try {
       const rr = await fetch(BASE + pg + '?cb=' + Date.now());
