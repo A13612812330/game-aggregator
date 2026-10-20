@@ -69,8 +69,8 @@ ok('B4 「可手游」标记行数 === nMobMerged + nMobOnly',
   nMobTag === (M.nMobMerged || 0) + (M.nMobOnly || 0),
   `${nMobTag} vs ${(M.nMobMerged || 0)} + ${M.nMobOnly}`);
 
-console.log('\n── C 行结构（13 列） ──');
-const LEN = 13;
+console.log('\n── C 行结构（14 列，v10.85 +冷门隐藏态） ──');
+const LEN = 14;
 const badLen = R.filter((r) => !Array.isArray(r) || r.length !== LEN).length;
 ok(`C1 每行都是 ${LEN} 列数组`, badLen === 0, '异常 ' + badLen + ' 行');
 const badName = R.filter((r) => typeof r[0] !== 'string' || !r[0].trim()).length;
@@ -81,6 +81,10 @@ const badCnt = R.filter((r) => [6, 7, 8, 9].some((i) => !Number.isInteger(r[i]) 
 ok('C4 本体态与三类计数都是非负整数', badCnt === 0, '异常 ' + badCnt + ' 行');
 const bodyVals = [...new Set(R.map((r) => r[6]))].sort();
 ok('C5 本体态取值在 0..3', bodyVals.every((v) => v >= 0 && v <= 3), '实测取值 ' + JSON.stringify(bodyVals));
+const badHide = R.filter((r) => ![0, 1].includes(r[13])).length;
+ok('C6 ★ v10.85 冷门隐藏态只能是 0/1', badHide === 0, '异常 ' + badHide + ' 行');
+const mhHidden = R.filter((r) => r[2] === 2 && r[13] !== 0).length;
+ok('C7 手游独有行不参与冷门口径（恒 0）', mhHidden === 0, '异常 ' + mhHidden + ' 行');
 
 console.log('\n── D 标记与 meta 一致 ──');
 const nRes = R.filter((r) => r[7] || r[8] || r[9]).length;
@@ -93,6 +97,17 @@ ok('D3 有 MOD 的款数 ≤ 覆盖款数且 > 0', cntMod > 0 && cntMod <= (cove
 ok('D4 三类覆盖款数都比 0 大（否则该列恒空）',
   (cover.mod || 0) > 0 && (cover.saves || 0) > 0 && (cover.trainers || 0) > 0,
   JSON.stringify(cover));
+/* ★ v10.85：冷门隐藏数与 cold-hide 口径现算夹逼 —— 快照标记 ≠ 口径现算即说明生成器
+   用的不是同一口径模块（抄一份规则 = 两份实现必然漂移）。 */
+const nHidden = R.filter((r) => r[13] === 1).length;
+ok('D5 ★ v10.85 行内冷门隐藏数 === meta.nHidden', nHidden === (M.nHidden || 0),
+  `${nHidden} vs ${M.nHidden}`);
+ok('D6 ★ 快照冷门隐藏数 === cold-hide 口径对 games.json 现算（夹逼）', (() => {
+  const coldHide = require(path.join(ROOT, 'data', 'cold-hide'));
+  const games = require(path.join(ROOT, 'data', 'games.json'));
+  const expect = games.filter((g) => coldHide.isHidden(g)).length;
+  return expect === (M.nHidden || 0);
+})());
 
 console.log('\n── E 内联 JSON ──');
 const m = HTML.match(/<script id="roster-data" type="application\/json">([\s\S]*?)<\/script>/);
@@ -114,10 +129,11 @@ console.log('\n── F 页面钩子 ──');
 ['data-sort="hot"', 'data-sort="ts"', 'data-sort="size"', 'data-sort="name"',
   'data-sort="mod"', 'data-sort="saves"', 'data-sort="trainers"', 'data-sort="body"',
 ].forEach((h, i) => ok(`F1.${i + 1} 可排序表头 ${h}`, HTML.includes(h)));
-/* ★ v10.80：分析模块的筛选条（anaKind all/pc/mob + anaSrc all）也是 data-v 按钮，
-   与名单筛选同款 ⇒ 计数 9 → 13（anaSrc 的 jidi/xd 不在正则白名单里，不计）。 */
-ok('F2 筛选：平台三档 + 资源六档（名单 9）+ 分析筛选条 4 档（v10.80）',
-  (HTML.match(/<button data-v="(all|pc|mob|any|mod|saves|trainers|body)"/g) || []).length === 13,
+/* ★ v10.80：分析模块的筛选条（anaKind all/pc/mob + anaSrc all）也是 data-v 按钮。
+   ★ v10.85：名单条 + 来源三档 + 冷门三档；全部「all」计 6（kind/res/src/cold/anaKind/anaSrc）。
+   计数 = kind 3 + res 6 + ana 4 + src 1 + cold 1 = 15（nomod 等 v10.85 反向钮在 H7 里按契约验）。 */
+ok('F2 筛选：平台 3 + 资源 6 + 分析 4 + 来源 1 + 冷门 1 = 15（v10.85）',
+  (HTML.match(/<button data-v="(all|pc|mob|any|mod|saves|trainers|body)"/g) || []).length === 15,
   String((HTML.match(/<button data-v="(all|pc|mob|any|mod|saves|trainers|body)"/g) || []).length) + ' 个');
 ok('F3 搜索框 #q 存在', HTML.includes('id="q"'));
 ok('F4 弹窗骨架 #mask / #dlg / #qBody 存在',
@@ -154,18 +170,18 @@ ok('H3 吸附位置用 var(--topbar-h)（与 topbar 同一真源，不会各自�
 /* ★ 多选是页面上「看不出错」的那类需求：仍是单选也能点、也出结果，只是永远只能选一个。
    所以必须让页面**自证**多选（aria-pressed + 提示文案），否则下一轮会被当单选用。 */
 const nPressed = (HTML.match(/aria-pressed="(true|false)"/g) || []).length;
-ok('H4 9 个筛选 chip 都有 aria-pressed（多选自证钩子）', nPressed === 9, nPressed + ' 个');
+ok('H4 19 个筛选 chip 都有 aria-pressed（多选自证钩子；v10.85 +来源/冷门/反向资源）', nPressed === 19, nPressed + ' 个');
 ok('H5 有资源组合方式开关 #resMode，默认「需同时具备」',
   HTML.includes('id="resMode"') && /<option value="all" selected>需同时具备<\/option>/.test(HTML));
 const nHint = (HTML.match(/可多选/g) || []).length;
 ok('H6 页面文案自证「可多选」', nHint >= 3, nHint + ' 处');
 /* ★ 契约对齐：资源按钮的每个 data-v 都要有同名判定分支 ——
    漏一个的表现是「点了没任何反应」，不报错、不红、只是静默失灵。 */
-const resVals = [...new Set((HTML.match(/<button data-v="(any|mod|saves|trainers|body)"/g) || [])
+const resVals = [...new Set((HTML.match(/<button data-v="(any|mod|saves|trainers|body|nomod|nosaves|notrainers|nores)"/g) || [])
   .map((s) => s.match(/data-v="([^"]+)"/)[1]))];
 const resMiss = resVals.filter((v) => !new RegExp('\\b' + v + ':').test(HTML));
-ok('H7 每个资源按钮都有对应判定分支（漏一个 ⇒ 点了没反应且不报错）',
-  resVals.length === 5 && resMiss.length === 0,
+ok('H7 每个资源按钮（含 v10.85 反向 4 档）都有对应判定分支（漏一个 ⇒ 点了没反应且不报错）',
+  resVals.length === 9 && resMiss.length === 0,
   resVals.length + ' 个按钮' + (resMiss.length ? ' 缺 ' + resMiss.join(',') : ''));
 
 console.log('\n── G 生成脚本自身 ──');
@@ -324,6 +340,47 @@ ok('J14 ★ v10.80 分析模块 v2：新鲜度行 + 独立筛选（平台/来源
   && HTML.includes('每日 09:30 随 daily-sync 自动重生成')
   && /cmpCard\('近 7 天', 7, now\)/.test(HTML) && /cmpCard\('近 30 天', 30, now\)/.test(HTML)
   && !HTML.includes('anaBuilt'));
+
+/* ── J15：v10.85 管理页升级 ──
+ * 用户口径：「将 roster 更新成游戏库管理页面」。守四类静默事故：
+ *   ① 新筛选（来源/冷门/反向资源）钩子存在但判定分支缺失 = 点了没反应（H7 已覆盖分支，这里守 DOM 契约）；
+ *   ② 完整度列可排序但 view() 无 score 分支 = 排序点了回到原序（无报错）；
+ *   ③ 管理动作 POST 的关键机制缺失 = 按钮永远失败/假成功；
+ *   ④ 服务端管理接口没有回环护栏 = 写文件的接口暴露给公网。 */
+ok('J15.1 ★ v10.85 来源/冷门筛选 seg + hash 白名单',
+  HTML.includes('id="segSrc"') && HTML.includes('id="segCold"')
+  && /k === 'src'\) F\.src = v\.split\(','\)\.filter/.test(HTML)
+  && /k === 'cold'\) F\.cold = v\.split\(','\)\.filter/.test(HTML)
+  && HTML.includes("syncSeg('#segSrc','src','all')") && HTML.includes("syncSeg('#segCold','cold','all')"));
+ok('J15.2 ★ v10.85 完整度列：data-sort="score" 表头 + view() 的 score 排序分支 + 0-4 展示',
+  HTML.includes('data-sort="score"') && /if\(s==='score'\)/.test(HTML)
+  && /score\(r\)\{ return \(r\[6\]===1\?1:0\)/.test(HTML) && HTML.includes("sc + '/4"));
+ok('J15.3 ★ v10.85 管理动作：toggleHide 走 POST /api/admin/hide-overrides + 响应回填 r[13]（不猜）',
+  HTML.includes("API + '/api/admin/hide-overrides'")
+  && /j\.hidden != null\) r\[13\] = j\.hidden \? 1 : 0/.test(HTML)
+  && HTML.includes('data-tog='));
+ok('J15.4 ★ v10.85 服务端管理接口有回环护栏（写文件的接口绝不暴露公网）+ 豁免即时生效链',
+  (() => {
+    const s = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
+    const guardIdx = s.indexOf('function adminLocalOnly');
+    const postIdx = s.indexOf("app.post('/api/admin/hide-overrides'");
+    return guardIdx >= 0 && postIdx > guardIdx
+      && /remoteAddress/.test(s)
+      && /coldHide\.setOverride/.test(s) && /coldHide\.hiddenById/.test(s);
+  })());
+ok('J15.5 ★ v10.85 cold-hide 支持运行时豁免（overridesSnapshot/setOverride/reload/hiddenById 四件套）',
+  (() => {
+    const c = fs.readFileSync(path.join(ROOT, 'data', 'cold-hide.js'), 'utf8');
+    return ['overridesSnapshot', 'setOverride', 'reload', 'hiddenById']
+      .every((k) => c.includes('function ' + k)) && c.includes('module.exports = { isCold, isHidden, stats, RECENT_MS, overridesSnapshot, setOverride, reload, hiddenById }');
+  })());
+ok('J15.6 ★ v10.85 冷门隐藏豁免文件在 .gitignore（个人状态不入库）',
+  (() => {
+    const gi = fs.readFileSync(path.join(ROOT, '.gitignore'), 'utf8');
+    return /^data\/hide-overrides\.json$/m.test(gi);
+  })());
+ok('J15.7 ★ v10.85 KPI 有冷门隐藏数（kCold ← meta.nHidden）',
+  HTML.includes('id="kCold"') && /M\.nHidden != null \? M\.nHidden : 0/.test(HTML));
 
 console.log(`\n── roster：${pass} / ${pass + fail} 通过${fail ? `（失败 ${fail}）` : ''} ──`);
 process.exit(fail ? 1 : 0);

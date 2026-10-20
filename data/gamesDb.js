@@ -8,6 +8,7 @@ const { normalizeCover, normalizeList } = require('./cover-url');
 const { dateTs } = require('../shared');
 const { normalizeDates, normalizeOne } = require('./date-norm');
 const { rank, NONE } = require('./search-rank');
+const coldHide = require('./cold-hide'); // ★ v10.84 冷门隐藏（仅列表层 excludeCold 时生效）
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'games.json');
@@ -110,6 +111,10 @@ function applyOpts(pool, opts) {
   const lo = o.sizeMin == null || o.sizeMin === '' ? null : parseFloat(o.sizeMin);
   const hi = o.sizeMax == null || o.sizeMax === '' ? null : parseFloat(o.sizeMax);
   let out = pool;
+  /* ★ v10.84 冷门隐藏：`excludeCold` 时在**池前**（排序/分页之前）剔除，
+   *   否则分页 total 与条目错位。口径与豁免见 `data/cold-hide.js` 头注。
+   *   只有列表层传 true —— search / detail / roster 不传，保证「可搜到、详情可达、看板全量」。 */
+  if (o.excludeCold) out = out.filter((x) => !coldHide.isHidden(x));
   if (lo != null || hi != null) {
     out = out.filter((x) => {
       const v = sizeGb(x.size);

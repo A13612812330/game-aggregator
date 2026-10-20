@@ -36,6 +36,19 @@ const app = express();
  *   实测本机无 PORT 环境变量，所以默认值就是 8123，与启动器 / 文档 / 测试脚本的约定一致。 */
 const PORT = parseInt(process.env.PORT, 10) || 8123;
 
+/* ★ v18（2026-10-16，经授权的**最小改动 ①**）：**默认只听回环**。
+ *   历史行为：末尾 `app.listen(port)` **没传 host** ⇒ Node 绑 `0.0.0.0`
+ *   ⇒ 局域网内任何设备都能访问。而本服务**全站零鉴权 + `ACAO:*`**，
+ *   而现在它还要被桌面客户端当**管理页**用（能下载、能解压、能改本机文件）
+ *   ⇒ 「管理」能力默认暴露在 LAN 是不能接受的。
+ *   逃生开关：确实要用别的设备访问时，显式设 `GAMEHUB_HOST=0.0.0.0`
+ *   —— **能力不删，只改默认**（与 v10.42 给端口自增加开关同一思路）。
+ *   ⚠️ 桌面客户端（GameIntel.exe）走的就是 `http://127.0.0.1:8123`，不受影响。 */
+const HOST = process.env.GAMEHUB_HOST || '127.0.0.1';
+
+/* 进程启动时刻 —— 供 `/api/health` 的实例标识用（比 ts 更能说明「这个实例活了多久」）。 */
+const BOOT_AT = Date.now();
+
 // ---------- 内存缓存（支持异步 builder：并发共享同一 Promise，失败自动清理） ----------
 const cache = new Map();
 /* ★★ v10.76：`ttlMs` 允许传**函数** `(value) => ms` —— 用于「结果**降级**时只短缓存」。
@@ -146,7 +159,23 @@ app.use(express.static(path.join(__dirname, 'public')));
 // 旧版多页路由收敛：home/search/library 已并入单页主站,老链接 301 至首页
 app.get(['/home.html', '/search.html', '/library.html'], (_req, res) => res.redirect(301, '/'));
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, ts: Date.now(), ttl: { feed: 180, detail: 600 } });
+  res.json({
+    ok: true, ts: Date.now(), ttl: { feed: 180, detail: 600 },
+    /* ★ v18（2026-10-16，经授权的**最小改动 ②**）：实例标识。
+     *   为什么要：桌面客户端（GameIntel.exe）会 `fork` 本服务，但它启动时**先探活**
+     *   （`/api/health` 通就**复用**、不 fork）⇒ 客户端原有信息分不清眼前这个实例
+     *   「是我拉起来的」还是「用户自己早就跑着的」。原先客户端 fork 时设了
+     *   `GAMEHUB_SHELL=1`，但**本文件从未读取过它** ⇒ 标记是单向的、等于没有。
+     *   现在把 `pid` / `startedAt` / `shell` 一并回出去：
+     *     · 客户端拿 `pid` 与自己的 `child.pid` 比对 ⇒ 能确证归属；
+     *     · 复用外部实例时 `shell=false` ⇒ 客户端如实标成「外部实例」，不冒认。
+     *   ⚠️ 只增字段，**不删不改** `ok` / `ts` / `ttl` —— 老调用方零影响。 */
+    pid: process.pid,
+    startedAt: BOOT_AT,
+    shell: process.env.GAMEHUB_SHELL === '1',
+    host: HOST,
+    port: PORT,
+  });
 });
 
 app.get('/api/feed', async (req, res) => {
@@ -381,8 +410,49 @@ app.get('/api/search', async (req, res) => {
 });
 
 // 机地 周/月/年 热榜（缓存 600s）
-app.get('/api/hots', async (req, res) => {
-  if (req.query.refresh === '1') cache.delete('hots');
+// GET /api/cold/stats — 冷门隐藏口径自证（v10.84）：现测规则命中数/豁免数，数字不写死
+app.get('/api/cold/stats', (_req, res) => {
+  res.json({ ok: true, ...coldHide.stats(gamesDb.all()) });
+});
+
+/* ── v10.85 管理页豁免接口（roster 行内「隐藏/显示」按钮的数据面）──
+ * GET  /api/admin/hide-overrides              → 当前豁免清单
+ * POST /api/admin/hide-overrides {id, op}     → 写 data/hide-overrides.json 旁路文件
+ *   op = 'show'（强制显示）/ 'hide'（强制隐藏）/ 'clear'（清除豁免，回到规则判定）
+ *   写入后即时生效（cold-hide 的 set 在内存里同步改，gamesDb.applyOpts 的钩子下一拍就是新值）。
+ * ★ 仅接受本机回环来源：线上部署在反代后面，remoteAddress 是代理 ⇒ 403。
+ *   管理动作是写文件，绝不能暴露给公网访客。 */
+function adminLocalOnly(req, res) {
+  const ip = String((req.socket && req.socket.remoteAddress) || '');
+  if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return true;
+  res.status(403).json({ ok: false, error: '管理接口仅限本机使用（8123/8124 回环）' });
+  return false;
+}
+app.get('/api/admin/hide-overrides', (req, res) => {
+  if (!adminLocalOnly(req, res)) return;
+  res.json({ ok: true, overrides: coldHide.overridesSnapshot() });
+});
+app.post('/api/admin/hide-overrides', (req, res) => {
+  if (!adminLocalOnly(req, res)) return;
+  const { id, op } = req.body || {};
+  if (!/^(xd|jidi)-[A-Za-z0-9_-]+$/.test(String(id || ''))) {
+    res.status(400).json({ ok: false, error: 'id 不合法（仅支持库内 xd-*/jidi-* 条目）' });
+    return;
+  }
+  if (!['show', 'hide', 'clear'].includes(String(op))) {
+    res.status(400).json({ ok: false, error: "op 必须是 show/hide/clear" });
+    return;
+  }
+  try {
+    const overrides = coldHide.setOverride(String(id), String(op));
+    const hidden = coldHide.hiddenById(String(id), gamesDb.all());
+    res.json({ ok: true, id, op, hidden, overrides });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: '写豁免失败: ' + e.message });
+  }
+});
+
+app.get('/api/hots', async (req, res) => {  if (req.query.refresh === '1') cache.delete('hots');
   try {
     const data = await cached('hots', 600_000, () => jidi.hotRanks());
     res.json({ ok: true, fetchedAt: Date.now(), hots: data });
@@ -443,6 +513,7 @@ app.get('/snapshot.html', async (req, res) => {
 
 // ================= 本地游戏库(全量索引 + 本地搜索 + 双源合并) =================
 const gamesDb = require('./data/gamesDb');
+const coldHide = require('./data/cold-hide'); // ★ v10.84 冷门隐藏（/api/cold/stats 自证；列表层钩子在 gamesDb.applyOpts）
 const bannerhub = require('./data/bannerhub');
 const phonecfg = require('./data/phonecfg');
 /* ★ v10.23：跨源「孪生条目」解析（详情页的「另一源也有收录 / 跨源跳转」用它）。
@@ -468,6 +539,7 @@ const flingdl = require('./data/flingdl');
 const tcsdl = require('./data/tcsdl');
 /* ★ v10.81：Thunderstore MOD 直链（门 1：MOD 唯一的自托管直链源，无防盗链） */
 const tsmods = require('./data/tsmods');
+const fitgirl = require('./data/fitgirl'); // ★ v10.86 FitGirl Repack 匹配库（外链档 + magnet 按需现抓）
 /* ★ v10.58：FR（FearlessRevolution）已摘除。理由：整站在 CF managed challenge 后面（只能有头浏览器
    + 页面上下文 fetch）、阶段② 须一次跑完 ≈3.5h，而 GTrainers 已覆盖同类需求且纯 HTTP 直连。
    ★ 摘除前实测：data/fr.json **从未产出** ⇒ fromFr() 贡献 0 条 ⇒ 零用户可见损失。
@@ -941,6 +1013,73 @@ app.get('/api/ts/mods', (req, res) => {
     community: g.length ? (tsmods.RAW.games.find((x) => x.libId === id) || {}).community || '' : '',
     items: tsmods.slim(id, limit),
   });
+});
+
+/* ★ v10.86：FitGirl Repack —— 本体页签的第三下载档（机地/XD 网盘之外）。
+ *   形态与 TCS 外链同款（ext:true 新标签直开原站文章页），零直链维护：
+ *   repack 更新换链不落我们库，点开页面永远是最新链。
+ *   ?id= 主键（库 id）；?t= 兜底走 gamesDb 一跳解析（同 /api/ts/mods 形态）。 */
+app.get('/api/fitgirl/repacks', (req, res) => {
+  let id = String(req.query.id || '').trim();
+  const t = String(req.query.t || '').trim();
+  if (!id && t) {
+    const g = (gamesDb.search(t, 1).items || [])[0];
+    if (g) id = g.id;
+  }
+  res.json({
+    ok: true, id, t, count: fitgirl.byGame(id).length,
+    items: fitgirl.slim(id, 8),
+  });
+});
+
+/* ★ v10.86：FitGirl magnet 按需现抓。为什么不做进目录快照：目录 82 页是轻量字段
+ *   （content 拉全量曾把 6 页撑截断），magnet 在文章正文里 —— 只能单篇按需抓。
+ *   ★ 防限速：单篇落 .cache/fitgirl/<slug>.json，TTL 24h（repack 页 stable，正文不常改）。
+ *   ★ SSRF 白名单：slug 必须 /^[a-z0-9-]+$/ 且在 fitgirl.json 表内（URL 只由自家数据拼）。
+ *   magnet 是开放协议 —— 前端「复制磁力」给任意 BT 客户端用；自研下载器（P3）上线后
+ *   只是前端调起目标替换，本端点不变。 */
+const FG_MAGNET_TTL = 24 * 3600 * 1000;
+app.get('/api/fitgirl/magnet', async (req, res) => {
+  const slug = String(req.query.slug || '').trim();
+  const id = String(req.query.id || '').trim();
+  if (!/^[a-z0-9-]+$/.test(slug) || !fitgirl.has(slug)) {
+    return res.status(400).json({ ok: false, error: 'bad slug（白名单外）' });
+  }
+  const entry = fitgirl.byGame(id).find((x) => x.slug === slug) ||
+    { slug, url: 'https://fitgirl-repacks.site/' + slug + '/' };
+  const fs = require('fs');
+  const path = require('path');
+  const cacheDir = path.join(__dirname, '.cache', 'fitgirl');
+  const cacheFile = path.join(cacheDir, slug + '.json');
+  try {
+    const st = fs.statSync(cacheFile);
+    if (Date.now() - st.mtimeMs < FG_MAGNET_TTL) {
+      const j = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+      return res.json({ ...j, cached: true });
+    }
+  } catch (e) { /* 无缓存/过期，现抓 */ }
+  try {
+    const r = await fetch(entry.url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125.0 Safari/537.36' },
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const html = await r.text();
+    /* 页面里 magnet 的 & 有两种转义形态（&amp; 与 &#038;，实测后者同样在场）—— 还原后再去重 */
+    const seen = new Set();
+    const magnets = [];
+    for (const m of html.matchAll(/magnet:\?xt=urn:btih:[^"'\s<>]+/g)) {
+      const mg = m[0].replace(/&amp;/g, '&').replace(/&#0?38;/g, '&');
+      if (!seen.has(mg)) { seen.add(mg); magnets.push(mg); }
+      if (magnets.length >= 5) break;
+    }
+    const out = { ok: true, slug, url: entry.url, count: magnets.length, magnets };
+    fs.mkdirSync(cacheDir, { recursive: true });
+    fs.writeFileSync(cacheFile, JSON.stringify({ ...out, fetchedAt: new Date().toISOString() }));
+    res.json(out);
+  } catch (e) {
+    res.status(502).json({ ok: false, error: 'FitGirl 抓取失败: ' + String((e && e.message) || e) });
+  }
 });
 
 /* ★ v10.83 实测记录：曾在此加 /api/mx/mods（Modrinth 补充源），实测 0 产出
@@ -1945,6 +2084,12 @@ app.get('/api/library/browse', (req, res) => {
   const scopeRaw = String(req.query.scope || '');
   const scope = ['mob', 'all'].includes(scopeRaw) ? scopeRaw : 'pc';
   const o = libOpts(req);
+  /* ★ v10.84 冷门隐藏：列表层默认剔除冷门口径（hot=0 且非近90天新游，见 data/cold-hide.js）。
+   *   scope=pc 走 browse 池前过滤；scope=all 复用同一个 o（browse 内部同钩子）；
+   *   scope=mob 是手游池，口径只对端游库，天然不受影响。
+   *   搜索(/api/search)与详情不过滤 ⇒ 冷门游戏「可搜到、详情可达」；
+   *   ?cold=0 显式关掉（管理员/测试逃生口）。 */
+  o.excludeCold = String(req.query.cold || '') !== '0';
 
   if (scope === 'pc') {
     const r = gamesDb.browse(g, limit, offset, sort, o);
@@ -2828,8 +2973,8 @@ app.use((_req, res) => res.status(404).json({ ok: false, error: 'Not Found' }));
  *     ③ 线上诊断以 8123 为准，看到的却是旧代码。
  *   逃生开关：`GAMEHUB_PORT_SHIFT=1`（并行跑对照实例时用）。 */
 function listen(port, triesLeft) {
-  const srv = app.listen(port, () => {
-    console.log(`[GameHub] 聚合站已启动: http://localhost:${port}`);
+  const srv = app.listen(port, HOST, () => {
+    console.log(`[GameHub] 聚合站已启动: http://${HOST}:${port}`);
     console.log(`[GameHub] 数据源: 机地 jidiyouxi.com  |  XDGAME xdgamer.com`);
   });
   srv.on('error', (e) => {

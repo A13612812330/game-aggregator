@@ -61,6 +61,8 @@ const SNAP = path.join(ROOT, 'docs', 'reports', `_roster-${STAMP}.json`);
 
 const resGroups = require('../data/res-groups');
 const mobilehub = require('../data/mobilehub');
+/* ★ v10.85 管理页：每行带「冷门隐藏」态（与 /api/library/browse 同一 cold-hide 口径单一来源） */
+const coldHide = require('../data/cold-hide');
 
 /* ─────────────────────────── 读源 ─────────────────────────── */
 
@@ -125,6 +127,7 @@ for (const g of games) {
     inMob ? 1 : 0,
     String(g.cover || ''),
     String(g.url || ''),
+    coldHide.isHidden(g) ? 1 : 0,   /* v10.85 r[13]：冷门隐藏态（show 豁免 > hide 强制 > 规则） */
   ]);
 }
 
@@ -148,6 +151,7 @@ for (const m of mobAll) {
     1,
     String(m.libCover || ''),
     String(m.libUrl || ''),
+    0,                               /* v10.85 r[13]：手游独有行不参与冷门口径（games.json 之外） */
   ]);
 }
 
@@ -155,6 +159,7 @@ const meta = {
   nPc: games.length, nMob: mobAll.length, nMobMerged: mobByLib.size,
   nMobOnly: rows.filter((r) => r[2] === SRC.mh).length,
   nRes: nHasRes, nBody: nBodyKnown,
+  nHidden: rows.filter((r) => r[13] === 1).length,   /* v10.85：冷门隐藏行数（仅端游行会命中） */
   probeTotal: Object.keys(probeRows).length,
   probeBuiltAt: (probe && probe.builtAt) || 0,
   cover: { mod: resGroups.libIdsFor('mod').size, saves: resGroups.libIdsFor('saves').size, trainers: resGroups.libIdsFor('trainers').size },
@@ -252,6 +257,9 @@ const html = `<!DOCTYPE html>
   .tag.xd{background:#E7F1FF;color:#0B5ED7}
   .tag.mh{background:#EAF7EF;color:#12693C}
   .tag.mob{background:#F3ECFF;color:#5B21B6}
+  /* v10.85：冷门隐藏标记 + 完整度中档色 */
+  .tag.cold{background:#F2F3F7;color:#6B7385;border:1px dashed #C9D2E3}
+  .cnt.w{background:#FFF3DC;color:#9A6100}
   .cnt{display:inline-block;min-width:26px;text-align:center;font-family:var(--font-num);font-weight:750;
     padding:2px 7px;border-radius:6px;font-size:11.5px}
   .cnt.y{background:#E8F6EC;color:#0F7A34}
@@ -428,6 +436,7 @@ const html = `<!DOCTYPE html>
     <div>手游中心<b id="kMob">-</b></div>
     <div>有三类资源<b id="kRes">-</b></div>
     <div>本体已实测<b id="kBody">-</b></div>
+    <div>冷门隐藏<b id="kCold">-</b></div>
     <div>当前筛选<b id="kView">-</b></div>
   </div>
 </header>
@@ -447,7 +456,11 @@ const html = `<!DOCTYPE html>
     <b>③ 筛选可以多选</b>：平台多选取<b>并集</b>（端游 ∪ 手游可玩）；资源多选的组合方式由右侧下拉框决定 ——
     <b>需同时具备</b>（逐项收窄，默认）或 <b>任一满足</b>（取并集）。两者结论差别很大，所以不设隐式默认。<br>
     <b>④ 点「查看」开的弹窗每类最多列 5 条</b>（弹窗是摘要），弹窗顶部有
-    <b>打开游戏详情页</b> 与 <b>直接打开资源弹窗</b> 两个按钮，超额条目在那里看全部。
+    <b>打开游戏详情页</b> 与 <b>直接打开资源弹窗</b> 两个按钮，超额条目在那里看全部。<br>
+    <b>⑤ 管理口径（v10.85）</b>：<b>冷门隐藏</b> = v10.84 口径（hot=0 且非近 90 天新游），
+    站内列表默认不显示、搜索/详情不受影响 —— 本页保持全量并打标记；行内<b>「隐藏 / 显示」</b>按钮
+    写 <b>hide-overrides.json</b> 豁免（show 强制显示 / hide 强制隐藏，赢过规则），
+    <b>仅本机 8123/8124 可写</b>，线上打开只读。<b>完整度</b> = 本体可下 + MOD + 存档 + 修改器 各 1 分（0–4）。
   </div>
 
   <div class="bar">
@@ -458,6 +471,18 @@ const html = `<!DOCTYPE html>
       <button data-v="pc" aria-pressed="false">端游</button>
       <button data-v="mob" aria-pressed="false">手游可玩</button>
     </div>
+    <label>来源</label>
+    <div class="seg" id="segSrc" role="group" aria-label="来源筛选（可多选）">
+      <button data-v="all" class="on" aria-pressed="true">全部</button>
+      <button data-v="jidi" aria-pressed="false">机地</button>
+      <button data-v="xd" aria-pressed="false">XDGAME</button>
+    </div>
+    <label>冷门</label>
+    <div class="seg" id="segCold" role="group" aria-label="冷门隐藏筛选（可多选）">
+      <button data-v="all" class="on" aria-pressed="true">全部</button>
+      <button data-v="visible" aria-pressed="false">仅可见</button>
+      <button data-v="cold" aria-pressed="false">仅冷门</button>
+    </div>
     <label>资源 <span class="mhint">可多选</span></label>
     <div class="seg" id="segRes" role="group" aria-label="资源筛选（可多选）">
       <button data-v="all" class="on" aria-pressed="true">不限</button>
@@ -466,6 +491,10 @@ const html = `<!DOCTYPE html>
       <button data-v="saves" aria-pressed="false">有存档</button>
       <button data-v="trainers" aria-pressed="false">有修改器</button>
       <button data-v="body" aria-pressed="false">本体可下</button>
+      <button data-v="nomod" aria-pressed="false">无 MOD</button>
+      <button data-v="nosaves" aria-pressed="false">无存档</button>
+      <button data-v="notrainers" aria-pressed="false">无修改器</button>
+      <button data-v="nores" aria-pressed="false">零资源</button>
     </div>
     <select id="resMode" class="sm" title="勾选多个资源条件时的组合方式">
       <option value="all" selected>需同时具备</option>
@@ -505,7 +534,8 @@ const html = `<!DOCTYPE html>
           <th data-sort="trainers" style="width:88px">修改器 <span class="ar"></span></th>
           <th data-sort="mod" style="width:78px">MOD <span class="ar"></span></th>
           <th data-sort="saves" style="width:78px">存档 <span class="ar"></span></th>
-          <th class="no" style="width:96px">链接</th>
+          <th data-sort="score" style="width:74px" title="本体可下 + MOD + 存档 + 修改器 各 1 分">完整度 <span class="ar"></span></th>
+          <th class="no" style="width:120px">链接</th>
         </tr>
       </thead>
       <tbody id="tb"></tbody>
@@ -595,8 +625,8 @@ const html = `<!DOCTYPE html>
   var SRC_CLS  = { 0:'jidi', 1:'xd', 2:'mh' };
   var BODY_TXT = { 0:['un','未测'], 1:['ok','可下'], 2:['auth','需登录'], 3:['no','无'] };
 
-  /* kind / res 是**数组**（多选）：空数组 = 不限制，与「全部 / 不限」按钮等价 */
-  var F = { q:'', kind:[], res:[], resMode:'all', sort:'hot', dir:-1, page:1, size:200 };
+  /* kind / src / cold / res 是**数组**（多选）：空数组 = 不限制，与「全部 / 不限」按钮等价 */
+  var F = { q:'', kind:[], src:[], cold:[], res:[], resMode:'all', sort:'hot', dir:-1, page:1, size:200 };
 
   var $ = function(s){ return document.querySelector(s); };
   function fmtSize(s){
@@ -633,6 +663,11 @@ const html = `<!DOCTYPE html>
     saves:    function(r){ return r[8] > 0; },
     trainers: function(r){ return r[9] > 0; },
     body:     function(r){ return r[6] === 1; },
+    /* v10.85 管理页反向筛选（找缺口）：与正向同用 resMode 组合语义 */
+    nomod:      function(r){ return r[7] <= 0; },
+    nosaves:    function(r){ return r[8] <= 0; },
+    notrainers: function(r){ return r[9] <= 0; },
+    nores:      function(r){ return !(r[7] || r[8] || r[9] || r[6] === 1); },
   };
   function kindOk(r){
     if(!F.kind.length) return true;
@@ -643,6 +678,26 @@ const html = `<!DOCTYPE html>
     }
     return false;
   }
+  /* v10.85：来源筛选（机地/XD）——手游中心行（r[2]===2）只在「全部」时出现 */
+  function srcOk(r){
+    if(!F.src.length) return true;
+    for(var i=0;i<F.src.length;i++){
+      if(F.src[i]==='jidi' && r[2]===0) return true;
+      if(F.src[i]==='xd' && r[2]===1) return true;
+    }
+    return false;
+  }
+  /* v10.85：冷门隐藏筛选（r[13] 构建期由 cold-hide 口径算好） */
+  function coldOk(r){
+    if(!F.cold.length) return true;
+    for(var i=0;i<F.cold.length;i++){
+      if(F.cold[i]==='visible' && r[13]!==1) return true;
+      if(F.cold[i]==='cold' && r[13]===1) return true;
+    }
+    return false;
+  }
+  /* v10.85：完整度 = 本体可下 + MOD + 存档 + 修改器 各 1 分（0–4），排序与展示同源 */
+  function score(r){ return (r[6]===1?1:0) + (r[7]>0?1:0) + (r[8]>0?1:0) + (r[9]>0?1:0); }
   function resOk(r){
     var t = F.res;
     if(!t.length) return true;
@@ -661,6 +716,8 @@ const html = `<!DOCTYPE html>
     for(var i=0;i<R.length;i++){
       var r = R[i];
       if(!kindOk(r)) continue;
+      if(!srcOk(r)) continue;
+      if(!coldOk(r)) continue;
       if(!resOk(r)) continue;
       if(q && r[0].toLowerCase().indexOf(q)<0 && String(r[1]).toLowerCase().indexOf(q)<0) continue;
       out.push(r);
@@ -677,6 +734,7 @@ const html = `<!DOCTYPE html>
       if(s==='mod'){ x=a[7]; y=b[7]; return d*(x-y); }
       if(s==='saves'){ x=a[8]; y=b[8]; return d*(x-y); }
       if(s==='trainers'){ x=a[9]; y=b[9]; return d*(x-y); }
+      if(s==='score'){ x=score(a); y=score(b); return d*(x-y) || b[4]-a[4]; }
       return 0;
     });
     return out;
@@ -692,6 +750,7 @@ const html = `<!DOCTYPE html>
     for(var i=a;i<b;i++){
       var r = V[i];
       var bt = BODY_TXT[r[6]] || BODY_TXT[0];
+      var sc = score(r);
       h += '<tr>'
         + '<td class="dim mono">' + (i+1) + '</td>'
         + '<td><div class="gcell">'
@@ -702,7 +761,8 @@ const html = `<!DOCTYPE html>
           + '<span class="dim mono" style="font-size:10.5px">' + esc(String(r[1])) + '</span></div>'
         + '</div></td>'
         + '<td><span class="tag ' + (SRC_CLS[r[2]]||'mh') + '">' + (SRC_NAME[r[2]]||'?') + '</span>'
-          + (r[10] ? ' <span class="tag mob">可手游</span>' : '') + '</td>'
+          + (r[10] ? ' <span class="tag mob">可手游</span>' : '')
+          + (r[13]===1 ? ' <span class="tag cold" title="v10.84 冷门口径：hot=0 且非近90天新游，站内列表默认不显示">冷门</span>' : '') + '</td>'
         + '<td>' + fmtSize(r[3]) + '</td>'
         + '<td>' + fmtHot(r[4]) + '</td>'
         + '<td>' + fmtTs(r[5]) + '</td>'
@@ -710,10 +770,15 @@ const html = `<!DOCTYPE html>
         + '<td>' + cnt(r[9]) + '</td>'
         + '<td>' + cnt(r[7]) + '</td>'
         + '<td>' + cnt(r[8]) + '</td>'
-        + '<td><button class="btn" data-id="' + esc(String(r[1])) + '" data-i="' + i + '">查看</button></td>'
+        + '<td><span class="cnt ' + (sc>=3?'y':(sc>0?'w':'n')) + '" title="本体可下+MOD+存档+修改器 各1分">' + sc + '/4</span></td>'
+        + '<td><div class="lk"><button class="btn" data-id="' + esc(String(r[1])) + '" data-i="' + i + '">查看</button>'
+          + (/^(xd|jidi)-/.test(String(r[1]))
+            ? '<button class="btn" data-tog="' + i + '" title="写 hide-overrides.json 豁免（仅本机 8123/8124 可写）">' + (r[13]===1?'显示':'隐藏') + '</button>'
+            : '')
+          + '</div></td>'
         + '</tr>';
     }
-    $('#tb').innerHTML = h || '<tr><td colspan="11"><div class="empty">没有符合条件的条目</div></td></tr>';
+    $('#tb').innerHTML = h || '<tr><td colspan="12"><div class="empty">没有符合条件的条目</div></td></tr>';
     $('#pgInfo').textContent = V.length
       ? ('第 ' + (a+1) + '–' + b + ' 条 / 共 ' + V.length.toLocaleString('en-US') + ' 条（原始 ' + R.length.toLocaleString('en-US') + ' 条）')
       : '0 条';
@@ -721,6 +786,9 @@ const html = `<!DOCTYPE html>
     $('#kView').textContent = V.length.toLocaleString('en-US');
     document.querySelectorAll('#tb button[data-id]').forEach(function(x){
       x.addEventListener('click', function(){ openDlg(V[Number(x.dataset.i)]); });
+    });
+    document.querySelectorAll('#tb button[data-tog]').forEach(function(x){
+      x.addEventListener('click', function(){ toggleHide(V[Number(x.dataset.tog)], x); });
     });
     writeHash();
   }
@@ -743,6 +811,8 @@ const html = `<!DOCTYPE html>
     var h = [];
     if(F.q) h.push('q=' + encodeURIComponent(F.q));
     if(F.kind.length) h.push('kind=' + F.kind.join(','));
+    if(F.src.length) h.push('src=' + F.src.join(','));
+    if(F.cold.length) h.push('cold=' + F.cold.join(','));
     if(F.res.length) h.push('res=' + F.res.join(','));
     if(F.resMode !== 'all') h.push('mode=' + F.resMode);
     if(F.sort !== 'hot'){ h.push('sort=' + F.sort); h.push('dir=' + F.dir); }
@@ -760,10 +830,13 @@ const html = `<!DOCTYPE html>
       var k = kv.slice(0, i), v = kv.slice(i + 1);
       if(k === 'q') F.q = decodeURIComponent(v);
       else if(k === 'kind') F.kind = v.split(',').filter(function(x){ return x === 'pc' || x === 'mob'; });
+      else if(k === 'src') F.src = v.split(',').filter(function(x){ return x === 'jidi' || x === 'xd'; });
+      else if(k === 'cold') F.cold = v.split(',').filter(function(x){ return x === 'visible' || x === 'cold'; });
       else if(k === 'res') F.res = v.split(',').filter(function(x){
-        return x === 'any' || x === 'mod' || x === 'saves' || x === 'trainers' || x === 'body'; });
+        return x === 'any' || x === 'mod' || x === 'saves' || x === 'trainers' || x === 'body'
+          || x === 'nomod' || x === 'nosaves' || x === 'notrainers' || x === 'nores'; });
       else if(k === 'mode' && (v === 'all' || v === 'any')) F.resMode = v;
-      else if(k === 'sort' && ['name','src','size','hot','ts','body','mod','saves','trainers'].indexOf(v) >= 0) F.sort = v;
+      else if(k === 'sort' && ['name','src','size','hot','ts','body','mod','saves','trainers','score'].indexOf(v) >= 0) F.sort = v;
       else if(k === 'dir' && (v === '1' || v === '-1')) F.dir = Number(v);
       else if(k === 'page' && /^[1-9][0-9]*$/.test(v)) F.page = Number(v);
       else if(k === 'size' && ['100','200','500','1000'].indexOf(v) >= 0) F.size = Number(v);
@@ -774,6 +847,7 @@ const html = `<!DOCTYPE html>
     $('#resMode').value = F.resMode;
     $('#pageSz').value = String(F.size);
     syncSeg('#segKind','kind','all'); syncSeg('#segRes','res','all');
+    syncSeg('#segSrc','src','all'); syncSeg('#segCold','cold','all');
     markSort();
   }
   window.addEventListener('hashchange', function(){ readHash(); syncUI(); render(); });
@@ -887,6 +961,34 @@ const html = `<!DOCTYPE html>
     if(qb) qb.addEventListener('click', function(){ queryBody(r, qb); });
   }
   function closeDlg(){ $('#mask').classList.remove('on'); $('#dActs').hidden = true; }
+
+  /* ── v10.85 管理动作：隐藏/显示 → POST /api/admin/hide-overrides ──
+   * 服务端写 data/hide-overrides.json 旁路文件并即时生效（仅本机回环可写，线上 403）。
+   * ★ 静态产物没有重算输入（hot/publishTs 不在行里），所以构建期算好的 r[13] 在写操作后
+   *   **必须用响应回填**（j.hidden）再 render —— 客户端猜不出新状态，猜了必漂移。 */
+  function toggleHide(r, btn){
+    var id = String(r[1]);
+    if(!/^(xd|jidi)-/.test(id)) return;
+    var op = r[13] === 1 ? 'show' : 'hide';
+    var old = btn.textContent;
+    btn.disabled = true; btn.textContent = '…';
+    fetch(API + '/api/admin/hide-overrides', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id, op: op }),
+    }).then(function(x){ return x.json(); }).then(function(j){
+      btn.disabled = false; btn.textContent = old;
+      if(j && j.ok){
+        if(j.hidden != null) r[13] = j.hidden ? 1 : 0;   /* 响应回填，不猜 */
+        render();
+      } else {
+        alert('写豁免失败：' + ((j && j.error) || '未知'));
+      }
+    }).catch(function(){
+      btn.disabled = false; btn.textContent = old;
+      alert('管理接口不可用 —— 豁免写入仅限本机（8123/8124）；在线上打开本页只读。');
+    });
+  }
 
   /* 本体实时查询：走 /api/download（服务端 30 分钟缓存）
    * ★★ 两个源的 items **结构不同**，v10.80 起两侧都直出链接：
@@ -1045,7 +1147,9 @@ const html = `<!DOCTYPE html>
     });
   }
   segBind('#segKind','kind','all'); segBind('#segRes','res','all');
+  segBind('#segSrc','src','all'); segBind('#segCold','cold','all');
   syncSeg('#segKind','kind','all'); syncSeg('#segRes','res','all');
+  syncSeg('#segSrc','src','all'); syncSeg('#segCold','cold','all');
   $('#resMode').addEventListener('change', function(e){
     F.resMode = e.target.value === 'any' ? 'any' : 'all'; F.page = 1; render();
   });
@@ -1059,9 +1163,10 @@ const html = `<!DOCTYPE html>
   });
   $('#pageSz').addEventListener('change', function(e){ F.size = Number(e.target.value)||200; F.page = 1; render(); });
   $('#reset').addEventListener('click', function(){
-    F.q=''; F.kind=[]; F.res=[]; F.resMode='all'; F.sort='hot'; F.dir=-1; F.page=1;
+    F.q=''; F.kind=[]; F.src=[]; F.cold=[]; F.res=[]; F.resMode='all'; F.sort='hot'; F.dir=-1; F.page=1;
     $('#q').value=''; $('#resMode').value='all';
     syncSeg('#segKind','kind','all'); syncSeg('#segRes','res','all');
+    syncSeg('#segSrc','src','all'); syncSeg('#segCold','cold','all');
     markSort(); render();
   });
   $('#pFirst').addEventListener('click', function(){ F.page=1; render(); });
@@ -1094,6 +1199,7 @@ const html = `<!DOCTYPE html>
   $('#kMob').textContent = (M.nMob || 0).toLocaleString('en-US');
   $('#kRes').textContent = nRes.toLocaleString('en-US');
   $('#kBody').textContent = nBody.toLocaleString('en-US');
+  $('#kCold').textContent = (M.nHidden != null ? M.nHidden : 0).toLocaleString('en-US');
   $('#noteProbe').textContent = nBody;
   if (M.nMobMerged) {
     $('#noteMerged').innerHTML = '手游中心共 <b>' + (M.nMob || 0).toLocaleString('en-US') + '</b> 款，其中 <b>'

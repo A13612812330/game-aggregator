@@ -5669,7 +5669,7 @@ function dlUniPane() {
     dlUniLoad(k);
     return;
   }
-  if (k === 'body') { dlUniPaintBody(d); return; }
+  if (k === 'body') { dlUniPaintBody(d); dlUniPaintFg(st.data.fg); return; }
   if (k === 'mod' || k === 'modifier') { dlUniPaintMod(d, k); return; }
   dlUniPaintSave(d);
 }
@@ -5681,9 +5681,15 @@ async function dlUniLoad(k) {
   st.busy[k] = true;
   try {
     if (k === 'body') {
-      const d = await dlUniFetchBody(st.ctx);
+      /* ★ v10.86：FitGirl Repack 段并行取 —— 服务端本地索引毫秒级，不拖慢
+         /api/download 的 302 解析；失败静默为 null（本体页签照常画，FitGirl 段不出现）。 */
+      const [d, fg] = await Promise.all([
+        dlUniFetchBody(st.ctx),
+        dlUniFetchFg(st.ctx).catch(() => null),
+      ]);
       st.data.body = d;
       st.cnt.body = d.links;
+      st.data.fg = fg;
     } else if (k === 'mod' || k === 'modifier') {
       /* ★ v10.53：修改器页签多取一路 **GTrainers**（聚合层）—— 见 dlUniFetchGt 注释。
          ★ v10.81：mod 页签多取一路 **Thunderstore**（/api/ts/mods）—— 机地帖全是网盘口令，
@@ -6009,6 +6015,77 @@ function dlUniPaintBody(d) {
   };
   paintDownload();
 }
+
+/* ★ v10.86：FitGirl Repack 段 —— 本体页签的第三下载档（机地 / XD 网盘之外）。
+ *
+ * 【为什么独立成段、渲染在 dlUniPaintBody 之后】dlUniPaintBody 有三条出口路径
+ *   （正常盘口 / noSrc / 全空态），FitGirl 在哪条路径上都可能命中 —— 尤其
+ *   「没有可直接打开的网盘地址」时它往往是唯一的第二出口。追加而非内嵌，
+ *   paintDownload() 一行不动。
+ * 【形态】TCS 外链同款（ext 新标签直开原站文章页，零直链维护：repack 换链不落我们库）；
+ *   magnet 按需现抓（服务端 24h 缓存），复制给任意 BT 客户端 —— 开放协议，
+ *   不依赖自研下载器（P3 上线后只换调起目标，本段不动）。
+ * 【adult】adult:true 的条目**照样显示**（详情页要能获取），带 18+ 角标 ——
+ *   列表层不铺 repack 条目，所以没有列表过滤问题（v10.84/85 豁免体系管的是游戏行）。
+ * 【样式】复用 .dl-gcm / .df-row / .dl-res-lk —— 与修改器 GCM 段同一容器同一行（铁律 17）。 */
+async function dlUniFetchFg(ctx) {
+  const q = [];
+  if (ctx.id) q.push('id=' + encodeURIComponent(ctx.id));
+  if (ctx.title) q.push('t=' + encodeURIComponent(ctx.title));
+  if (!q.length) return null;
+  const j = await fetch(api('/api/fitgirl/repacks?' + q.join('&'))).then((r) => r.json());
+  return (j && j.ok && j.count > 0) ? j : null;
+}
+
+function dlUniPaintFg(fg) {
+  if (!fg || !fg.items || !fg.items.length) return;
+  const body = $('#dlBody');
+  if (!body) return;
+  const rows = fg.items.map((it) => {
+    const ad = it.adult ? ' <span class="tagx" style="background:#FDECEC;color:#B4232A" title="成人内容（18+）">18+</span>' : '';
+    return '<div class="df-row"><span class="ix">·</span><span class="bd">'
+      + '<span class="t"><span class="tagx">FitGirl</span>' + ad + esc(it.title || it.slug) + '</span>'
+      + '<span class="m">' + esc(String(it.date || '').slice(0, 10)) + '</span>'
+      + '<span class="dl-res-lk">'
+      + '<a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">↗ 打开 Repack 页</a>'
+      + '<a href="#" data-fg-magnet="' + esc(it.slug) + '">⧉ 复制磁力</a>'
+      + '</span></span></div>';
+  }).join('');
+  const sec = document.createElement('div');
+  sec.className = 'dl-gcm';
+  sec.innerHTML = '<div class="dl-note"><b>FitGirl Repack</b> 命中 <b>' + fg.items.length +
+    '</b> 个资源包 · BT 种子含全部内容，可在客户端里勾选需要的文件（Selective Download）'
+    + ' · 用 qBittorrent / 迅雷等任意 BT 客户端下载</div>' + rows;
+  body.appendChild(sec);
+}
+
+/* 复制磁力（事件委托 —— 段是动态追加的；写 here 而不是段内绑定，换游戏重绘不重复绑） */
+document.addEventListener('click', async (e) => {
+  const a = e.target.closest && e.target.closest('[data-fg-magnet]');
+  if (!a) return;
+  e.preventDefault();
+  const slug = a.dataset.fgMagnet;
+  const old = a.textContent;
+  a.textContent = '… 抓取中';
+  try {
+    const j = await fetch(api('/api/fitgirl/magnet?slug=' + encodeURIComponent(slug))).then((r) => r.json());
+    if (!j.ok || !(j.magnets || []).length) throw new Error(j.error || '没有磁力');
+    /* 第一条 = FitGirl 官方种子（tracker 最多、含 Selective Download） */
+    const txt = j.magnets[0];
+    try {
+      await navigator.clipboard.writeText(txt);
+      a.textContent = '✓ 已复制';
+    } catch (ce) {
+      /* 剪贴板权限不可用（非安全上下文等）→ 手动复制兜底 */
+      window.prompt('自动复制不可用，请手动复制：', txt);
+      a.textContent = old;
+      return;
+    }
+  } catch (er) {
+    a.textContent = '✗ ' + String((er && er.message) || er).slice(0, 20);
+  }
+  setTimeout(() => { a.textContent = old; }, 2500);
+});
 
 /** 社区帖行（Mod / 修改器共用）
  *
