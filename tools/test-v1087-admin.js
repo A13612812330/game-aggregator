@@ -61,6 +61,20 @@ ok(/GAMEHUB_ADMIN_TOKEN/.test(srv) && /admin-token\.json/.test(srv),
   'B4 令牌真源双通道：env > data/admin-token.json');
 ok(!/adminLocalOnly\(req, res\)\) return;\n  res\.json\(\{ ok: true, overrides/.test(srv),
   'B5 hide-overrides GET 已切到 adminGuard（不再只有回环一条路）');
+/* ★★ B6/B7 钉 v10.87.1 修的真漏洞：首发上线实测「线上无令牌 200」——
+ *   根因是反代把 socket 对端变成回环，guard 只看 IP 就等于公网裸奔。
+ *   这两条判的是**判据本身**（Host 校验 + 转发头校验都必须在 guard 函数体内），
+ *   不是钉字面量写法：删掉任一条件就红，防止后人「简化」回单 IP 判断。 */
+{
+  const gBody = srv.slice(srv.indexOf('function adminGuard'), srv.indexOf('function adminGuard') + 1400);
+  ok(/hostLocal/.test(gBody) && /headers\.host/.test(gBody),
+    'B6 adminGuard 校验 Host 是否为本地三形态（反代 Host ≠ localhost 必须走令牌）');
+  ok(/x-forwarded-for/i.test(gBody) && /x-real-ip/i.test(gBody) && /!fwd/.test(gBody),
+    'B7 adminGuard 校验转发头（X-Forwarded-For / X-Real-IP 在场即取消回环豁免）');
+  ok(/req\.query\.token/.test(gBody) && /req\.body\.token|body\s*&&\s*req\.body\.token|req\.body\.token/.test(gBody),
+    'B8 令牌三通道：头 > ?token= > body.token（反代剥头时的降级路）');
+  ok(/req\._adminVia/.test(gBody), 'B9 guard 把判定结果写 req._adminVia（日志 via 不重判 IP）');
+}
 
 /* ── C. 令牌文件 ── */
 console.log('\n-- C. 令牌文件 --');

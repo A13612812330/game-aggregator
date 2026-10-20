@@ -447,11 +447,30 @@ function adminToken() {
     return typeof j.token === 'string' && j.token ? j.token : null;
   } catch (e) { return null; }
 }
+/* ★★ v10.87.1 修正：回环豁免必须排除「经反代而来」的请求。
+ *   首发上线实测到真漏洞：线上反代把 socket 对端变成回环，只判 IP 的结果是
+ *   `GET /api/admin/log`、`GET /api/admin/hide-overrides` 无令牌直接 200 ——
+ *   连 POST 写豁免也一起裸奔到公网。判据改成三条件**全部成立**才免令牌：
+ *     ① socket 对端是回环   ② Host 是本地三形态（localhost/127.0.0.1/[::1]）
+ *     ③ 没有任何转发头（反代必带 X-Forwarded-* / Forwarded；本地直连没有）
+ *   任何一条不成立 ⇒ 走令牌轨。
+ * ★ 令牌取三通道：X-Admin-Token 头 > ?token= > body.token。
+ *   为什么不止头一条：反代有可能剥自定义头，头被剥时后两条还能通；
+ *   前端策略是「先只发头，403 才降级带 query/body」——正常路径不把令牌写进 URL。 */
 function adminGuard(req, res) {
   const ip = String((req.socket && req.socket.remoteAddress) || '');
-  if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return true;
+  const isLoop = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+  const host = String(req.headers.host || '').toLowerCase();
+  const hostLocal = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);
+  const fwd = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.headers['forwarded']
+    || req.headers['x-forwarded-host'] || req.headers['cf-connecting-ip'];
+  if (isLoop && hostLocal && !fwd) { req._adminVia = 'loopback'; return true; }
   const tok = adminToken();
-  if (tok && String(req.headers['x-admin-token'] || '') === tok) return true;
+  const given = String(req.headers['x-admin-token']
+    || req.query.token
+    || (req.body && req.body.token)
+    || '');
+  if (tok && given && given === tok) { req._adminVia = 'token'; return true; }
   res.status(403).json({ ok: false, error: '管理接口需要本机回环或 X-Admin-Token（/admin 页顶栏填令牌）' });
   return false;
 }
@@ -495,12 +514,12 @@ app.post('/api/admin/hide-overrides', (req, res) => {
     const overrides = coldHide.setOverride(String(id), String(op));
     const hidden = coldHide.hiddenById(String(id), gamesDb.all());
     const g = gamesDb.byIdGet(String(id));
-    const ip = String((req.socket && req.socket.remoteAddress) || '');
-    /* v10.87：操作留痕 —— 谁（回环/令牌）在什么时候对哪条做了什么，追加进 admin-log.jsonl */
+    /* v10.87：操作留痕 —— 谁（回环/令牌）在什么时候对哪条做了什么，追加进 admin-log.jsonl
+     *   via 取 adminGuard 判定的结果，不在这里重判 IP（否则反代下会把令牌操作误记成 loopback）。 */
     appendAdminLog({
       ts: Date.now(), id: String(id), title: g ? g.title : '',
       op: String(op), hidden: !!hidden,
-      via: (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') ? 'loopback' : 'token',
+      via: req._adminVia || 'unknown',
     });
     res.json({ ok: true, id, op, hidden, overrides });
   } catch (e) {

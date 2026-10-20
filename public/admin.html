@@ -190,10 +190,28 @@ function saveToken() {
 }
 function paintTok() { $('tokDot').className = 'token-dot ' + (tok() ? 'on' : 'off'); }
 
+/* 请求封装：默认只发 X-Admin-Token 头（令牌不进 URL，不进访问日志）。
+ * ★ 为什么还要降级重试：v10.87 线上实测反代环境不保证透传自定义头，
+ *   头被剥时再走一次 —— GET 带 ?token=、POST 把 token 塞进 body（服务端三通道都认）。
+ *   正常路径永远只发头，降级只在 403 时发生一次。 */
 async function api(path, opt) {
-  const r = await fetch(path, Object.assign({ headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()) }, opt || {}));
-  const j = await r.json().catch(() => ({ ok: false, error: '响应解析失败' }));
-  if (r.status === 403) j.ok = false, j.needAuth = true;
+  const t = tok();
+  const send = async (fallback) => {
+    const o = Object.assign({}, opt || {});
+    const isGet = String(o.method || 'GET').toUpperCase() === 'GET';
+    let url = path;
+    o.headers = Object.assign({ 'Content-Type': 'application/json' }, fallback ? {} : authHeaders());
+    if (fallback && t) {
+      if (isGet) url += (path.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(t);
+      else if (o.body) { try { const b = JSON.parse(o.body); b.token = t; o.body = JSON.stringify(b); } catch (e) {} }
+    }
+    const r = await fetch(url, o);
+    const j = await r.json().catch(() => ({ ok: false, error: '响应解析失败' }));
+    if (r.status === 403) { j.ok = false; j.needAuth = true; }
+    return j;
+  };
+  const j = await send(false);
+  if (!j.ok && j.needAuth && t) return send(true);
   return j;
 }
 
