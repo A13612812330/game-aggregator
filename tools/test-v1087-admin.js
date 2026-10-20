@@ -33,7 +33,10 @@ const hasAdmin = fs.existsSync(path.join(ROOT, 'public', 'admin.html'));
 ok(hasAdmin, 'A1 管理页存在', 'public/admin.html');
 if (hasAdmin) {
   const pg = read('public/admin.html');
-  ok(pg.includes('id="tokInput"') && pg.includes('gh_admin_token'),
+  /* ★ v10.88 改版：输入框 id 从 tokInput → tkInput、抽屉函数 openDrawer/setOv → openEdit/saveAll。
+   *   判据钉**意图**（有令牌输入 + localStorage 持久化 / 有编辑+保存+日志三个交互），
+   *   不钉具体 id 与函数名 —— 否则每次改版都要改防线（铁律 156）。 */
+  ok(/(id="(tokInput|tkInput)")/.test(pg) && pg.includes('gh_admin_token'),
     'A2 令牌输入框 + localStorage 持久化在位');
   ok(pg.includes('/api/admin/overview') && pg.includes('/api/admin/game?id=')
     && pg.includes("/api/admin/hide-overrides'") && pg.includes('/api/admin/log?limit='),
@@ -42,10 +45,10 @@ if (hasAdmin) {
   ok(pg.includes('admin=1') || pg.includes("admin', '1'") || /admin=\$\{/.test(pg)
     || pg.includes("admin: '1'"),
     'A5 列表请求带 admin=1（隐藏态服务端回填）');
-  ok(pg.includes('openDrawer') && pg.includes('setOv') && pg.includes('loadLog'),
-    'A6 抽屉详情 / 豁免操作 / 操作日志三个交互函数齐备');
+  ok(/function (openDrawer|openEdit)/.test(pg) && /function (setOv|saveAll)/.test(pg) && /function loadLog/.test(pg),
+    'A6 详情/编辑、状态保存、操作日志三个交互函数齐备');
   /* 防自坑：页面里凡拼 URL 的地方不能出现未转义的引号注入点 */
-  ok(!/onclick="openDrawer\('"\+/.test(pg), 'A7 无裸字符串拼接的 onclick（id 走转义通道）');
+  ok(!/onclick="(openDrawer|openEdit)\('"\+/.test(pg), 'A7 无裸字符串拼接的 onclick（id 走转义通道）');
 }
 
 /* ── B. 服务端鉴权双轨 ── */
@@ -127,7 +130,10 @@ const libIdx = srv.indexOf("app.get('/api/library'");
 const libBody = srv.slice(libIdx, libIdx + 2600);
 ok(/req\.query\.admin/.test(libBody) && /it\.hidden = coldHide\.isHidden\(x\)/.test(libBody),
   'F2 /api/library admin=1 同样回填（搜索与管理列表徽标同源）');
-ok(/o\.filter = \(g\) => coldHide\.isHidden\(g\)/.test(brBody),
+/* ★ v10.88：hidden 筛选从「单条 o.filter 赋值」升级成「条件数组 + every」（多条件可叠加），
+ *   判据钉意图 —— 最终仍由 coldHide.isHidden 判定、仍是池前过滤（在 browse 调用之前生效）。 */
+ok((/o\.filter = \(g\) => coldHide\.isHidden\(g\)/.test(brBody)
+  || (/conds\.push\(\(g\) => coldHide\.isHidden\(g\)/.test(brBody) && /o\.filter = \(g\) => conds\.every/.test(brBody))),
   'G1 hidden=1|0 池前过滤走 coldHide.isHidden（分页 total 与行数一致）');
 ok(/cold=0/.test(srv.slice(brIdx - 1200, brIdx)) || /req\.query\.cold/.test(brBody),
   'G2 cold=0 逃生口保留（管理页才能看到被隐藏的行）');

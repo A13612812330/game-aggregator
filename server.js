@@ -526,6 +526,31 @@ app.post('/api/admin/hide-overrides', (req, res) => {
     res.status(500).json({ ok: false, error: '写豁免失败: ' + e.message });
   }
 });
+/* ── v10.88 POST /api/admin/note ── 备注编辑（管理后台唯一的「内容编辑」）
+ *   body: { id, note }  note 空串 = 删除
+ *   为什么单独一个文件而不混进 hide-overrides：豁免是行为（改列表结果），备注是标注（零副作用），
+ *   两者语义不同、回滚粒度也不同。 */
+app.post('/api/admin/note', (req, res) => {
+  if (!adminGuard(req, res)) return;
+  const { id, note } = req.body || {};
+  if (!/^(xd|jidi)-[A-Za-z0-9_-]+$/.test(String(id || ''))) {
+    return res.status(400).json({ ok: false, error: 'id 不合法（仅支持库内 xd-*/jidi-* 条目）' });
+  }
+  if (String(note || '').length > 500) {
+    return res.status(400).json({ ok: false, error: '备注最长 500 字' });
+  }
+  try {
+    const saved = gameNotes.set(String(id), note);
+    const g = gamesDb.byIdGet(String(id));
+    appendAdminLog({
+      ts: Date.now(), id: String(id), title: g ? g.title : '',
+      op: saved.note ? 'note' : 'note-clear', via: req._adminVia || 'unknown',
+    });
+    res.json({ ok: true, id: saved.id, note: saved.note, noteCount: gameNotes.count() });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: '写备注失败: ' + e.message });
+  }
+});
 
 /* ── v10.87 管理后台三端点 ──
  * GET /api/admin/overview  → 页头统计卡一次拿全（冷门口径 + 库构成 + 六个资源源 stats）
@@ -538,6 +563,7 @@ app.get('/api/admin/overview', (_req, res) => {
     ok: true,
     cold: coldHide.stats(all),
     lib: gamesDb.stats(),
+    notes: { count: gameNotes.count() },
     mods: mods.stats(),
     trainers: trainers.stats(),
     saves: saves.stats(),
@@ -586,7 +612,7 @@ app.get('/api/admin/game', (req, res) => {
       publishTs: g.publishTs || null, genres: g.genres || [], cover: g.cover || '',
       url: g.url || '', jidiUrl: g.jidiUrl || '',
     },
-    state: { cold: coldHide.isCold(g), hidden: coldHide.isHidden(g), override: ov, resId, resCounts },
+    state: { cold: coldHide.isCold(g), hidden: coldHide.isHidden(g), override: ov, resId, resCounts, note: gameNotes.get(g.id) },
     resources: {
       /* resGroups.byLib 内部已做 slimItem 瘦身投影，这里直接用（再 map 一遍是重复劳动） */
       resGroups: {
@@ -692,6 +718,8 @@ const tcsdl = require('./data/tcsdl');
 /* ★ v10.81：Thunderstore MOD 直链（门 1：MOD 唯一的自托管直链源，无防盗链） */
 const tsmods = require('./data/tsmods');
 const fitgirl = require('./data/fitgirl'); // ★ v10.86 FitGirl Repack 匹配库（外链档 + magnet 按需现抓）
+const fitgirlParts = require('./data/fitgirl-parts'); // ★ v10.88 下载源解析器（主组/变体/可选附件，跨镜像归并）
+const gameNotes = require('./data/game-notes'); // ★ v10.88 管理备注（后台唯一可编辑内容，不影响抓取与匹配）
 /* ★ v10.58：FR（FearlessRevolution）已摘除。理由：整站在 CF managed challenge 后面（只能有头浏览器
    + 页面上下文 fetch）、阶段② 须一次跑完 ≈3.5h，而 GTrainers 已覆盖同类需求且纯 HTTP 直连。
    ★ 摘除前实测：data/fr.json **从未产出** ⇒ fromFr() 贡献 0 条 ⇒ 零用户可见损失。
@@ -1231,6 +1259,71 @@ app.get('/api/fitgirl/magnet', async (req, res) => {
     res.json(out);
   } catch (e) {
     res.status(502).json({ ok: false, error: 'FitGirl 抓取失败: ' + String((e && e.message) || e) });
+  }
+});
+
+/* ── v10.88 GET /api/fitgirl/parts?slug=&id= ──
+ *  下载源结构化：主 repack 组 / 变体组 / fg-optional-* 附件组，每组跨 3 个镜像归并。
+ *  ★ 为什么按需现抓而不落库：全量落库是十几万条链接（5,811 游戏 × ~30 卷），
+ *    fitgirl.json 会从 1.26MB 涨到几十 MB，载荷与每日同步全变重 —— 而收益只是省一次抓取。
+ *    体量换收益不划算（v10.88 实测决策，见 docs/versions/v10.88.md）。
+ *  ★ 缓存与白名单口径同 magnet：slug 必须在 fitgirl 表内（防 SSRF），24h TTL 落 .cache。 */
+const FG_PARTS_TTL = 24 * 3600 * 1000;
+/* ★ 缓存结构版本：解析器输出结构变化时 +1，旧缓存在读取时被判失效 ⇒ 自动重抓。
+ *   踩过的坑：v10.88 加 mode 字段后，旧缓存返回没有 mode 的对象，前端/探针看到 undefined
+ *   却以为代码没生效（TTL 24h 内一直这样）。缓存内容必须自带版本。 */
+const FG_PARTS_VER = 2;
+app.get('/api/fitgirl/parts', async (req, res) => {
+  const slug = String(req.query.slug || '').trim();
+  const id = String(req.query.id || '').trim();
+  if (!/^[a-z0-9-]+$/.test(slug) || !fitgirl.has(slug)) {
+    return res.status(400).json({ ok: false, error: 'bad slug（白名单外）' });
+  }
+  const entry = fitgirl.byGame(id).find((x) => x.slug === slug) ||
+    { slug, url: 'https://fitgirl-repacks.site/' + slug + '/' };
+  const fsMod = require('fs');
+  const pathMod = require('path');
+  const cacheDir = pathMod.join(__dirname, '.cache', 'fitgirl');
+  const cacheFile = pathMod.join(cacheDir, slug + '.parts.json');
+  const fresh = String(req.query.fresh || '') === '1';
+  if (!fresh) {
+    try {
+      const st = fsMod.statSync(cacheFile);
+      if (Date.now() - st.mtimeMs < FG_PARTS_TTL) {
+        const j = JSON.parse(fsMod.readFileSync(cacheFile, 'utf8'));
+        if (j.v === FG_PARTS_VER) return res.json({ ...j, cached: true });
+      }
+    } catch (e) { /* 无缓存/过期 ⇒ 现抓 */ }
+  }
+  try {
+    const r = await fetch(entry.url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125.0 Safari/537.36' },
+      signal: AbortSignal.timeout(25000),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const html = await r.text();
+    const parsed = fitgirlParts.parse(html);
+    const out = {
+      ok: true, v: FG_PARTS_VER, slug, url: entry.url,
+      fetchedAt: new Date().toISOString(),
+      /* mode: inline（分卷可归并）/ container（清单在 paste 或 filecrypt 里）/ none（无下载区） */
+      mode: parsed.mode,
+      magnet: parsed.magnet,
+      sets: parsed.sets,
+      containers: parsed.containers.slice(0, 6),
+      stats: parsed.stats,
+      warnings: parsed.warnings,
+    };
+    /* 只有「既无分卷也无容器」才算没有下载区；只给容器的帖是正常形态（实测占 40%），
+     * 必须 200 返回容器 + 磁力，报 404 会让前端把一半游戏判成「不支持」。 */
+    if (parsed.mode === 'none') {
+      return res.status(404).json({ ok: false, error: '该帖没有下载区（预告/汇总帖）', slug, url: entry.url, magnet: parsed.magnet });
+    }
+    fsMod.mkdirSync(cacheDir, { recursive: true });
+    fsMod.writeFileSync(cacheFile, JSON.stringify(out));
+    res.json(out);
+  } catch (e) {
+    res.status(502).json({ ok: false, error: 'FitGirl 下载源抓取失败: ' + String((e && e.message) || e) });
   }
 });
 
@@ -2254,9 +2347,21 @@ app.get('/api/library/browse', (req, res) => {
    *   ⚠️ 条件写 `!o.excludeCold` 而不是 `=== false` —— test-cold-hide 用
    *   `o.excludeCold\s*=` 计数「赋值只此一处」，`===` 会被误计成第二处。 */
   if (String(req.query.admin || '') === '1' && !o.excludeCold) {
+    /* v10.88：管理页需要多条件叠加（隐藏态 + 来源 + 有备注），
+     * 所以改成「条件数组 + every」而不是逐个覆盖 o.filter —— 覆盖会让后一个筛选
+     * 静默吃掉前一个（列表数字对不上，但不报错）。 */
+    const conds = [];
     const hv = String(req.query.hidden || '');
-    if (hv === '1') o.filter = (g) => coldHide.isHidden(g) === true;
-    else if (hv === '0') o.filter = (g) => coldHide.isHidden(g) === false;
+    if (hv === '1') conds.push((g) => coldHide.isHidden(g) === true);
+    else if (hv === '0') conds.push((g) => coldHide.isHidden(g) === false);
+    /* asrc：来源（xd=XDGAME / jidi=机地）。不复用 `src` 这个参数名 ——
+     * 它已被 resGroups 的 `?src=&id=` 语义占用，同名会让两处互相干扰。 */
+    const asrc = String(req.query.asrc || '');
+    if (asrc === 'xd') conds.push((g) => /xd/i.test(String(g.source || '')));
+    else if (asrc === 'jidi') conds.push((g) => /jidi/i.test(String(g.source || '')));
+    /* note=1：只看标过备注的（人工核对清单的入口） */
+    if (String(req.query.note || '') === '1') conds.push((g) => !!gameNotes.get(g.id));
+    if (conds.length) o.filter = (g) => conds.every((f) => f(g));
   }
 
   if (scope === 'pc') {
@@ -2270,7 +2375,12 @@ app.get('/api/library/browse', (req, res) => {
       ok: true, scope, ...r,
       items: r.items.map((x) => {
         const it = withRes(x);
-        if (admin) { it.hidden = coldHide.isHidden(x); it.cold = coldHide.isCold(x); }
+        if (admin) {
+          it.hidden = coldHide.isHidden(x);
+          it.cold = coldHide.isCold(x);
+          /* v10.88：备注随行回填（管理页要能看到自己标过什么，不能点进详情才知道） */
+          it.note = gameNotes.get(x.id);
+        }
         return it;
       }),
     });

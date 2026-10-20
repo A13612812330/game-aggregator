@@ -3,210 +3,435 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GameHub 管理后台 · 游戏库管理</title>
+<title>GameHub 管理后台</title>
 <style>
 :root{
   --bg:#f4f6f9; --card:#fff; --line:#e3e8ef; --txt:#1c2330; --sub:#5b6675;
   --pri:#2563eb; --pri-bg:#eff6ff; --ok:#16a34a; --ok-bg:#f0fdf4;
   --warn:#d97706; --warn-bg:#fffbeb; --dan:#dc2626; --dan-bg:#fef2f2;
-  --chip:#f1f5f9; --shadow:0 1px 3px rgba(16,24,40,.08);
+  --chip:#f1f5f9; --sh:0 1px 3px rgba(16,24,40,.08); --sh2:0 12px 40px rgba(16,24,40,.18);
+  --side:#111827; --side2:#1f2937;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--txt);font-size:14px}
+body{font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--txt);font-size:14px;-webkit-font-smoothing:antialiased}
 a{color:var(--pri);text-decoration:none}
+button{font-family:inherit}
 
-/* ── 顶栏 ── */
-.topbar{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid var(--line);padding:10px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:var(--shadow)}
-.topbar h1{font-size:17px;font-weight:700}
-.topbar h1 small{font-weight:400;color:var(--sub);font-size:12px;margin-left:6px}
-.topbar .sp{flex:1}
-.token-box{display:flex;align-items:center;gap:6px}
-.token-box input{width:290px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-family:Consolas,monospace}
-.token-dot{width:9px;height:9px;border-radius:50%;background:#cbd5e1}
-.token-dot.on{background:var(--ok)}
-.token-dot.off{background:var(--dan)}
-.topbar .lnk{font-size:13px;color:var(--sub)}
-.topbar .lnk a{margin-left:10px}
+/* ═══ 骨架 ═══ */
+.shell{display:flex;min-height:100vh}
+.side{position:fixed;inset:0 auto 0 0;width:230px;background:var(--side);color:#cbd5e1;display:flex;flex-direction:column;padding:0;z-index:40}
+.brand{padding:18px 18px 14px;border-bottom:1px solid #1f2937}
+.brand b{display:flex;align-items:center;gap:9px;color:#fff;font-size:15px}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.18)}
+.brand span{display:block;color:#64748b;font-size:11.5px;margin-top:5px;letter-spacing:.4px}
+.nav{padding:10px 8px;flex:1;overflow:auto}
+.nav a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;color:#cbd5e1;font-size:13.5px;margin-bottom:2px;cursor:pointer}
+.nav a i{font-style:normal;width:18px;text-align:center;opacity:.85}
+.nav a:hover{background:var(--side2);color:#fff}
+.nav a.on{background:#1d4ed8;color:#fff;font-weight:600}
+.nav .sec{color:#4b5563;font-size:10.5px;letter-spacing:1px;padding:14px 12px 6px}
+.side-foot{padding:12px 14px;border-top:1px solid #1f2937;font-size:11.5px;color:#64748b;line-height:1.7}
+.side-foot b{color:#94a3b8;font-weight:600}
 
-/* ── 统计卡 ── */
-.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:14px 20px 4px}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
-.stat b{display:block;font-size:22px;font-weight:700;margin-top:2px}
-.stat span{font-size:12px;color:var(--sub)}
-.stat.warn b{color:var(--warn)} .stat.dan b{color:var(--dan)} .stat.ok b{color:var(--ok)} .stat.pri b{color:var(--pri)}
-
-/* ── 工具行 ── */
-.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 20px}
-.toolbar input[type=text]{flex:1;min-width:220px;max-width:420px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px}
-.toolbar select{padding:7px 8px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff}
-.toolbar button{padding:8px 16px;border:none;border-radius:10px;background:var(--pri);color:#fff;font-size:14px;cursor:pointer}
-.toolbar button.ghost{background:var(--chip);color:var(--txt)}
-.chip{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:999px;background:var(--chip);font-size:12.5px;cursor:pointer;user-select:none;border:1px solid transparent}
-.chip.on{background:var(--pri-bg);border-color:var(--pri);color:var(--pri);font-weight:600}
-
-/* ── 表格 ── */
-.wrap{padding:0 20px 30px}
-.pager{display:flex;align-items:center;gap:10px;padding:10px 0;font-size:13px;color:var(--sub)}
-.pager button{padding:5px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font-size:13px}
-.pager button:disabled{opacity:.4;cursor:default}
-table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
-th{background:#f8fafc;text-align:left;font-size:12px;color:var(--sub);padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
-td{padding:9px 10px;border-bottom:1px solid #f0f3f7;vertical-align:middle}
-tr:last-child td{border-bottom:none}
-tr.row:hover{background:#f8fafc}
-.t-title{font-weight:600;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.t-title small{display:block;font-weight:400;color:var(--sub);font-size:11px;font-family:Consolas,monospace}
-.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap}
-.b-hide{background:var(--dan-bg);color:var(--dan)}
-.b-cold{background:var(--warn-bg);color:var(--warn)}
-.b-show{background:var(--ok-bg);color:var(--ok)}
-.rchip{display:inline-block;background:var(--chip);border-radius:6px;padding:2px 6px;font-size:11px;margin:1px 2px;color:var(--sub);white-space:nowrap}
-.rchip.has{background:var(--pri-bg);color:var(--pri)}
-.btn{padding:4px 10px;border:1px solid var(--line);border-radius:7px;background:#fff;cursor:pointer;font-size:12px;margin:1px 2px}
+.main{margin-left:230px;flex:1;min-width:0;display:flex;flex-direction:column}
+.top{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:11px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.top h2{font-size:16px;font-weight:700}
+.top .crumb{color:var(--sub);font-size:12.5px}
+.top .sp{flex:1}
+.tk{display:flex;align-items:center;gap:7px;background:#f8fafc;border:1px solid var(--line);border-radius:9px;padding:4px 8px}
+.tk input{width:210px;border:0;background:transparent;font-size:12.5px;font-family:Consolas,monospace;outline:none}
+.tkdot{width:8px;height:8px;border-radius:50%;background:#cbd5e1;flex:0 0 auto}
+.tkdot.on{background:var(--ok)} .tkdot.off{background:var(--dan)}
+.btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 14px;font-size:13px;cursor:pointer;color:var(--txt)}
 .btn:hover{border-color:var(--pri);color:var(--pri)}
 .btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}
-.btn.dan{color:var(--dan)} .btn.dan:hover{border-color:var(--dan);background:var(--dan-bg);color:var(--dan)}
-.btn.ok{color:var(--ok)} .btn.ok:hover{border-color:var(--ok);background:var(--ok-bg);color:var(--ok)}
-.empty{padding:40px;text-align:center;color:var(--sub)}
+.btn.pri:hover{opacity:.92;color:#fff}
+.btn.dan{background:var(--dan-bg);border-color:#fecaca;color:var(--dan)}
+.btn.sm{padding:4px 9px;font-size:12px;border-radius:7px}
+.btn:disabled{opacity:.45;cursor:default}
 
-/* ── 抽屉 ── */
-.mask{position:fixed;inset:0;background:rgba(15,23,42,.35);z-index:40;display:none}
-.mask.on{display:block}
-.drawer{position:fixed;top:0;right:-720px;width:700px;max-width:96vw;height:100vh;background:#fff;z-index:50;box-shadow:-8px 0 30px rgba(15,23,42,.15);transition:right .25s ease;display:flex;flex-direction:column}
-.drawer.on{right:0}
-.dw-head{padding:16px 20px;border-bottom:1px solid var(--line)}
-.dw-head h2{font-size:17px;line-height:1.4}
-.dw-head .meta{font-size:12px;color:var(--sub);margin-top:4px;display:flex;gap:10px;flex-wrap:wrap}
-.dw-body{flex:1;overflow-y:auto;padding:14px 20px}
-.dw-foot{padding:12px 20px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.dw-foot .msg{font-size:12.5px;color:var(--sub);flex:1}
-.sec{margin-bottom:18px}
-.sec h3{font-size:13.5px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
-.sec h3 .cnt{background:var(--pri-bg);color:var(--pri);border-radius:999px;padding:1px 9px;font-size:11.5px}
-.sec h3 .none{color:#94a3b8;font-size:12px;font-weight:400}
-.item{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:6px;font-size:13px}
-.item .it-title{font-weight:600}
-.item .it-meta{color:var(--sub);font-size:11.5px;margin-top:2px;display:flex;gap:8px;flex-wrap:wrap}
-.item a.dl{margin-left:8px;font-size:12px}
-.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:14px}
-.kv .k{font-size:11.5px;color:var(--sub)} .kv .v{font-size:13px;font-weight:600}
-.state-line{display:flex;gap:8px;align-items:center;margin-bottom:14px;font-size:13px}
+.view{display:none;padding:18px 22px 40px}
+.view.on{display:block}
 
-/* ── 日志 ── */
-.logsec{padding:0 20px 30px}
-.logsec h2{font-size:15px;margin-bottom:8px;cursor:pointer;user-select:none}
-.logsec table{box-shadow:none}
-.logsec td,.logsec th{font-size:12px;padding:6px 10px}
-@media (max-width:760px){ td.opt-hide{display:none} .stats{grid-template-columns:repeat(2,1fr)} }
+/* ═══ 卡片 / 统计 ═══ */
+.grid{display:grid;gap:11px}
+.g6{grid-template-columns:repeat(auto-fill,minmax(152px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh)}
+.stat{padding:13px 15px}
+.stat span{display:block;font-size:12px;color:var(--sub)}
+.stat b{display:block;font-size:23px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums}
+.stat em{font-style:normal;font-size:11.5px;color:var(--sub)}
+.stat.pri b{color:var(--pri)} .stat.ok b{color:var(--ok)} .stat.warn b{color:var(--warn)} .stat.dan b{color:var(--dan)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh);margin-top:13px;overflow:hidden}
+.panel .ph{padding:12px 15px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px}
+.panel .ph h3{font-size:13.5px;font-weight:700}
+.panel .ph .sp{flex:1}
+.panel .pb{padding:14px 15px}
+
+/* 覆盖条 */
+.bar{display:grid;grid-template-columns:150px 1fr 92px;align-items:center;gap:12px;padding:7px 0;font-size:13px}
+.bar .nm{color:var(--txt)}
+.bar .track{height:9px;background:#eef2f7;border-radius:6px;overflow:hidden}
+.bar .fill{height:100%;background:linear-gradient(90deg,#60a5fa,#2563eb);border-radius:6px}
+.bar .vv{text-align:right;color:var(--sub);font-variant-numeric:tabular-nums;font-size:12.5px}
+
+/* ═══ 工具行 / 筛选 ═══ */
+.tools{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:12px}
+.tools input[type=text]{flex:1 1 260px;max-width:400px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;outline:none}
+.tools input[type=text]:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.tools select{padding:8px 9px;border:1px solid var(--line);border-radius:9px;font-size:13px;background:#fff;color:var(--txt)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:5px 11px;border-radius:999px;background:var(--chip);font-size:12.5px;cursor:pointer;border:1px solid transparent;user-select:none;color:#374151}
+.chip.on{background:var(--pri-bg);border-color:#bfdbfe;color:var(--pri);font-weight:600}
+
+/* ═══ 表格 ═══ */
+.tblwrap{overflow:auto;border-radius:12px;border:1px solid var(--line);background:var(--card);box-shadow:var(--sh)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{position:sticky;top:0;background:#f8fafc;text-align:left;font-size:11.5px;color:var(--sub);font-weight:600;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;z-index:2}
+td{padding:8px 10px;border-bottom:1px solid #f1f4f8;vertical-align:middle}
+tr.row:last-child td{border-bottom:0}
+tr.row:hover{background:#f8fbff;cursor:pointer}
+.cv{width:38px;height:50px;border-radius:6px;object-fit:cover;background:#eef2f7;display:block}
+.tt{font-weight:600;max-width:330px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tt small{display:block;font-weight:400;color:var(--sub);font-size:10.5px;font-family:Consolas,monospace;margin-top:1px}
+.bdg{display:inline-block;padding:1px 7px;border-radius:999px;font-size:10.5px;font-weight:600;white-space:nowrap}
+.b-hide{background:var(--dan-bg);color:var(--dan)} .b-vis{background:var(--ok-bg);color:var(--ok)}
+.b-cold{background:#f1f5f9;color:#475569} .b-xd{background:#eef2ff;color:#4338ca} .b-jd{background:#fff7ed;color:#c2410c}
+.b-note{background:#fefce8;color:#a16207}
+.mut{color:var(--sub);font-size:12px;font-variant-numeric:tabular-nums}
+.pager{display:flex;align-items:center;gap:9px;padding:11px 2px;font-size:12.5px;color:var(--sub)}
+.pager .sp{flex:1}
+.empty{padding:44px 10px;text-align:center;color:var(--sub);font-size:13.5px}
+
+/* ═══ 弹窗 ═══ */
+.mask{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:flex-start;justify-content:center;padding:44px 16px;z-index:60;overflow:auto}
+.mask.on{display:flex}
+.modal{background:#fff;border-radius:15px;box-shadow:var(--sh2);width:100%;max-width:980px;overflow:hidden;animation:pop .16s ease-out}
+@keyframes pop{from{transform:translateY(10px);opacity:.6}to{transform:none;opacity:1}}
+.mh{display:flex;align-items:flex-start;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.mh img{width:46px;height:62px;border-radius:7px;object-fit:cover;background:#eef2f7}
+.mh h3{font-size:15.5px;line-height:1.35}
+.mh .meta{color:var(--sub);font-size:12px;margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mh .sp{flex:1}
+.mclose{border:0;background:transparent;font-size:20px;line-height:1;color:#94a3b8;cursor:pointer;padding:2px 4px}
+.mclose:hover{color:var(--dan)}
+.mb{display:grid;grid-template-columns:1fr 340px;gap:0}
+.mcol{padding:16px 18px}
+.mcol+.mcol{border-left:1px solid var(--line);background:#fcfdff}
+.fld{margin-bottom:13px}
+.fld label{display:block;font-size:12px;color:var(--sub);margin-bottom:5px;font-weight:600}
+.fld textarea{width:100%;min-height:84px;resize:vertical;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font:13px/1.6 inherit;outline:none}
+.fld textarea:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.fld .hint{font-size:11.5px;color:#94a3b8;margin-top:4px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:6px 12px;font-size:12.5px;cursor:pointer;color:var(--sub)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--pri-bg);color:var(--pri);font-weight:600}
+.kv{font-size:12.5px;line-height:1.95}
+.kv i{font-style:normal;color:var(--sub);display:inline-block;min-width:74px}
+.kv b{font-weight:600}
+.rgrp{margin-bottom:10px}
+.rgrp h4{font-size:12px;color:var(--sub);font-weight:700;margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.rgrp h4 em{font-style:normal;background:var(--chip);color:#475569;border-radius:6px;padding:0 6px;font-size:11px}
+.rlist{display:flex;flex-direction:column;gap:4px;max-height:190px;overflow:auto}
+.ritem{font-size:12.5px;line-height:1.45;display:flex;gap:6px;align-items:baseline}
+.ritem a{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ritem span{color:#94a3b8;font-size:11px;flex:0 0 auto}
+.mf{display:flex;gap:9px;align-items:center;padding:12px 18px;border-top:1px solid var(--line);background:#fafbfd}
+.mf .sp{flex:1}
+.mf .stat-line{font-size:12px;color:var(--sub)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(16px);background:#111827;color:#fff;padding:9px 16px;border-radius:10px;font-size:13px;opacity:0;transition:.2s;z-index:99;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* 日志表 */
+.log-row{display:grid;grid-template-columns:150px 1fr 66px 90px;gap:10px;padding:8px 0;border-bottom:1px solid #f1f4f8;font-size:12.5px;align-items:center}
+.log-row:last-child{border-bottom:0}
+.log-row .t{color:var(--sub);font-variant-numeric:tabular-nums;font-size:11.5px}
+.code{font-family:Consolas,monospace;font-size:11.5px;background:var(--chip);border-radius:6px;padding:1px 6px}
+
+@media (max-width:900px){
+  .side{position:static;width:100%;flex-direction:row;align-items:center;overflow-x:auto}
+  .brand{border:0;padding:12px 14px;white-space:nowrap}
+  .nav{display:flex;gap:4px;padding:8px}
+  .nav a{white-space:nowrap}
+  .nav .sec,.side-foot{display:none}
+  .shell{flex-direction:column}
+  .main{margin-left:0}
+  .mb{grid-template-columns:1fr}
+  .mcol+.mcol{border-left:0;border-top:1px solid var(--line)}
+}
 </style>
 </head>
 <body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand">
+      <b><span class="dot"></span>GameHub 管理后台</b>
+      <span>LIBRARY CONSOLE</span>
+    </div>
+    <nav class="nav" id="nav">
+      <div class="sec">总览</div>
+      <a data-v="dash" class="on"><i>▦</i>仪表盘</a>
+      <div class="sec">数据</div>
+      <a data-v="games"><i>▤</i>游戏库</a>
+      <a data-v="res"><i>◇</i>资源覆盖</a>
+      <div class="sec">运维</div>
+      <a data-v="log"><i>≡</i>操作日志</a>
+      <a data-v="set"><i>⚙</i>设置</a>
+    </nav>
+    <div class="side-foot">
+      <div>线上 <b id="fLive">—</b></div>
+      <div>备注 <b id="fNotes">0</b> 条</div>
+    </div>
+  </aside>
 
-<div class="topbar">
-  <h1>🎮 GameHub 管理后台<small>v10.87 · 游戏库管理</small></h1>
-  <div class="sp"></div>
-  <div class="token-box">
-    <span id="tokDot" class="token-dot" title="令牌状态"></span>
-    <input id="tokInput" type="password" placeholder="管理令牌（线上必填，本机免填）">
-    <button class="btn" onclick="saveToken()">保存</button>
+  <div class="main">
+    <header class="top">
+      <h2 id="vTitle">仪表盘</h2>
+      <span class="crumb" id="vCrumb">总览 / 数据健康</span>
+      <span class="sp"></span>
+      <div class="tk" title="线上管理写操作需要令牌；本机 8123/8124 直连免令牌">
+        <span class="tkdot" id="tkDot"></span>
+        <input id="tkInput" type="password" placeholder="管理令牌（线上需填）" autocomplete="off">
+        <button class="btn sm" onclick="saveToken()">保存</button>
+      </div>
+      <a class="btn sm" href="/" target="_blank" rel="noopener">打开主站 ↗</a>
+    </header>
+
+    <!-- ═══ 仪表盘 ═══ -->
+    <section class="view on" id="view-dash">
+      <div class="grid g6" id="stats"></div>
+      <div class="panel">
+        <div class="ph"><h3>库构成与冷门口径</h3><span class="sp"></span><span class="mut" id="dashBuilt">—</span></div>
+        <div class="pb">
+          <div class="bar"><div class="nm">可见（列表展示）</div><div class="track"><div class="fill" id="barVis"></div></div><div class="vv" id="vvVis">—</div></div>
+          <div class="bar"><div class="nm">冷门隐藏</div><div class="track"><div class="fill" id="barHide" style="background:linear-gradient(90deg,#fca5a5,#dc2626)"></div></div><div class="vv" id="vvHide">—</div></div>
+          <div class="bar"><div class="nm">热启动保护</div><div class="track"><div class="fill" id="barRecent" style="background:linear-gradient(90deg,#fcd34d,#d97706)"></div></div><div class="vv" id="vvRecent">—</div></div>
+          <div class="mut" style="margin-top:9px">口径：hot=0 且非近 90 天新游 · 现算不落名单 · 搜索与详情不受影响（可搜到、详情可达）</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><h3>数据源健康</h3><span class="sp"></span><span class="mut">来自各源 stats()</span></div>
+        <div class="pb" id="srcHealth"></div>
+      </div>
+    </section>
+
+    <!-- ═══ 游戏库 ═══ -->
+    <section class="view" id="view-games">
+      <div class="tools">
+        <input type="text" id="q" placeholder="搜索标题 / 别名 / id（回车搜索）">
+        <button class="btn pri" onclick="applySearch()">搜索</button>
+        <select id="fHide" onchange="reload()">
+          <option value="">全部状态</option>
+          <option value="0">仅可见</option>
+          <option value="1">仅隐藏</option>
+        </select>
+        <select id="fSrc" onchange="reload()">
+          <option value="">全部来源</option>
+          <option value="xd">XDGAME</option>
+          <option value="jidi">机地</option>
+        </select>
+        <select id="fSort" onchange="reload()">
+          <option value="updated">按更新时间</option>
+          <option value="hot">按热度</option>
+          <option value="score">按推荐分</option>
+          <option value="title">按标题</option>
+        </select>
+        <div class="chips">
+          <span class="chip" id="cNote" onclick="toggleNote()">⭐ 只看有备注</span>
+          <span class="chip" id="cCold" onclick="toggleCold()">🌙 显示冷门</span>
+        </div>
+        <span class="sp" style="flex:1"></span>
+        <button class="btn sm" onclick="reload()">刷新</button>
+      </div>
+      <div class="tblwrap">
+        <table>
+          <thead><tr>
+            <th style="width:44px"></th>
+            <th>游戏</th>
+            <th style="width:74px">来源</th>
+            <th style="width:64px">热度</th>
+            <th style="width:92px">更新</th>
+            <th style="width:96px">资源</th>
+            <th style="width:72px">状态</th>
+            <th style="width:124px">备注</th>
+            <th style="width:96px">操作</th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <div class="empty" id="rowsEmpty" style="display:none">没有符合条件的游戏</div>
+      </div>
+      <div class="pager">
+        <span id="pgInfo">—</span>
+        <span class="sp"></span>
+        <button class="btn sm" id="pgPrev" onclick="page(-1)">上一页</button>
+        <button class="btn sm" id="pgNext" onclick="page(1)">下一页</button>
+      </div>
+    </section>
+
+    <!-- ═══ 资源覆盖 ═══ -->
+    <section class="view" id="view-res">
+      <div class="panel">
+        <div class="ph"><h3>七路资源覆盖</h3><span class="sp"></span><span class="mut">命中 / 总量 · 匹配率</span></div>
+        <div class="pb" id="resBars"></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><h3>说明</h3></div>
+        <div class="pb mut" style="line-height:1.9">
+          · <b>MOD / 修改器 / 存档</b>：来自机地帖聚合层（resGroups），与卡面 chip 同源。<br>
+          · <b>FLiNG / TCS</b>：修改器直链源，FLiNG 走流代理、TCS 为外链。<br>
+          · <b>GTrainers</b>：第三方修改器站，直链可下。<br>
+          · <b>FitGirl</b>：Repack 本体档，匹配率受目录覆盖上限约束（长尾独立游戏常无 Repack）。<br>
+          · <b>Thunderstore</b>：社区 MOD，仅覆盖有对应社区的游戏。
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 日志 ═══ -->
+    <section class="view" id="view-log">
+      <div class="tools">
+        <button class="btn sm" onclick="loadLog()">刷新</button>
+        <span class="mut" id="logInfo">—</span>
+      </div>
+      <div class="panel"><div class="pb" id="logList"></div></div>
+    </section>
+
+    <!-- ═══ 设置 ═══ -->
+    <section class="view" id="view-set">
+      <div class="panel">
+        <div class="ph"><h3>管理鉴权</h3></div>
+        <div class="pb">
+          <div class="kv" style="line-height:2">
+            <div><i>本机</i>8123 / 8124 直连免令牌（回环 + 本地 Host + 无转发头 三条件同时成立）</div>
+            <div><i>线上</i>需在右上角填 <span class="code">X-Admin-Token</span>，存浏览器本地</div>
+            <div><i>令牌源</i>环境变量 <span class="code">GAMEHUB_ADMIN_TOKEN</span> &gt; <span class="code">data/admin-token.json</span>（不入库，随发布上线）</div>
+            <div><i>当前</i><span id="setTok">未填写</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><h3>数据边界（重要）</h3></div>
+        <div class="pb mut" style="line-height:1.95">
+          · 线上容器的 <span class="code">data/</span> 会在<b>每次发布</b>时被本地载荷覆盖 ⇒ 线上做的豁免与备注<b>不跨发布保留</b>。<br>
+          · 需要长期保留的管理动作，请在本地实例（8123/8124）做，再发布。<br>
+          · 备注存 <span class="code">data/game-notes.json</span>；豁免存 <span class="code">data/hide-overrides.json</span>（已 gitignore）。<br>
+          · 所有管理写操作都会追加到 <span class="code">data/admin-log.jsonl</span>（谁/何时/对哪条/回环还是令牌）。
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><h3>最近操作</h3><span class="sp"></span><a href="#" onclick="go('log');return false">查看全部 →</a></div>
+        <div class="pb" id="setLog"></div>
+      </div>
+    </section>
   </div>
-  <div class="lnk"><a href="/" target="_blank">首页</a><a href="/roster/" target="_blank">roster 看板</a></div>
 </div>
 
-<div class="stats" id="stats"></div>
-
-<div class="toolbar">
-  <input id="q" type="text" placeholder="搜索游戏名（回车或点按钮）…" onkeydown="if(event.key==='Enter')doSearch()">
-  <button onclick="doSearch()">搜索</button>
-  <button class="ghost" onclick="resetAll()">重置</button>
-  <select id="hiddenSel" onchange="reload()">
-    <option value="">全部隐藏态</option>
-    <option value="1">仅隐藏（最终态）</option>
-    <option value="0">仅可见</option>
-  </select>
-  <select id="sortSel" onchange="reload()">
-    <option value="updated">最新更新</option>
-    <option value="hot">热度最高</option>
-    <option value="score">评分最高</option>
-    <option value="size">容量最大</option>
-    <option value="title">名称排序</option>
-  </select>
-  <span class="chip" data-k="mod" onclick="tgChip(this)">📖 有MOD</span>
-  <span class="chip" data-k="tr" onclick="tgChip(this)">🛠 有修改器</span>
-  <span class="chip" data-k="sv" onclick="tgChip(this)">💾 有存档</span>
-</div>
-
-<div class="wrap">
-  <div class="pager">
-    <span id="pagerInfo">加载中…</span>
-    <span class="sp" style="flex:1"></span>
-    <button id="prevBtn" onclick="page(-1)" disabled>‹ 上一页</button>
-    <button id="nextBtn" onclick="page(1)" disabled>下一页 ›</button>
+<!-- ═══ 编辑弹窗 ═══ -->
+<div class="mask" id="mask" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="mh">
+      <img id="mCover" alt="">
+      <div style="min-width:0">
+        <h3 id="mTitle">—</h3>
+        <div class="meta" id="mMeta"></div>
+      </div>
+      <span class="sp"></span>
+      <button class="mclose" onclick="closeModal()">✕</button>
+    </div>
+    <div class="mb">
+      <div class="mcol">
+        <div class="fld">
+          <label>备注（管理标注，不影响抓取与搜索）</label>
+          <textarea id="mNote" placeholder="例如：等更新 / 封面错 / 已人工核对 / 别名待补"></textarea>
+          <div class="hint">最长 500 字 · 存 data/game-notes.json</div>
+        </div>
+        <div class="fld">
+          <label>列表状态</label>
+          <div class="seg" id="mSeg">
+            <button data-op="clear">跟随规则</button>
+            <button data-op="show">强制显示</button>
+            <button data-op="hide">强制隐藏</button>
+          </div>
+          <div class="hint" id="mSegHint">跟随规则 = 按冷门口径自动判定</div>
+        </div>
+        <div class="fld">
+          <label>记录信息</label>
+          <div class="kv" id="mInfo">—</div>
+        </div>
+      </div>
+      <div class="mcol">
+        <div id="mRes"><div class="mut">加载资源中…</div></div>
+      </div>
+    </div>
+    <div class="mf">
+      <span class="stat-line" id="mStat"></span>
+      <span class="sp"></span>
+      <button class="btn" onclick="closeModal()">关闭</button>
+      <button class="btn pri" onclick="saveAll()">保存</button>
+    </div>
   </div>
-  <table>
-    <thead><tr>
-      <th>游戏</th><th>来源</th><th class="opt-hide">热度</th><th class="opt-hide">更新</th>
-      <th class="opt-hide">容量</th><th>资源</th><th>状态</th><th>操作</th>
-    </tr></thead>
-    <tbody id="rows"><tr><td colspan="8" class="empty">加载中…</td></tr></tbody>
-  </table>
 </div>
-
-<div class="logsec">
-  <h2 id="logTitle" onclick="toggleLog()">簿 📜 管理操作日志（点开/收起）</h2>
-  <div id="logBody" style="display:none"></div>
-</div>
-
-<div class="mask" id="mask" onclick="closeDrawer()"></div>
-<div class="drawer" id="drawer">
-  <div class="dw-head">
-    <h2 id="dwTitle">—</h2>
-    <div class="meta" id="dwMeta"></div>
-  </div>
-  <div class="dw-body" id="dwBody"><div class="empty">加载中…</div></div>
-  <div class="dw-foot" id="dwFoot"></div>
-</div>
+<div class="toast" id="toast"></div>
 
 <script>
-'use strict';
-/* ═══ v10.87 管理后台（public/admin.html，独立页 —— 非主源派生页，pages-sync 不覆盖） ═══
- * 数据面：/api/admin/overview（统计）· /api/library/browse?cold=0&admin=1（列表，含隐藏态标注）
- *        /api/library?q=&admin=1（搜索，含隐藏态标注）· /api/admin/game（抽屉聚合）
- *        /api/admin/hide-overrides（读写豁免）· /api/admin/log（操作日志）
- * 鉴权：本机回环免令牌；线上写操作带 X-Admin-Token（localStorage 持久）。
- * ★ 铁律 154：行上的 hidden/cold 徽标是**服务端响应回填**（admin=1 参数），前端不猜。 */
-
-const LIMIT = 50;
-let offset = 0, total = 0, lastQ = '';
+/* ═══════════ 基础 ═══════════ */
 const $ = (id) => document.getElementById(id);
+const LIMIT = 50;
+let offset = 0, total = 0, cur = null, curItem = null, segOp = 'clear';
+let showCold = false, onlyNote = false;
+const VIEWS = { dash: ['仪表盘', '总览 / 数据健康'], games: ['游戏库', '数据 / 2 万条全量池'], res: ['资源覆盖', '数据 / 七路资源'], log: ['操作日志', '运维 / 留痕'], set: ['设置', '运维 / 配置与边界'] };
 
-/* ---------- 令牌 ---------- */
-function tok() { return localStorage.getItem('gh_admin_token') || ''; }
-function authHeaders() { const t = tok(); return t ? { 'X-Admin-Token': t } : {}; }
-function saveToken() {
-  localStorage.setItem('gh_admin_token', $('tokInput').value.trim());
-  paintTok(); reload(); loadLog(true);
-  $('tokInput').value = '';
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(window.__t); window.__t = setTimeout(() => t.classList.remove('on'), 2000);
 }
-function paintTok() { $('tokDot').className = 'token-dot ' + (tok() ? 'on' : 'off'); }
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function nf(n) { return n == null ? '—' : Number(n).toLocaleString('en-US'); }
+function ts2d(t) {
+  if (!t) return '—';
+  const d = new Date(Number(t) || t);
+  if (isNaN(d)) return '—';
+  return (d.getMonth() + 1) + '-' + String(d.getDate()).padStart(2, '0');
+}
+function ago(t) {
+  const n = Number(t) || 0; if (!n) return '—';
+  const diff = Date.now() - n;
+  if (diff < 0) return '刚刚';
+  const m = diff / 60000;
+  if (m < 60) return Math.max(1, Math.round(m)) + ' 分钟前';
+  const h = m / 60; if (h < 24) return Math.round(h) + ' 小时前';
+  const d = h / 24; if (d < 30) return Math.round(d) + ' 天前';
+  return Math.round(d / 30) + ' 个月前';
+}
 
-/* 请求封装：默认只发 X-Admin-Token 头（令牌不进 URL，不进访问日志）。
- * ★ 为什么还要降级重试：v10.87 线上实测反代环境不保证透传自定义头，
- *   头被剥时再走一次 —— GET 带 ?token=、POST 把 token 塞进 body（服务端三通道都认）。
- *   正常路径永远只发头，降级只在 403 时发生一次。 */
+/* ═══════════ 鉴权（头优先，403 降级一次） ═══════════ */
+function tok() { return localStorage.getItem('gh_admin_token') || ''; }
+function saveToken() {
+  const v = $('tkInput').value.trim();
+  if (v) localStorage.setItem('gh_admin_token', v); else localStorage.removeItem('gh_admin_token');
+  $('tkInput').value = ''; paintTok(); toast(v ? '令牌已保存' : '令牌已清除');
+  reload(); loadLog(); loadSetLog();
+}
+function paintTok() {
+  const on = !!tok();
+  $('tkDot').className = 'tkdot ' + (on ? 'on' : 'off');
+  $('setTok').textContent = on ? '已填写（' + tok().slice(0, 6) + '…）' : '未填写（本机直连无需）';
+}
 async function api(path, opt) {
   const t = tok();
   const send = async (fallback) => {
     const o = Object.assign({}, opt || {});
     const isGet = String(o.method || 'GET').toUpperCase() === 'GET';
     let url = path;
-    o.headers = Object.assign({ 'Content-Type': 'application/json' }, fallback ? {} : authHeaders());
+    o.headers = Object.assign({ 'Content-Type': 'application/json' }, (!fallback && t) ? { 'X-Admin-Token': t } : {});
     if (fallback && t) {
       if (isGet) url += (path.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(t);
       else if (o.body) { try { const b = JSON.parse(o.body); b.token = t; o.body = JSON.stringify(b); } catch (e) {} }
     }
     const r = await fetch(url, o);
-    const j = await r.json().catch(() => ({ ok: false, error: '响应解析失败' }));
+    const j = await r.json().catch(() => ({ ok: false, error: '响应解析失败（HTTP ' + r.status + '）' }));
     if (r.status === 403) { j.ok = false; j.needAuth = true; }
     return j;
   };
@@ -215,236 +440,278 @@ async function api(path, opt) {
   return j;
 }
 
-/* ---------- 统计卡 ---------- */
-function nf(n) { return (n == null ? '—' : Number(n).toLocaleString('en-US')); }
+/* ═══════════ 视图切换 ═══════════ */
+function go(v) {
+  const [t, c] = VIEWS[v] || VIEWS.dash;
+  $('vTitle').textContent = t; $('vCrumb').textContent = c;
+  document.querySelectorAll('.nav a').forEach((a) => a.classList.toggle('on', a.dataset.v === v));
+  document.querySelectorAll('.view').forEach((s) => s.classList.toggle('on', s.id === 'view-' + v));
+  if (location.hash.slice(1) !== v) history.replaceState(null, '', '#' + v);
+  if (v === 'dash') loadStats();
+  if (v === 'games') reload(true);
+  if (v === 'res') loadRes();
+  if (v === 'log') { loadLog(); loadSetLog(); }
+  if (v === 'set') { loadSetLog(); }
+}
+document.querySelectorAll('.nav a').forEach((a) => a.addEventListener('click', () => go(a.dataset.v)));
+
+/* ═══════════ 仪表盘 ═══════════ */
 async function loadStats() {
   const j = await api('/api/admin/overview');
-  if (!j.ok) { $('stats').innerHTML = '<div class="stat"><span>统计加载失败</span><b>—</b></div>'; return; }
+  if (!j.ok) { $('stats').innerHTML = '<div class="card stat"><span>统计加载失败</span><b>—</b></div>'; return; }
   const c = j.cold, l = j.lib;
   const cards = [
-    ['库内游戏总数', nf(c.total), ''],
-    ['可见（列表层）', nf(c.visible), 'ok'],
-    ['冷门隐藏', nf(c.hidden), 'dan'],
-    ['热启动保护', nf(c.recentHot0), 'warn'],
-    ['豁免 show/hide', c.overrideShow + ' / ' + c.overrideHide, 'pri'],
-    ['双源覆盖', nf(l.dual), ''],
-    ['MOD 条目', nf(j.mods.matched || j.mods.total), ''],
-    ['修改器', nf(j.trainers.matched || j.trainers.total), ''],
-    ['存档', nf(j.saves.matched || j.saves.total), ''],
-    ['GTrainers 条目', nf(j.gt.total), ''],
-    ['FitGirl 匹配游戏', nf(j.fitgirl.matchedGames), ''],
-    ['TS MOD 包', nf(j.tsmods.packages || j.tsmods.total), ''],
+    ['库内总数', nf(c.total), 'pri', '端游全量池'],
+    ['可见', nf(c.visible), 'ok', '列表实际展示'],
+    ['冷门隐藏', nf(c.hidden), 'dan', 'hot=0 且非新游'],
+    ['热启动保护', nf(c.recentHot0), 'warn', '近 90 天新游'],
+    ['豁免', nf((c.overrideShow || 0) + (c.overrideHide || 0)), '', '手改 ' + (c.overrideShow || 0) + ' 显 / ' + (c.overrideHide || 0) + ' 藏'],
+    ['备注', nf((j.notes || {}).count), '', '管理标注'],
+    ['双源覆盖', nf(l.dual), 'pri', '机地 ∩ XD'],
+    ['MOD', nf((j.mods || {}).matched), '', '匹配 ' + ((j.mods || {}).matchedRate || 0) + '%'],
+    ['修改器', nf((j.trainers || {}).matched), '', 'GT + FLiNG'],
+    ['存档', nf((j.saves || {}).matched), '', '游侠云存档'],
+    ['FitGirl', nf((j.fitgirl || {}).matchedGames), '', 'Repack 档'],
+    ['Thunderstore', nf((j.tsmods || {}).matched), '', '社区 MOD'],
   ];
-  $('stats').innerHTML = cards.map(([s, v, cls]) =>
-    '<div class="stat ' + cls + '"><span>' + s + '</span><b>' + v + '</b></div>').join('');
+  $('stats').innerHTML = cards.map((x) =>
+    '<div class="card stat ' + x[2] + '"><span>' + x[0] + '</span><b>' + x[1] + '</b><em>' + x[3] + '</em></div>').join('');
+  $('fNotes').textContent = nf((j.notes || {}).count);
+
+  const pct = (n) => Math.max(1, Math.min(100, (n / (c.total || 1)) * 100));
+  $('barVis').style.width = pct(c.visible) + '%'; $('vvVis').textContent = nf(c.visible);
+  $('barHide').style.width = pct(c.hidden) + '%'; $('vvHide').textContent = nf(c.hidden);
+  $('barRecent').style.width = pct(c.recentHot0) + '%'; $('vvRecent').textContent = nf(c.recentHot0);
+  $('dashBuilt').textContent = '总数 ' + nf(c.total) + ' · 规则 ' + (c.rule || '');
+
+  const health = [
+    ['机地帖 MOD', (j.mods || {}).matched, (j.mods || {}).total],
+    ['修改器', (j.trainers || {}).matched, (j.trainers || {}).total],
+    ['云存档', (j.saves || {}).matched, (j.saves || {}).total],
+    ['GTrainers', (j.gt || {}).matched, (j.gt || {}).total],
+    ['FitGirl', (j.fitgirl || {}).matchedGames, (j.fitgirl || {}).gamesTotal || (j.lib || {}).total],
+    ['Thunderstore', (j.tsmods || {}).matched, (j.tsmods || {}).total],
+  ];
+  $('srcHealth').innerHTML = health.map(([nm, m, t]) => {
+    const p = t ? Math.round((m / t) * 100) : 0;
+    return '<div class="bar"><div class="nm">' + esc(nm) + '</div><div class="track"><div class="fill" style="width:' + Math.max(1, p) + '%"></div></div><div class="vv">' + p + '% · ' + nf(m) + '/' + nf(t) + '</div></div>';
+  }).join('');
 }
 
-/* ---------- 列表 ---------- */
-function state() {
-  return {
-    q: lastQ,
-    hidden: $('hiddenSel').value,
-    sort: $('sortSel').value,
-    chips: [...document.querySelectorAll('.chip.on')].map((x) => x.dataset.k),
-  };
-}
-function tgChip(el) { el.classList.toggle('on'); reload(); }
-function resetAll() {
-  lastQ = ''; $('q').value = ''; $('hiddenSel').value = ''; $('sortSel').value = 'updated';
-  document.querySelectorAll('.chip.on').forEach((x) => x.classList.remove('on'));
-  offset = 0; reload();
-}
-function doSearch() { lastQ = $('q').value.trim(); offset = 0; reload(); }
-function page(d) { offset = Math.max(0, offset + d * LIMIT); reload(); window.scrollTo(0, 0); }
-
-function resChips(it) {
-  const r = it.res || it.resCounts;
-  if (!r) return '';
-  const mk = (n, label, icon) => n > 0 ? '<span class="rchip has">' + icon + ' ' + label + ' ' + n + '</span>' : '';
-  return mk(r.mod, 'MOD', '📖') + mk(r.trainers, '修改器', '🛠') + mk(r.saves, '存档', '💾')
-    + (it.res && it.res.fg ? '<span class="rchip has">🎯 ' + it.res.fg + '</span>' : '');
-}
-function stateBadge(it) {
-  if (it.override === 'show') return '<span class="badge b-show">豁免显示</span>';
-  if (it.override === 'hide') return '<span class="badge b-hide">豁免隐藏</span>';
-  if (it.hidden) return '<span class="badge b-hide">已隐藏</span>';
-  if (it.cold) return '<span class="badge b-cold">冷门(规则未藏)</span>';
-  return '<span class="badge b-show">正常</span>';
-}
-function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
-
-async function reload() {
-  const st = state();
-  $('rows').innerHTML = '<tr><td colspan="8" class="empty">加载中…</td></tr>';
-  let items = [], label = '';
-  if (st.q) {
-    const p = new URLSearchParams({ q: st.q, limit: LIMIT, admin: '1' });
-    st.chips.forEach((k) => p.set(k, '1'));
-    const j = await api('/api/library?' + p);
-    if (!j.ok) return loadFail(j);
-    items = j.items || []; total = j.count || items.length;
-    label = '搜索「' + esc(st.q) + '」命中 ' + nf(j.count) + '（本页 ' + items.length + '，搜索模式下筛选为页内效果）';
-    $('prevBtn').disabled = $('nextBtn').disabled = true;
-  } else {
-    const p = new URLSearchParams({
-      scope: 'pc', cold: '0', admin: '1', sort: st.sort,
-      limit: LIMIT, offset: String(offset),
-    });
-    if (st.hidden !== '') p.set('hidden', st.hidden);
-    st.chips.forEach((k) => p.set(k, '1'));
-    const j = await api('/api/library/browse?' + p);
-    if (!j.ok) return loadFail(j);
-    items = j.items || []; total = j.total || 0;
-    label = '共 ' + nf(total) + ' 条 · 第 ' + (offset + 1) + '–' + (offset + items.length) + ' 条';
-    $('prevBtn').disabled = offset <= 0;
-    $('nextBtn').disabled = offset + LIMIT >= total;
-  }
-  $('pagerInfo').innerHTML = label;
-  $('rows').innerHTML = items.length ? items.map(rowHtml).join('') : '<tr><td colspan="8" class="empty">无匹配条目</td></tr>';
-}
-function loadFail(j) {
-  $('rows').innerHTML = '<tr><td colspan="8" class="empty">' +
-    (j.needAuth ? '🔒 管理接口需要令牌 —— 顶栏填入令牌并保存（本机 8123/8124 免令牌）' : esc(j.error || '加载失败')) + '</td></tr>';
-}
-function rowHtml(it) {
-  const acts = [];
-  acts.push('<button class="btn pri" onclick="openDrawer(\'' + it.id + '\')">详情</button>');
-  if (it.hidden) acts.push('<button class="btn ok" onclick="setOv(\'' + it.id + '\',\'show\',this)">显示</button>');
-  else acts.push('<button class="btn dan" onclick="setOv(\'' + it.id + '\',\'hide\',this)">隐藏</button>');
-  if (it.override) acts.push('<button class="btn" onclick="setOv(\'' + it.id + '\',\'clear\',this)">清除豁免</button>');
-  return '<tr class="row">' +
-    '<td><div class="t-title" title="' + esc(it.title) + '">' + esc(it.title) + '<small>' + esc(it.id) + '</small></div></td>' +
-    '<td>' + esc(it.source || '') + '</td>' +
-    '<td class="opt-hide">' + nf(it.hot || 0) + '</td>' +
-    '<td class="opt-hide">' + esc(it.dateLabel || '') + '</td>' +
-    '<td class="opt-hide">' + esc(it.size || '') + '</td>' +
-    '<td>' + resChips(it) + '</td>' +
-    '<td>' + stateBadge(it) + '</td>' +
-    '<td style="white-space:nowrap">' + acts.join('') + '</td></tr>';
+/* ═══════════ 资源覆盖 ═══════════ */
+async function loadRes() {
+  const j = await api('/api/admin/overview');
+  if (!j.ok) { $('resBars').innerHTML = '<div class="mut">加载失败</div>'; return; }
+  const total = (j.lib || {}).total || 1;
+  const srcs = [
+    ['MOD（机地聚合）', (j.mods || {}).libGames || (j.mods || {}).matched, total],
+    ['修改器（GT + FLiNG）', (j.trainers || {}).libGames || (j.trainers || {}).matched, total],
+    ['云存档（游侠）', (j.saves || {}).libGames || (j.saves || {}).matched, total],
+    ['GTrainers 直链', (j.gt || {}).matched, total],
+    ['FitGirl Repack', (j.fitgirl || {}).matchedGames, total],
+    ['Thunderstore MOD', (j.tsmods || {}).matched, total],
+  ];
+  $('resBars').innerHTML = srcs.map(([nm, m, t]) => {
+    const p = Math.min(100, Math.round(((m || 0) / (t || 1)) * 100));
+    return '<div class="bar"><div class="nm">' + esc(nm) + '</div><div class="track"><div class="fill" style="width:' + Math.max(1, p) + '%"></div></div><div class="vv">' + nf(m) + ' · ' + p + '%</div></div>';
+  }).join('');
 }
 
-/* ---------- 豁免操作 ---------- */
-async function setOv(id, op, btn) {
-  if (btn) btn.disabled = true;
-  const j = await api('/api/admin/hide-overrides', { method: 'POST', body: JSON.stringify({ id, op }) });
-  if (btn) btn.disabled = false;
+/* ═══════════ 游戏库列表 ═══════════ */
+function qs() {
+  const p = new URLSearchParams();
+  p.set('scope', 'pc'); p.set('limit', LIMIT); p.set('offset', offset);
+  p.set('admin', '1'); p.set('sort', $('fSort').value || 'updated');
+  const q = $('q').value.trim(); if (q) p.set('q', q);
+  if (!showCold) p.set('cold', '0'); else p.set('cold', '0');
+  const h = $('fHide').value; if (h) p.set('hidden', h);
+  const s = $('fSrc').value; if (s) p.set('asrc', s);
+  if (onlyNote) p.set('note', '1');
+  return '/api/library/browse?' + p.toString();
+}
+
+async function reload(resetPage) {
+  if (resetPage) offset = 0;
+  const j = await api(qs());
   if (!j.ok) {
-    alert(j.needAuth ? '🔒 无权限：需要本机回环或正确令牌（线上请先在顶栏填令牌）\n' + (j.error || '')
-      : '操作失败：' + (j.error || ''));
+    $('rows').innerHTML = '';
+    $('rowsEmpty').style.display = 'block';
+    $('rowsEmpty').textContent = '加载失败：' + (j.error || ('HTTP ' + (j.needAuth ? '403' : '?')) ) + (j.needAuth ? '（线上需在右上角填令牌）' : '');
     return;
   }
-  reload(); loadStats(); if (drawerId === id) openDrawer(id, true);
+  total = j.total || 0;
+  const items = j.items || [];
+  $('rowsEmpty').style.display = items.length ? 'none' : 'block';
+  $('rowsEmpty').textContent = '没有符合条件的游戏';
+  $('rows').innerHTML = items.map((g, i) => {
+    const res = g.res || {};
+    /* res 的键名来自 resGroups.countsFor：mod / saves / trainers（trainers 是复数，别写成 trainer） */
+    const chips = [
+      res.mod ? '<span class="bdg b-jd" title="MOD">M' + res.mod + '</span>' : '',
+      res.trainers ? '<span class="bdg b-xd" title="修改器">T' + res.trainers + '</span>' : '',
+      res.saves ? '<span class="bdg b-vis" title="存档">S' + res.saves + '</span>' : '',
+    ].filter(Boolean).join(' ');
+    const srcBdg = /xd/i.test(g.source || '') ? '<span class="bdg b-xd">XD</span>' : '<span class="bdg b-jd">机地</span>';
+    const stBdg = g.hidden ? '<span class="bdg b-hide">隐藏</span>' : '<span class="bdg b-vis">可见</span>';
+    const coldBdg = g.cold ? ' <span class="bdg b-cold">冷门</span>' : '';
+    return '<tr class="row" data-i="' + i + '">'
+      + '<td>' + (g.cover ? '<img class="cv" loading="lazy" src="' + esc(g.cover) + '" alt="" onerror="this.style.visibility=\'hidden\'">' : '<div class="cv"></div>') + '</td>'
+      + '<td><div class="tt" title="' + esc(g.title) + '">' + esc(g.title || '—') + '<small>' + esc(g.id) + '</small></div></td>'
+      + '<td>' + srcBdg + '</td>'
+      + '<td class="mut">' + nf(g.hot) + '</td>'
+      + '<td class="mut">' + ago(g.updatedTs) + '</td>'
+      + '<td>' + (chips || '<span class="mut">—</span>') + '</td>'
+      + '<td>' + stBdg + coldBdg + '</td>'
+      + '<td>' + (g.note ? '<span class="bdg b-note" title="' + esc(g.note) + '">' + esc(g.note.slice(0, 8)) + (g.note.length > 8 ? '…' : '') + '</span>' : '<span class="mut">—</span>') + '</td>'
+      + '<td><button class="btn sm" onclick="openEdit(' + i + ',event)">编辑</button></td>'
+      + '</tr>';
+  }).join('');
+
+  document.querySelectorAll('#rows tr.row').forEach((tr) => {
+    tr.addEventListener('click', () => openEdit(+tr.dataset.i));
+  });
+  const from = total ? offset + 1 : 0, to = Math.min(offset + items.length, total);
+  $('pgInfo').textContent = '共 ' + nf(total) + ' 条 · 当前 ' + nf(from) + '–' + nf(to);
+  $('pgPrev').disabled = offset <= 0;
+  $('pgNext').disabled = offset + LIMIT >= total;
+  window.__items = items;
+}
+function page(d) { offset = Math.max(0, offset + d * LIMIT); reload(); }
+function applySearch() { offset = 0; reload(); }
+$('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') applySearch(); });
+function toggleNote() { onlyNote = !onlyNote; $('cNote').classList.toggle('on', onlyNote); offset = 0; reload(); }
+function toggleCold() { showCold = !showCold; $('cCold').classList.toggle('on', showCold); toast(showCold ? '冷门行已显示（筛选中标注）' : '冷门行仍全部列出，仅切换高亮'); }
+
+/* ═══════════ 编辑弹窗 ═══════════ */
+async function openEdit(i, ev) {
+  if (ev) ev.stopPropagation();
+  const g = (window.__items || [])[i];
+  if (!g) return;
+  curItem = g; segOp = 'clear';
+  $('mCover').src = g.cover || '';
+  $('mCover').style.visibility = g.cover ? 'visible' : 'hidden';
+  $('mTitle').textContent = g.title || '—';
+  $('mMeta').innerHTML = '<span class="code">' + esc(g.id) + '</span>'
+    + (/xd/i.test(g.source || '') ? '<span class="bdg b-xd">XDGAME</span>' : '<span class="bdg b-jd">机地</span>')
+    + '<span class="mut">更新 ' + ago(g.updatedTs) + '</span>';
+  $('mNote').value = g.note || '';
+  $('mInfo').innerHTML = '<div><i>标题</i><b>' + esc(g.title || '—') + '</b></div>'
+    + '<div><i>热度</i><b>' + nf(g.hot) + '</b> · <i style="min-width:auto">推荐分</i> <b>' + nf(g.score) + '</b></div>'
+    + '<div><i>容量</i><b>' + esc(g.size || '—') + '</b></div>'
+    + '<div><i>类型</i><b>' + esc((g.genres || []).join(' / ') || '—') + '</b></div>'
+    + '<div><i>别名</i><b>' + esc(((g.aliases || []).slice(0, 3).join(' / ')) || '—') + '</b></div>'
+    + '<div><i>列表态</i><b>' + (g.hidden ? '隐藏' : '可见') + '</b>' + (g.cold ? ' · 规则判为冷门' : '') + '</div>';
+  paintSeg();
+  $('mRes').innerHTML = '<div class="mut">加载资源中…</div>';
+  $('mStat').textContent = '';
+  $('mask').classList.add('on');
+
+  const j = await api('/api/admin/game?id=' + encodeURIComponent(g.id));
+  if (!j.ok) { $('mRes').innerHTML = '<div class="mut">资源加载失败：' + esc(j.error || '') + '</div>'; return; }
+  renderRes(j);
+  /* 用服务端真值回填状态（铁律 154：不猜） */
+  const st = j.state || {};
+  cur = j;
+  segOp = st.override || 'clear';
+  paintSeg();
+  if (st.note != null) $('mNote').value = st.note;
 }
 
-/* ---------- 详情抽屉 ---------- */
-let drawerId = null;
-async function openDrawer(id, silent) {
-  drawerId = id;
-  $('mask').classList.add('on'); $('drawer').classList.add('on');
-  if (!silent) { $('dwTitle').textContent = '加载中…'; $('dwBody').innerHTML = '<div class="empty">加载中…</div>'; $('dwFoot').innerHTML = ''; }
-  const j = await api('/api/admin/game?id=' + encodeURIComponent(id));
-  if (drawerId !== id) return;
-  if (!j.ok) { $('dwBody').innerHTML = '<div class="empty">' + esc(j.error || '加载失败') + '</div>'; return; }
-  const g = j.game, st = j.state;
-  $('dwTitle').textContent = g.title;
-  $('dwMeta').innerHTML = [esc(g.id), esc(g.source), '热度 ' + nf(g.hot), esc(g.dateLabel),
-    esc(g.size || ''), (g.genres || []).slice(0, 3).map(esc).join(' / ')].filter(Boolean).join(' · ');
+function paintSeg() {
+  document.querySelectorAll('#mSeg button').forEach((b) => b.classList.toggle('on', b.dataset.op === segOp));
+  $('mSegHint').textContent = segOp === 'clear' ? '跟随规则 = 按冷门口径自动判定'
+    : segOp === 'show' ? '强制显示：即使 hot=0 也出现在列表' : '强制隐藏：无论热度如何都不出现在列表';
+}
+document.querySelectorAll('#mSeg button').forEach((b) => b.addEventListener('click', () => { segOp = b.dataset.op; paintSeg(); }));
 
-  const badge = st.override === 'show' ? '<span class="badge b-show">豁免显示</span>'
-    : st.override === 'hide' ? '<span class="badge b-hide">豁免隐藏</span>'
-    : st.hidden ? '<span class="badge b-hide">已隐藏（冷门口径）</span>'
-    : st.cold ? '<span class="badge b-cold">冷门（规则命中）</span>' : '<span class="badge b-show">正常显示</span>';
-  const twinNote = st.resId && st.resId !== g.id
-    ? '<span style="color:var(--warn)">资源挂在孪生条目 ' + esc(st.resId) + '</span>' : '';
-
-  const sec = (title, items, renderItem, emptyTip) => {
-    const n = (items || []).length;
-    return '<div class="sec"><h3>' + title + '<span class="cnt">' + n + '</span>' +
-      (n ? '' : '<span class="none">' + (emptyTip || '本游戏暂无') + '</span>') + '</h3>' +
-      (items || []).map(renderItem).join('') + '</div>';
+function renderRes(j) {
+  const R = j.resources || {};
+  /* 资源条目字段口径（实测核对，不能凭猜）：
+   *   resGroups.slimItem → { title, page(原帖), links:[{label,url,cls}], date, ... }  ← 没有 url 字段
+   *   各直链源（fling/savesYx/gt/fitgirl/tsmods）→ 各自 slim，用 url || page || links[0].url 兜底取打开地址
+   *   ⇒ 统一走 pickUrl()，避免某一源缺 url 时整行变成死链。 */
+  const pickUrl = (x) => x.url || x.page || (x.link) || ((x.links && x.links[0] && x.links[0].url) || '') || '#';
+  const sec = (title, n, body) => n ? '<div class="rgrp"><h4>' + esc(title) + ' <em>' + n + '</em></h4>' + body + '</div>' : '';
+  const linkRow = (x, sub) => {
+    const lk = (x.links || []).map((l) => l.label).filter(Boolean).join(' / ');
+    return '<div class="ritem"><a href="' + esc(pickUrl(x)) + '" target="_blank" rel="noopener">' + esc(x.title || x.name || x.label || '打开') + '</a>'
+      + (sub || lk ? '<span>' + esc([sub, lk].filter(Boolean).join(' · ')) + '</span>' : '') + '</div>';
   };
-  const linkOf = (it) => {
-    if (it.links && it.links.length) return it.links.map((l) => '<a class="dl" target="_blank" href="' + esc(l.url) + '">' + esc(l.label || '下载') + '</a>').join('');
-    if (it.dl) return '<a class="dl" target="_blank" href="' + esc(it.dl.url) + '">' + esc(it.dl.kind || '下载') + '</a>';
-    if (it.page) return '<a class="dl" target="_blank" href="' + esc(it.page) + '">原贴</a>';
-    if (it.url) return '<a class="dl" target="_blank" href="' + esc(it.url) + '">打开</a>';
-    return '';
-  };
-  const rg = j.resources.resGroups;
-  const rgItem = (it) => '<div class="item"><div class="it-title">' + esc(it.title) + linkOf(it) + '</div>' +
-    '<div class="it-meta"><span>' + esc(it.srcLabel || it.src || '') + '</span>' +
-    (it.date ? '<span>' + esc(it.date) + '</span>' : '') +
-    (it.size ? '<span>' + esc(it.size) + '</span>' : '') +
-    (it.downloads ? '<span>' + nf(it.downloads) + ' 下载</span>' : '') + '</div></div>';
-  const plainItem = (it) => '<div class="item"><div class="it-title">' + esc(it.title || it.name || it.slug || '') + linkOf(it) + '</div>' +
-    '<div class="it-meta">' +
-    (it.zh ? '<span>' + esc(it.zh) + '</span>' : '') +
-    (it.version ? '<span>v' + esc(it.version) + '</span>' : '') +
-    (it.source ? '<span>' + esc(it.source) + '</span>' : '') +
-    (it.srcLabel ? '<span>' + esc(it.srcLabel) + '</span>' : '') +
-    (it.date ? '<span>' + esc(it.date) + '</span>' : '') +
-    (it.adult ? '<span style="color:var(--dan)">18+</span>' : '') + '</div></div>';
 
-  $('dwBody').innerHTML =
-    '<div class="state-line">' + badge + twinNote + '</div>' +
-    '<div class="kv">' +
-      '<div><div class="k">资源归属 resId</div><div class="v">' + esc(st.resId) + '</div></div>' +
-      '<div><div class="k">机地帖 MOD / 存档 / 修改器</div><div class="v">' + st.resCounts.mod + ' / ' + st.resCounts.saves + ' / ' + st.resCounts.trainers + '</div></div>' +
-      '<div><div class="k">评分</div><div class="v">' + (g.score || '—') + '</div></div>' +
-      '<div><div class="k">详情页</div><div class="v">' + (g.url ? '<a target="_blank" href="' + esc(g.url) + '">源站</a>' : '—') + (g.jidiUrl ? ' · <a target="_blank" href="' + esc(g.jidiUrl) + '">机地</a>' : '') + '</div></div>' +
-    '</div>' +
-    sec('📖 机地帖资源（MOD/存档/修改器 三分类明细）',
-      [].concat(rg.mod.map((x) => Object.assign({ _c: 'MOD' }, x)),
-                rg.saves.map((x) => Object.assign({ _c: '存档' }, x)),
-                rg.trainers.map((x) => Object.assign({ _c: '修改器' }, x))),
-      (it) => '<div class="item"><div class="it-title">[' + it._c + '] ' + esc(it.title) + linkOf(it) + '</div>' +
-        '<div class="it-meta"><span>' + esc(it.srcLabel || '') + '</span>' + (it.date ? '<span>' + esc(it.date) + '</span>' : '') + '</div></div>',
-      '机地帖无此游戏') +
-    sec('🛠 修改器（FLiNG 流代理 / TCS 外链）', j.resources.fling, plainItem, '无修改器直链') +
-    sec('💾 云存档（Ludusavi）', j.resources.savesYx, plainItem, '无云存档') +
-    sec('🗂 GTrainers（直链档）', j.resources.gt, plainItem, '') +
-    sec('🎯 FitGirl Repack（种子直链档）', j.resources.fitgirl,
-      (it) => '<div class="item"><div class="it-title">' + esc(it.title) + ' ' + (it.adult ? '<span class="badge b-hide">18+</span>' : '') +
-        '<a class="dl" target="_blank" href="' + esc(it.url) + '">原帖</a></div>' +
-        '<div class="it-meta"><span>' + esc(it.date || '') + '</span></div></div>',
-      '未匹配到 FitGirl 条目') +
-    sec('📦 Thunderstore MOD', j.resources.tsmods, plainItem, '无 TS 包');
-  $('dwFoot').innerHTML =
-    (st.hidden ? '<button class="btn ok" onclick="setOv(\'' + g.id + '\',\'show\')">✅ 强制显示</button>'
-               : '<button class="btn dan" onclick="setOv(\'' + g.id + '\',\'hide\')">🚫 强制隐藏</button>') +
-    (st.override ? '<button class="btn" onclick="setOv(\'' + g.id + '\',\'clear\')">清除豁免（回到规则）</button>' : '') +
-    '<span class="msg">操作写 data/hide-overrides.json 并留痕 admin-log.jsonl；线上数据在下次发布时重置，重要豁免请在本地执行后保留文件。</span>';
-}
-function closeDrawer() {
-  drawerId = null;
-  $('mask').classList.remove('on'); $('drawer').classList.remove('on');
+  let html = '';
+  /* 机地帖三分类 */
+  const rg = R.resGroups || {};
+  const mk = (arr, nm) => sec(nm, (arr || []).length, '<div class="rlist">' + (arr || []).map((x) => linkRow(x, x.date || '')).join('') + '</div>');
+  html += mk(rg.mod, '机地帖 · MOD');
+  html += mk(rg.saves, '机地帖 · 存档');
+  html += mk(rg.trainers, '机地帖 · 修改器');
+  /* 修改器直链 */
+  html += sec('FLiNG 修改器', (R.fling || []).length, '<div class="rlist">' + (R.fling || []).slice(0, 8).map((x) => '<div class="ritem"><a href="' + esc(pickUrl(x)) + '" target="_blank" rel="noopener">' + esc(x.title || x.name || 'FLiNG') + '</a>' + (x.dl ? '<span>直链</span>' : '') + '</div>').join('') + '</div>');
+  html += sec('云存档（游侠）', (R.savesYx || []).length, '<div class="rlist">' + (R.savesYx || []).slice(0, 8).map((x) => linkRow(x, x.date || '')).join('') + '</div>');
+  html += sec('GTrainers', (R.gt || []).length, '<div class="rlist">' + (R.gt || []).slice(0, 8).map((x) => linkRow(x, '')).join('') + '</div>');
+  html += sec('FitGirl Repack', (R.fitgirl || []).length, '<div class="rlist">' + (R.fitgirl || []).map((x) => '<div class="ritem"><a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.title || x.slug) + '</a>' + (x.adult ? '<span>18+</span>' : '') + '</div>').join('') + '</div>');
+  html += sec('Thunderstore', (R.tsmods || []).length, '<div class="rlist">' + (R.tsmods || []).slice(0, 8).map((x) => '<div class="ritem"><span>' + esc(x.name) + '</span><span>' + esc(x.version || '') + '</span></div>').join('') + '</div>');
+
+  $('mRes').innerHTML = html || '<div class="mut">该游戏暂无可展示的资源</div>';
+
+  /* 底部统计：资源合计 + FitGirl 下载源入口 */
+  const fg = (R.fitgirl || [])[0];
+  $('mStat').innerHTML = '资源合计 ' + nf(((rg.mod || []).length + (rg.saves || []).length + (rg.trainers || []).length
+    + (R.fling || []).length + (R.savesYx || []).length + (R.gt || []).length + (R.tsmods || []).length))
+    + (fg ? ' · <a href="/api/fitgirl/parts?slug=' + encodeURIComponent(fg.slug) + '" target="_blank">查看下载源 JSON ↗</a>' : '');
 }
 
-/* ---------- 操作日志 ---------- */
-let logOpen = false;
-async function loadLog(force) {
-  if (!logOpen && !force) return;
-  const j = await api('/api/admin/log?limit=50');
-  const body = $('logBody');
-  if (!j.ok) { body.innerHTML = '<div class="empty">' + (j.needAuth ? '🔒 需要令牌' : esc(j.error || '')) + '</div>'; return; }
-  body.innerHTML = (j.items.length
-    ? '<table><thead><tr><th>时间</th><th>游戏</th><th>id</th><th>操作</th><th>结果</th><th>来源</th></tr></thead><tbody>' +
-      j.items.map((x) => '<tr><td>' + new Date(x.ts).toLocaleString('zh-CN') + '</td><td>' + esc((x.title || '').slice(0, 30)) +
-        '</td><td>' + esc(x.id) + '</td><td>' + esc(x.op) + '</td><td>' + (x.hidden ? '隐藏' : '显示') + '</td><td>' + esc(x.via) + '</td></tr>').join('') +
-      '</tbody></table>'
-    : '<div class="empty">暂无操作记录（做一次隐藏/显示就有了）</div>') +
-    '<p style="font-size:12px;color:var(--sub);margin-top:6px">累计 ' + nf(j.total) + ' 条 · 展示最近 ' + j.items.length + ' 条</p>';
-}
-function toggleLog() {
-  logOpen = !logOpen;
-  $('logBody').style.display = logOpen ? '' : 'none';
-  if (logOpen) loadLog();
+function closeModal() { $('mask').classList.remove('on'); cur = null; curItem = null; }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+async function saveAll() {
+  if (!curItem) return;
+  const id = curItem.id;
+  const note = $('mNote').value.trim();
+  let changed = 0;
+  const r1 = await api('/api/admin/note', { method: 'POST', body: JSON.stringify({ id, note }) });
+  if (!r1.ok) { toast('备注保存失败：' + (r1.error || (r1.needAuth ? '需要令牌' : '未知'))); return; }
+  changed++;
+  const initOp = (cur && cur.state && cur.state.override) || 'clear';
+  if (segOp !== initOp) {
+    const r2 = await api('/api/admin/hide-overrides', { method: 'POST', body: JSON.stringify({ id, op: segOp }) });
+    if (!r2.ok) { toast('状态保存失败：' + (r2.error || '未知')); return; }
+    changed++;
+  }
+  toast('已保存' + (changed > 1 ? '（备注 + 状态）' : '（备注）'));
+  curItem.note = note;
+  reload();
+  loadStats();
+  closeModal();
 }
 
-/* ---------- 启动 ---------- */
+/* ═══════════ 日志 ═══════════ */
+async function loadLog() {
+  const j = await api('/api/admin/log?limit=100');
+  if (!j.ok) {
+    $('logList').innerHTML = '<div class="mut">读取失败：' + esc(j.error || '') + (j.needAuth ? '（线上需填令牌）' : '') + '</div>';
+    $('logInfo').textContent = '—';
+    return;
+  }
+  $('logInfo').textContent = '共 ' + nf(j.total) + ' 条 · 显示最近 ' + (j.items || []).length;
+  $('logList').innerHTML = (j.items || []).length ? (j.items || []).map((x) =>
+    '<div class="log-row"><div class="t">' + new Date(x.ts).toLocaleString('zh-CN', { hour12: false }) + '</div>'
+    + '<div>' + esc(x.title || '—') + ' <span class="code">' + esc(x.id || '') + '</span></div>'
+    + '<div><span class="bdg ' + (x.op === 'hide' ? 'b-hide' : x.op === 'clear' ? 'b-cold' : 'b-vis') + '">' + esc(x.op) + '</span></div>'
+    + '<div class="mut">' + esc(x.via || '—') + '</div></div>').join('')
+    : '<div class="empty">还没有管理操作记录</div>';
+}
+async function loadSetLog() {
+  const j = await api('/api/admin/log?limit=5');
+  $('setLog').innerHTML = j.ok && (j.items || []).length
+    ? j.items.map((x) => '<div class="log-row"><div class="t">' + new Date(x.ts).toLocaleString('zh-CN', { hour12: false }) + '</div><div>' + esc(x.title || x.id) + '</div><div><span class="code">' + esc(x.op) + '</span></div><div class="mut">' + esc(x.via || '') + '</div></div>').join('')
+    : '<div class="mut">无记录' + (j.needAuth ? '（需令牌）' : '') + '</div>';
+}
+
+/* ═══════════ 启动 ═══════════ */
 paintTok();
-loadStats();
-reload();
+go((location.hash || '#dash').slice(1));
+loadSetLog();
 </script>
 </body>
 </html>

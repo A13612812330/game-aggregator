@@ -859,6 +859,25 @@ python tools/clean-excel.py       # 读 E:/新建文件夹/基础测试数据.xl
 > 它们和 `docs/versions/v10.N.md` 是同一批内容的两次书写，并存只会各自漂移。
 > 需要旧摘要原本可走 `git show <sha>:README.md`，或本地归档 `_archived/README-v10.41-版本块全量.md`。
 
+### ★ v10.88 增量（2026-10-20）—— **FitGirl 下载源结构化**（三形态归并 · 一键复制）+ 管理后台改**真后台** + 备注编辑
+
+> **用户口径**：「先给我看看列表 / 优化后的下载源是怎么样的」「游戏管理页面像真正的后台以及编辑页面弹窗」。<br>
+> **下载源解析**（实测 14 帖 + 新老各 10 帖）：三站 `datanodes` / `fuckingfast` / `filekeeper` 是**同一套分卷的镜像**
+> （564 条里冗余 2/3）；链接多不是「历史版本累积」而是**多个产物组** ⇒ 按「host + 分卷前缀」聚簇后跨镜像归并成
+> `sets[]`（`main` 主包 / `variant` 另一版本如 UNCENSORED 72 卷 vs 原版 13 卷 / `optional` 的 `fg-optional-*` 附件）。
+> **形态分布 inline 60% / container 40%**（只抽新帖会得到 100% inline 的错误结论 —— 铁律 160）。<br>
+> **端点**：`data/fitgirl-parts.js` 纯函数解析器 + `GET /api/fitgirl/parts`（slug 白名单 · 24h 缓存 ·
+> **缓存带结构版本号** ⇒ 铁律 159 · `mode:inline|container|none`，只有 none 才 404）。<br>
+> **不做**：扒直链（fuckingfast 403+CF 挑战 / datanodes 302 多跳 / filecrypt JS 解密 —— 三条墙实测）、
+> 全量落库（十几万条会让 fitgirl.json 涨到几十 MB）⇒ 按需 + 缓存。<br>
+> **真后台**：`/admin` 重写 —— 左侧五视图（仪表盘/游戏库/资源覆盖/操作日志/设置）+ 12 张统计卡 + 数据源健康；
+> 游戏库 搜索/隐藏态/来源/排序/只看有备注 + 50 条分页；**编辑弹窗** = 左栏备注（500 字真存）+ 列表状态三选、
+> 右栏七路资源聚合、底部下载源入口。**备注** `data/game-notes.js` + `POST /api/admin/note`（adminGuard · 进操作日志 ·
+> 列表服务端回填）；筛选改**条件数组 every**（多条件不互相覆盖）。<br>
+> **防线**：test-v1088-admin **39/39**（新，登记 run-all）· 探针 parts **20/20** / admin **18/18** ·
+> test-v1087 32/32 · test-roster 87/87 · run-all 4374–4386（波动=联网类+jsdom 偶发，单跑全绿）。
+> 预览：`_preview/fg-parts.html`（7 个真实游戏，含两种形态）。详见 [docs/versions/v10.88.md](docs/versions/v10.88.md)。
+
 ### ★ v10.87 增量（2026-10-20）—— **游戏库详细管理后台 `/admin`**：线上管理鉴权 + 七路资源聚合抽屉 + 操作日志
 
 > **用户口径**：「要的，游戏管理也我需要一个很详细的页面进行管理」⇒ 放开线上管理写操作（加鉴权）+ 独立详细管理页。<br>
@@ -919,19 +938,7 @@ python tools/clean-excel.py       # 读 E:/新建文件夹/基础测试数据.xl
 > **用户口径**：「本体靠网盘吧，mod 接入直链下载，并且优化下」。逐项：
 > **① TS 扩量**：`--per 24→50` 重抓（备份 bak-20261016）——254 社区匹配 252 游戏，包数 **2,870 → 4,331（+51%）**，热门社区普遍顶到 40（`--pages 2`×20 ⇒ 候选池 40，per=50 实际封顶 40/社区 ⇒ **铁律 152**；要真 50 需 `--pages 3`）。直链形态不变（官方 download 口 302 → 自家 CDN，无防盗链）。**② Modrinth 撤下**：不支持按游戏过滤（games facet 全 0），只能名称搜索；无护栏首抓 58 游戏/241 包人工核验**全是 MC 模组**（query=raft 第一名是描述含 lava rafts 的 MC 模组）；双护栏（名字命中+MC loader 剔除）重抓 **252 游戏全 0 命中** ⇒ server/前端/data 全回滚，探针存档 `tools/fetch-modrinth.js` + test-v1083 防回归断言（**铁律 151**）。**③ 本体网盘**维持跳转（绕登录/存 Cookie 两路均实测排除：夸克 2024-03 起签名 AES 化 + 游客大小上限 + 单 IP 风控熔断；存 Cookie 则直链绑服务端 IP ⇒ 全量流中转带宽不可行）。**④ 本地可下载清单现测**：直链合计约 **10,044 条**（TS 4,331 + FLiNG 1,726 + 游侠存档 1,987 + GT direct 2,000）。防线：test-v1083 **14/14**（新，登记 run-all）· test-v1081 27/27 · pages-sync 58/58 · twin 69/69 · card-parity 69/69 · server 语法闸 + 8124 重启实测。详见 [docs/versions/v10.83.md](docs/versions/v10.83.md)。
 
-### ★ v10.82 增量（2026-10-16）—— 修复：解包匹配 / 解压助手页「🏠 首页」点了无效
-
-> **用户口径**：「发现个bug，在解包匹配和解压助手点击首页都无效」。
-
-- **根因**：`build-unpack-page.js` / `build-extract-page.js` 漏了 `body[data-page]` 标记 ⇒
-  首页脚本 `IS_SUB_PAGE=false` ⇒ 顶栏 `#navHome` 被 `preventDefault` 拦成「回顶部」
-  （v10.71 拆新页时漏带；emulator / resources 老页带标记一直正常；底部 Tab 无拦截不受影响）。
-- **改法**（全在构建源头，主源 / server / data 未动）：两个 builder 补 `data-page` + 重建两页；
-  pages-sync 新增回归断言（五张派生页逐一要求 body 带 `data-page`，54→58 条）。⇒ 铁律 150。
-- **验证**：pages-sync **58/58** · twin 69/69 · card-parity 69/69 · extract-page 24/24 ·
-  **真浏览器探针 6/6**（真点 `#navHome`：两子页跳回 `/`；首页回顶部语义反证未破坏）。
-
-详见 [v10.82](docs/versions/v10.82.md)。
+### ★ v10.82 块的摘要按「只留最近 6 版」规范移出（v10.88 加新版、去掉 v10.82）
 
 ### ★ v10.81 块的摘要按「只留最近 6 版」规范移出（v10.87 加新版、去掉 v10.81）
 
