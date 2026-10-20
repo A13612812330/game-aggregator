@@ -78,9 +78,12 @@ ok('C1 dlUniFetchFg 定义且与 dlUniFetchBody 并行（Promise.all）',
   && /Promise\.all\(\[\s*dlUniFetchBody\(st\.ctx\),\s*dlUniFetchFg\(st\.ctx\)\.catch/.test(HTML));
 ok('C2 body 页签渲染后追加 FitGirl 段（dlUniPaintFg）',
   /dlUniPaintBody\(d\);\s*dlUniPaintFg\(st\.data\.fg\);/.test(HTML));
-ok('C3 外链按钮 + 复制磁力 + 18+ 角标三件套',
-  HTML.includes('data-fg-magnet=') && HTML.includes('打开 Repack 页')
-  && /18\+/.test(HTML));
+/* ★ v10.92 契约变更：行内从「↗ 打开 Repack 页 / ⧉ 复制磁力 / ▸ 分卷清单」三链接
+ *   改成「⬇ 直链下载 / ⧉ 磁力链」两个按钮 + 一个 `↗ 原站` 小字链接
+ *   （用户口径：只显示直链下载 + 磁力链下载按钮）。原站不能删：帖子里还有安装说明与截图。 */
+ok('C3 两个下载按钮 + 原站小链接 + 18+ 角标',
+  HTML.includes('data-fg-dl=') && HTML.includes('data-fg-magnet=')
+  && HTML.includes('class="fgorg"') && /18\+/.test(HTML));
 ok('C4 剪贴板失败有手动复制兜底（不静默失效）',
   /navigator\.clipboard\.writeText/.test(HTML) && /window\.prompt\('自动复制不可用/.test(HTML));
 ok('C5 成人条目详情页照样显示（18+ 角标，不隐藏 —— 用户口径）',

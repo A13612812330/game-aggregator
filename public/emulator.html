@@ -2228,6 +2228,63 @@
   .fgp .warn{font-size:11px;color:#B45309;margin-top:6px;line-height:1.7}
   .fgp .ctn{font-size:11.5px;color:var(--c-t2);line-height:1.85}
   .fgp .ctn a{font-weight:750;color:var(--c-primary);margin-right:8px}
+  /* ==== v10.92 FitGirl 源整理：只留「直链下载 / 磁力链」两个按钮 + 一个直链弹窗 ====
+     【用户口径】「将 FitGirl 的源整理成只显示直链下载 + 磁力链下载按钮」。
+     【为什么按钮叫「直链下载」但实际是打开镜像页】三站实测全是落地页：
+       datanodes.to / filekeeper.net 302 → /download，fuckingfast.co 是 Cloudflare
+       「Just a moment...」挑战页 —— 没有可被服务端代下的文件直链（实测见
+       docs/ONLINE-DOWNLOAD-PLAN.md 三·1）。按钮文案只承诺「把你带到能下这个文件的地方」，
+       不写「服务器替你下完」这种做不到的话。
+     【为什么弹窗而不是行内展开】一个 repack 最多 48 卷（Arma 3 实测），行内铺开会把
+       「下载与资源」弹窗顶成几千像素；而且镜像切换需要一块稳定容器。
+     【为什么复用 .dlpop 外壳】沿用既有弹窗视觉，不新造一套（项目铁律：沿用设计）。
+       只把 z-index 抬到 120 —— 它必须压在 .dlpop(110) 之上，否则从「下载与资源」里
+       点出来的直链弹窗会被整个盖住，而「元素存在、可点」全都还成立（那类假绿最难发现）。 */
+  .fgbtns{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:7px}
+  .fgbtn{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:750;line-height:1.5;
+    padding:5px 11px;border-radius:8px;border:1px solid var(--c-border);background:#fff;color:var(--c-t2);
+    text-decoration:none;cursor:pointer;font-family:inherit;transition:filter .15s,background .15s,color .15s}
+  .fgbtn.dl{color:#fff;border-color:transparent;background:linear-gradient(135deg,#0F766E,#14B8A6)}
+  .fgbtn.dl:hover{filter:brightness(1.07)}
+  .fgbtn.mg{color:var(--c-primary);background:var(--c-primary-soft);border-color:#C9DCFF}
+  .fgbtn.mg:hover{background:var(--c-primary);color:#fff}
+  .fgorg{font-size:10.5px;color:var(--c-t3);text-decoration:none;margin-left:3px}
+  .fgorg:hover{color:var(--c-primary);text-decoration:underline}
+  #fgDl{z-index:120}
+  #fgDl .dlpop-box{max-height:min(84vh,820px)}
+  .fgdl-hint{font-size:11.5px;line-height:1.8;color:var(--c-t2);background:#F7F9FC;
+    border:1px solid var(--c-border);border-radius:9px;padding:8px 11px;margin-bottom:11px}
+  .fgdl-hint b{color:var(--c-t1)}
+  .fgdl-set{border-top:1px dashed #DCE6FB;padding:10px 0}
+  .fgdl-set:first-of-type{border-top:0;padding-top:0}
+  .fgdl-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .fgdl-row .k{flex:none;font:800 10px/1.6 var(--font-num);padding:1px 6px;border-radius:5px;background:#E8EFFD;color:#2F6FED}
+  .fgdl-row .k.v{background:#FDECEC;color:#B4232A}
+  .fgdl-row .k.o{background:#EEF2F7;color:#475569}
+  .fgdl-row .n{font-size:12.5px;font-weight:700;color:var(--c-t1);min-width:0;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap;max-width:320px}
+  .fgdl-row .q{font-size:11px;color:var(--c-t3);font-family:var(--font-num)}
+  .fgdl-row .sp{flex:1 1 auto}
+  .fgdl-mir{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px}
+  .fgdl-mir button{font-size:10.5px;padding:3px 9px;border:1px solid var(--c-border);border-radius:6px;
+    background:#fff;cursor:pointer;color:var(--c-t2);font-family:var(--font-num)}
+  .fgdl-mir button.on{background:var(--c-primary);border-color:var(--c-primary);color:#fff;font-weight:700}
+  .fgdl-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+  .fgdl-acts button{font-size:10.5px;font-weight:750;color:var(--c-primary);background:var(--c-primary-soft);
+    border:1px solid #C9DCFF;border-radius:6px;padding:3px 9px;cursor:pointer;font-family:inherit}
+  .fgdl-acts button:hover{background:var(--c-primary);color:#fff}
+  .fgdl-acts button.on{background:var(--c-primary);color:#fff;border-color:var(--c-primary)}
+  .fgdl-list{margin-top:8px;max-height:290px;overflow:auto;border:1px solid var(--c-border);
+    border-radius:9px;background:#FCFDFF}
+  .fgdl-list[hidden]{display:none}
+  .fgdl-p{display:flex;align-items:center;gap:8px;padding:6px 10px;border-top:1px dashed var(--c-border)}
+  .fgdl-p:first-child{border-top:0}
+  .fgdl-p .no{flex:none;font:800 10px/1.6 var(--font-num);color:var(--c-t3);min-width:26px}
+  .fgdl-p .fn{flex:1 1 auto;min-width:0;font-size:11.5px;color:var(--c-t1);word-break:break-all;line-height:1.6}
+  .fgdl-p .op{flex:none;font-size:10.5px;font-weight:750;color:var(--c-primary);text-decoration:none;
+    border:1px solid #C9DCFF;border-radius:6px;padding:2px 8px;background:#fff}
+  .fgdl-p .op:hover{background:var(--c-primary);color:#fff}
+  .fgdl-empty{font-size:11.5px;line-height:1.8;color:var(--c-t3);padding:10px 2px}
   .dlpop .emu-loading{padding:22px 4px;text-align:center;font-size:12.5px;color:var(--c-t2)}
   .dlpop .emu-empty{padding:20px 4px;text-align:center;font-size:12.5px;line-height:1.8;color:var(--c-t3)}
   .dl-note+.dl-sv-list{margin-top:9px}
@@ -2939,6 +2996,26 @@
     <div class="dlmod" id="dlModTabs" hidden></div>
     <div class="dlpop-b" id="dlBody"></div>
     <div class="dlpop-f" id="dlFoot"></div>
+  </div>
+</div>
+
+<!-- ===== ⬇ FitGirl 直链下载弹窗（v10.92）=====
+     点「直链下载」才出现：镜像切换 + 该组全部分卷（逐条打开 / 复制全部）。
+     ★ 为什么必须放在这一段（#mask 之后、.tabbar 之前）：这正是 tools/page-assets.js
+       抽取的 OVERLAY —— /emulator /unpack /resources /extract 四张派生页会自动带上
+       同一个弹窗，不需要在派生页单独改（项目铁律：只改主源）。
+     ★ 外壳复用 .dlpop（.dlpop-bg / -box / -h / -b / -f），只靠 #fgDl 把 z-index 抬到 120：
+       它从「下载与资源」弹窗里点开，层级低于 110 会被整个盖住。 -->
+<div class="dlpop" id="fgDl" hidden>
+  <div class="dlpop-bg" data-fgdl="close"></div>
+  <div class="dlpop-box" role="dialog" aria-modal="true" aria-label="FitGirl 直链下载">
+    <div class="dlpop-h">
+      <span class="ic">⬇</span>
+      <div class="tx"><b id="fgDlTitle">FitGirl 直链下载</b><span id="fgDlSub"></span></div>
+      <button class="dlpop-x" type="button" data-fgdl="close" aria-label="关闭">✕</button>
+    </div>
+    <div class="dlpop-b" id="fgDlBody"></div>
+    <div class="dlpop-f" id="fgDlFoot"></div>
   </div>
 </div>
 
@@ -3750,7 +3827,8 @@ function bindRankUI() {
   $('#rankPills').addEventListener('click', (e) => {
     const b = e.target.closest('.stage-pill'); if (!b || b.dataset.p === rankPeriod) return;
     rankPeriod = b.dataset.p;
-    $$('#rankPills .stage-pill').forEach(x => x.classList.toggle('on', x === b));  /* refreshRank：独立页无热榜分区，跳过 */
+    $$('#rankPills .stage-pill').forEach(x => x.classList.toggle('on', x === b));
+  /* refreshRank：独立页无热榜分区，跳过 */
   });
   $('#rankRefresh').addEventListener('click', () => { toast('正在刷新榜单…'); refreshRank(true); });
 }
@@ -7265,19 +7343,23 @@ function dlUniPaintFg(fg) {
     return '<div class="df-row"><span class="ix">·</span><span class="bd">'
       + '<span class="t"><span class="tagx">FitGirl</span>' + ad + esc(it.title || it.slug) + '</span>'
       + '<span class="m">' + esc(String(it.date || '').slice(0, 10)) + '</span>'
-      + '<span class="dl-res-lk">'
-      + '<a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">↗ 打开 Repack 页</a>'
-      + '<a href="#" data-fg-magnet="' + esc(it.slug) + '">⧉ 复制磁力</a>'
-      /* ★ v10.89：分卷清单按需展开（点开才拉 /api/fitgirl/parts）——
-         不铺在首屏：磁力是主路径，分卷是「非 BT 下载 / 只想下某几个分卷」时的备选。 */
-      + '<a href="#" data-fg-parts="' + esc(it.slug) + '">▸ 分卷清单</a>'
+      /* ★ v10.92：只留两个按钮 —— 「⬇ 直链下载」打开镜像/分卷弹窗，「⧉ 磁力链」复制磁力。
+         「↗ 原站」降级成小字：帖子里还有安装说明、截图、语言包说明，不能删；
+         但它不是下载动作，不该和两个下载按钮抢视觉权重。
+         ★ 为什么直链按钮不是服务端代下：三站实测全是落地页（302 /download 或
+           Cloudflare 挑战页），没有可代下的文件直链 —— 见 docs/ONLINE-DOWNLOAD-PLAN.md。 */
+      + '<span class="fgbtns">'
+      + '<button type="button" class="fgbtn dl" data-fg-dl="' + esc(it.slug) + '"'
+      + ' data-fg-title="' + esc(it.title || it.slug) + '">⬇ 直链下载</button>'
+      + '<button type="button" class="fgbtn mg" data-fg-magnet="' + esc(it.slug) + '">⧉ 磁力链</button>'
+      + '<a class="fgorg" href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">↗ 原站</a>'
       + '</span></span></div>';
   }).join('');
   const sec = document.createElement('div');
   sec.className = 'dl-gcm';
   sec.innerHTML = '<div class="dl-note"><b>FitGirl Repack</b> 命中 <b>' + fg.items.length +
-    '</b> 个资源包 · BT 种子含全部内容，可在客户端里勾选需要的文件（Selective Download）'
-    + ' · 用 qBittorrent / 迅雷等任意 BT 客户端下载</div>' + rows;
+    '</b> 个资源包 · 磁力链含全部内容，可按文件挑着下（Selective Download）；'
+    + '直链走镜像站的网页下载页</div>' + rows;
   body.appendChild(sec);
 }
 
@@ -7309,56 +7391,123 @@ document.addEventListener('click', async (e) => {
   setTimeout(() => { a.textContent = old; }, 2500);
 });
 
-/* ★ v10.89 FitGirl 分卷清单：行内展开 + 按镜站「复制全部」
- * 【为什么按需】一次全量不可行 —— 库里 5,813 个 repack、平均几十卷，等于十几万条 URL；
- *   服务端 `/api/fitgirl/parts` 单篇解析 + 24h 缓存，只有用户真点开才付这个成本。
- * 【为什么分组】主包 / 变体 / 可选附件（见 .fgp 样式注释），平铺会让人把变体分卷混进主包。
- * 【为什么只给一个镜站】三站是同一套分卷的镜像，复制一份就够；换站不重开、不重拉接口。
- * ★ 失败必须说清是哪一种：`mode=none`（这篇没下载区）/ 404（不在白名单）/ 网络 ——
- *   三种都见过，统一写「加载失败」等于把「本来就没有」误报成「坏了」。 */
-const FG_PARTS = Object.create(null);   /* slug → 接口原始回包（切站/重开不重复请求） */
+/* ★ v10.92 FitGirl 直链下载弹窗
+ *
+ * 【用户口径】「将 FitGirl 的源整理成只显示直链下载 + 磁力链下载按钮」。
+ * 【为什么从「行内展开」改成「弹窗」】Arma 3 实测主包 48 卷，行内插一块清单会把
+ *   「下载与资源」弹窗顶到几千像素，而且插在列表中间会让滚动位置乱跳。
+ * 【为什么按需拉 /api/fitgirl/parts】库里 5,813 个 repack、平均几十卷 = 十几万条 URL，
+ *   全量进页面不可行；服务端单篇解析 + 24h 缓存，只有真点开才付这个成本。
+ * 【为什么按组 + 按镜像】三站是同一套分卷的镜像（实测 564 条里 2/3 是重复），
+ *   所以一次只显示一个镜像；主包 / 变体 / 可选附件必须分组，平铺会让用户把变体混进主包。
+ * ★ 失败必须说清是哪一种：404（不在白名单）/ mode=none（这篇没下载区）/ 网络 ——
+ *   统一写「加载失败」等于把「本来就没有」误报成「坏了」。
+ * ★ 弹窗层级：它从「下载与资源」(.dlpop, z-index 110) 里点开，必须压在上面，
+ *   否则会被整个盖住，而「元素存在、可点」全都还成立（最难发现的那类假绿）。
+ */
+const FG_PARTS = Object.create(null);   /* slug → 接口原始回包（换镜像/重开不重复请求） */
 
-function fgPartsHtml(j) {
-  const sets = j.sets || [];
-  const warn = (j.warnings || []).length
-    ? '<div class="warn">⚠ ' + esc(j.warnings.join('；')) + '</div>' : '';
-  const head = '<div class="h"><b>分卷清单</b><span class="mut">'
-    + (j.mode === 'container'
-      ? '镜像清单页形态'
-      : (sets.length + ' 组 · 主包 ' + ((j.stats || {}).mainParts || 0) + ' 卷（单站口径）'))
-    + ' · ' + (j.cached ? '缓存' : '现抓') + '</span></div>';
-  if (j.mode === 'container') {
-    const cs = (j.containers || []).map((c) =>
-      '<a href="' + esc(c.url) + '" target="_blank" rel="noopener noreferrer">↗ ' + esc(c.host) + '</a>').join('');
-    return '<div class="fgp">' + head + '<div class="ctn">这篇 repack 没有在页面直列分卷，只给了镜像清单页'
-      + '（JDownloader / Mipony 能直接吃整份清单）：<br>' + (cs || '（未识别到清单页，请走上方磁力）')
-      + '</div>' + warn + '</div>';
-  }
-  const rows = sets.map((s, si) => {
-    const hosts = s.hosts || [];
-    const btns = hosts.map((h, i) => '<button type="button" data-h="' + esc(h) + '"'
-      + ' class="' + (i === 0 ? 'on' : '') + '">' + esc(h.replace(/\.(to|co|net)$/i, '')) + '</button>').join('');
-    const k = s.kind === 'main' ? '主包' : (s.kind === 'variant' ? '变体' : '可选');
-    const kcls = s.kind === 'main' ? '' : (s.kind === 'variant' ? 'v' : 'o');
-    return '<div class="set" data-s="' + si + '" data-h="' + esc(hosts[0] || '') + '">'
-      + '<div class="r1"><span class="k ' + kcls + '">' + k + '</span>'
-      + '<span class="n" title="' + esc(s.label || s.prefix || '') + '">' + esc(s.label || s.prefix || '分卷组') + '</span>'
-      + '<span class="q">' + s.parts + ' 卷</span>'
-      + (hosts.length > 1 ? '<span class="hst">' + btns + '</span>' : '<span class="q">' + esc(hosts[0] || '—') + '</span>')
-      + '<span class="cp" data-cp="' + si + '">⧉ 复制全部 ' + s.parts + ' 条</span>'
-      + '</div></div>';
-  }).join('');
-  return '<div class="fgp">' + head + rows + warn + '</div>';
+/* 一次只看一篇。host[si]=当前镜像；open[si]=该组分卷列表是否展开。换 slug 即重置 —— 
+   否则「上一篇展开过 48 卷、下一篇也全铺」的串台。 */
+const FGD = { slug: '', title: '', data: null, host: {}, open: {} };
+
+function fgDlCurHost(si) {
+  const s = (((FGD.data || {}).sets) || [])[si] || {};
+  const hs = s.hosts || [];
+  const cur = FGD.host[si];
+  return hs.indexOf(cur) >= 0 ? cur : (hs[0] || '');
 }
 
-async function fgToggleParts(a) {
-  const slug = a.dataset.fgParts;
-  const row = a.closest('.df-row');
-  if (!row) return;
-  const nxt = row.nextElementSibling;
-  if (nxt && nxt.classList.contains('fgp')) { nxt.remove(); a.textContent = '▸ 分卷清单'; return; }
-  const old = a.textContent;
-  a.textContent = '… 解析中';
+function fgDlUrls(si) {
+  const s = (((FGD.data || {}).sets) || [])[si] || {};
+  const h = fgDlCurHost(si);
+  return (((s.byHost || {})[h]) || []).map((x) => x.url);
+}
+
+function fgDlSetHtml(si, s) {
+  const hs = s.hosts || [];
+  const cur = fgDlCurHost(si);
+  const k = s.kind === 'main' ? '主包' : (s.kind === 'variant' ? '变体' : '可选');
+  const kcls = s.kind === 'main' ? '' : (s.kind === 'variant' ? 'v' : 'o');
+  const mir = hs.length > 1
+    ? '<div class="fgdl-mir">' + hs.map((h) => '<button type="button" data-fgmir="' + si + '"'
+      + ' data-h="' + esc(h) + '" class="' + (h === cur ? 'on' : '') + '">' + esc(h) + '</button>').join('') + '</div>'
+    : '<div class="fgdl-mir"><button type="button" class="on" disabled>' + esc(hs[0] || '—') + '</button></div>';
+  const list = (((s.byHost || {})[cur]) || []);
+  const open = !!FGD.open[si];
+  const items = list.map((x, n) => '<div class="fgdl-p"><span class="no">#' + (x.part || (n + 1)) + '</span>'
+    + '<span class="fn">' + esc(x.name || x.url) + '</span>'
+    + '<a class="op" href="' + esc(x.url) + '" target="_blank" rel="noopener noreferrer">打开 ↗</a></div>').join('');
+  return '<div class="fgdl-set">'
+    + '<div class="fgdl-row"><span class="k ' + kcls + '">' + k + '</span>'
+    + '<span class="n" title="' + esc(s.label || s.prefix || '') + '">' + esc(s.label || s.prefix || '分卷组') + '</span>'
+    + '<span class="q">' + (s.parts || list.length) + ' 卷</span><span class="sp"></span></div>'
+    + mir
+    + '<div class="fgdl-acts">'
+    + '<button type="button" data-fgcopy="' + si + '">⧉ 复制全部 ' + list.length + ' 条</button>'
+    + '<button type="button" data-fglist="' + si + '" class="' + (open ? 'on' : '') + '">'
+    + (open ? '▴ 收起分卷' : '▾ 展开分卷') + '</button>'
+    + '</div>'
+    + '<div class="fgdl-list"' + (open ? '' : ' hidden') + '>'
+    + (items || '<div class="fgdl-empty">该镜像没有可用链接</div>')
+    + '</div></div>';
+}
+
+/* ★ 纯函数：回包 → 正文 HTML。
+ * 单独拆出来不是为了好看：`test-v1089-fg-parts-ui` 靠 `new Function` 抽纯函数直接验
+ * 「给定回包 ⇒ 生成什么」，不启浏览器也能守住三类形态（inline / container / 退化输入）。
+ * 渲染与取数一旦混在一个碰 DOM 的函数里，这条防线就只能退化成「源码里有没有这行字」。 */
+function fgDlBodyHtml(j) {
+  const sets = (j && j.sets) || [];
+  const warn = (j && (j.warnings || []).length)
+    ? '<div class="fgdl-hint" style="margin-top:10px">⚠ ' + esc(j.warnings.join('；')) + '</div>'
+    : '';
+  let html = '<div class="fgdl-hint">三个镜像站是<b>同一套文件</b>的镜像，挑一个就行。'
+    + '这里给的是镜像站的文件页地址，<b>实际下载在镜像站网页里完成</b>（不是本站代下）。</div>';
+  if (j && j.mode === 'container') {
+    const cs = (j.containers || []).map((c) => '<a class="op" href="' + esc(c.url) + '"'
+      + ' target="_blank" rel="noopener noreferrer">↗ ' + esc(c.host) + '</a>').join(' ');
+    return html + '<div class="fgdl-empty">这篇 repack 没有在页面直列分卷，只给了镜像清单页：<br>'
+      + (cs || '（未识别到清单页，请走磁力链）') + '</div>' + warn;
+  }
+  /* ★ 空 sets 也要带 warning：后端特意吐出来的「镜像分卷数不一致」不能因为
+     恰好没有可渲染的组就被吞掉 —— 那样用户看到的是「什么都没有」而不是「有问题」。 */
+  if (!sets.length) return html + '<div class="fgdl-empty">这篇没有可用的直链分卷。</div>' + warn;
+  html += sets.map((x, si) => fgDlSetHtml(si, x)).join('');
+  return html + warn;
+}
+
+function fgDlFootHtml(j) {
+  const sets = (j && j.sets) || [];
+  return '<span style="font-size:11px;color:var(--c-t3)">'
+    + (sets.length ? (sets.length + ' 组 · 主包 ' + (((j.stats || {}).mainParts) || 0) + ' 卷（单站口径）') : '')
+    + ' · ' + (j && j.cached ? '缓存' : '现抓')
+    + '</span><span style="flex:1"></span>'
+    + '<button type="button" class="fgbtn" data-fgdl="close">关闭</button>';
+}
+
+function fgDlRender() {
+  const body = $('#fgDlBody');
+  const foot = $('#fgDlFoot');
+  if (!body || !foot || !FGD.data) return;
+  body.innerHTML = fgDlBodyHtml(FGD.data);
+  foot.innerHTML = fgDlFootHtml(FGD.data);
+}
+
+async function fgDlOpen(slug, title) {
+  const pop = $('#fgDl');
+  if (!pop || !slug) return;
+  FGD.slug = slug;
+  FGD.title = title || slug;
+  FGD.data = null;
+  FGD.host = Object.create(null);
+  FGD.open = Object.create(null);
+  $('#fgDlTitle').textContent = 'FitGirl 直链下载';
+  $('#fgDlSub').textContent = title || slug;
+  $('#fgDlBody').innerHTML = '<div class="emu-loading">正在解析镜像与分卷清单…</div>';
+  $('#fgDlFoot').innerHTML = '';
+  pop.hidden = false;
+  requestAnimationFrame(() => pop.classList.add('on'));
   try {
     if (!FG_PARTS[slug]) {
       const r = await fetch(api('/api/fitgirl/parts?slug=' + encodeURIComponent(slug)));
@@ -7366,45 +7515,55 @@ async function fgToggleParts(a) {
       if (!j.ok) throw new Error(j.error || ('HTTP ' + r.status));
       FG_PARTS[slug] = j;
     }
-    const box = document.createElement('div');
-    box.innerHTML = fgPartsHtml(FG_PARTS[slug]);
-    const el = box.firstElementChild;
-    el.dataset.slug = slug;
-    row.insertAdjacentElement('afterend', el);
-    a.textContent = '▴ 收起清单';
+    /* 期间用户又点了另一篇 ⇒ 丢弃这次结果，别把 A 的清单画到 B 的标题下 */
+    if (FGD.slug !== slug) return;
+    FGD.data = FG_PARTS[slug];
+    fgDlRender();
   } catch (er) {
-    a.textContent = old;
-    const box = document.createElement('div');
-    box.className = 'fgp';
-    box.innerHTML = '<div class="h"><b>分卷清单</b></div><div class="ctn">这篇没有可解析的分卷清单：'
-      + esc(String((er && er.message) || er)) + '。可直接用上面的磁力，或打开 Repack 页看原站。</div>';
-    row.insertAdjacentElement('afterend', box);
+    if (FGD.slug !== slug) return;
+    $('#fgDlBody').innerHTML = '<div class="fgdl-empty">这篇取不到分卷清单：'
+      + esc(String((er && er.message) || er))
+      + '。<br>可以直接用「⧉ 磁力链」，或点「↗ 原站」看帖子原文。</div>';
   }
 }
 
-/* 分卷清单的三类交互（事件委托：块是动态插入的，重绘不重复绑） */
+function fgDlClose() {
+  const pop = $('#fgDl');
+  if (!pop || pop.hidden) return;
+  pop.classList.remove('on');
+  FGD.slug = '';
+  FGD.data = null;
+  setTimeout(() => { if (!pop.classList.contains('on')) pop.hidden = true; }, 180);
+}
+
+/* FitGirl 两个按钮 + 弹窗内交互（全部事件委托：段落与弹窗内容都是动态重建的，
+   逐次绑定会在换游戏重绘后叠加多次，点一次触发 N 次） */
 document.addEventListener('click', async (e) => {
   const t = e.target;
-  const a = t.closest && t.closest('[data-fg-parts]');
-  if (a) { e.preventDefault(); fgToggleParts(a); return; }
+  if (!t || !t.closest) return;
 
-  const hb = t.closest && t.closest('.fgp .hst button');
-  if (hb) {
-    const set = hb.closest('.set');
-    set.dataset.h = hb.dataset.h;
-    set.querySelectorAll('.hst button').forEach((b) => b.classList.toggle('on', b === hb));
-    return;
-  }
+  const dl = t.closest('[data-fg-dl]');
+  if (dl) { e.preventDefault(); fgDlOpen(dl.dataset.fgDl, dl.dataset.fgTitle); return; }
 
-  const cp = t.closest && t.closest('.fgp .cp');
+  const closeEl = t.closest('[data-fgdl="close"]');
+  if (closeEl) { e.preventDefault(); fgDlClose(); return; }
+
+  const mir = t.closest('.fgdl-mir button[data-fgmir]');
+  if (mir) { FGD.host[+mir.dataset.fgmir] = mir.dataset.h; fgDlRender(); return; }
+
+  const lst = t.closest('[data-fglist]');
+  if (lst) { const si = +lst.dataset.fglist; FGD.open[si] = !FGD.open[si]; fgDlRender(); return; }
+
+  const cp = t.closest('[data-fgcopy]');
   if (cp) {
-    const box = cp.closest('.fgp');
-    const set = cp.closest('.set');
-    const j = FG_PARTS[box.dataset.slug];
-    if (!j || !set) return;
-    const s = (j.sets || [])[+set.dataset.s] || {};
-    const list = (((s.byHost || {})[set.dataset.h]) || []).map((x) => x.url);
-    if (!list.length) { cp.textContent = '✗ 该站无链接'; setTimeout(() => { cp.textContent = '⧉ 复制全部 ' + (s.parts || 0) + ' 条'; }, 2000); return; }
+    const si = +cp.dataset.fgcopy;
+    const list = fgDlUrls(si);
+    const old = cp.textContent;
+    if (!list.length) {
+      cp.textContent = '✗ 该镜像无链接';
+      setTimeout(() => { cp.textContent = old; }, 1800);
+      return;
+    }
     const txt = list.join('\n');
     try {
       await navigator.clipboard.writeText(txt);
@@ -7412,7 +7571,7 @@ document.addEventListener('click', async (e) => {
     } catch (ce) {
       window.prompt('自动复制不可用，请手动复制（每行一个分卷 URL）：', txt);
     }
-    setTimeout(() => { cp.textContent = '⧉ 复制全部 ' + (s.parts || list.length) + ' 条'; }, 2600);
+    setTimeout(() => { cp.textContent = old; }, 2400);
   }
 });
 
@@ -7968,7 +8127,11 @@ async function loadDlBlock(d, fb, title) {
 $('#mask').addEventListener('click', closeDetail);
 
 /* ================= 启动 ================= */
-async function init() {  /* bindRankUI：独立页无榜单 UI，跳过 */  /* renderSide：独立页无右栏，跳过 */  /* renderCats：独立页无分类行，跳过 */  /* renderList：独立页无最新收录列表，跳过 */
+async function init() {
+  /* bindRankUI：独立页无榜单 UI，跳过 */
+  /* renderSide：独立页无右栏，跳过 */
+  /* renderCats：独立页无分类行，跳过 */
+  /* renderList：独立页无最新收录列表，跳过 */
   refreshRank(false); // 首页主体：热榜（缓存秒显 / 首次拉取）
   // 手机三个分区（社区配置 / 实测配置 / 指南）已拆到 /emulator.html，
   // 首页只保留入口卡（数字由上面的专区跳转块异步回填），此处不再初始化。
@@ -8966,6 +9129,10 @@ function dModLinks() {
         否则用户在位置弹窗上按 ESC，会看到下面那层也一起没了（「一下关两层」）。 */
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
+    /* ★ v10.92：直链弹窗 z-index 120，叠在「下载与资源」(110) 之上 ⇒ 它必须是第一优先，
+       否则按一次 ESC 会把底下那层一起关掉（v10.46 位置弹窗踩过同一个坑）。 */
+    const fgdl = $('#fgDl');
+    if (fgdl && !fgdl.hidden) { e.stopPropagation(); fgDlClose(); return; }
     if (sv && !sv.hidden) { e.stopPropagation(); closeSvLoc(); return; }
     if (pop.hidden) return;
     e.stopPropagation();

@@ -813,6 +813,165 @@ app.get('/api/admin/verify', (req, res) => {
   });
 });
 
+/* ── ★ v10.92 GET /api/admin/env ──
+ * 线上运行时**只读自检**：「这台机器能不能跑云下载引擎」不能靠猜。
+ *
+ * 回答五件事：
+ *   ① 平台 / CPU 架构 / Node 版本 / 核数 / 内存（决定 aria2 该拿 x64 还是 arm64）；
+ *   ② 磁盘总量与剩余（决定单任务体积上限该设多少）；
+ *   ③ aria2c 是否已经在 PATH 或常见位置（没有就要自带二进制或换纯 JS 引擎）；
+ *   ④ 出站四路：DNS / HTTPS / TCP-tracker / UDP-DHT（BT 要的是后两个）；
+ *   ⑤ 工作目录可写性（任务缓存要落到哪）。
+ *
+ * ★★ 全部探测**并行 + 单项 2.5s 超时**。这条端点会被当健康检查用：
+ *   上一版探针把六个探测串行放在请求路径里，最坏 30s+ 才回第一个字节，
+ *   部署平台的 60s 健康检查直接判「服务没起来」，把线上应用换成了探针还起不来。
+ *   慢探测必须并行、必须有上限、必须能降级成 false 而不是挂住。
+ * ★ 只读：不写盘、不下载任何正文、不 join 任何 swarm；BT 只发一条 DHT ping 看有没有回包。
+ * ★ 它自己必须 guarded（同 verify：能反映权限状态的端点要在护栏里）。 */
+app.get('/api/admin/env', async (req, res) => {
+  if (!adminGuard(req, res)) return;
+  const os = require('os');
+  const net = require('net');
+  const dgram = require('dgram');
+  const dns = require('dns');
+  const fsm = require('fs');
+  /* ★ 用 promisify 版：回调版的 options 是**倒数第二个**实参，而 tools/check-stdio-guard.js
+   *   只看「最后一个顶层实参」判 stdio（回调会被判成「options 不是对象字面量」⇒ UNKNOWN）。
+   *   promisify 版把 options 放回最后一位，守卫能直接读到 `stdio`。 */
+  const execFile = require('util').promisify(require('child_process').execFile);
+
+  /* 单项超时：到点就返回 fallback，不让任何一路拖住整条端点 */
+  function cap(p, ms, fallback) {
+    return Promise.race([
+      Promise.resolve(p).catch((e) => ({ ok: false, err: String((e && e.message) || e).slice(0, 60) })),
+      new Promise((r) => setTimeout(() => r(fallback), ms || 2500)),
+    ]);
+  }
+
+  function tcpProbe(host, port) {
+    return new Promise((resolve) => {
+      const t0 = Date.now();
+      const s = new net.Socket();
+      let done = false;
+      const fin = (ok, note) => {
+        if (done) return; done = true;
+        try { s.destroy(); } catch (e) { /* 已断开 */ }
+        resolve({ ok, ms: Date.now() - t0, note: note || '' });
+      };
+      s.setTimeout(2500);
+      s.once('connect', () => fin(true, 'connected'));
+      s.once('timeout', () => fin(false, 'timeout'));
+      s.once('error', (e) => fin(false, String((e && e.code) || 'error').slice(0, 40)));
+      try { s.connect(port, host); } catch (e) { fin(false, 'connect-throw'); }
+    });
+  }
+
+  function udpProbe(host, port) {
+    return new Promise((resolve) => {
+      const t0 = Date.now();
+      const sock = dgram.createSocket('udp4');
+      const payload = Buffer.from('d1:ad2:id20:probe-gh-0000000000e1:q4:ping1:t2:aa1:y1:qe');
+      let done = false;
+      const fin = (ok, note) => {
+        if (done) return; done = true;
+        try { sock.close(); } catch (e) { /* 已关 */ }
+        resolve({ ok, ms: Date.now() - t0, note: note || '' });
+      };
+      const timer = setTimeout(() => fin(false, 'timeout'), 2500);
+      sock.once('message', (b) => { clearTimeout(timer); fin(true, 'replied ' + b.length + 'B'); });
+      sock.once('error', (e) => { clearTimeout(timer); fin(false, String((e && e.code) || 'error').slice(0, 40)); });
+      try {
+        sock.send(payload, 0, payload.length, port, host, (err) => {
+          if (err) { clearTimeout(timer); fin(false, 'send-failed'); }
+        });
+      } catch (e) { clearTimeout(timer); fin(false, 'send-throw'); }
+    });
+  }
+
+  const env = {
+    platform: process.platform,
+    arch: process.arch,
+    node: process.version,
+    release: os.release(),
+    cpus: os.cpus().length,
+    cpuModel: String((os.cpus()[0] || {}).model || '').slice(0, 80),
+    memTotalMB: Math.round(os.totalmem() / 1048576),
+    memFreeMB: Math.round(os.freemem() / 1048576),
+    pid: process.pid,
+    uptimeSec: Math.round(process.uptime()),
+    cwd: process.cwd(),
+    execPath: process.execPath,
+    isRoot: typeof process.getuid === 'function' ? process.getuid() === 0 : null,
+    hasApt: fsm.existsSync('/usr/bin/apt-get') || fsm.existsSync('/usr/bin/apt'),
+  };
+
+  const disk = {};
+  for (const at of ['cwd', 'root']) {
+    try {
+      const st = fsm.statfsSync(at === 'cwd' ? process.cwd() : '/');
+      disk[at] = {
+        totalGB: +(st.blocks * st.bsize / 1073741824).toFixed(1),
+        freeGB: +(st.bavail * st.bsize / 1073741824).toFixed(1),
+      };
+    } catch (e) { disk[at] = { err: String(e.message).slice(0, 40) }; }
+  }
+
+  const [aria2, shOut, dnsOut, httpsOut, tcp1, tcp2, udp1, udp2] = await Promise.all([
+    cap((() => {
+      /* 回调式 resolve 改成 promise：options 必须是**最后一个**实参，否则 stdio 守卫读不到 */
+      return execFile('sh', ['-c', 'command -v aria2c && aria2c --version | head -1'],
+        { timeout: 2500, stdio: ['ignore', 'pipe', 'pipe'] })
+        .then(({ stdout }) => ({ ok: true, out: String(stdout).trim().split('\n')[0].slice(0, 80) }))
+        .catch(() => ({ ok: false, err: 'not-found' }));
+    })(), 2500, { ok: false, err: 'timeout' }),
+    cap((() => {
+      return execFile('sh', ['-c', 'ls -l /bin/sh 2>&1 | head -1'],
+        { timeout: 2000, stdio: ['ignore', 'pipe', 'pipe'] })
+        .then(({ stdout }) => ({ ok: true, out: String(stdout).trim().slice(0, 80) }))
+        .catch(() => ({ ok: false, err: 'no-sh' }));
+    })(), 2000, { ok: false, err: 'timeout' }),
+    cap(new Promise((resolve) => {
+      const t0 = Date.now();
+      dns.lookup('github.com', (err, addr) => resolve(err
+        ? { ok: false, err: String(err.code || 'err') }
+        : { ok: true, addr, ms: Date.now() - t0 }));
+    }), 2500, { ok: false, err: 'timeout' }),
+    cap((async () => {
+      const t0 = Date.now();
+      try {
+        const r = await fetch('https://raw.githubusercontent.com/aria2/aria2/master/README.rst', {
+          method: 'HEAD', signal: AbortSignal.timeout(2500),
+        });
+        return { ok: r.ok, status: r.status, ms: Date.now() - t0 };
+      } catch (e) { return { ok: false, err: 'fetch-failed' }; }
+    })(), 2800, { ok: false, err: 'timeout' }),
+    tcpProbe('tracker.opentrackr.org', 1337),
+    tcpProbe('tracker.torrent.eu.org', 451),
+    udpProbe('dht.transmissionbt.com', 6881),
+    udpProbe('tracker.opentrackr.org', 1337),
+  ]);
+
+  let writable = false;
+  let writeErr = '';
+  try {
+    const probeFile = require('path').join(os.tmpdir(), 'gh-env-probe-' + process.pid + '.txt');
+    fsm.writeFileSync(probeFile, String(Date.now()));
+    fsm.unlinkSync(probeFile);
+    writable = true;
+  } catch (e) { writeErr = String(e.message).slice(0, 60); }
+
+  res.json({
+    ok: true,
+    at: new Date().toISOString(),
+    env,
+    disk,
+    bin: { aria2: aria2, shell: shOut },
+    egress: { dns: dnsOut, https: httpsOut, tcpTrackers: [tcp1, tcp2], udpDht: [udp1, udp2] },
+    tmp: { writable, err: writeErr, dir: os.tmpdir() },
+  });
+});
+
 /* ── ★ v10.90 GET/POST /api/admin/profile ──
  * 「页面管理」改爬虫字段、「游戏库」改资料字段，**写的是同一份** data/game-profile.json。
  *   GET  ?id=<库id>  → { profile: 覆盖差异, effective: 叠加后的展示值, raw: 爬虫原值 }

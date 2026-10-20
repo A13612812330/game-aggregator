@@ -10,7 +10,7 @@
 
 ---
 
-## ★ 铁律速查（1–165）
+## ★ 铁律速查（1–168）
 
 > 从 `.workbuddy/memory/MEMORY.md` 迁出（2026-10-10）。那个文件有 3,000 字硬上限，
 > 而 40 条铁律占了近一半篇幅 ⇒ 加上「坐标 / 线上入口 / 待办」就装不下（实测 3,505 字，被
@@ -1366,6 +1366,38 @@
     - 判据：`test-v1091` C4 —— `public/*.html` 与 `server.js` 里**搜不到**该口令；
     - ★ 附带：错误信息不许区分「用户名错」与「密码错」（防枚举），
       `timingSafeEqual` 比哈希、长度不等先返回 false。
+
+166. ★★★ **部署工具按「工作区」绑定 appId，不是按目录 —— 传别的目录 = 换掉线上主站**（v10.92 实测踩中）：
+    想发一个「独立的只读探针」，于是把 `_probe-runtime` 目录交给部署工具；返回的 `appId` 与主站
+    **完全同一个**（`wbapp_047a…`），平台拿新目录重建服务 ⇒ `SITES_START_FAILED`（60s 内没在
+    3000 端口响应），紧接着主站 `/api/admin/overview` 变 **404**、分享链接打不开。
+    - 根因：appId 的绑定键是**工作区**，目录只是「本次要发的载荷」；同工作区第二次发布不新建应用，
+      而是**覆盖**上一次 —— 「我只是发个探针」在平台眼里就是「把这个应用换成探针」。
+    - 判据：**一个工作区只有一个线上应用**。要第二个应用 = 换工作区（另一个目录/会话），
+      不是在同一工作区里换子目录。
+    - 恢复：立刻重发正确载荷（`_deploy-gamehub`），`deployedAs: http-service` + `verified: true`
+      之后**逐页 md5 比对**回到原版才继续（200 不算恢复，见铁律 6）。
+    - ★ 发布工具报「服务未能响应」时，先按「线上已坏」处理，别当成「这次没发成功」。
+
+167. ★★★ **任何可能被当健康检查用的端点，探测必须并行 + 单项超时**（v10.92）：
+    探针把 6 个网络探测（DNS / HTTPS / TCP×2 / UDP×2）**串行**放在请求路径里，最坏 30s+ 才吐首字节
+    ⇒ 平台 60s 健康检查判死、部署失败（现象是「服务没起来」，不是「端点慢」，极难归因）。
+    - 正解：`Promise.all` + 每项 `AbortSignal.timeout(ms)` / `Promise.race` 兜底 fallback；
+      失败项**如实为 false**，不许抛（抛了整条端点 500，又把健康检查拖垮）。
+    - 判据：这类端点的**最坏**耗时（不是平均）要压到 3s 内 —— 它随时会被健康检查/监控当探针打。
+      本轮 `/api/admin/env` 本地实测 2.5s（6 路并行 + 单项 2.5s 上限）。
+
+168. ★★ **`execFile` 回调式把 options 放在倒数第二 ⇒ stdio 守卫判 UNKNOWN，前置闸变红**（v10.92）：
+    `tools/check-stdio-guard.js` 只取「**最后一个顶层实参**」当 options；而
+    `execFile(cmd, args, { timeout }, cb)` 的最后一位是回调 ⇒ 判定「options 不是对象字面量」⇒ UNKNOWN ⇒
+    `check-stdio-guard` exit 1（run-all 的**前置闸**红，一红就挡后面全量）。
+    - 正解：`const execFile = require('util').promisify(require('child_process').execFile);`
+      调用写成 `execFile(cmd, args, { timeout, stdio: ['ignore', 'pipe', 'pipe'] })` ——
+      options 落回最后一位，守卫能直接读到 `stdio`；`.then(({ stdout }))` 取输出、`.catch()` 兜失败。
+    - ★ 别用「登记例外」绕：例外表里那两条（`_push-via-api` / `restart-server`）是
+      「stdio 由常量 `Object.assign` 传入」的真情况；新写的代码总有更简单的写法。
+    - 顺带：`stdio[0]` 必须是 `ignore`/`inherit`，`pipe` 在沙箱里必 EBUSY（见下文〈子进程 stdin〉一节）。
+
 ---
 
 ## 〇、环境怪癖（不知道就会白查半天）
