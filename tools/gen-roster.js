@@ -439,6 +439,7 @@ const html = `<!DOCTYPE html>
     <div>冷门隐藏<b id="kCold">-</b></div>
     <div>当前筛选<b id="kView">-</b></div>
   </div>
+  <a href="/admin" style="margin-left:auto;white-space:nowrap;font-size:13px;font-weight:600" title="v10.87 详细管理后台：统计卡 / 搜索筛选 / 单游戏七路资源明细 / 豁免操作 / 操作日志">🎮 详细管理后台 →</a>
 </header>
 
 <div class="wrap">

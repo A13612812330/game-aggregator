@@ -158,6 +158,9 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public')));
 // 旧版多页路由收敛：home/search/library 已并入单页主站,老链接 301 至首页
 app.get(['/home.html', '/search.html', '/library.html'], (_req, res) => res.redirect(301, '/'));
+/* ★ v10.87 管理后台路由：express.static 只认精确路径（/admin/ 会找 admin/index.html 而 404），
+ *   显式映射到 public/admin.html —— /admin 与 /admin/ 双形态都收。 */
+app.get(['/admin', '/admin/'], (_req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.get('/api/health', (_req, res) => {
   res.json({
     ok: true, ts: Date.now(), ttl: { feed: 180, detail: 600 },
@@ -428,12 +431,57 @@ function adminLocalOnly(req, res) {
   res.status(403).json({ ok: false, error: '管理接口仅限本机使用（8123/8124 回环）' });
   return false;
 }
+
+/* ── v10.87 管理鉴权双轨：回环 OR 令牌 ──
+ *   v10.85 的 adminLocalOnly 只有回环一条路，线上（反代后 remoteAddress 不是回环）
+ *   一律 403 ⇒ 线上管理页只读。用户拍板放开线上管理 ⇒ 加 X-Admin-Token 第二条轨：
+ *   · 令牌真源：env GAMEHUB_ADMIN_TOKEN > data/admin-token.json（.gitignore，随载荷上线）
+ *   · 每请求现读文件（几行 JSON，开销可忽略）⇒ 改令牌不用重启
+ *   · adminLocalOnly 函数**保留**（test-roster J15.4 断言它存在 + 回环语义不变），
+ *     回环放行走它，令牌校验走这里 —— 双轨互不影响。
+ *   ★ POST 写文件仍走这层护栏：公网访客没有令牌就是 403，与 v10.85 语义向后兼容。 */
+function adminToken() {
+  if (process.env.GAMEHUB_ADMIN_TOKEN) return String(process.env.GAMEHUB_ADMIN_TOKEN);
+  try {
+    const j = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'admin-token.json'), 'utf8'));
+    return typeof j.token === 'string' && j.token ? j.token : null;
+  } catch (e) { return null; }
+}
+function adminGuard(req, res) {
+  const ip = String((req.socket && req.socket.remoteAddress) || '');
+  if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return true;
+  const tok = adminToken();
+  if (tok && String(req.headers['x-admin-token'] || '') === tok) return true;
+  res.status(403).json({ ok: false, error: '管理接口需要本机回环或 X-Admin-Token（/admin 页顶栏填令牌）' });
+  return false;
+}
+
+/* ── v10.87 管理操作日志：data/admin-log.jsonl 追加（一行一条 JSON）──
+ *   为什么 jsonl 不 json：追加写 O(1)，读「最近 N 条」只 tail，不用整读整写。
+ *   写失败不阻断主流程（日志是附属品，豁免本身已落盘）。 */
+const ADMIN_LOG_PATH = path.join(__dirname, 'data', 'admin-log.jsonl');
+function appendAdminLog(entry) {
+  try {
+    fs.appendFileSync(ADMIN_LOG_PATH, JSON.stringify(entry) + '\n');
+  } catch (e) { /* 日志失败不阻断 */ }
+}
+function readAdminLog(limit) {
+  let lines = [];
+  try { lines = fs.readFileSync(ADMIN_LOG_PATH, 'utf8').split('\n').filter(Boolean); } catch (e) { /* 无日志文件 = 空清单 */ }
+  const n = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 500);
+  const items = [];
+  for (let i = lines.length - 1; i >= 0 && items.length < n; i--) {
+    try { items.push(JSON.parse(lines[i])); } catch (e) { /* 坏行跳过 */ }
+  }
+  return { ok: true, total: lines.length, items };
+}
+
 app.get('/api/admin/hide-overrides', (req, res) => {
-  if (!adminLocalOnly(req, res)) return;
+  if (!adminGuard(req, res)) return;
   res.json({ ok: true, overrides: coldHide.overridesSnapshot() });
 });
 app.post('/api/admin/hide-overrides', (req, res) => {
-  if (!adminLocalOnly(req, res)) return;
+  if (!adminGuard(req, res)) return;
   const { id, op } = req.body || {};
   if (!/^(xd|jidi)-[A-Za-z0-9_-]+$/.test(String(id || ''))) {
     res.status(400).json({ ok: false, error: 'id 不合法（仅支持库内 xd-*/jidi-* 条目）' });
@@ -446,10 +494,95 @@ app.post('/api/admin/hide-overrides', (req, res) => {
   try {
     const overrides = coldHide.setOverride(String(id), String(op));
     const hidden = coldHide.hiddenById(String(id), gamesDb.all());
+    const g = gamesDb.byIdGet(String(id));
+    const ip = String((req.socket && req.socket.remoteAddress) || '');
+    /* v10.87：操作留痕 —— 谁（回环/令牌）在什么时候对哪条做了什么，追加进 admin-log.jsonl */
+    appendAdminLog({
+      ts: Date.now(), id: String(id), title: g ? g.title : '',
+      op: String(op), hidden: !!hidden,
+      via: (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') ? 'loopback' : 'token',
+    });
     res.json({ ok: true, id, op, hidden, overrides });
   } catch (e) {
     res.status(500).json({ ok: false, error: '写豁免失败: ' + e.message });
   }
+});
+
+/* ── v10.87 管理后台三端点 ──
+ * GET /api/admin/overview  → 页头统计卡一次拿全（冷门口径 + 库构成 + 六个资源源 stats）
+ *   为什么不复用六七个零散 stats 端点：管理页首屏要 7 个数字，7 次往返不如 1 次；
+ *   全部来自内存表现算，零额外成本。读接口不设防（数据本就公开，/api/*stats 一直可读）。
+ * GET /api/admin/log?limit= → 最近 N 条管理操作（写接口，设防） */
+app.get('/api/admin/overview', (_req, res) => {
+  const all = gamesDb.all();
+  res.json({
+    ok: true,
+    cold: coldHide.stats(all),
+    lib: gamesDb.stats(),
+    mods: mods.stats(),
+    trainers: trainers.stats(),
+    saves: saves.stats(),
+    gt: gt.stats(),
+    fitgirl: fitgirl.stats(),
+    tsmods: tsmods.stats(),
+  });
+});
+app.get('/api/admin/log', (req, res) => {
+  if (!adminGuard(req, res)) return;
+  res.json(readAdminLog(req.query.limit));
+});
+
+/* GET /api/admin/game?id=<库id> — 单游戏详情聚合（管理抽屉唯一数据源）
+ *   一发拿全：游戏 meta + 隐藏态 + 七路资源命中（机地帖三分类 / FLiNG / TCS / GTrainers /
+ *   云存档 / 存档位置 / FitGirl / Thunderstore）。前端不再对七个 match 端点各发一遍。
+ *   ★ 孪生兜底同 /api/res/game 口径：资源常挂在双料记录的另一条上，id 空了换 resId 再查。
+ *   读接口不设防（聚合的全是公开数据）。 */
+app.get('/api/admin/game', (req, res) => {
+  const id = String(req.query.id || '').trim();
+  const g = id ? gamesDb.byIdGet(id) : null;
+  if (!g) return res.status(404).json({ ok: false, error: '库内无此 id: ' + id });
+
+  /* 孪生归属：resFor 是 roster/首页 chip 的同一真源（铁律：同一语义一份实现） */
+  let resId = id, resCounts = { mod: 0, saves: 0, trainers: 0 };
+  try { const h = resFor(g); if (h) { resId = h.id; resCounts = h.counts; } } catch (e) { /* 聚合层未起不阻塞 */ }
+
+  /* 隐藏态三问：规则冷门？最终隐藏？有无手工豁免？—— 与 /api/cold/stats 同一 coldHide 真源 */
+  const snap = coldHide.overridesSnapshot();
+  const ov = snap.show.includes(id) ? 'show' : (snap.hide.includes(id) ? 'hide' : null);
+
+  const byLibBoth = (fn, slim) => {
+    let list = fn(id);
+    if ((!list || !list.length) && resId && resId !== id) list = fn(resId) || [];
+    return (list || []).slice(0, 12).map(slim || ((x) => x));
+  };
+  const trDl = (x) => { const dl = flingdl.attach(x) || tcsdl.attach(x); return {
+    name: x.name, zh: x.zh, version: x.version, source: x.source, libId: x.libId,
+    ...(dl ? { dl } : {}) }; };
+
+  res.json({
+    ok: true,
+    game: {
+      id: g.id, title: g.title, source: g.source, hot: g.hot || 0, score: g.score || null,
+      size: g.size || '', dateLabel: g.dateLabel || '', updatedTs: g.updatedTs || null,
+      publishTs: g.publishTs || null, genres: g.genres || [], cover: g.cover || '',
+      url: g.url || '', jidiUrl: g.jidiUrl || '',
+    },
+    state: { cold: coldHide.isCold(g), hidden: coldHide.isHidden(g), override: ov, resId, resCounts },
+    resources: {
+      /* resGroups.byLib 内部已做 slimItem 瘦身投影，这里直接用（再 map 一遍是重复劳动） */
+      resGroups: {
+        mod: resGroups.byLib('mod', resId, 12),
+        saves: resGroups.byLib('saves', resId, 12),
+        trainers: resGroups.byLib('trainers', resId, 12),
+      },
+      fling: byLibBoth((k) => trainers.byLib(k), trDl),
+      savesYx: byLibBoth((k) => savesYx.byLib(k), (x) => savesYx.slim(x)),
+      gt: byLibBoth((k) => gt.byLib(k), (x) => gt.slim(x)),
+      fitgirl: byLibBoth((k) => fitgirl.byGame(k), (x) => ({ slug: x.slug, url: x.url, title: x.title, date: x.date, adult: !!x.adult })),
+      /* tsmods.byLib 返回的是**原始包**（字段与展示层不对齐），走官方 slim（与 /api/ts/mods 同形） */
+      tsmods: byLibBoth((k) => tsmods.slim(k, 8)),
+    },
+  });
 });
 
 app.get('/api/hots', async (req, res) => {  if (req.query.refresh === '1') cache.delete('hots');
@@ -1956,7 +2089,13 @@ app.get('/api/library', (req, res) => {
    *
    *   ⚠️ 必须与 `withRes` 的副本保护**同时**上线：修污染前，这里能出现 chip 纯靠
    *     `/api/search/all` 先把对象污染了（顺序依赖），单独改任一处都会露馅。 */
-  res.json({ ok: true, q: raw, aliasNote, count: r.count, total: gamesDb.stats().total, items: withNKeys(r.items.map(withRes)) });
+  /* ★ v10.87：admin=1 → 每行带 hidden/cold 标注（管理页徽标），判定走服务端 coldHide 真源 */
+  const admin = String(req.query.admin || '') === '1';
+  res.json({ ok: true, q: raw, aliasNote, count: r.count, total: gamesDb.stats().total, items: withNKeys(r.items.map((x) => {
+    const it = withRes(x);
+    if (admin) { it.hidden = coldHide.isHidden(x); it.cold = coldHide.isCold(x); }
+    return it;
+  })) });
 });
 
 // GET /api/library/recent?limit=20 — 最近收录(供空态展示)
@@ -2090,10 +2229,32 @@ app.get('/api/library/browse', (req, res) => {
    *   搜索(/api/search)与详情不过滤 ⇒ 冷门游戏「可搜到、详情可达」；
    *   ?cold=0 显式关掉（管理员/测试逃生口）。 */
   o.excludeCold = String(req.query.cold || '') !== '0';
+  /* ★ v10.87 管理页隐藏态筛选（池前过滤，total 才与行数一致）：
+   *   admin=1 且 hidden=1|0 → 只留「最终隐藏」/「最终可见」的行；
+   *   判定复用 coldHide.isHidden（与豁免、/api/cold/stats 同一真源）。
+   *   ⚠️ 条件写 `!o.excludeCold` 而不是 `=== false` —— test-cold-hide 用
+   *   `o.excludeCold\s*=` 计数「赋值只此一处」，`===` 会被误计成第二处。 */
+  if (String(req.query.admin || '') === '1' && !o.excludeCold) {
+    const hv = String(req.query.hidden || '');
+    if (hv === '1') o.filter = (g) => coldHide.isHidden(g) === true;
+    else if (hv === '0') o.filter = (g) => coldHide.isHidden(g) === false;
+  }
 
   if (scope === 'pc') {
     const r = gamesDb.browse(g, limit, offset, sort, o);
-    return res.json({ ok: true, scope, ...r, items: r.items.map(withRes) });
+    /* ★ v10.87：`admin=1` → 每行带隐藏态标注（hidden 最终态 / cold 规则命中）。
+     *   管理页用 `cold=0&admin=1`：cold=0 关掉池前过滤（冷门行也要看见），
+     *   admin=1 让每行自带「为什么被藏」的判定 —— 判定在**服务端现算**
+     *   （铁律 154：静态产物/列表可变状态必须响应回填，不靠前端猜）。 */
+    const admin = String(req.query.admin || '') === '1';
+    return res.json({
+      ok: true, scope, ...r,
+      items: r.items.map((x) => {
+        const it = withRes(x);
+        if (admin) { it.hidden = coldHide.isHidden(x); it.cold = coldHide.isCold(x); }
+        return it;
+      }),
+    });
   }
 
   /** ★ v10.70：排序键**统一从 `gamesDb.cmp(sort)` 取比较函数**。

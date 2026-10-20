@@ -859,6 +859,18 @@ python tools/clean-excel.py       # 读 E:/新建文件夹/基础测试数据.xl
 > 它们和 `docs/versions/v10.N.md` 是同一批内容的两次书写，并存只会各自漂移。
 > 需要旧摘要原本可走 `git show <sha>:README.md`，或本地归档 `_archived/README-v10.41-版本块全量.md`。
 
+### ★ v10.87 增量（2026-10-20）—— **游戏库详细管理后台 `/admin`**：线上管理鉴权 + 七路资源聚合抽屉 + 操作日志
+
+> **用户口径**：「要的，游戏管理也我需要一个很详细的页面进行管理」⇒ 放开线上管理写操作（加鉴权）+ 独立详细管理页。<br>
+> **鉴权双轨**：回环放行保留（本机 8123/8124 体验不变）+ 线上 `X-Admin-Token` 头（令牌真源
+> env > `data/admin-token.json`，48 位 hex 随机，.gitignore 不入库、随发布载荷上线；每请求现读 ⇒ 换令牌不用重启）。<br>
+> **`/admin` 管理页**（独立页，非主源派生页）：统计卡一发拿全（冷门口径 + 库构成 + 六源 stats）·
+> 列表管理视角全量池（每行 hidden/cold **服务端回填**，隐藏态池前筛选与分页计数一致）·
+> 详情抽屉 **七路资源聚合**（机地帖三分类 + FLiNG/TCS + 云存档 + GT + FitGirl + Thunderstore，孪生兜底走 `resFor` 同源）·
+> 豁免操作（隐藏/显示/清除即时生效）· **操作日志**（jsonl 追加留痕，via=loopback|token）。roster 顶栏挂入口。<br>
+> **防线**：test-v1087-admin **28/28**（新，登记 run-all）· 探针 **19/19**（豁免回环后文件复原空）·
+> run-all **4383/4**（与 v10.86 基线持平）。详见 [docs/versions/v10.87.md](docs/versions/v10.87.md)。
+
 ### ★ v10.86 增量（2026-10-20）—— **FitGirl Repack 接入**：本体第三下载档（外链 + 复制磁力）
 
 > **用户口径**：「FitGirl 和多 repack 源聚合怎么样并入，暂不介入自研下载种子」⇒ 拍板 P0+P1 全量、P2 缓一缓、P3 挂起。<br>
@@ -916,39 +928,7 @@ python tools/clean-excel.py       # 读 E:/新建文件夹/基础测试数据.xl
 
 详见 [v10.82](docs/versions/v10.82.md)。
 
-### ★ v10.81 增量（2026-10-15）—— 资源**直链改造**：修改器 / 存档 / MOD 三线「直链下载」（P0→P1→P2 全做）
-
-> **用户口径**：「修改器，Mod，存档有没有办法通过反编译或者爬虫，获取对应平台的源文件，
-> 后续直接通过链接下载本体，而不是通过网盘等进行爬取」—— 拍板 P0→P1→P2 全做。
-
-① **根因认知（先回答「反编译行不行」）**：反编译只能拿到接口、拿不到文件 —— 机地 MOD/存档帖是
-用户上传的**网盘分享**（mods.json 8,943 条 100% 指向机地帖、内容全是夸克/百度口令），文件本体在
-夸克/百度服务器上，**机地自己都没存**。直链成立的唯一前提 = **平台自己托管文件** ⇒ 正确路线是
-**换自托管源**，不是挖网盘直链。② **P0**：修改器/存档直链 v10.53 就已接线（GTrainers 段 +
-游侠「⬇ 直接下载」）；修 `/api/res/game` 的 `?t=` **恒空 bug**（`gamesDb.search()` v10.62 起返回
-对象，老 `[0]` 写法恒 undefined ⇒ 纯名字查询永远空 —— 前端双发 id+t 所以一直没炸；铁律 148）。
-③ **P1 FLiNG**（`tools/fetch-fling-dl.js`）：详情页 → `/downloads/<token>` → 302 的 `path` 参数
-→ zip 直链；**Referer 防盗链**（无 Referer 403）⇒ 新增流代理 `GET /api/dl/fling?u=…`（SSRF
-白名单 + 30s 硬超时）；死 token 空 path 按 `\.(zip|rar|exe)$` 过滤；fling_archive 393 条本身
-就是直链。终态：1,161 页 · withDl **975（84.0%）** · **直链 1,726 条** → 修改器页签 GCM 段分治
-（「其中 N 个风灵月影（FLiNG）官方文件可直下」+ `⬇ FLiNG ↗` 按钮）。④ **P2 Thunderstore**
-（门 1，`tools/fetch-thunderstore.js`）：`/api/experimental/community/` → 精确匹配库内端游
-（343 社区 → **254** 命中）→ `listing?ordering=most-downloaded` → `/api/experimental/package/`
-取 `latest.download_url`（302 → CDN zip，**无防盗链**，前端直链；禁用的 `/api/v1/package/` 未用）。
-终态：**252 款游戏 · 2,870 个包**（每社区 Top 20）→ Mod 页签第四路 TS 段（排在机地帖**之前**
-—— 能直下的排前面）+ 角标计数 + 空态守卫。⑤ **顺带修第二个真 bug**：`dlUniFetchGcm` 只发
-`t=` 不发 `id=` —— 直开参数（`?open=&dl=modifier`）场景 `ctx.title` 未解析 ⇒ GCM 段空 ⇒
-FLiNG 按钮消失（行为探针实拍踩到的假绿链）。⑥ **P1b TheCheatScript（用户拍板「先做」当轮补齐）**：
-thecheatscript.com **不自托管**（实测外链全是 MEGA / Yandex）⇒ 做不了流代理，消费形态 =
-**新标签直开**（免提取码免客户端，前端 `ext:true` 渲染「↗ 直开」，不冒充 CDN 直链）；
-抓取器 `fetch-tcs-dl.js`（host 白名单）终态 **1,847 页 · withDl 1,838（99.5%）· 外链 2,316 条 · err 0**；
-顺带修第三个渲染矛盾：机地空态与 CheatScript 外链并存时自相矛盾 ⇒ 空态守卫补 GCM 段
-（改为「但下方有可直下的来源」）。⑦ **防线**：新套件 `test-v1081-dl.js` **27/27**
-（登记 SUITES；一条负向断言先被 fetcher 注释咬红 ⇒ 剥注释再判，铁律 126 再现）· 行为探针
-`_probe-v1081-dl.js` **14/14**（★ 跨域验证必须在 Node 侧，页内 fetch 被 CORS 咬死）· 反证
-roster 26/26 · pages-sync 54/54 · 四张派生页重建 + 前置闸全过。⑧ 发布/推送见顶部；
-FLiNG noDl 180 页 = 源站下架如实落库；TCS noDl 9 页同。
-详见 [v10.81](docs/versions/v10.81.md)。
+### ★ v10.81 块的摘要按「只留最近 6 版」规范移出（v10.87 加新版、去掉 v10.81）
 
 ### ★ v10.80 块的摘要按「只留最近 6 版」规范移出（v10.86 加新版、去掉 v10.80）
 

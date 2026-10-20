@@ -974,9 +974,13 @@ const GN = require(path.join(root, 'data', 'game-name'));
      切片结果同样是空串 ⇒ 上面两条会双双为假、看起来像真红。 */
   const browseBody = srvSrc.slice(srvSrc.indexOf("app.get('/api/library/browse'"),
     srvSrc.indexOf("app.get('/api/search/all'"));
-  t('★★ v10.53：`/api/library/browse` 改挂 `withRes`（首页卡片从此带 res / resId）',
+  /* ★ v10.87 更新判据（钉意图不钉形状）：browse 挂 withRes 的链路仍必须在 ——
+   *   v10.87 起管理页 admin=1 时换成带 hidden/cold 标注的包装（内部仍调 withRes(x)），
+   *   两种形态都算「挂了 withRes」：字面量 map(withRes) 或包装内 withRes(x)。 */
+  t('★★ v10.53：`/api/library/browse` 改挂 `withRes`（首页卡片从此带 res / resId；v10.87 允许 admin 包装形态）',
     browseBody.length > 200 && /gamesDb\.browse\(/.test(browseBody)
-    && /items: r\.items\.map\(withRes\)/.test(browseBody));
+    && (/items: r\.items\.map\(withRes\)/.test(browseBody)
+      || (/items: r\.items\.map\(\(x\) => \{/.test(browseBody) && /withRes\(x\)/.test(browseBody))));
   t('★★ v10.53：`mod` / `tr` / `sv` 三个筛选都走 `resGroups.libIdsFor`（与卡面同源）',
     /const modOnly = String\(req\.query\.mod \|\| ''\) === '1';/.test(srvSrc)
     && /if \(modOnly\) \{ const set = resGroups\.libIdsFor\('mod'\); filters\.push\(\(g\) => set\.has\(g\.id\)\); \}/.test(srvSrc)

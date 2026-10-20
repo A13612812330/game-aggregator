@@ -44,8 +44,12 @@ sec('A `/api/library` 挂资源（用户诉求②的落点）');
  *   拿全文件正则去判，打坏 `/api/library` 后仍会因为另一处而**假绿**（反证 A 实测栽过）。 */
 const LIB_SECT = (SRVC.split("app.get('/api/library', ")[1] || '').split('app.get(')[0];
 
-t(/items: withNKeys\(r\.items\.map\(withRes\)\)/.test(LIB_SECT),
-  '★ A1 联想接口挂的是 `withRes`（不再是 `withBh`）—— 这一条就是「联想里没有 MOD/修改器/存档」的开关');
+/* ★ v10.87 更新判据（钉意图）：/api/library 这段必须挂 withRes —— v10.87 起允许
+ *   admin=1 的包装形态（map((x)=>{...withRes(x)...})，行上带 hidden/cold 回填），
+ *   字面量 map(withRes) 与包装内 withRes(x) 都算「挂了」。 */
+t(/items: withNKeys\(r\.items\.map\(withRes\)\)/.test(LIB_SECT)
+  || (/items: withNKeys\(r\.items\.map\(\(x\) => \{/.test(LIB_SECT) && /withRes\(x\)/.test(LIB_SECT)),
+  '★ A1 联想接口挂的是 `withRes`（不再是 `withBh`）—— 这一条就是「联想里没有 MOD/修改器/存档」的开关（v10.87 允许 admin 包装形态）');
 t(!/r\.items\.map\(withBh\)/.test(SRVC),
   'A1 **没有残留**的 `r.items.map(withBh)`（留着就等于有两个接口各挂一套，必然漂移）');
 t(/get\('\/api\/library', \(req, res\)/.test(SRVC) && /v10\.62：联想面板改走 `withRes`/.test(SRVC),

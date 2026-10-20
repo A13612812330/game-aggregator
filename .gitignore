@@ -99,3 +99,5 @@ tools/_*
 #   v10.85：管理页豁免旁路文件（用户手写/管理页写入的个人豁免，不入库——
 #      与 cold-hide.js 注释口径一致：库内数据每日同步重建，个人豁免属于本地状态）
 data/hide-overrides.json
+data/admin-token.json
+data/admin-log.jsonl
