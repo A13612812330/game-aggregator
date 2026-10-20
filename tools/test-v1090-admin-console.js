@@ -158,12 +158,17 @@ ok(/'爬取值：' \+ \(brief\(raw\[f\]\)/.test(ADMIN),
 ok(/el\.placeholder = has \? '' : \('爬取值：'/.test(ADMIN),
   'B21 已覆盖的字段不再回显爬取值（避免"看起来没改过"）');
 
-ok(/const TKEY = 'gh_admin_token'/.test(ADMIN), 'B22 令牌键名集中一处');
-ok(/\$\('tkInput'\)\.value = tok\(\);/.test(ADMIN), 'B23 保存后回填令牌（原来立刻清空，原文再也看不到）');
+/* ★ v10.91 契约变更：顶栏的「令牌输入框」升级为「管理员账号登录」。
+ *   这里保留的是 v10.90 那三条**行为**（令牌仍能回填 / 仍能切明文 / 仍当场校验），
+ *   只是入口从顶栏挪进了登录弹窗的「用令牌登录」页 —— 所以断言跟着换位置，不是删掉。 */
+ok(/const SKEY = 'gh_admin_sid'/.test(ADMIN) && /const TKEY = 'gh_admin_token'/.test(ADMIN),
+  'B22 凭据键名集中一处（会话 + 令牌双键）');
+ok(/\$\('tkInput'\)\.value = tok\(\);/.test(ADMIN), 'B23 令牌仍然回填（改位置不改行为）');
 ok(/function toggleTk\(\)/.test(ADMIN) && /id="tkEye"/.test(ADMIN), 'B24 👁 可切明文查看已填令牌');
 ok(/api\('\/api\/admin\/verify'\)/.test(ADMIN), 'B25 保存令牌时当场校验有效/无效');
 ok(/showAuth\(/.test(ADMIN) && /id="authBar"/.test(ADMIN), 'B26 403 在内容区挂横幅（不再只给一张空表）');
-ok(/showAuth\(t\s*\?/.test(ADMIN), 'B27 横幅区分「没填令牌」与「令牌不被接受」');
+/* v10.91：横幅仍要区分两种 403 —— 「根本没登录」 vs 「登录了但会话失效」 */
+ok(/showAuth\(s\s*\n?\s*\?/.test(ADMIN), 'B27 横幅区分「没登录」与「登录已失效」');
 
 /* 仪表盘 / 资源覆盖 */
 ok(/id="dashChips"/.test(ADMIN) && /id="dashMods"/.test(ADMIN), 'B28 仪表盘有模块 chip + 模块卡');
@@ -174,6 +179,11 @@ ok(/class="miss-item"/.test(ADMIN), 'B31 资源覆盖给出缺口清单（能直
 ok(/function resPick\(k\)/.test(ADMIN), 'B32 可只看某一个模块');
 ok(/if \(!VIEWS\[v\]\) v = 'dash';/.test(ADMIN),
   'B33 旧 hash（#rm-mod 等）回落仪表盘（否则切过去整页空白）');
+/* ★ v10.91 修的真 bug：六源 stats() 字段名各不相同，统一读 .matched/.total 会让三行印出 NaN% */
+ok(/sv2\.inPcLib/.test(ADMIN) && /gt2\.preMatched/.test(ADMIN) && /ts2\.communities/.test(ADMIN),
+  'B34 数据源健康逐源用**真实字段名**（saves.inPcLib / gt.preMatched / tsmods.communities）');
+ok(ADMIN.includes('const bad = m == null || t == null || !t;') && /bad \? '—' :/.test(ADMIN),
+  'B35 分子/分母缺失时显示「—」而不是 NaN（字段再改名要**显形**，不能静默打 NaN）');
 
 /* ═════════ C. HTTP 实测（本机 8124；回环免令牌） ═════════ */
 (async () => {

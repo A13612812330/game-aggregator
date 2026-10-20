@@ -116,6 +116,8 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
 .mask{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:flex-start;justify-content:center;padding:44px 16px;z-index:60;overflow:auto}
 .mask.on{display:flex}
 .modal{background:#fff;border-radius:15px;box-shadow:var(--sh2);width:100%;max-width:980px;overflow:hidden;animation:pop .16s ease-out}
+.modal.sm{max-width:430px}
+.acct{font-size:12.5px;font-weight:600;color:#334155;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @keyframes pop{from{transform:translateY(10px);opacity:.6}to{transform:none;opacity:1}}
 .mh{display:flex;align-items:flex-start;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)}
 .mh img{width:46px;height:62px;border-radius:7px;object-fit:cover;background:#eef2f7}
@@ -178,13 +180,13 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
 .pgdot{color:#94a3b8;padding:0 1px}
 
 /* 表单输入（资料弹窗） */
-.fld input[type=text],.fld input[type=number],.fld input[type=date]{width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:9px;font:13px/1.5 inherit;outline:none;background:#fff}
+.fld input[type=text],.fld input[type=number],.fld input[type=date],.fld input[type=password]{width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:9px;font:13px/1.5 inherit;outline:none;background:#fff}
 .fld input:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
 .fld .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .fld .ln{display:flex;gap:6px;align-items:center}
 .ovr{display:inline-block;font-size:10px;color:#a16207;background:#fefce8;border-radius:5px;padding:0 5px;margin-left:5px;vertical-align:1.5px;font-weight:700}
 
-/* 鉴权横幅：令牌缺失/无效时说人话（原来只给一张空表） */
+/* 鉴权横幅：未登录 / 会话失效时说人话（原来只给一张空表） */
 .authbar{display:none;align-items:center;gap:9px;background:var(--dan-bg);border:1px solid #fecaca;color:var(--dan);border-radius:10px;padding:9px 13px;font-size:12.5px;margin-bottom:12px}
 .authbar.on{display:flex}
 .authbar .sp{flex:1}
@@ -257,23 +259,24 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
       <h2 id="vTitle">仪表盘</h2>
       <span class="crumb" id="vCrumb">总览 / 数据健康</span>
       <span class="sp"></span>
-      <!-- ★ v10.90：令牌条改造 —— ① 保存后**回填**（原来立刻清空，原文再也看不到）；
-           ② 👁 可切换明文；③ 保存时立刻打 /api/admin/verify 给绿/红结论。 -->
-      <div class="tk" title="线上管理写操作需要令牌；本机 8123/8124 直连免令牌">
-        <span class="tkdot" id="tkDot"></span>
-        <input id="tkInput" type="password" placeholder="管理令牌（线上需填）" autocomplete="off">
-        <button class="btn sm" id="tkEye" onclick="toggleTk()" title="显示 / 隐藏令牌">👁</button>
-        <button class="btn sm" onclick="saveToken()">保存</button>
+      <!-- ★ v10.91：令牌条 → 账号条。
+           用户口径：「为什么要令牌，不如直接给我一个管理员账号」——
+           令牌的问题是难记、难查、填错只得到一张空表；账号密码才是人用的东西。
+           令牌通道没有删，退化到登录弹窗里的「用令牌登录」（脚本仍走它）。 -->
+      <div class="tk" id="acctBar" title="管理员账号（本机直连免登录）">
+        <span class="tkdot off" id="tkDot"></span>
+        <span class="acct" id="acctName">未登录</span>
+        <button class="btn sm" id="acctBtn" onclick="acctAction()">登录</button>
       </div>
       <a class="btn sm" href="/" target="_blank" rel="noopener">打开主站 ↗</a>
     </header>
 
-    <!-- ★ v10.90 鉴权横幅：令牌缺失/无效时在**内容区**说清楚，
+    <!-- ★ v10.90 鉴权横幅：未登录/失效时在**内容区**说清楚，
          而不是只把表格留空（原来的表现是「填了令牌还是什么都没有」）。 -->
     <div class="authbar" id="authBar">
-      <b>未授权</b><span id="authMsg">线上需要管理令牌才能看管理数据。</span>
+      <b>未登录</b><span id="authMsg">线上需要管理员账号才能看管理数据。</span>
       <span class="sp"></span>
-      <button class="btn sm" onclick="focusTok()">去填令牌</button>
+      <button class="btn sm" onclick="openLogin()">登录</button>
     </div>
 
     <!-- ═══ 页面管理（爬取条目清单）═══
@@ -454,14 +457,16 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
     <!-- ═══ 设置 ═══ -->
     <section class="view" id="view-set">
       <div class="panel">
-        <div class="ph"><h3>管理鉴权</h3></div>
+        <div class="ph"><h3>管理鉴权（v10.91 改为管理员账号）</h3></div>
         <div class="pb">
           <div class="kv" style="line-height:2">
-            <div><i>本机</i>8123 / 8124 直连免令牌（回环 + 本地 Host + 无转发头 三条件同时成立）</div>
-            <div><i>线上</i>需在右上角填 <span class="code">X-Admin-Token</span>，存浏览器本地</div>
-            <div><i>查看已填令牌</i>点顶栏 <b>👁</b> 切明文；保存时会调 <span class="code">/api/admin/verify</span> 当场判定有效/无效</div>
-            <div><i>令牌源</i>环境变量 <span class="code">GAMEHUB_ADMIN_TOKEN</span> &gt; <span class="code">data/admin-token.json</span>（不入库，随发布上线）</div>
-            <div><i>当前</i><span id="setTok">未填写</span></div>
+            <div><i>登录方式</i>右上角 <b>登录</b> → 用户名 + 密码。登录后 30 天内免重复输入</div>
+            <div><i>本机</i>8123 / 8124 直连 <b>免登录</b>（回环 + 本地 Host + 无转发头 三条件同时成立）</div>
+            <div><i>账号源</i>环境变量 <span class="code">GAMEHUB_ADMIN_USER</span> + <span class="code">GAMEHUB_ADMIN_PASS</span>
+              &gt; <span class="code">data/admin-account.json</span>（只存 scrypt 派生值，明文不落盘、不入库）</div>
+            <div><i>改密码</i><span class="code">node tools/set-admin-account.js &lt;用户名&gt; &lt;密码&gt;</span>（改完不用重启，下次登录即生效）</div>
+            <div><i>令牌</i>仍然保留：抓取脚本 / 无头核验走 <span class="code">X-Admin-Token</span>，人在登录弹窗点「用令牌登录」也能用</div>
+            <div><i>当前</i><span id="setTok">未登录</span></div>
           </div>
         </div>
       </div>
@@ -473,7 +478,7 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
           · 备注存 <span class="code">data/game-notes.json</span>；豁免存 <span class="code">data/hide-overrides.json</span>（已 gitignore）。<br>
           · <b>资料覆盖存 <span class="code">data/game-profile.json</span></b>（不入库）：页面管理改的标题/封面/热度/链接、游戏库改的简介/类型/厂商/发售日/别名都在这里，<b>不回写爬虫产物</b>。<br>
           · 资料覆盖<b>只改展示，不参与匹配</b> —— 改标题不会影响已匹配的 MOD / 修改器 / 存档归属。<br>
-          · 所有管理写操作都会追加到 <span class="code">data/admin-log.jsonl</span>（谁/何时/对哪条/回环还是令牌）。
+          · 所有管理写操作都会追加到 <span class="code">data/admin-log.jsonl</span>（谁/何时/对哪条/账号还是令牌）。
         </div>
       </div>
       <div class="panel">
@@ -481,6 +486,51 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
         <div class="pb" id="setLog"></div>
       </div>
     </section>
+  </div>
+</div>
+
+<!-- ═══ 登录弹窗（v10.91 管理员账号）═══
+     ★ 口令**只在服务端比对**：这个文件里没有任何密码常量。
+       如果把它做成前端硬编码对比，任何人 View Source 就拿到密码了。 -->
+<div class="mask" id="lmask" onclick="if(event.target===this)closeLogin()">
+  <div class="modal sm">
+    <div class="mh">
+      <div>
+        <h3 id="lgTitle">管理员登录</h3>
+        <div class="meta" id="lgSub">账号校验在服务端，密码不写进前端文件</div>
+      </div>
+      <span class="sp"></span>
+      <button class="mclose" onclick="closeLogin()">×</button>
+    </div>
+    <div class="mcol" style="padding:18px">
+      <div id="lgPanePwd">
+        <div class="fld"><label>用户名</label><input type="text" id="lgUser" autocomplete="username" placeholder="liyou"></div>
+        <div class="fld"><label>密码</label>
+          <div class="ln">
+            <input type="password" id="lgPass" autocomplete="current-password"
+                   onkeydown="if(event.key==='Enter')submitLogin()">
+            <button class="btn sm" id="lgEye" onclick="togglePass()" title="显示 / 隐藏密码">👁</button>
+          </div>
+        </div>
+        <div class="mut" id="lgMsg" style="min-height:19px;font-size:12.5px;line-height:1.5"></div>
+      </div>
+      <div id="lgPaneTok" style="display:none">
+        <div class="fld"><label>管理令牌</label>
+          <div class="ln">
+            <input type="password" id="tkInput" autocomplete="off" placeholder="data/admin-token.json 里的 token">
+            <button class="btn sm" id="tkEye" onclick="toggleTk()" title="显示 / 隐藏令牌">👁</button>
+          </div>
+          <div class="hint">这条通道主要给脚本 / 无头工具用，人用账号登录即可。</div>
+        </div>
+        <div class="mut" id="lgTokMsg" style="min-height:19px;font-size:12.5px"></div>
+      </div>
+    </div>
+    <div class="mf">
+      <a href="#" class="mut" id="lgSwitch" onclick="lgMode();return false">用令牌登录</a>
+      <span class="sp"></span>
+      <button class="btn sm" onclick="closeLogin()">取消</button>
+      <button class="btn pri" id="lgGo" onclick="submitLogin()">登录</button>
+    </div>
   </div>
 </div>
 
@@ -656,58 +706,178 @@ function ago(t) {
   return Math.round(d / 30) + ' 个月前';
 }
 
-/* ═══════════ 鉴权（头优先，403 降级一次） ═══════════
- * ★ v10.90 三个修正，都来自「已填写令牌不能查看」这条反馈：
- *   ① `saveToken()` 原来保存后立刻把输入框清空 ⇒ 令牌原文再也看不到（只能看到前 6 位）。
- *      现在**回填**，并给一个 👁 切换明文；
- *   ② 保存时同步打 `/api/admin/verify` ⇒ 立刻给「令牌有效 / 无效」的结论，
- *      而不是让用户对着空表格猜；
- *   ③ 任何管理请求 403 的时候，在内容区顶部挂一条横幅说清楚原因
- *      （原来只有空表格 + console 一条 403，肉眼根本看不到）。 */
-const TKEY = 'gh_admin_token';
+/* ═══════════ 鉴权：管理员账号（v10.91）═══════════
+ * 用户口径：「为什么要令牌，不如直接给我一个管理员账号」。
+ *   令牌不好记、难核对，填错只会得到一张空表 —— 它本质是一个长得像乱码、
+ *   还要求人工保管的密码。现在改成账号密码登录。
+ *
+ * 三条通道，服务端任一成立即放行（顺序即优先级）：
+ *   ① 本机回环（8123 / 8124 直连）—— 前端不需要任何凭据
+ *   ② 会话：账号密码换来的**随机 sid**（浏览器只拿这个，它本身没有信息量）
+ *   ③ 令牌：保留给脚本 / 无头工具，登录弹窗里留了入口
+ *
+ * ★★ 密码**绝不能**写在前端：本文件里没有任何口令常量，比对发生在 /api/admin/login。
+ *   （做成前端硬编码对比的话，任何人 View Source 就拿到密码了 —— 比令牌更糟。）
+ * ★ 会话过期 / 服务重启后 sid 失效：api() 收到 403 会清掉本地 sid 并提示重新登录，
+ *   而不是让用户对着一张空表猜。 */
+const SKEY = 'gh_admin_sid';       /* 会话 id（服务端内存，重启即失效）*/
+const TKEY = 'gh_admin_token';     /* 令牌（备用通道，脚本同款）*/
+let ACCT = { on: false, user: '', via: '' };
+let LGMODE = 'pwd';                /* 登录弹窗当前页：pwd | tok */
+
+function sid() { return localStorage.getItem(SKEY) || ''; }
 function tok() { return localStorage.getItem(TKEY) || ''; }
 function tokMask(t) { return t ? t.slice(0, 6) + '…' : ''; }
+function showAuth(msg) { $('authMsg').textContent = msg; $('authBar').classList.add('on'); }
+function hideAuth() { $('authBar').classList.remove('on'); }
+
+function acctText() {
+  if (ACCT.on && ACCT.via === 'loopback') return '本机直连';
+  if (ACCT.on && ACCT.via === 'token') return '令牌';
+  if (ACCT.on) return ACCT.user || '已登录';
+  return '未登录';
+}
+function paintAcct() {
+  const on = !!ACCT.on;
+  $('tkDot').className = 'tkdot ' + (on ? 'on' : 'off');
+  $('acctName').textContent = acctText();
+  $('acctBtn').textContent = (on && ACCT.via === 'session') ? '退出' : (on ? '账号' : '登录');
+  if ($('setTok')) {
+    $('setTok').textContent = !on ? '未登录'
+      : ACCT.via === 'loopback' ? '本机回环直连（8123/8124，免登录）'
+        : ACCT.via === 'token' ? '令牌通道（' + tokMask(tok()) + '）'
+          : '已登录：' + (ACCT.user || '?');
+  }
+}
+function acctAction() {
+  if (ACCT.on && ACCT.via === 'session') doLogout();
+  else openLogin();
+}
+
+/* ── 登录弹窗 ── */
+function openLogin() {
+  $('lmask').classList.add('on');
+  lgMode(LGMODE);
+  setTimeout(() => { const el = LGMODE === 'pwd' ? $('lgUser') : $('tkInput'); if (el) el.focus(); }, 40);
+}
+function closeLogin() {
+  $('lmask').classList.remove('on');
+  $('lgMsg').textContent = '';
+  $('lgTokMsg').textContent = '';
+  $('lgPass').value = '';
+}
+function lgMode(m) {
+  LGMODE = m || (LGMODE === 'pwd' ? 'tok' : 'pwd');
+  const pwd = LGMODE === 'pwd';
+  $('lgPanePwd').style.display = pwd ? '' : 'none';
+  $('lgPaneTok').style.display = pwd ? 'none' : '';
+  $('lgTitle').textContent = pwd ? '管理员登录' : '用管理令牌';
+  $('lgSwitch').textContent = pwd ? '用令牌登录' : '用账号密码登录';
+  $('lgGo').textContent = pwd ? '登录' : '保存令牌';
+  if (!pwd) $('tkInput').value = tok();   /* ★ 回填：已保存的令牌要能查看 */
+  $('tkEye').textContent = $('tkInput').type === 'password' ? '👁' : '🙈';
+}
+function togglePass() {
+  const i = $('lgPass');
+  i.type = i.type === 'password' ? 'text' : 'password';
+  $('lgEye').textContent = i.type === 'password' ? '👁' : '🙈';
+}
 function toggleTk() {
   const i = $('tkInput');
   i.type = i.type === 'password' ? 'text' : 'password';
   $('tkEye').textContent = i.type === 'password' ? '👁' : '🙈';
 }
-function focusTok() { $('tkInput').focus(); $('tkInput').select(); }
-function showAuth(msg) { $('authMsg').textContent = msg; $('authBar').classList.add('on'); }
-function hideAuth() { $('authBar').classList.remove('on'); }
+function submitLogin() { return LGMODE === 'pwd' ? doLogin() : saveToken(); }
 
+async function doLogin() {
+  const user = $('lgUser').value.trim();
+  const pass = $('lgPass').value;
+  if (!user || !pass) { $('lgMsg').textContent = '用户名和密码都要填'; return; }
+  $('lgMsg').textContent = '正在登录…';
+  let r, j;
+  try {
+    /* 登录不走 api()：它还没凭据，且 403 语义不同（这里是「密码错」不是「会话失效」）*/
+    r = await fetch('/api/admin/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user, pass }),
+    });
+    j = await r.json().catch(() => ({ ok: false, error: '响应解析失败（HTTP ' + r.status + '）' }));
+  } catch (e) {
+    $('lgMsg').textContent = '网络错误：' + e.message;
+    return;
+  }
+  if (!j.ok) { $('lgMsg').textContent = j.error || ('登录失败（HTTP ' + r.status + '）'); return; }
+  if (j.sid) localStorage.setItem(SKEY, j.sid);
+  localStorage.removeItem(TKEY);        /* 账号登录成功 ⇒ 旧的令牌不再参战，免两条线打架 */
+  ACCT = { on: true, user: j.user || user, via: 'session' };
+  $('lgPass').value = '';
+  closeLogin(); paintAcct(); hideAuth();
+  toast('已登录：' + (j.user || user));
+  refreshAll();
+}
+
+async function doLogout() {
+  if (!window.confirm('退出登录？退出后需要重新输入账号密码。')) return;
+  const s = sid();
+  try {
+    await fetch('/api/admin/logout', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sid: s }),
+    });
+  } catch (e) { /* 网络失败也照样清本地：留着无效 sid 只会让页面更难用 */ }
+  localStorage.removeItem(SKEY);
+  ACCT = { on: false, user: '', via: '' };
+  paintAcct();
+  showAuth('已退出登录。点右上角「登录」重新进入。');
+  refreshAll();
+}
+
+/* 令牌通道（保留）：写本地 → 立刻 verify → 给结论，不再"点了保存就弹成功"。 */
 async function saveToken() {
   const v = $('tkInput').value.trim();
   if (v) localStorage.setItem(TKEY, v); else localStorage.removeItem(TKEY);
-  $('tkInput').value = tok();          /* ← 回填：已填写的令牌要能查看 */
-  paintTok();
-  if (!v) { hideAuth(); toast('令牌已清除'); return; }
+  $('tkInput').value = tok();           /* ★ 回填：已填写的令牌要能查看 */
+  if (!v) { $('lgTokMsg').textContent = '令牌已清除'; paintAcct(); return; }
+  $('lgTokMsg').textContent = '正在校验…';
   const j = await api('/api/admin/verify');
-  if (j.ok) { hideAuth(); toast('令牌有效（' + (j.via || '?') + '）'); }
-  else {
-    /* 点了保存 ≠ 令牌可用：红灯 + 横幅，别让绿点撒谎 */
-    $('tkDot').className = 'tkdot off';
-    showAuth('令牌无效：服务端没有接受它。请核对设置页的令牌来源（env 或 data/admin-token.json）。');
+  if (j.ok) {
+    ACCT = { on: true, user: '', via: 'token' };
+    paintAcct(); closeLogin(); hideAuth();
+    toast('令牌有效（' + (j.via || '?') + '）');
+    refreshAll();
+  } else {
+    $('lgTokMsg').textContent = '令牌没有被接受：请核对 data/admin-token.json 里的值。';
     toast('令牌无效');
   }
+}
+
+function refreshAll() {
   reload(); pagesReload(); loadLog(); loadSetLog();
+  if ($('stats')) loadStats();
 }
-function paintTok() {
-  const on = !!tok();
-  $('tkDot').className = 'tkdot ' + (on ? 'on' : 'off');
-  $('setTok').textContent = on ? '已填写（' + tokMask(tok()) + '，点 👁 可查看全文）' : '未填写（本机直连无需）';
-  if (!on) $('tkInput').placeholder = '管理令牌（线上必填 · 本机免填）';
-}
+
 async function api(path, opt) {
-  const t = tok();
+  const s = sid(), t = tok();
   const send = async (fallback) => {
     const o = Object.assign({}, opt || {});
     const isGet = String(o.method || 'GET').toUpperCase() === 'GET';
     let url = path;
-    o.headers = Object.assign({ 'Content-Type': 'application/json' }, (!fallback && t) ? { 'X-Admin-Token': t } : {});
-    if (fallback && t) {
-      if (isGet) url += (path.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(t);
-      else if (o.body) { try { const b = JSON.parse(o.body); b.token = t; o.body = JSON.stringify(b); } catch (e) {} }
+    const h = { 'Content-Type': 'application/json' };
+    if (!fallback && s) h['X-Admin-Session'] = s;
+    if (!fallback && t) h['X-Admin-Token'] = t;
+    o.headers = h;
+    /* 降级通道（防反代剥自定义头）：会话走 ?sid= / body.sid，令牌走 ?token= / body.token */
+    if (fallback) {
+      if (isGet) {
+        if (s) url += (url.includes('?') ? '&' : '?') + 'sid=' + encodeURIComponent(s);
+        if (t) url += (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(t);
+      } else if (o.body) {
+        try {
+          const b = JSON.parse(o.body);
+          if (s) b.sid = s;
+          if (t) b.token = t;
+          o.body = JSON.stringify(b);
+        } catch (e) { /* 非 JSON body 不降级 */ }
+      }
     }
     const r = await fetch(url, o);
     const j = await r.json().catch(() => ({ ok: false, error: '响应解析失败（HTTP ' + r.status + '）' }));
@@ -716,14 +886,12 @@ async function api(path, opt) {
   };
   const j = await send(false);
   if (!j.ok && j.needAuth) {
-    /* 有令牌才降级重试（query / body 两条通道，防反代剥头） */
-    if (t) {
-      const j2 = await send(true);
-      if (j2.ok) { hideAuth(); return j2; }
-    }
-    showAuth(t
-      ? '令牌没有被接受（HTTP 403）。请核对令牌是否与线上 data/admin-token.json 一致。'
-      : '这条数据需要管理令牌。请把令牌填到右上角并点保存。');
+    if (s || t) { const j2 = await send(true); if (j2.ok) { hideAuth(); return j2; } }
+    /* 会话确实失效了（过期 / 服务重启 / 改了账号）⇒ 清掉本地 sid，别让它一直发无效请求 */
+    if (s) { localStorage.removeItem(SKEY); ACCT = { on: false, user: '', via: '' }; paintAcct(); }
+    showAuth(s
+      ? '登录已失效（会话过期或服务重启）。请重新登录。'
+      : '这条数据需要管理员账号。点右上角「登录」。');
     return j;
   }
   hideAuth();
@@ -808,17 +976,29 @@ async function loadStats() {
   $('barRecent').style.width = pct(c.recentHot0) + '%'; $('vvRecent').textContent = nf(c.recentHot0);
   $('dashBuilt').textContent = '总数 ' + nf(c.total) + ' · 规则 ' + (c.rule || '');
 
+  /* ★ v10.91 修：这张表原来统一读 `.matched / .total`，但六个源的 stats() **字段名各不相同** ——
+   *   saves 是 `inPcLib / total`、gt 是 `preMatched / listTotal`、tsmods 没有 `total`（是 `communities`）
+   *   ⇒ 三行印出 `NaN% · —,6,632`（分子 undefined 除以分母数字）。
+   *   现在**逐源写真实字段名**，并给一个「取不到就显示 —」的兜底：
+   *   下次某个源改字段时，这一行会**明显变灰**，而不是悄悄印 NaN。 */
+  const num = (v) => (typeof v === 'number' && isFinite(v) ? v : null);
+  const sv2 = j.saves || {}, gt2 = j.gt || {}, ts2 = j.tsmods || {}, fg2 = j.fitgirl || {};
   const health = [
-    ['机地帖 MOD', (j.mods || {}).matched, (j.mods || {}).total],
-    ['修改器', (j.trainers || {}).matched, (j.trainers || {}).total],
-    ['云存档', (j.saves || {}).matched, (j.saves || {}).total],
-    ['GTrainers', (j.gt || {}).matched, (j.gt || {}).total],
-    ['FitGirl', (j.fitgirl || {}).matchedGames, (j.fitgirl || {}).gamesTotal || (j.lib || {}).total],
-    ['Thunderstore', (j.tsmods || {}).matched, (j.tsmods || {}).total],
+    ['机地帖 MOD', num((j.mods || {}).matched), num((j.mods || {}).total)],
+    ['修改器', num((j.trainers || {}).matched), num((j.trainers || {}).total)],
+    ['存档（Ludusavi）', num(sv2.inPcLib), num(sv2.total)],
+    ['云存档', num(sv2.withCloud), num(sv2.total)],
+    ['GTrainers', num(gt2.preMatched), num(gt2.listTotal)],
+    ['FitGirl', num(fg2.matchedGames), num((j.lib || {}).total)],
+    ['Thunderstore', num(ts2.matched), num(ts2.communities)],
   ];
   $('srcHealth').innerHTML = health.map(([nm, m, t]) => {
-    const p = t ? Math.round((m / t) * 100) : 0;
-    return '<div class="bar"><div class="nm">' + esc(nm) + '</div><div class="track"><div class="fill" style="width:' + Math.max(1, p) + '%"></div></div><div class="vv">' + p + '% · ' + nf(m) + '/' + nf(t) + '</div></div>';
+    const bad = m == null || t == null || !t;
+    const p = bad ? 0 : Math.round((m / t) * 100);
+    return '<div class="bar"><div class="nm">' + esc(nm) + '</div>'
+      + '<div class="track"><div class="fill" style="width:' + (bad ? 0 : Math.max(1, p)) + '%;'
+      + (bad ? 'background:#cbd5e1' : '') + '"></div></div>'
+      + '<div class="vv">' + (bad ? '—' : p + '% · ' + nf(m) + '/' + nf(t)) + '</div></div>';
   }).join('');
 
   paintDashChips();
@@ -836,7 +1016,7 @@ async function paintDashMods() {
     const j = await api('/api/admin/coverage?module=' + m.key + '&limit=0');
     const el = $('dc-' + m.key);
     if (!el) continue;
-    if (!j.ok) { el.innerHTML = '<div class="mut">' + esc(j.needAuth ? '需要令牌' : (j.error || '加载失败')) + '</div>'; continue; }
+    if (!j.ok) { el.innerHTML = '<div class="mut">' + esc(j.needAuth ? '需要登录' : (j.error || '加载失败')) + '</div>'; continue; }
     const rows = (j.sources || []).map((s) => {
       const p = Math.min(100, s.rate || 0);
       return '<div class="bar" style="grid-template-columns:96px 1fr 78px;padding:5px 0">'
@@ -876,7 +1056,7 @@ async function loadRes() {
     const j = await api('/api/admin/coverage?module=' + k + '&limit=20');
     const el = $('rc-' + k);
     if (!el) continue;
-    if (!j.ok) { el.innerHTML = '<div class="hd"><b>' + esc(m.label) + '</b></div><div class="mut">' + esc(j.needAuth ? '需要令牌' : (j.error || '加载失败')) + '</div>'; continue; }
+    if (!j.ok) { el.innerHTML = '<div class="hd"><b>' + esc(m.label) + '</b></div><div class="mut">' + esc(j.needAuth ? '需要登录' : (j.error || '加载失败')) + '</div>'; continue; }
     grand += j.missingTotal || 0;
     const bars = (j.sources || []).map((s) => {
       const p = Math.min(100, s.rate || 0);
@@ -974,7 +1154,7 @@ async function pagesReload(resetPage) {
   if (!j.ok) {
     $('pRows').innerHTML = '';
     $('pEmpty').style.display = 'block';
-    $('pEmpty').textContent = '需要令牌或加载失败（' + (j.error || 'HTTP ' + (j.needAuth ? '403' : '?')) + '）';
+    $('pEmpty').textContent = '需要登录或加载失败（' + (j.error || 'HTTP ' + (j.needAuth ? '403' : '?')) + '）';
     $('pPgBar').innerHTML = '';
     return;
   }
@@ -1008,7 +1188,7 @@ async function reload(resetPage) {
   if (!j.ok) {
     $('rows').innerHTML = '';
     $('rowsEmpty').style.display = 'block';
-    $('rowsEmpty').textContent = '需要令牌或加载失败（' + (j.error || ('HTTP ' + (j.needAuth ? '403' : '?'))) + '）';
+    $('rowsEmpty').textContent = '需要登录或加载失败（' + (j.error || ('HTTP ' + (j.needAuth ? '403' : '?'))) + '）';
     $('gPgBar').innerHTML = '';
     return;
   }
@@ -1069,7 +1249,7 @@ let rmMod = 'mod', rmSrc = '', rmOff = 0, rmQ = '', rmTotal = 0;
 const SRC_DEF = {
   fitgirl: {
     cols: [['日期', '96px'], ['标记', '70px']],
-    /* FitGirl / Thunderstore 原本只有「按 libId 反查」，没有扁平列表 ⇒ 走 /api/admin/res（需令牌） */
+    /* FitGirl / Thunderstore 原本只有「按 libId 反查」，没有扁平列表 ⇒ 走 /api/admin/res（需登录） */
     url: (q, off) => '/api/admin/res?kind=fitgirl&size=' + RM_LIMIT + '&page=' + (Math.floor(off / RM_LIMIT) + 1) + (q ? '&q=' + encodeURIComponent(q) : ''),
     norm: (x) => ({
       gameId: x.gameId, gameTitle: x.gameTitle, title: x.title,
@@ -1183,7 +1363,7 @@ async function resmReload() {
 
   const j = await api(def.url(rmQ, rmOff));
   if (!j.ok) {
-    const msg = j.needAuth ? '需要令牌（线上在右上角填）' : (j.error || '加载失败');
+    const msg = j.needAuth ? '需要登录（右上角）' : (j.error || '加载失败');
     $('rmRows').innerHTML = '<tr><td colspan="' + colspan + '" class="mut" style="padding:18px">' + esc(msg) + '</td></tr>';
     $('rmEmpty').style.display = 'none';
     $('rmPgBar').innerHTML = '';
@@ -1264,7 +1444,7 @@ async function openProf(i, mode, ev) {
   $('pfNote').value = g.note || '';
 
   const j = await api('/api/admin/profile?id=' + encodeURIComponent(g.id));
-  if (!j.ok) { $('pfStat').textContent = '读取失败：' + (j.error || (j.needAuth ? '需要令牌' : '')); return; }
+  if (!j.ok) { $('pfStat').textContent = '读取失败：' + (j.error || (j.needAuth ? '需要登录' : '')); return; }
   pfData = j;
   pfFill(j);
   $('pfStat').textContent = '资料 ' + (j.completeness || 0) + '/7 · ' + (mode === 'pages' ? '编辑爬虫字段' : '编辑游戏资料');
@@ -1324,7 +1504,7 @@ async function saveProf() {
   const note = $('pfNote').value.trim();
 
   const r1 = await api('/api/admin/profile', { method: 'POST', body: JSON.stringify({ id, patch }) });
-  if (!r1.ok) return toast('资料保存失败：' + (r1.error || (r1.needAuth ? '需要令牌' : '未知')));
+  if (!r1.ok) return toast('资料保存失败：' + (r1.error || (r1.needAuth ? '需要登录' : '未知')));
   const r2 = await api('/api/admin/note', { method: 'POST', body: JSON.stringify({ id, note }) });
   if (!r2.ok) return toast('备注保存失败：' + (r2.error || '未知'));
   const initOp = (pfData && pfData.state && pfData.state.override) || 'clear';
@@ -1363,7 +1543,7 @@ async function openEdit(i, ev) {
   $('mask').classList.add('on');
 
   const j = await api('/api/admin/game?id=' + encodeURIComponent(g.id));
-  if (!j.ok) { $('mRes').innerHTML = '<div class="mut">资源加载失败：' + esc(j.error || '') + (j.needAuth ? '（线上需在右上角填令牌）' : '') + '</div>'; return; }
+  if (!j.ok) { $('mRes').innerHTML = '<div class="mut">资源加载失败：' + esc(j.error || '') + (j.needAuth ? '（右上角登录）' : '') + '</div>'; return; }
   renderRes(j);
   /* 用服务端真值回填状态（铁律 154：不猜） */
   const st = j.state || {};
@@ -1420,7 +1600,9 @@ function renderRes(j) {
 function closeModal() { $('mask').classList.remove('on'); cur = null; curItem = null; }
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
-  if ($('pmask').classList.contains('on')) closeProf();
+  /* v10.91：登录弹窗在最上层，Esc 先关它 */
+  if ($('lmask').classList.contains('on')) closeLogin();
+  else if ($('pmask').classList.contains('on')) closeProf();
   else closeModal();
 });
 
@@ -1430,7 +1612,7 @@ async function saveAll() {
   const note = $('mNote').value.trim();
   let changed = 0;
   const r1 = await api('/api/admin/note', { method: 'POST', body: JSON.stringify({ id, note }) });
-  if (!r1.ok) { toast('备注保存失败：' + (r1.error || (r1.needAuth ? '需要令牌' : '未知'))); return; }
+  if (!r1.ok) { toast('备注保存失败：' + (r1.error || (r1.needAuth ? '需要登录' : '未知'))); return; }
   changed++;
   const initOp = (cur && cur.state && cur.state.override) || 'clear';
   if (segOp !== initOp) {
@@ -1449,7 +1631,7 @@ async function saveAll() {
 async function loadLog() {
   const j = await api('/api/admin/log?limit=100');
   if (!j.ok) {
-    $('logList').innerHTML = '<div class="mut">读取失败：' + esc(j.error || '') + (j.needAuth ? '（线上需填令牌）' : '') + '</div>';
+    $('logList').innerHTML = '<div class="mut">读取失败：' + esc(j.error || '') + (j.needAuth ? '（需登录）' : '') + '</div>';
     $('logInfo').textContent = '—';
     return;
   }
@@ -1468,10 +1650,21 @@ async function loadSetLog() {
     : '<div class="mut">无记录' + (j.needAuth ? '（需令牌）' : '') + '</div>';
 }
 
-/* ═══════════ 启动 ═══════════ */
-paintTok();
-go((location.hash || '#dash').slice(1));
-loadSetLog();
+/* ═══════════ 启动 ═══════════
+ * ★ v10.91：先打一次 verify 确认「现在到底是谁」，再渲染视图 ——
+ *   否则首屏会因为并发请求先后顺序不同，一会儿绿点一会儿红灯。
+ *   本机回环会直接 via=loopback（不弹登录），线上没会话就落到「未登录 + 横幅」。 */
+(async function bootstrap() {
+  let j = { ok: false };
+  try { j = await api('/api/admin/verify'); } catch (e) { /* 断网时不阻塞页面 */ }
+  ACCT = j.ok
+    ? { on: true, user: j.user || '', via: j.via || 'session' }
+    : { on: false, user: '', via: '' };
+  paintAcct();
+  if (ACCT.on) hideAuth();
+  go((location.hash || '#dash').slice(1));
+  loadSetLog();
+}());
 </script>
 </body>
 </html>

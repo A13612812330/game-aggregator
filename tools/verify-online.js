@@ -221,6 +221,21 @@ function chk(ok, name, extra) {
     chk(r.s === 403, `[接口] ★ 无令牌 ${label} ⇒ 403（备注不公网可读）`, 'status ' + r.s);
   }
 
+  /* ---- ★ v10.91 管理员账号：线上必须能走到「用户名或密码不正确」 ----
+   * 为什么要验这条：账号文件 `data/admin-account.json` 是 `.gitignore` 的，
+   * 它能不能上线**只取决于发布载荷有没有带上**。带漏了的表现是登录接口回
+   * 「服务端还没有配置账号」，而不是 401 —— 用户在页面上会以为是密码写错了。
+   * ★ 只打一次：一次失败会消耗 1 次限流额度（8 次/10 分钟），不要写成循环。 */
+  const lgRes = await fetch(BASE.replace(/\/$/, '') + '/api/admin/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user: '__probe__', pass: '__probe__' }),
+  });
+  let lgJ = null; try { lgJ = await lgRes.json(); } catch (e) { /* 非 JSON */ }
+  chk(lgRes.status === 401 && lgJ && /用户名或密码不正确/.test(String(lgJ.error || '')),
+    '[接口] ★ v10.91 管理员登录通道在位（401 且不是「未配置账号」⇒ 账号文件已随载荷上线）',
+    'status ' + lgRes.status + ' · ' + String((lgJ || {}).error || '').slice(0, 40));
+
   /* ---- ② 页面侧：真机打开、真点详情页 ---- */
   const H = await connectBrowser();
   const b = H.browser;

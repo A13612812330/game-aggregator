@@ -7,11 +7,14 @@
 const path = require('path');
 const fs = require('fs');
 const zlib = require('zlib');
+const crypto = require('crypto');
 const { spawn } = require('child_process');
 const express = require('express');
 const jidi = require('./fetchers/jidi');
 const xdgamer = require('./fetchers/xdgamer');
 const download = require('./fetchers/download');
+/* ★ v10.91 管理员账号（用户名 + 密码）。模块只在调用时读盘，requiring 本身无副作用。 */
+const adminAccount = require('./data/admin-account');
 /* ★ v10.25：/api/detail/merged 的截图去重要用**与两个 fetcher 同一份** idOf/merge ——
    抄一份到这里就等于「同一语义两份实现」，下次改尺寸策略必然漂移。 */
 const shotsLib = require('./fetchers/shots');
@@ -465,6 +468,97 @@ function adminToken() {
     return typeof j.token === 'string' && j.token ? j.token : null;
   } catch (e) { return null; }
 }
+/* ── v10.91 登录会话（用户名 + 密码 ⇒ 会话 id）──
+ *   为什么用「内存会话 + 随机 id」而不是把用户名密码塞进前端：
+ *   前端硬编码校验等于把密码公开（任何人 View Source 就拿到），所以口令只在服务端比对，
+ *   浏览器只持有一个**随机串**，它本身没有任何信息量。
+ *   · 会话存在**进程内存**：重启 / 发布后全部失效 ⇒ 需要重新登录一次（宁可这样，
+ *     也不把会话写盘：写盘就等于再造一份凭据文件）。
+ *   · 三通道取 sid：`X-Admin-Session` 头 > `gh_sid` Cookie > `?sid=` / body.sid
+ *     （与令牌同一取舍：反代可能剥头，Cookie 又可能被同站策略挡掉）。
+ *   · Cookie 走 HttpOnly + SameSite=Lax：正常浏览器路径下 JS 根本拿不到它，减少 XSS 风险。 */
+const SESSIONS = new Map();          /* sid -> { user, exp } */
+const SESS_COOKIE = 'gh_sid';
+const SESS_TTL = 30 * 24 * 3600 * 1000;
+const LOGIN_FAIL = new Map();        /* ip -> [失败时间戳] */
+const LOGIN_MAX = 8;                 /* 10 分钟内最多失败 8 次 */
+const LOGIN_WIN = 10 * 60 * 1000;
+
+function newSid() { return crypto.randomBytes(24).toString('hex'); }
+function cookieOf(req, name) {
+  const raw = String(req.headers.cookie || '');
+  for (const part of raw.split(';')) {
+    const i = part.indexOf('=');
+    if (i < 0) continue;
+    if (part.slice(0, i).trim() === name) {
+      try { return decodeURIComponent(part.slice(i + 1).trim()); } catch (e) { return part.slice(i + 1).trim(); }
+    }
+  }
+  return '';
+}
+function sidOf(req) {
+  return String(req.headers['x-admin-session']
+    || cookieOf(req, SESS_COOKIE)
+    || (req.query && req.query.sid)
+    || (req.body && req.body.sid)
+    || '');
+}
+function sessOf(req) {
+  const sid = sidOf(req);
+  if (!sid) return null;
+  const s = SESSIONS.get(sid);
+  if (!s) return null;
+  if (s.exp < Date.now()) { SESSIONS.delete(sid); return null; }
+  return { sid, user: s.user, exp: s.exp };
+}
+function pruneSessions() {
+  const now = Date.now();
+  for (const [k, v] of SESSIONS) if (v.exp < now) SESSIONS.delete(k);
+  for (const [k, arr] of LOGIN_FAIL) {
+    const keep = (arr || []).filter((t) => now - t < LOGIN_WIN);
+    if (keep.length) LOGIN_FAIL.set(k, keep); else LOGIN_FAIL.delete(k);
+  }
+}
+function loginThrottle(ip) {
+  const now = Date.now();
+  const list = (LOGIN_FAIL.get(ip) || []).filter((t) => now - t < LOGIN_WIN);
+  LOGIN_FAIL.set(ip, list);
+  if (list.length >= LOGIN_MAX) {
+    return { ok: false, wait: Math.max(1, Math.ceil((LOGIN_WIN - (now - list[0])) / 1000)) };
+  }
+  return { ok: true };
+}
+function loginFailed(ip) {
+  const l = LOGIN_FAIL.get(ip) || [];
+  l.push(Date.now());
+  LOGIN_FAIL.set(ip, l);
+  if (LOGIN_FAIL.size > 5000) pruneSessions();
+}
+function clientIp(req) {
+  /* ★ 必须优先取 `X-Forwarded-For`：线上所有请求的 socket 对端都是反代（同一个地址），
+   *   只按 socket 计数 ⇒ **一个人爆破就把所有人一起锁在外面**（本机实测踩到：
+   *   脚本连错 8 次之后，浏览器用正确密码登录也吃 429）。
+   *   取第一段（最靠近用户的那个地址）。 */
+  const xff = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  if (xff) return xff;
+  return String((req.socket && req.socket.remoteAddress) || '') || 'unknown';
+}
+
+/* 全站兜底：XFF 可以伪造 ⇒ 按 IP 限流本身可被绕过。
+ * 加一道「全站失败总数」闸门，防止无限次爆破；阈值取高（500/10min），
+ * 正常使用永远碰不到，只有真的在被爆破时才会触发。 */
+let GLOBAL_FAIL = [];
+function globalBlocked() {
+  const now = Date.now();
+  GLOBAL_FAIL = GLOBAL_FAIL.filter((t) => now - t < LOGIN_WIN);
+  return GLOBAL_FAIL.length >= 500;
+}
+function globalFailed() {
+  const now = Date.now();
+  GLOBAL_FAIL = GLOBAL_FAIL.filter((t) => now - t < LOGIN_WIN);
+  GLOBAL_FAIL.push(now);
+}
+
 /* ★★ v10.87.1 修正：回环豁免必须排除「经反代而来」的请求。
  *   首发上线实测到真漏洞：线上反代把 socket 对端变成回环，只判 IP 的结果是
  *   `GET /api/admin/log`、`GET /api/admin/hide-overrides` 无令牌直接 200 ——
@@ -483,13 +577,21 @@ function adminGuard(req, res) {
   const fwd = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.headers['forwarded']
     || req.headers['x-forwarded-host'] || req.headers['cf-connecting-ip'];
   if (isLoop && hostLocal && !fwd) { req._adminVia = 'loopback'; return true; }
+  /* v10.91：登录会话 —— 人用的通道（账号密码换来的随机 sid）。 */
+  const s = sessOf(req);
+  if (s) { req._adminVia = 'session'; req._adminUser = s.user; return true; }
+  /* 令牌通道保留：抓取脚本 / verify-online / 各测试套件靠它做无头鉴权。 */
   const tok = adminToken();
   const given = String(req.headers['x-admin-token']
     || req.query.token
     || (req.body && req.body.token)
     || '');
   if (tok && given && given === tok) { req._adminVia = 'token'; return true; }
-  res.status(403).json({ ok: false, error: '管理接口需要本机回环或 X-Admin-Token（/admin 页顶栏填令牌）' });
+  res.status(403).json({
+    ok: false,
+    needAuth: true,
+    error: '管理接口需要登录管理员账号（/admin 右上角「登录」），或本机回环直连',
+  });
   return false;
 }
 
@@ -616,6 +718,81 @@ app.get('/api/admin/log', (req, res) => {
   res.json(readAdminLog(req.query.limit));
 });
 
+/* ── ★ v10.91 管理员账号：登录 / 登出 / 账号状态 ────────────────────────────
+ * 用户口径：「为什么要令牌，不如直接给我一个管理员账号」。
+ *
+ * 与令牌的关系（有意共存，不是没删干净）：
+ *   · **人**走账号密码（好记、能改、登录后长期有效）；
+ *   · **程序**走令牌（抓取脚本 / verify-online / 测试套件做无头鉴权，
+ *     它们没有浏览器、也不该学会登录流程）。
+ *   ⇒ adminGuard 三条通道：回环 / 会话 / 令牌，任一成立即放行。
+ *
+ * ★ 登录接口**不**走 adminGuard（它必须能被未登录的人调用），
+ *   所以它自己成了唯一一个「公网可打」的写敏感端点，必须自带防爆破：
+ *   同一 IP 10 分钟内失败 8 次 ⇒ 429 + 剩余等待秒数。 */
+app.post('/api/admin/login', (req, res) => {
+  const ip = clientIp(req);
+  const gate = loginThrottle(ip);
+  if (!gate.ok) {
+    res.status(429).json({ ok: false, error: '尝试次数过多，请 ' + gate.wait + ' 秒后再试' });
+    return;
+  }
+  if (globalBlocked()) {
+    res.status(429).json({ ok: false, error: '全站登录失败次数过多（可能正被爆破），请 10 分钟后再试' });
+    return;
+  }
+  const user = String((req.body && req.body.user) || '').trim();
+  const pass = String((req.body && req.body.pass) || '');
+  if (!adminAccount.stats().configured) {
+    res.status(401).json({ ok: false, error: '服务端还没有配置账号：本地执行 node tools/set-admin-account.js <用户名> <密码>' });
+    return;
+  }
+  if (!adminAccount.check(user, pass)) {
+    loginFailed(ip);
+    globalFailed();
+    appendAdminLog({ ts: Date.now(), id: '-', title: '登录失败', op: 'login-fail', via: 'password', user: user.slice(0, 32), ip });
+    res.status(401).json({ ok: false, error: '用户名或密码不正确' });
+    return;
+  }
+  const sid = newSid();
+  const exp = Date.now() + SESS_TTL;
+  SESSIONS.set(sid, { user, exp });
+  if (SESSIONS.size > 5000) pruneSessions();
+  LOGIN_FAIL.delete(ip);
+  /* Cookie 只在「非回环」时加 Secure：本地 8123/8124 是 http，带 Secure 浏览器不写。 */
+  const https = String(req.headers['x-forwarded-proto'] || '').toLowerCase() === 'https';
+  res.setHeader('Set-Cookie',
+    SESS_COOKIE + '=' + sid + '; Path=/; HttpOnly; SameSite=Lax; Max-Age=' + Math.floor(SESS_TTL / 1000)
+    + (https ? '; Secure' : ''));
+  appendAdminLog({ ts: Date.now(), id: '-', title: '管理员登录', op: 'login', via: 'password', user, ip });
+  res.json({ ok: true, user, sid, exp, ttl: SESS_TTL });
+});
+
+app.post('/api/admin/logout', (req, res) => {
+  const s = sessOf(req);
+  if (s) {
+    /* 会话可能在 Cookie / 头 / query 任一通道里 ⇒ 三处都要能清掉 */
+    SESSIONS.delete(s.sid);
+    appendAdminLog({ ts: Date.now(), id: '-', title: '管理员登出', op: 'logout', via: 'session', user: s.user });
+  }
+  res.setHeader('Set-Cookie', SESS_COOKIE + '=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
+  res.json({ ok: true });
+});
+
+/* 账号状态（guarded）：设置页显示「当前是谁 / 账号从哪来 / 什么时候改过」，
+ * 绝不回传 hash 或 salt。 */
+app.get('/api/admin/account', (req, res) => {
+  if (!adminGuard(req, res)) return;
+  res.json({
+    ok: true,
+    via: req._adminVia || 'unknown',
+    user: req._adminUser || null,
+    account: adminAccount.stats(),
+    sessions: SESSIONS.size,
+    tokenPath: !!adminToken(),
+  });
+});
+
 /* ── ★ v10.90 GET /api/admin/verify ──
  * 一个**只回答「你这张令牌算不算数」**的探针。
  *
@@ -627,7 +804,13 @@ app.get('/api/admin/log', (req, res) => {
  *   （这也是铁律 161 的同一个坑：能反映权限状态的端点，本身要在护栏里面）。 */
 app.get('/api/admin/verify', (req, res) => {
   if (!adminGuard(req, res)) return;
-  res.json({ ok: true, via: req._adminVia || 'unknown', at: Date.now() });
+  res.json({
+    ok: true,
+    via: req._adminVia || 'unknown',
+    user: req._adminUser || null,
+    account: adminAccount.stats().user,   /* 只给用户名，不给凭据 */
+    at: Date.now(),
+  });
 });
 
 /* ── ★ v10.90 GET/POST /api/admin/profile ──

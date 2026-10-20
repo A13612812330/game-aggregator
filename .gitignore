@@ -101,3 +101,5 @@ tools/_*
 data/hide-overrides.json
 data/admin-token.json
 data/admin-log.jsonl
+#   v10.91：管理员账号（只存 scrypt 派生值 + salt，但仍是凭据文件 ⇒ 不入库）
+data/admin-account.json

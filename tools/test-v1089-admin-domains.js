@@ -152,7 +152,8 @@ ok(/\/api\/admin\/res\?kind=fitgirl/.test(ADMIN) && /\/api\/admin\/res\?kind=ts/
   'B24 fitgirl / ts 子源走新增端点（这两个原本没有扁平列表）');
 
 /* 鉴权提示与分页边界 */
-ok(/needAuth \? '需要令牌/.test(ADMIN), 'B25 403 时提示填令牌（不是空白表）');
+/* v10.91 措辞随账号登录调整：令牌 → 登录（判据仍是「403 要说人话，不是空白表」） */
+ok(/needAuth \? '需要登录/.test(ADMIN), 'B25 403 时提示需要登录（不是空白表）');
 ok(/Math\.max\(1, Math\.min\(pages, parseInt/.test(ADMIN), 'B26 跳页越界被夹到 1..pages');
 ok(/'共 ' \+ nf\(total\)/.test(ADMIN), 'B27 分页信息用实测 total（不写死）');
 
