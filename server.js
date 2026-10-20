@@ -556,6 +556,9 @@ app.post('/api/admin/note', (req, res) => {
  * GET /api/admin/overview  → 页头统计卡一次拿全（冷门口径 + 库构成 + 六个资源源 stats）
  *   为什么不复用六七个零散 stats 端点：管理页首屏要 7 个数字，7 次往返不如 1 次；
  *   全部来自内存表现算，零额外成本。读接口不设防（数据本就公开，/api/*stats 一直可读）。
+ *   ★★ v10.88.1 复核：**本端点只回聚合计数，不含任何备注正文** ⇒ 保持公开；
+ *   但同批加的 `state.note`（/api/admin/game）与 browse `?admin=1` 的行回填都会带出
+ *   备注原文，那两处已升为 adminGuard（**铁律 161**）。
  * GET /api/admin/log?limit= → 最近 N 条管理操作（写接口，设防） */
 app.get('/api/admin/overview', (_req, res) => {
   const all = gamesDb.all();
@@ -581,8 +584,14 @@ app.get('/api/admin/log', (req, res) => {
  *   一发拿全：游戏 meta + 隐藏态 + 七路资源命中（机地帖三分类 / FLiNG / TCS / GTrainers /
  *   云存档 / 存档位置 / FitGirl / Thunderstore）。前端不再对七个 match 端点各发一遍。
  *   ★ 孪生兜底同 /api/res/game 口径：资源常挂在双料记录的另一条上，id 空了换 resId 再查。
- *   读接口不设防（聚合的全是公开数据）。 */
+ *   ★★ v10.88.1 修正：**不能再当「纯公开读接口」**。v10.88 往 `state` 里加了 `note`
+ *   （管理侧私有批注），而这条 handler 沿用了 v10.87 的「不设防」——发布后线上实测：
+ *   无令牌 `GET /api/admin/game?id=xd-1` 返回 200，`state.note` 明文可见。
+ *   ⇒ 判据升级为 adminGuard（回环三条件 / 令牌三通道），与 log、hide-overrides 同档。
+ *   **教训（铁律 161）：给一个「已声明不设防」的端点加进管理侧字段时，必须同步把端点升为需鉴权**；
+ *   字段的可见性等级由端点护栏决定，不由字段自己决定。 */
 app.get('/api/admin/game', (req, res) => {
+  if (!adminGuard(req, res)) return;
   const id = String(req.query.id || '').trim();
   const g = id ? gamesDb.byIdGet(id) : null;
   if (!g) return res.status(404).json({ ok: false, error: '库内无此 id: ' + id });
@@ -2341,12 +2350,19 @@ app.get('/api/library/browse', (req, res) => {
    *   搜索(/api/search)与详情不过滤 ⇒ 冷门游戏「可搜到、详情可达」；
    *   ?cold=0 显式关掉（管理员/测试逃生口）。 */
   o.excludeCold = String(req.query.cold || '') !== '0';
+  /* ★★ v10.88.1：`admin=1` 是「回包多带管理侧字段」的开关（hidden / cold / note），
+   *   所以它本身必须过鉴权 —— 否则公开搜索接口加一个 `?admin=1` 就能读到全部备注。
+   *   只在这一支里 guard：不带 admin=1 的正常搜索完全不受影响（仍是公开读接口）。
+   *   ★ 通用判据（铁律 161）：**参数一出现就改变数据可见性等级的接口**，
+   *     这个参数必须自己带鉴权，不能指望「接口整体是公开的」。 */
+  const isAdminView = String(req.query.admin || '') === '1';
+  if (isAdminView && !adminGuard(req, res)) return;
   /* ★ v10.87 管理页隐藏态筛选（池前过滤，total 才与行数一致）：
    *   admin=1 且 hidden=1|0 → 只留「最终隐藏」/「最终可见」的行；
    *   判定复用 coldHide.isHidden（与豁免、/api/cold/stats 同一真源）。
    *   ⚠️ 条件写 `!o.excludeCold` 而不是 `=== false` —— test-cold-hide 用
    *   `o.excludeCold\s*=` 计数「赋值只此一处」，`===` 会被误计成第二处。 */
-  if (String(req.query.admin || '') === '1' && !o.excludeCold) {
+  if (isAdminView && !o.excludeCold) {
     /* v10.88：管理页需要多条件叠加（隐藏态 + 来源 + 有备注），
      * 所以改成「条件数组 + every」而不是逐个覆盖 o.filter —— 覆盖会让后一个筛选
      * 静默吃掉前一个（列表数字对不上，但不报错）。 */
@@ -2370,7 +2386,7 @@ app.get('/api/library/browse', (req, res) => {
      *   管理页用 `cold=0&admin=1`：cold=0 关掉池前过滤（冷门行也要看见），
      *   admin=1 让每行自带「为什么被藏」的判定 —— 判定在**服务端现算**
      *   （铁律 154：静态产物/列表可变状态必须响应回填，不靠前端猜）。 */
-    const admin = String(req.query.admin || '') === '1';
+    const admin = isAdminView;
     return res.json({
       ok: true, scope, ...r,
       items: r.items.map((x) => {

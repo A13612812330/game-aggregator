@@ -96,6 +96,26 @@ ok(/conds\.every\(\(f\) => f\(g\)\)/.test(srv) && /o\.filter = \(g\) => conds\.e
   'B10 管理筛选用条件数组（多条件不互相覆盖）');
 ok(/req\.query\.asrc/.test(srv), 'B11 asrc 来源筛选参数在位（不复用 src 避免语义冲突）');
 
+/* ── v10.88.1 鉴权回补：加了 note 字段的三处必须各自设防 ──
+ * 起因：v10.88 发布后线上实测 `GET /api/admin/game?id=xd-1` 无令牌 **200** 且
+ * `state.note` 明文返回；`/api/library/browse?admin=1` 同理能读到全库备注。
+ * 根因不是 guard 写错了，而是**加字段时没复查该端点的可见性等级**（铁律 161）。*/
+const gIdx = srv.indexOf("app.get('/api/admin/game'");
+const gBody = srv.slice(gIdx, gIdx + 500);
+ok(/if \(!adminGuard\(req, res\)\) return;/.test(gBody),
+  'B12 /api/admin/game 走 adminGuard（state.note 不再公网可读）');
+ok(/isAdminView && !adminGuard\(req, res\)/.test(srv),
+  'B13 browse 的 admin=1 分支自带鉴权（改变数据可见性的参数必须自己验）');
+/* 阳性对照：overview 只回聚合计数、不含任何备注正文 ⇒ 保持公开，
+ * 否则线上管理页未填令牌时首屏 12 张卡会全空（把安全修成不可用也是 bug）。*/
+const oIdx = srv.indexOf("app.get('/api/admin/overview'");
+/* 切片必须止于下一个端点 —— 用固定长度窗口会把 `/api/admin/log` 的 adminGuard
+ * 切进来，判据就恒假（自己踩过一次：B14 假红）。 */
+const oEnd = srv.indexOf("app.get('/api/admin/log'", oIdx);
+const oBody = srv.slice(oIdx, oEnd > oIdx ? oEnd : oIdx + 600);
+ok(oIdx > 0 && !/adminGuard/.test(oBody),
+  'B14 overview 保持公开读（仅计数，不含备注正文）');
+
 /* ═══ C. 备注模块 ═══ */
 console.log('\n-- C. 备注模块 --');
 ok(has('data/game-notes.js'), 'C1 data/game-notes.js 存在');

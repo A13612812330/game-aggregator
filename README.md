@@ -874,9 +874,13 @@ python tools/clean-excel.py       # 读 E:/新建文件夹/基础测试数据.xl
 > 游戏库 搜索/隐藏态/来源/排序/只看有备注 + 50 条分页；**编辑弹窗** = 左栏备注（500 字真存）+ 列表状态三选、
 > 右栏七路资源聚合、底部下载源入口。**备注** `data/game-notes.js` + `POST /api/admin/note`（adminGuard · 进操作日志 ·
 > 列表服务端回填）；筛选改**条件数组 every**（多条件不互相覆盖）。<br>
-> **防线**：test-v1088-admin **39/39**（新，登记 run-all）· 探针 parts **20/20** / admin **18/18** ·
+> **防线**：test-v1088-admin **42/42**（新，登记 run-all）· 探针 parts **20/20** / admin **18/18** ·
 > test-v1087 32/32 · test-roster 87/87 · run-all 4374–4386（波动=联网类+jsdom 偶发，单跑全绿）。
-> 预览：`_preview/fg-parts.html`（7 个真实游戏，含两种形态）。详见 [docs/versions/v10.88.md](docs/versions/v10.88.md)。
+> 预览：`_preview/fg-parts.html`（7 个真实游戏，含两种形态）。详见 [docs/versions/v10.88.md](docs/versions/v10.88.md)。<br>
+> **★ v10.88.1 同日补丁（发布后线上实测）**：`GET /api/admin/game` 与 `browse?admin=1` **无令牌 200**，
+> `state.note` 备注公网可读 —— 根因是加字段时没复查端点可见性等级（**铁律 161**）⇒ 两处各自升 `adminGuard`；
+> `overview` 只回计数、**保持公开**并留阳性对照断言（防「安全修成不可用」）。
+> `verify-online.js` 新增四页 md5 逐字节 + **无令牌 403 哨兵**（发布即验）。
 
 ### ★ v10.87 增量（2026-10-20）—— **游戏库详细管理后台 `/admin`**：线上管理鉴权 + 七路资源聚合抽屉 + 操作日志
 

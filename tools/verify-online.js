@@ -174,7 +174,7 @@ function chk(ok, name, extra) {
      ★ 判据语义 = 「线上派生页与本地逐字节相同」。**未发布时它会红，这是正确的红**
        （不是判据坏了）；v10.32 发布后三页 md5 曾全部相等，证明该口径可达。 */
   const md5hex = (s) => require('crypto').createHash('md5').update(s).digest('hex');
-  for (const pg of ['emulator.html', 'unpack.html']) {
+  for (const pg of ['emulator.html', 'unpack.html', 'resources.html', 'admin.html']) {
     let body = null, st = 0;
     try {
       const rr = await fetch(BASE + pg + '?cb=' + Date.now());
@@ -190,6 +190,26 @@ function chk(ok, name, extra) {
     const om = md5hex(body), lm = md5hex(loc);
     chk(om === lm, `[页面] ${pg} 线上与本地**逐字节一致**`,
       om.slice(0, 10) + ' vs ' + lm.slice(0, 10) + (om === lm ? '' : '  ← 线上是旧版（该页未发布）'));
+  }
+
+  /* ---- ★ v10.88 服务端改动的判据（页面串抓不到的那一类）----
+   * `/api/fitgirl/parts` 与 `adminGuard` 全在 server.js 里，admin.html 的字节比对只能
+   * 证明「页面新」，证明不了「接口新 / 鉴权在位」⇒ 必须打接口。
+   * ★ 这几条同时是**回归哨兵**：v10.88.1 的漏洞就是「端点不带 guard」，静态读代码看不出来，
+   *   只有线上实测无令牌状态码能抓住它（发布即验，别等用户发现）。 */
+  const fp = await api('/api/fitgirl/parts?slug=cyberpunk-2077');
+  chk(fp.s === 200 && fp.j && fp.j.ok && typeof fp.j.v === 'number' && Array.isArray(fp.j.sets),
+    '[接口] ★ v10.88 FitGirl 下载源结构化接口在位（带结构版本号 v + sets 归并组）',
+    fp.j ? ('v=' + fp.j.v + ' mode=' + fp.j.mode + ' sets=' + (fp.j.sets || []).length +
+      ' mainParts=' + ((fp.j.stats || {}).mainParts || 0)) : 'status ' + fp.s);
+  /* 无令牌必须 403 —— 这两条是 v10.88.1 修复的原位回归判据：
+   * `state.note` 与 browse `?admin=1` 的行回填都会带出备注正文。 */
+  for (const [u, label] of [
+    ['/api/admin/game?id=xd-1', '/api/admin/game（含 state.note）'],
+    ['/api/library/browse?admin=1&limit=1', '/api/library/browse?admin=1（行回填 note）'],
+  ]) {
+    const r = await api(u);
+    chk(r.s === 403, `[接口] ★ 无令牌 ${label} ⇒ 403（备注不公网可读）`, 'status ' + r.s);
   }
 
   /* ---- ② 页面侧：真机打开、真点详情页 ---- */

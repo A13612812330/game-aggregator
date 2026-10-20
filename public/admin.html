@@ -607,7 +607,7 @@ async function openEdit(i, ev) {
   $('mask').classList.add('on');
 
   const j = await api('/api/admin/game?id=' + encodeURIComponent(g.id));
-  if (!j.ok) { $('mRes').innerHTML = '<div class="mut">资源加载失败：' + esc(j.error || '') + '</div>'; return; }
+  if (!j.ok) { $('mRes').innerHTML = '<div class="mut">资源加载失败：' + esc(j.error || '') + (j.needAuth ? '（线上需在右上角填令牌）' : '') + '</div>'; return; }
   renderRes(j);
   /* 用服务端真值回填状态（铁律 154：不猜） */
   const st = j.state || {};
