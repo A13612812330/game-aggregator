@@ -132,22 +132,30 @@ async function main() {
   ok('共享顶栏 / 抽屉 / mask / tabbar 已带上',
     !!q('.topbar') && !!q('#drawer') && !!q('#mask') && !!q('.tabbar'));
 
-  ok('切换条 #resTabs 有 3 个平级页签', qa('#resTabs .res-tab').length === 3, `实际 ${qa('#resTabs .res-tab').length}`);
-  ok('三页签 data-et 依次为 md/sv/tr',
-    qa('#resTabs .res-tab').map((b) => b.dataset.et).join(',') === 'md,sv,tr',
+  /* ★★ v10.96：页签从 3 个变 4 个（新增「本体」并作为默认分区）。
+     —— 用户口径：「端游资源我需要一个本体的页面（目前已有 Mod/修改器/存档）」
+     —— 本体放**第一位**并作默认：它是「拿到游戏」的第一步，藏在最后一个等于没做。 */
+  ok('切换条 #resTabs 有 4 个平级页签', qa('#resTabs .res-tab').length === 4, `实际 ${qa('#resTabs .res-tab').length}`);
+  ok('四页签 data-et 依次为 bd/md/sv/tr',
+    qa('#resTabs .res-tab').map((b) => b.dataset.et).join(',') === 'bd,md,sv,tr',
     qa('#resTabs .res-tab').map((b) => b.dataset.et).join(','));
-  ok('第 1 个页签是「MOD」', /MOD/.test((qa('#resTabs .res-tab')[0] || {}).textContent || ''),
+  ok('第 1 个页签是「本体」', /本体/.test((qa('#resTabs .res-tab')[0] || {}).textContent || ''),
     (qa('#resTabs .res-tab')[0] || {}).textContent || '(缺失)');
-  ok('第 2 个页签是「存档」', /存档/.test((qa('#resTabs .res-tab')[1] || {}).textContent || ''),
+  ok('第 2 个页签是「MOD」', /MOD/.test((qa('#resTabs .res-tab')[1] || {}).textContent || ''),
     (qa('#resTabs .res-tab')[1] || {}).textContent || '(缺失)');
-  ok('第 3 个页签是「修改器」', /修改器/.test((qa('#resTabs .res-tab')[2] || {}).textContent || ''),
+  ok('第 3 个页签是「存档」', /存档/.test((qa('#resTabs .res-tab')[2] || {}).textContent || ''),
     (qa('#resTabs .res-tab')[2] || {}).textContent || '(缺失)');
-  ok('默认只显示 MOD（其余带 et-hide）',
-    !q('#mods').classList.contains('et-hide')
+  ok('第 4 个页签是「修改器」', /修改器/.test((qa('#resTabs .res-tab')[3] || {}).textContent || ''),
+    (qa('#resTabs .res-tab')[3] || {}).textContent || '(缺失)');
+  ok('默认只显示「本体」（其余三个带 et-hide）',
+    !q('#resBody').classList.contains('et-hide')
+    && q('#mods').classList.contains('et-hide')
     && q('#resSaves').classList.contains('et-hide')
     && q('#resTrainers').classList.contains('et-hide'));
-  ok('三个页签数字胶囊都已回填（非占位 —）',
-    !qa('#resTabs .res-tab b').some((b) => /^[—\-]$/.test(b.textContent.trim())),
+  /* ⚠️ 数字胶囊只要求 MOD/存档/修改器三个**回填**：本体那个来自另一个接口
+     （/api/jiditopics/stats），jsdom 里拿不到就留「—」是**正确**的降级，不该算红。 */
+  ok('MOD / 存档 / 修改器三个页签数字胶囊都已回填（非占位 —）',
+    !qa('#resTabs .res-tab').slice(1).some((t) => /^[—\-]$/.test((t.querySelector('b') || {}).textContent || '')),
     qa('#resTabs .res-tab b').map((b) => b.textContent.trim()).join(' / '));
 
   /* ---- 顶栏搜索入口（共享资产，曾因绑定埋在 bindRankUI 内而彻底失效） ---- */
@@ -165,6 +173,11 @@ async function main() {
   /* ============================================================
    * 二、MOD 分区 —— v10.47 新形态：一卡一款游戏
    * ============================================================ */
+  /* ★ v10.96：默认分区改成「本体」⇒ 断言 MOD 前先显式切过去。
+     断言的**对象**没变（MOD 分区的形态），变的只是进入路径。 */
+  W.switchResTab('md');
+  for (let i = 0; i < 60 && qa('#mdGrid .emu-card').length === 0; i++) await sleep(150);
+
   const md = shapeOf(qa, '#mdGrid');
   ok('MOD 网格已渲染**游戏组卡**（>0 张）', md.n > 0, `实际 ${md.n} 张`);
   ok('★★ MOD 卡**全部**是聚合卡 .emu-card.grp（用户诉求：按游戏做卡片而不是按 MOD）',
@@ -713,9 +726,11 @@ async function main() {
   /* ---- 陌生 hash（比如从手机专区抄过来的 #emu）必须安全落回默认页签 ---- */
   const { dom: d5 } = await makeDom(BASE + PAGE + '#emu');
   const d5d = d5.window.document;
-  ok('陌生深链 #emu → 安全落回 MOD（不空白）', !d5d.querySelector('#mods').classList.contains('et-hide'));
-  ok('陌生深链 #emu → 高亮停在 MOD（不会有野页签被点亮）',
-    (d5d.querySelector('#resTabs .res-tab.on') || {}).dataset?.et === 'md');
+  /* ★ v10.96：默认分区已改成「本体」⇒ 断言改成「落回**默认分区**」而不是写死 MOD。
+     写死具体分区会让下一个改默认值的人又改一遍测试 —— 这里守的是「不空白」这件事。 */
+  ok('陌生深链 #emu → 安全落回默认分区（不空白）', !d5d.querySelector('#resBody').classList.contains('et-hide'));
+  ok('陌生深链 #emu → 高亮停在默认分区（不会有野页签被点亮）',
+    (d5d.querySelector('#resTabs .res-tab.on') || {}).dataset?.et === 'bd');
   d5.window.close();
 
   /* ---- 汇总 ---- */

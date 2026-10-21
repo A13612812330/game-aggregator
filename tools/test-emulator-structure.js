@@ -355,7 +355,10 @@ const barRowCount = count(emu, /class="emu-bar-row"/g);
 t('手机专区只剩手游中心一条筛选条，共 3 行 .emu-bar-row', barRowCount === 3, `实际 ${barRowCount} 行`);
 {
   const resRows = count(res, /class="emu-bar-row"/g);
-  t('端游资源页三条筛选条共 6 行 .emu-bar-row（MOD 2 / 存档 2 / 修改器 2）', resRows === 6, `实际 ${resRows} 行`);
+  /* ★ v10.96：新增「本体」分区（搜索 + 排序各一行）⇒ 6 → 8 行。
+   *   这不是「放宽阈值」，是**分区数量变了**：每分区固定 2 行筛选条，
+   *   4 个分区 = 8 行。判据仍写成**精确值**，新增/漏删分区当场报红。 */
+  t('端游资源页四条筛选条共 8 行 .emu-bar-row（本体 2 / MOD 2 / 存档 2 / 修改器 2）', resRows === 8, `实际 ${resRows} 行`);
 }
 t('手游中心筛选独占一行（行首有「筛选」标签 + 4 个开关）',
   /<div class="emu-bar-row">\s*<span class="emu-bar-lb">筛选<\/span>[\s\S]{0,900}id="emuToggleSv"/.test(emu));
@@ -510,19 +513,22 @@ t('旧的写死顺序（sec(...true) 四连）已移除', !/html \+= sec\('📱'
  *   ⚠️ 每个可切换 <main> 必须带 data-et —— 缺了 main[data-et].et-hide 匹配不上，切走也隐藏不掉
  */
 const rsecAll = rsec;
-t('端游资源页恰好 3 个平级页签', count(res, /class="res-tab[ ">]/g) === 3, `实际 ${count(res, /class="res-tab[ ">]/g)}`);
-t('端游资源页页签顺序为 md/sv/tr（MOD → 存档 → 修改器）',
-  (res.match(/class="res-tab[^"]*" data-et="(\w+)"/g) || []).map((s) => s.replace(/.*data-et="/, '').replace(/"$/, '')).join(',') === 'md,sv,tr',
+/* ★ v10.96：页签由 3 个变 4 个 —— 第 1 个是「本体」（机地话题库里按需抓本体下载）。
+ *   本体排第 1 且作默认分区：它是「拿到这款游戏」的第一步，藏在最后等于没做。 */
+t('端游资源页恰好 4 个平级页签', count(res, /class="res-tab[ ">]/g) === 4, `实际 ${count(res, /class="res-tab[ ">]/g)}`);
+t('端游资源页页签顺序为 bd/md/sv/tr（本体 → MOD → 存档 → 修改器）',
+  (res.match(/class="res-tab[^"]*" data-et="(\w+)"/g) || []).map((s) => s.replace(/.*data-et="/, '').replace(/"$/, '')).join(',') === 'bd,md,sv,tr',
   (res.match(/class="res-tab[^"]*" data-et="(\w+)"/g) || []).join(' | '));
-t('三个页签文案依次是 MOD / 存档 / 修改器',
-  /data-et="md"[\s\S]{0,120}MOD/.test(res)
+t('四个页签文案依次是 本体 / MOD / 存档 / 修改器',
+  /data-et="bd"[\s\S]{0,120}本体/.test(res)
+  && /data-et="md"[\s\S]{0,120}MOD/.test(res)
   && /data-et="sv"[\s\S]{0,120}存档/.test(res)
   && /data-et="tr"[\s\S]{0,120}修改器/.test(res));
-t('3 个可切换分区全部带 data-et（缺了 main[data-et].et-hide 匹配不上）',
-  [...res.matchAll(/<main\b[^>]*>/g)].length === 3 &&
+t('4 个可切换分区全部带 data-et（缺了 main[data-et].et-hide 匹配不上）',
+  [...res.matchAll(/<main\b[^>]*>/g)].length === 4 &&
   [...res.matchAll(/<main\b[^>]*>/g)].every((m) => /data-et="/.test(m[0])));
-t('ET_MAP 覆盖全部 3 个分区（漏一个就有页签点了没反应）',
-  /ET_MAP = \{ md: '#mods', sv: '#resSaves', tr: '#resTrainers' \}/.test(res));
+t('ET_MAP 覆盖全部 4 个分区（漏一个就有页签点了没反应）',
+  /ET_MAP = \{ bd: '#resBody', md: '#mods', sv: '#resSaves', tr: '#resTrainers' \}/.test(res));
 /* ★ 类名隔离：本页另起 .res-tab / #resTabs，**不复用** #emuTabs/.emu-tab。
  *   复用会让「改手机专区页签样式」意外改到这里（用户对样式的基线要求）。
  * ★ 判据按**类名 token** 判、不按字符串前缀 —— 第一版写的是
@@ -533,13 +539,13 @@ const resBtnCls = [...res.matchAll(/<button class="([^"]*)"/g)].flatMap((m) => m
 t('本页切换条是独立的 #resTabs / .res-tab（未复用手机专区的骨架选择器）',
   /<div class="emu-tabs" id="resTabs">/.test(res) && !/id="emuTabs"/.test(res)
   && !resBtnCls.includes('emu-tab')
-  && resBtnCls.filter((c) => c === 'res-tab').length === 3,
+  && resBtnCls.filter((c) => c === 'res-tab').length === 4,
   `按钮类名 token：${resBtnCls.join(' ')}`);
 /* ★ 三个分区骨架必须在**生成器里硬编码**（不能从派生页回读）。
  *   这里直接查生成器源码 + 产物两侧，任一侧缺了都算失败。 */
 const buildRes = fs.readFileSync(path.join(root, 'tools', 'build-resource-page.js'), 'utf8');
-t('生成器里硬编码了三个分区骨架常量 MODS_HTML / SAVES_HTML / TRAINERS_HTML',
-  /const MODS_HTML = /.test(buildRes) && /const SAVES_HTML = /.test(buildRes) && /const TRAINERS_HTML = /.test(buildRes));
+t('生成器里硬编码了四个分区骨架常量 BODY_HTML / MODS_HTML / SAVES_HTML / TRAINERS_HTML',
+  /const BODY_HTML = /.test(buildRes) && /const MODS_HTML = /.test(buildRes) && /const SAVES_HTML = /.test(buildRes) && /const TRAINERS_HTML = /.test(buildRes));
 /* ★ v10.47：三个分区的骨架 id 变了 —— 排序项改由 resource-sections.js 从 GRP_META
  *   生成（不再写死在 HTML 里，免得 HTML 一张表、JS 一张表各自漂），
  *   开关换成来源下拉。这份清单必须与「生成器里硬编码的常量」和
@@ -1194,7 +1200,7 @@ t('端游资源页顶栏高亮落在「端游资源」上（首页不抢高亮�
 t('端游资源页顶栏保留其余 3 个入口（首页 / 手机专区 / 解包匹配）',
   /id="navEmu"/.test(res) && /id="navUnpack"/.test(res));
 t('端游资源页 <title> 与文档头已按本页改写',
-  /<title>端游资源 · MOD \/ 存档 \/ 修改器 — GameHub<\/title>/.test(res));
+  /<title>端游资源 · 本体 \/ MOD \/ 存档 \/ 修改器 — GameHub<\/title>/.test(res));
 t('端游资源页底部 Tab 有回首页入口（href="/"）',
   /<nav class="tabbar"[\s\S]*?href="\/"[\s\S]*?<\/nav>/.test(res));
 t('端游资源页底部 Tab 高亮落在「端游资源」上（tabRes, data-tab="md"）',
@@ -1203,8 +1209,8 @@ t('端游资源页底部 Tab 已清掉首页语义死链（latest / about）',
   !/<nav class="tabbar"[\s\S]*?data-tab="latest"[\s\S]*?<\/nav>/.test(res) &&
   !/<nav class="tabbar"[\s\S]*?data-tab="about"[\s\S]*?<\/nav>/.test(res));
 /* 底 Tab 的「端游资源」在当前页应当切页签而不是重载到别处 */
-t('bootTab 默认进 MOD 页签（缺省不是空白首屏）',
-  /switchResTab\(ET_MAP\[t\] \? t : 'md', \{ scroll: false \}\)/.test(res));
+t('bootTab 默认进「本体」页签（缺省不是空白首屏）',
+  /switchResTab\(ET_MAP\[t\] \? t : 'bd', \{ scroll: false \}\)/.test(res));
 t('goEmuPage 兜底指向 /emulator.html（派生页不再依赖主源的绝对地址常量）',
   /function goEmuPage\(\) \{ location\.href = '\/emulator\.html'; \}/.test(res));
 

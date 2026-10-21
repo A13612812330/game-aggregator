@@ -36,4 +36,30 @@ function dlRetryable(v) {
   return (v.sections || []).some((s) => s && s.error);
 }
 
-module.exports = { dlCacheTtl, dlRetryable, FULL, FAILED, DEGRADED };
+/* ---------------------------------------------------------------------------
+ * `/api/search` 的缓存时长 —— **同一类问题的第二个落点**（v10.96）
+ *
+ * 起因（2026-10-21 全模块抽样发现）：`/api/search` 对整份结果统一缓存 5 分钟，
+ * 而 XD 侧搜索有站点级限流（实测返回「管理员设定搜索时间间隔为3秒」提示页）。
+ * ⇒ 任何人触发一次限流，**全站 5 分钟内搜同一个词都看到「XD 源失败」**；
+ *   而 XD 的限流窗口其实是**几十秒级**的，锁 5 分钟纯属自己放大故障。
+ *
+ * 规则：
+ *   · 任一源 `ok:false`（= 这次没取到）→ 45 秒，下一次就能自愈
+ *   · 两源都 ok（哪怕都是 0 条）        → 5 分钟
+ *     ⚠️ 「两源都成功但确实 0 条」是**真结论**，必须照常缓存 ——
+ *        否则每次开搜索框都重打两个源站，反过来更快触发限流（同 dlCacheTtl 的判据）。
+ */
+const SEARCH_FULL = 5 * 60_000;
+const SEARCH_FAILED = 45_000;
+
+function searchCacheTtl(v) {
+  if (!v || !v.sources) return SEARCH_FAILED;
+  const bad = Object.values(v.sources).some((s) => s && s.ok === false);
+  return bad ? SEARCH_FAILED : SEARCH_FULL;
+}
+
+module.exports = {
+  dlCacheTtl, dlRetryable, searchCacheTtl,
+  FULL, FAILED, DEGRADED, SEARCH_FULL, SEARCH_FAILED,
+};

@@ -461,3 +461,289 @@ async function initGrp(cat) {
 function initMd() { return initGrp('mod'); }
 function initSv() { return initGrp('saves'); }
 function initTr() { return initGrp('trainers'); }
+
+/* ============================================================================
+ * ★★ v10.96：第四个分区「本体」（#resBody）
+ *
+ * 用户口径：「端游资源我需要一个本体的页面（目前已有 Mod/修改器/存档）」。
+ *
+ * 为什么这一区**形态与另三区不同**（这是本区所有设计选择的来源）：
+ *   另三区（MOD / 存档 / 修改器）背后都有**离线建好的索引**（data/res-groups.js），
+ *   所以能「一卡一款游戏 + 卡内直接铺条目 + 服务端分页」。
+ *   而**本体链接没有索引可用**：机地的本体帖只能从话题资源接口实时取，
+ *   17,220 款全量预抓要 6 小时以上、且必然把机地打成限流（v10.95 实测 405 的成因）。
+ *   ⇒ 所以本区做成「**列表全量可见 + 卡内按需抓取**」：
+ *     · 列表 = 机地话题库 17,220 款（`/api/jiditopics/list`，自带封面/体积/评分/热度）
+ *     · 卡片上给一个「查本体下载」按钮，点它才发一次真实抓取
+ *     · 抓到的结果按 tid 存 localStorage ⇒ 同一台设备复访**不用重抓**
+ *       （服务端另有 30 分钟缓存；失败只缓存 60 秒，见 data/dl-cache-ttl.js）
+ *
+ * ⚠️ 为什么不自动抓首屏：
+ *   24 张卡 = 24 次对机地的请求，页面一打开就触发限流；
+ *   而且大部分游戏用户根本不关心。**按需**是这里唯一的正确选择。
+ * ========================================================================== */
+
+const BD_PAGE_SIZE = 24;
+const BD_LS_KEY = 'gh.bd.links.v1';
+/* localStorage 只留最近 400 款，超出按时间淘汰（单条最大 ~200 条链接，
+   400 条约 1~2 MB，仍在 5 MB 配额内） */
+const BD_LS_MAX = 400;
+
+const bdState = {
+  q: '', sort: 'hot', offset: 0, total: 0, items: [], inited: false, loading: false,
+};
+
+/** 已抓取的结果缓存：tid -> { ts, posts:[...], links:n } */
+let bdLinks = (function () {
+  try {
+    const raw = localStorage.getItem(BD_LS_KEY);
+    const o = raw ? JSON.parse(raw) : null;
+    return (o && typeof o === 'object') ? o : {};
+  } catch (e) { return {}; }
+})();
+
+function bdSaveLinks() {
+  try {
+    const keys = Object.keys(bdLinks);
+    if (keys.length > BD_LS_MAX) {
+      keys.sort((a, b) => (bdLinks[a].ts || 0) - (bdLinks[b].ts || 0));
+      for (const k of keys.slice(0, keys.length - BD_LS_MAX)) delete bdLinks[k];
+    }
+    localStorage.setItem(BD_LS_KEY, JSON.stringify(bdLinks));
+  } catch (e) { /* 配额满 / 隐私模式：当作没缓存，功能不受影响 */ }
+}
+
+/** 盘口名 → 卡面样式类（.bd-* 定义在主源 index.html，本页只引用） */
+function bdCls(server) {
+  const s = String(server || '');
+  if (/夸克/.test(s)) return 'quark';
+  if (/百度/.test(s)) return 'baidu';
+  if (/迅雷/.test(s)) return 'xunlei';
+  if (/阿里/.test(s)) return 'ali';
+  if (/123/.test(s)) return '123';
+  if (/蓝奏/.test(s)) return 'lanzou';
+  if (/UC|uc/.test(s)) return 'uc';
+  if (/139/.test(s)) return '139';
+  if (/189|天翼/.test(s)) return '189';
+  if (/PikPak|pikpak/i.test(s)) return 'pikpak';
+  return 'other';
+}
+
+/** 按帖子聚合：一条 item = 一个网盘链接，同一帖常有 2~4 个盘口 */
+function bdGroupByPost(items) {
+  const map = new Map();
+  for (const it of (items || [])) {
+    const k = it.postId || it.postUrl || ('x' + Math.random());
+    if (!map.has(k)) {
+      map.set(k, {
+        postId: it.postId || '', postTitle: it.postTitle || '', postUrl: it.postUrl || '',
+        author: it.author || '', dpv: it.dpv || 0, note: it.note || '',
+        links: [],
+      });
+    }
+    if (it.real) map.get(k).links.push({ url: it.real, label: it.server || '网盘', cls: bdCls(it.server) });
+  }
+  return [...map.values()].filter((p) => p.links.length);
+}
+
+/** 一条帖子行（与另三区的 glRow 同形，但盘口按钮来自实时抓取） */
+function bdPostRow(p, n) {
+  const two = p.links.slice(0, 2)
+    .map((l) => '<a class="bd-' + esc(l.cls) + '" href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer"'
+      + ' title="' + esc(l.label) + '">' + esc(String(l.label).replace(/网盘$/, '').slice(0, 6)) + '</a>')
+    .join('');
+  const more = p.links.length > 2 ? '<span class="more">+' + (p.links.length - 2) + '</span>' : '';
+  const post = p.postUrl
+    ? '<a class="po-btn" href="' + esc(p.postUrl) + '" target="_blank" rel="noopener noreferrer" title="去机地看原贴（含安装说明）">原贴</a>'
+    : '';
+  const title = p.postTitle || '（无标题帖）';
+  return '<div class="gl-i">'
+    + '<span class="n">' + n + '</span>'
+    + '<span class="t" title="' + esc(title) + '">' + esc(title.slice(0, 40)) + (title.length > 40 ? '…' : '') + '</span>'
+    + '<span class="gl-lk">' + two + more + post + '</span>'
+    + '</div>';
+}
+
+/** 一张本体卡。`cached` 有值就**直接铺结果**，不显示「查」按钮。 */
+function bdCard(g) {
+  const title = g.title || '?';
+  const en = g.titleEn ? '<div class="alt" title="' + esc(g.titleEn) + '">' + esc(String(g.titleEn).slice(0, 46)) + '</div>' : '';
+  const cov = g.cover
+    ? '<div class="cov"><img src="' + esc(g.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer"></div>'
+    : '<div class="cov ph"><span>' + esc(String(title).slice(0, 2).toUpperCase()) + '</span></div>';
+  const hot = Number(g.dpv) > 0 ? '<span class="pill">🔥 ' + Number(g.dpv).toLocaleString() + '</span>' : '';
+  const size = g.size ? '<span class="pill">' + esc(String(g.size).slice(0, 10)) + '</span>' : '';
+  const score = Number(g.score) > 0 ? '<span class="pill">' + g.score + ' 分</span>' : '';
+  const c = bdLinks[g.tid];
+  const inner = c
+    ? (c.posts && c.posts.length
+      ? c.posts.slice(0, 3).map((p, i) => bdPostRow(p, i)).join('')
+      : '<div class="bd-empty-s">这款的机地话题下<b>没有本体资源帖</b>（可能只在别处发布）</div>')
+    : '<button class="bd-get" type="button" data-bd-tid="' + esc(String(g.tid)) + '"'
+      + ' data-bd-url="' + esc(g.url || ('https://jidiyouxi.com/topic/detail/' + g.tid)) + '">🔍 查本体下载</button>';
+  const total = c && c.posts ? c.posts.reduce((n, p) => n + p.links.length, 0) : 0;
+  const moreBtn = (c && c.posts && c.posts.length > 3)
+    ? '<button class="grp-more" type="button" data-bd-more="' + esc(String(g.tid)) + '">查看全部 '
+      + c.posts.length + ' 个资源帖（' + total + ' 个盘口）▸</button>'
+    : '';
+  return '<article class="emu-card grp' + (g.cover ? ' has-cov' : '') + ' bd-card" data-tid="' + esc(String(g.tid)) + '">'
+    + cov
+    + '<div class="bd">'
+    + '<h4 title="' + esc(title) + '">' + esc(title) + '</h4>'
+    + en
+    + '<div class="meta"><span class="tg k-body">本体</span>' + size + hot + score + '</div>'
+    + '<div class="gl">' + inner + '</div>'
+    + moreBtn
+    + '</div></article>';
+}
+
+/** 抓一款游戏的本体链接并写进卡里（不动其它卡） */
+async function bdFetchOne(card, tid, url, force) {
+  const gl = card.querySelector('.gl');
+  if (!gl) return;
+  const old = gl.querySelector('[data-bd-tid]');
+  if (old) { old.disabled = true; old.textContent = '正在抓取…'; }
+  try {
+    const j = await fetch(api('/api/download?url=' + encodeURIComponent(url) + (force ? '&refresh=1' : '')))
+      .then((r) => r.json());
+    if (!j || j.ok === false) throw new Error((j && j.error) || '抓取失败');
+    const body = (j.items || []).filter((x) => x.section === 'body');
+    const posts = bdGroupByPost(body);
+    const rec = { ts: Date.now(), posts, links: posts.reduce((n, p) => n + p.links.length, 0) };
+    bdLinks[tid] = rec;
+    bdSaveLinks();
+    /* 只重绘这一张卡（重绘整页会让滚动位置和已展开的卡全部复位） */
+    const g = bdState.items.find((x) => String(x.tid) === String(tid)) || { tid };
+    const wrap = document.createElement('div');
+    wrap.innerHTML = bdCard(g);
+    const fresh = wrap.firstElementChild;
+    if (fresh) card.replaceWith(fresh);
+    const secErr = (j.sections || []).find((s) => s.key === 'body' && s.error);
+    if (secErr && typeof toast === 'function') toast('机地这次没取到：' + String(secErr.error).slice(0, 60));
+  } catch (e) {
+    if (old) { old.disabled = false; old.textContent = '🔍 重试：' + String(e.message || '').slice(0, 24); }
+    else if (typeof toast === 'function') toast('抓取失败：' + String(e.message || '').slice(0, 60));
+  }
+}
+
+/** 一卡全部资源帖 → 弹窗（复用主站 #dlPop 外壳，列表独立渲染） */
+function bdAllPop(tid) {
+  const c = bdLinks[tid];
+  const g = bdState.items.find((x) => String(x.tid) === String(tid)) || {};
+  const pop = document.getElementById('dlPop');
+  const bodyEl = document.getElementById('dlBody');
+  if (!c || !pop || !bodyEl) return;
+  dlUni = null;
+  dFullCur = null;
+  const mt = document.getElementById('dlModTabs');
+  if (mt) { mt.hidden = true; mt.innerHTML = ''; }
+  const tEl = document.getElementById('dlTitle');
+  if (tEl) tEl.textContent = (g.title || '') + ' · 全部本体资源帖';
+  const total = c.posts.reduce((n, p) => n + p.links.length, 0);
+  const sEl = document.getElementById('dlSub');
+  if (sEl) sEl.textContent = c.posts.length + ' 个资源帖 · ' + total + ' 个网盘盘口 · 点盘口直接开';
+  bodyEl.innerHTML = '<div class="grp-pop"><div class="emu-card grp">'
+    + c.posts.map((p, i) => bdPostRow(p, i + 1)).join('')
+    + '</div></div>';
+  const fEl = document.getElementById('dlFoot');
+  if (fEl) fEl.innerHTML = '<b>' + esc(g.title || '') + '</b> · 点右上角 ✕ 或按 Esc 关闭';
+  pop.hidden = false;
+  requestAnimationFrame(() => pop.classList.add('on'));
+}
+
+/** 拉一页列表 */
+async function loadBd(more) {
+  const st = bdState;
+  if (st.loading) return;
+  st.loading = true;
+  const grid = document.getElementById('bdGrid');
+  if (!more) {
+    st.offset = 0;
+    if (grid) grid.innerHTML = '<div class="emu-loading">正在读取机地话题库…</div>';
+  }
+  try {
+    const qs = new URLSearchParams({
+      q: st.q, sort: st.sort, limit: BD_PAGE_SIZE, offset: st.offset,
+    });
+    const j = await fetch(api('/api/jiditopics/list?' + qs)).then((r) => r.json());
+    if (!j || j.ok === false) throw new Error((j && j.error) || '接口返回异常');
+    st.total = j.total || 0;
+    const items = j.items || [];
+    st.items = more ? st.items.concat(items) : items;
+    st.offset = st.items.length;
+    if (grid) {
+      grid.innerHTML = st.items.length
+        ? st.items.map((g) => bdCard(g)).join('')
+        : '<div class="emu-empty">没有匹配的游戏，换个关键词试试</div>';
+    }
+    const cnt = document.getElementById('bdCount');
+    if (cnt) cnt.textContent = '共 ' + st.total.toLocaleString() + ' 款可查';
+    const mo = document.getElementById('bdMore');
+    if (mo) mo.style.display = st.items.length < st.total ? '' : 'none';
+    const nCached = Object.keys(bdLinks).length;
+    const stBox = document.getElementById('bdStats');
+    if (stBox) {
+      stBox.innerHTML = [
+        ['可查游戏', st.total],
+        ['本机已抓', nCached],
+        ['命中盘口', Object.values(bdLinks).reduce((n, x) => n + (x.links || 0), 0)],
+        ['数据来源', '机地话题'],
+      ].map(([k, v]) => '<div class="st"><b>' + (typeof v === 'number' ? v.toLocaleString() : esc(String(v)))
+        + '</b><span>' + esc(k) + '</span></div>').join('');
+    }
+  } catch (e) {
+    if (grid) grid.innerHTML = '<div class="emu-empty">拉取失败，请稍后重试</div>';
+  } finally { st.loading = false; }
+}
+
+/** 本体分区入口 */
+async function initBd() {
+  const st = bdState;
+  if (st.inited) return;
+  st.inited = true;
+
+  const grid = document.getElementById('bdGrid');
+  if (grid && !grid.dataset.bound) {
+    grid.dataset.bound = '1';
+    grid.addEventListener('click', (e) => {
+      const get = e.target.closest('[data-bd-tid]');
+      if (get) {
+        e.preventDefault(); e.stopPropagation();
+        const card = get.closest('.bd-card');
+        if (card) bdFetchOne(card, get.dataset.bdTid, get.dataset.bdUrl, false);
+        return;
+      }
+      const more = e.target.closest('[data-bd-more]');
+      if (more) { e.preventDefault(); e.stopPropagation(); bdAllPop(more.dataset.bdMore); }
+    });
+  }
+
+  const sorts = document.getElementById('bdSorts');
+  if (sorts && !sorts.dataset.bound) {
+    sorts.dataset.bound = '1';
+    sorts.innerHTML = [['hot', '最热门'], ['update', '最近更新'], ['score', '评分最高']]
+      .map(([k, label], i) => '<button class="emu-sort' + (i === 0 ? ' on' : '') + '" data-s="' + k + '" type="button">' + label + '</button>')
+      .join('');
+    sorts.addEventListener('click', (e) => {
+      const b = e.target.closest('.emu-sort'); if (!b) return;
+      sorts.querySelectorAll('.emu-sort').forEach((x) => x.classList.toggle('on', x === b));
+      st.sort = b.dataset.s;
+      loadBd(false);
+    });
+  }
+
+  const si = document.getElementById('bdSearch');
+  if (si && !si.dataset.bound) {
+    si.dataset.bound = '1';
+    let t;
+    si.addEventListener('input', () => {
+      clearTimeout(t);
+      t = setTimeout(() => { st.q = si.value.trim(); loadBd(false); }, 260);
+    });
+  }
+
+  const mo = document.getElementById('bdMore');
+  if (mo && !mo.dataset.bound) { mo.dataset.bound = '1'; mo.addEventListener('click', () => loadBd(true)); }
+
+  await loadBd(false);
+}

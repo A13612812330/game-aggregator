@@ -238,7 +238,28 @@ async function detail(id, host) {
 
 async function search(q) {
   const url = `${HOST_XD}/search/${encodeURIComponent(q)}.html`;
-  const html = await getHtml(url);
+  let html = await getHtml(url);
+  /* ★★ v10.96：搜索**被限流时要抛错，不能返回空数组**（2026-10-21 实测）。
+   *
+   *  触发限流时站点返回的是一张 1,755 字节的「提示信息」页，正文为
+   *  「管理员设定搜索时间间隔为3秒，请稍后再试！」。它 HTTP 200、体积也过 getHtml
+   *  的 500 字节门槛 ⇒ cheerio 从这张页里解析出 0 条 ⇒
+   *  **「被限流」与「真的没这款游戏」在返回值上完全一样**。
+   *  上层（/api/search）会把空数组当成正常结果，前端显示「没有找到」——
+   *  用户看到的结论是「搜不到」，真实原因是「被站点挡了」。
+   *  ⇒ 这里三件事：识别 → 等够间隔重试一次 → 仍不行就抛错（让上层能如实显示）。
+   *
+   *  ⚠️ 等待 3.6s 而不是 3s：站点说的是「间隔 3 秒」，卡在临界点会二次触发；
+   *     只重试一次是因为搜索是**用户主动操作**，等太久不如直接告诉他原因。
+   */
+  const LIMITED_RE = /管理员设定搜索时间间隔|搜索时间间隔/;
+  for (let i = 0; i < 2 && LIMITED_RE.test(html); i++) {
+    await new Promise((r) => setTimeout(r, 3600));
+    html = await getHtml(url);
+  }
+  if (LIMITED_RE.test(html)) {
+    throw new Error('XD 搜索被源站限流（要求两次搜索间隔 3 秒），请稍后重试');
+  }
   const $ = cheerio.load(html);
   const items = [];
   const seen = new Set();
@@ -251,11 +272,17 @@ async function search(q) {
     seen.add(id);
     const title = $li.find('a.tit').first().text().replace(/\s+/g, ' ').trim();
     if (!title) return;
-    const category = $li.find('> span').first().text().trim();
-    const date = $li.find('time').first().text().trim();
+    /* ★ v10.96：分类徽标在新结构里是 `span.type`（旧的裸 `> span` 会先命中别的 span） */
+    const category = ($li.find('span.type').first().text() || $li.find('> span').first().text() || '').trim();
+    const date = ($li.find('time.news').first().text() || $li.find('time').first().text() || '').trim();
+    const coverRaw = $li.find('img.lazy').first().attr('data-original')
+      || $li.find('img.lazy').first().attr('src')
+      || $li.find('img').first().attr('src') || '';
     items.push({
       id: 'xd-' + id, source: 'xdgamer', kind: 'update', rank: null,
-      title, cover: null, score: null, size: null,
+      title,
+      cover: /defaultpic|logo|\.gif/i.test(coverRaw) ? null : abs(HOST_XD, coverRaw),
+      score: null, size: null,
       genres: category ? [category] : [],
       badge: date || null, dateLabel: date || null,
       url: HOST_XD + href,
@@ -290,32 +317,90 @@ async function category(slug) {
   const $ = cheerio.load(html);
   const items = [];
   const seen = new Set();
+
+  const push = (o) => {
+    if (!o || !o.id || seen.has(o.id)) return;
+    seen.add(o.id);
+    items.push(o);
+  };
+
+  /* ★★★ v10.96：XD 分类页**同时存在两套布局**，两套都得认（2026-10-21 实测）。
+   *
+   *  这不是「改版了」，而是**改了一半**：
+   *    · `/sort/pcgame/` `/sort/host/` `/sort/mobile/` → **新布局**
+   *        <li><span class="type">动作冒险</span>
+   *            <a href="/game/15750.html"><img class="lazy img" src="…"></a>
+   *            <a href="/game/15750.html" class="tit">你的猫/Your Cat</a>
+   *            <div class="data"><span>评分：5.6 分</span> … <time class="news">2026-10-21</time></div></li>
+   *    · `/sort/dzmx/` `/sort/gj/` 等细分分类 → **旧布局仍在**
+   *        <li><a class="list-img" href="…"><img class="lazy" data-original="…"></a>
+   *            <div class="list-info"><a class="soft-title" href="…">标题</a>
+   *              <div class="list-ca">时间：2026-10-21</div>
+   *              <div class="list-btn"><span class="pf">评分：…</span><span class="dx">大小：未知</span></div></div></li>
+   *
+   *  ⚠️ 踩坑记录：v10.96 第一版把选择器**整体换成了新的**，结果 pcgame 出 40 条、
+   *     dzmx/gj 出 0 条 —— 「用新版替换旧版」在改了一半的站点上**等于新增一个坏分类**。
+   *     正确做法是两套都跑、按 id 去重（同一页只会命中其中一套）。
+   *
+   *  ⚠️ 新布局**没有体积字段**（旧布局的 `.dx` 常是「大小：未知」的空壳）⇒
+   *     size 只在能解析出数字时才填，不猜。
+   */
+  const coverOf = ($li) => $li.find('img.lazy').first().attr('data-original')
+    || $li.find('img.lazy').first().attr('src')
+    || $li.find('img').first().attr('src') || '';
+  const coverOk = (raw) => (/defaultpic|logo|\.gif/i.test(raw) ? null : abs(HOST_XD, raw));
+
+  /* —— 布局 A（新）：span.type + a.tit + time.news —— */
+  $('li:has(a[href*="/game/"]):has(a.tit)').each((_, el) => {
+    const $li = $(el);
+    const $a = $li.find('a[href*="/game/"]').first();
+    const href = $a.attr('href') || '';
+    const id = (href.match(/game\/(\d+)\.html/) || [])[1];
+    if (!id) return;
+    const title = ($li.find('a.tit').first().text() || '').replace(/\s+/g, ' ').trim();
+    if (!title) return;
+    const typeName = ($li.find('span.type').first().text() || '').trim();
+    const dtTxt = $li.find('time.news').first().text() || $li.find('font.news').first().text() || '';
+    const dm = String(dtTxt).match(/(\d{4}-\d{2}-\d{2})/);
+    /* 评分「评分：5.6 分」；`0` 是站点给无评分游戏的占位，按「没有」处理 */
+    const scTxt = ($li.find('.data').first().text() || '').replace(/\s+/g, ' ');
+    const sm2 = scTxt.match(/评分[：:]\s*([\d.]+)/);
+    push({
+      id: 'xd-' + id, source: 'xdgamer', kind: 'update', rank: null,
+      title, cover: coverOk(coverOf($li)),
+      score: sm2 && Number(sm2[1]) > 0 ? Number(sm2[1]) : null,
+      size: null, genres: [typeName || catName(slug)],
+      badge: dm ? dm[1] : null, dateLabel: dm ? dm[1] : null,
+      url: HOST_XD + href,
+    });
+  });
+
+  /* —— 布局 B（旧，细分分类仍在用）：a.soft-title + .list-ca + .dx —— */
   $('li:has(a.soft-title):has(a[href*="/game/"])').each((_, el) => {
     const $li = $(el);
     const $a = $li.find('a[href*="/game/"]').first();
     const href = $a.attr('href') || '';
     const id = (href.match(/game\/(\d+)\.html/) || [])[1];
-    if (!id || seen.has(id)) return;
-    seen.add(id);
+    if (!id) return;
     const title = ($li.find('a.soft-title').first().text() || '').replace(/\s+/g, ' ').trim();
     if (!title) return;
-    const coverRaw = $li.find('img.lazy').first().attr('data-original') || $li.find('img').first().attr('src') || '';
-    let date = null;
-    const dtTxt = $li.find('.list-ca').first().text() || '';
-    const dm = dtTxt.match(/(\d{4}-\d{2}-\d{2})/);
-    if (dm) date = dm[1];
-    let size = null;
+    const dm = ($li.find('.list-ca').first().text() || '').match(/(\d{4}-\d{2}-\d{2})/);
     const dxTxt = $li.find('.dx').first().text() || '';
     const sm = dxTxt.match(/(\d+(?:\.\d+)?)\s*(GB|MB|TB)/i);
-    if (sm) size = sm[1] + sm[2].toUpperCase();
-    items.push({
+    /* 旧布局的评分是星星宽度（`<span id="stars" style="width:56%">`）⇒ 56% ≈ 5.6 分，
+       但这是「按百分比反推」，仅在能取到宽度时使用；取不到就留 null。 */
+    const w = ($li.find('#stars').first().attr('style') || '').match(/width\s*:\s*([\d.]+)%/);
+    push({
       id: 'xd-' + id, source: 'xdgamer', kind: 'update', rank: null,
-      title, cover: /defaultpic|logo|\.gif/i.test(coverRaw) ? null : abs(HOST_XD, coverRaw),
-      score: null, size, genres: [catName(slug)],
-      badge: date || null, dateLabel: date || null,
+      title, cover: coverOk(coverOf($li)),
+      score: w ? Math.round(Number(w[1])) / 10 : null,
+      size: sm ? sm[1] + sm[2].toUpperCase() : null,
+      genres: [catName(slug)],
+      badge: dm ? dm[1] : null, dateLabel: dm ? dm[1] : null,
       url: HOST_XD + href,
     });
   });
+
   return { slug, category: catName(slug), items };
 }
 

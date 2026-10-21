@@ -171,6 +171,17 @@ app.use((req, res, next) => {
     fs.createReadStream(gz).pipe(res);
   });
 });
+/* ★ v10.96：`/favicon.ico` 回 204 而不是 404。
+ *
+ * 页面 head 里已经有内联 SVG 的 icon（v10.71），但**部分浏览器仍会额外请求
+ * 根目录的 /favicon.ico**（书签栏、PWA 安装、部分 Chromium 版本的预取）。
+ * 静态目录里没有这个文件 ⇒ 每个访问者的控制台都挂一条 404 红字，
+ * 而它**不是缺陷**、也没法从 HTML 侧消除。204 是「我知道，但这里没有」的正确回答。
+ *
+ * 全模块抽样时这条 404 是唯一一条「页面错误」，会掩盖真正的 JS 报错 —— 所以必须清掉。
+ */
+app.get('/favicon.ico', (_req, res) => res.status(204).end());
+
 app.use(express.static(path.join(__dirname, 'public')));
 // 旧版多页路由收敛：home/search/library 已并入单页主站,老链接 301 至首页
 app.get(['/home.html', '/search.html', '/library.html'], (_req, res) => res.redirect(301, '/'));
@@ -394,7 +405,7 @@ app.get('/api/search', async (req, res) => {
     if (hdBusy) return res.status(429).json({ ok: false, error: '机地深度搜索正忙（单实例串行），请稍候再试' });
     hdBusy = true;
     try {
-      const data = await cached(key, 600_000, async () => {
+      const data = await cached(key, searchCacheTtl, async () => {
         const jidiHd = require('./fetchers/jidiHeadless');
         const [xdR, jiR] = await Promise.allSettled([xdgamer.search(q), jidiHd.searchJidi(q)]);
         return {
@@ -422,7 +433,7 @@ app.get('/api/search', async (req, res) => {
     return;
   }
   try {
-    const data = await cached('search:' + q, 300_000, async () => {
+    const data = await cached('search:' + q, searchCacheTtl, async () => {
       const [xdR, jidiR] = await Promise.allSettled([xdgamer.search(q), jidi.search(q)]);
       return {
         q, aliasNote, fetchedAt: Date.now(),
@@ -3862,7 +3873,7 @@ app.get('/api/jiditopics/list', (req, res) => {
 //       SSR 兜底 120 秒、完整成功才 30 分钟。
 //     ⚠️ 判据是「有没有 error」而不是「有没有链接」——「帖在但没写网盘」是正常空结果，
 //        照常缓存，否则每次打开都重打源站，反而更快触发限流。
-const { dlCacheTtl } = require('./data/dl-cache-ttl');
+const { dlCacheTtl, searchCacheTtl } = require('./data/dl-cache-ttl');
 
 app.get('/api/download', async (req, res) => {
   const rawUrl = String(req.query.url || '').trim();

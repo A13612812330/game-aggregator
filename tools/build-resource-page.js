@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* 维护 public/resources.html —— 「端游资源」独立页（MOD / 存档 / 修改器）
+/* 维护 public/resources.html —— 「端游资源」独立页（本体 / MOD / 存档 / 修改器）
  *
  * 为什么有这一页（v10.44）：
  *   用户口径：「手游的样式更新下，也需要划分模块 MOD，存档，修改器，
@@ -120,8 +120,8 @@ const idxHeadA = findLine(idxLines, /^<head>/);
 const idxHeadB = findLine(idxLines, /^<style>/);
 const HEAD_LINES = cut(idxLines, idxHeadA, idxHeadB - 1).split('\n');
 {
-  const TITLE = '端游资源 · MOD / 存档 / 修改器 — GameHub';
-  const DESC = 'PC 游戏 MOD、存档位置、修改器一站式查询。MOD 带网盘直链，存档给出文件路径与云同步支持，修改器标注来源与获取方式。';
+  const TITLE = '端游资源 · 本体 / MOD / 存档 / 修改器 — GameHub';
+  const DESC = 'PC 游戏本体下载、MOD、存档位置、修改器一站式查询。本体按需实时抓取机地社区网盘直链，MOD 带网盘直链，存档给出文件路径与云同步支持，修改器标注来源与获取方式。';
   const ti = HEAD_LINES.findIndex((l) => /<title>/.test(l));
   if (ti >= 0) HEAD_LINES[ti] = `<title>${TITLE}</title>`;
   const di = HEAD_LINES.findIndex((l) => /<meta name="description"/.test(l));
@@ -134,6 +134,44 @@ const HEAD_LINES = cut(idxLines, idxHeadA, idxHeadB - 1).split('\n');
  * 约束：所有 id 必须与 resource-sections.js 里 getElementById 的取值一一对应，
  *       否则某个 init 拿不到节点 → 切过去一片空白。已由文件末尾「出站自检」强制校验。 */
 
+/* ⓪ 本体（#resBody）—— v10.96 新增，用户口径「端游资源我需要一个本体的页面」
+ *
+ * ★ 这一区与另三区的**形态差异是有意的**（原因写在 resource-sections.js 的本体段）：
+ *   另三区背后有离线索引，卡内直接铺条目；本体没有索引可建（机地本体帖只能实时取，
+ *   17,220 款预抓要 6 小时且必然触发限流），所以做成「列表全量可见 + 卡内按需抓取」。
+ *   卡片上那个按钮是**唯一**会打机地的入口 —— 不打就不会限流。
+ *
+ * ★ 为什么把它放**第一个**并作默认页签：本体是「拿到游戏」的第一步，
+ *   MOD / 存档 / 修改器都在它之后才有意义；藏在最后一个等于没做。
+ */
+const BODY_HTML = `
+<main class="wrap" id="resBody" data-et="body">
+  <div class="sec-h"><span class="bar body"></span><h2>本体</h2><span class="en">GAME FILES</span><span class="more" id="bdCount"></span></div>
+  <div class="emu-intro body">
+    <span class="ic">🎮</span>
+    <div class="tx">
+      <b>先把游戏拿到，再谈 MOD 与存档</b>——这一页列出<b>机地社区有话题的全部游戏</b>，
+      每张卡点「<b>🔍 查本体下载</b>」即<b>实时去机地抓</b>它话题下的本体资源帖，
+      抓到后卡内直接铺<b>网盘盘口</b>（百度 / 夸克 / 迅雷 / 阿里 / 天翼…），点盘口就到网盘页。
+      抓过的会<b>存在本机</b>，下次打开不用重抓。
+      <span style="opacity:.75">本站只做聚合与指路，<b>不转存、不提供文件</b>。安装与解压请以原贴说明为准。</span>
+      <span id="bdBuilt" style="opacity:.75"></span>
+    </div>
+  </div>
+  <div class="emu-stats" id="bdStats"></div>
+  <div class="emu-bar">
+    <div class="emu-bar-row">
+      <input class="emu-search" id="bdSearch" type="text" placeholder="搜索：剑星 / 星露谷物语 / 赛博朋克2077…" autocomplete="off">
+    </div>
+    <div class="emu-bar-row">
+      <span class="emu-bar-lb">排序</span>
+      <div class="emu-sorts" id="bdSorts"></div>
+    </div>
+  </div>
+  <div class="emu-grid body grp" id="bdGrid"></div>
+  <button class="load-more" id="bdMore" style="display:none">加载更多</button>
+</main>`;
+
 /* ① MOD（#mods）：机地社区 MOD 专区帖，带网盘直链
  * ★ v10.47：一卡一款游戏（卡内铺前 3 条），卡形与另两个分区完全一致。
  *   ⇒ HTML 骨架因此大幅收敛：排序项由 resource-sections.js 从 GRP_META 生成
@@ -141,7 +179,7 @@ const HEAD_LINES = cut(idxLines, idxHeadA, idxHeadB - 1).split('\n');
  *     「仅看匹配端游」开关**删掉** —— 组卡按定义就是「能对上端游库的游戏」，
  *     留一个恒真的开关只会误导。 */
 const MODS_HTML = `
-<main class="wrap" id="mods" data-et="md">
+<main class="wrap et-hide" id="mods" data-et="md">
   <div class="sec-h"><span class="bar md"></span><h2>MOD</h2><span class="en">MODS</span><span class="more" id="mdCount"></span></div>
   <div class="emu-intro md">
     <span class="ic">🧩</span>
@@ -243,7 +281,8 @@ const TRAINERS_HTML = `
  *   顺序：MOD → 存档 → 修改器（用户口径的列举顺序）。 */
 const BACKBAR = `<div class="wrap page-back">
   <div class="emu-tabs" id="resTabs">
-    <button class="res-tab on" data-et="md" type="button"><b id="tabNumMd">—</b><span>MOD</span></button>
+    <button class="res-tab on" data-et="bd" type="button"><b id="tabNumBd">—</b><span>本体</span></button>
+    <button class="res-tab" data-et="md" type="button"><b id="tabNumMd">—</b><span>MOD</span></button>
     <button class="res-tab" data-et="sv" type="button"><b id="tabNumSv">—</b><span>存档</span></button>
     <button class="res-tab" data-et="tr" type="button"><b id="tabNumTr">—</b><span>修改器</span></button>
   </div>
@@ -252,10 +291,10 @@ const BACKBAR = `<div class="wrap page-back">
 /* 独立页专属脚本：子页签切换 + 数字回填 */
 const TAB_JS = `/* ================= 🎮 端游资源 · 子页签（独立页） =================
    v10.44：MOD(#mods) / 存档(#resSaves) / 修改器(#resTrainers) 三个平级页签。
-   URL hash 同步：/resources.html#md / #sv / #tr（非法值归一为 #md）
+   URL hash 同步：/resources.html#bd / #md / #sv / #tr（非法值归一为 #bd = 本体）
 */
-const ET_MAP = { md: '#mods', sv: '#resSaves', tr: '#resTrainers' };
-let etCur = 'md';
+const ET_MAP = { bd: '#resBody', md: '#mods', sv: '#resSaves', tr: '#resTrainers' };
+let etCur = 'bd';
 
 /* 主脚本底部 Tab 的 emu 分支会调 goEmuPage()，那个定义在「独立页跳转块」里、
    本页已把整块替换掉 —— 补一个，万一被调到就是回手机专区（而不是 ReferenceError）。 */
@@ -263,6 +302,7 @@ function goEmuPage() { location.href = '/emulator.html'; }
 
 /** 各分区懒加载入口（在 initXxx 声明之后调用，避免 TDZ） */
 function etInit(t) {
+  if (t === 'bd') return initBd();
   if (t === 'md') return initMd();
   if (t === 'sv') return initSv();
   if (t === 'tr') return initTr();
@@ -279,11 +319,11 @@ function switchResTab(t, opts) {
   try { etInit(t); } catch (e) {}
   if (opts && opts.scroll !== false) window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-/* 顶栏「端游资源」入口：本页已在资源页，改为切「MOD」 */
+/* 顶栏「端游资源」入口：本页已在资源页，改为切默认分区（本体） */
 (function bindNavRes() {
   const el = document.getElementById('navRes'); if (!el) return;
-  el.setAttribute('href', '#md');
-  el.addEventListener('click', (e) => { e.preventDefault(); switchResTab('md'); });
+  el.setAttribute('href', '#bd');
+  el.addEventListener('click', (e) => { e.preventDefault(); switchResTab('bd'); });
 })();
 /** 子页签数字回填（MOD / 存档 / 修改器各覆盖多少款游戏）
  *  ★ v10.47：改读 /api/res/stats?list=1 —— 一次请求拿三个分区。
@@ -303,6 +343,12 @@ async function fillTabNums() {
     if (c.saves) set('tabNumSv', c.saves.groups);
     if (c.trainers) set('tabNumTr', c.trainers.groups);
   } catch (e) {}
+  /* ★ 本体页签的数字是**话题库总数**，另一个接口 —— 单取，失败就不填（留「—」）。
+     绝不写死数字：库里话题会随同步变，硬编码的 17,220 迟早变成错的。 */
+  try {
+    const t = await fetch(api('/api/jiditopics/stats')).then((r) => r.json());
+    if (t && t.ok && t.total) set('tabNumBd', t.total);
+  } catch (e) {}
 }
 /* 底部 Tab */
 const tb = document.getElementById('tabbar');
@@ -316,10 +362,10 @@ document.getElementById('resTabs').addEventListener('click', (e) => {
   const b = e.target.closest('.res-tab'); if (!b) return;
   switchResTab(b.dataset.et);
 });
-/* 首屏：按 hash 决定进哪个页签，默认 MOD */
+/* 首屏：按 hash 决定进哪个页签，默认「本体」（v10.96） */
 (function bootTab() {
   const t = location.hash.slice(1);
-  switchResTab(ET_MAP[t] ? t : 'md', { scroll: false });
+  switchResTab(ET_MAP[t] ? t : 'bd', { scroll: false });
   fillTabNums();
 })();
 `;
@@ -398,6 +444,17 @@ const out = [
      ⚠️ 旧写法有个真坑值得记：.md-lk .lk.bd-* 那十条把十六进制**手抄**了一份，
         与详情页 .dl-it .lk.bd-* 完全相同却互不相干 —— 典型的「三份手抄必然漂」。
      ⚠️ 本段在模板串内部：注释里**不能出现反引号**（会提前闭合模板串）。 */
+  .bar.body{background:linear-gradient(90deg,#7C3AED,#A855F7)}
+  .emu-intro.body{background:linear-gradient(135deg,#F5F1FF,#FAF7FF);border-color:#E6DAFF}
+  /* 本体卡专属：卡内那个「查本体下载」按钮。刻意做成**实心主色块**而不是普通按钮 ——
+     它是本区唯一的动作入口，视觉上必须一眼看见（另三区的卡内条目是链接，不是按钮）。 */
+  .bd-get{display:block;width:100%;margin:2px 0 0;padding:9px 10px;border-radius:8px;cursor:pointer;
+    font:750 12px/1.2 var(--font);color:#fff;border:0;
+    background:linear-gradient(135deg,#7C3AED,#6366F1);transition:.15s}
+  .bd-get:hover{filter:brightness(1.08);transform:translateY(-1px)}
+  .bd-get:disabled{opacity:.65;cursor:default;transform:none}
+  .bd-empty-s{padding:9px 2px;color:#8A94A6;font-size:12px;line-height:1.55}
+  .bd-empty-s b{color:#5A6478}
   .bar.md{background:linear-gradient(90deg,#2E6BFF,#4F8CFF)}
   .emu-intro.md{background:linear-gradient(135deg,#EEF4FF,#F7FAFF);border-color:#D8E4FF}
 </style>
@@ -408,6 +465,7 @@ const out = [
   '',
   BACKBAR,
   '',
+  BODY_HTML,
   MODS_HTML,
   SAVES_HTML,
   TRAINERS_HTML,
@@ -474,4 +532,4 @@ assertScriptSyntax(out, 'resources.html');
 fs.writeFileSync(RES, out, 'utf8');
 console.log(`✅ 已生成 public/resources.html`);
 console.log(`   CSS ${CSS.length}B ｜ 顶栏 ${TOPBAR.length}B ｜ 抽屉+tabbar ${OVERLAY.length}B ｜ 脚本 ${JS.length}B`);
-console.log(`   三分区 MOD ${MODS_HTML.length}B ＋ 存档 ${SAVES_HTML.length}B ＋ 修改器 ${TRAINERS_HTML.length}B 与 3 页签切换条`);
+console.log(`   四分区 本体 ${BODY_HTML.length}B ＋ MOD ${MODS_HTML.length}B ＋ 存档 ${SAVES_HTML.length}B ＋ 修改器 ${TRAINERS_HTML.length}B 与 4 页签切换条`);
