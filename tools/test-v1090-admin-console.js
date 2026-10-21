@@ -131,7 +131,11 @@ ok(pageCols[0] === '封面' && pageCols[1] === '游戏名' && pageCols[2] === '�
   && pageCols[3] === '平台' && pageCols[4] === '热度',
   'B3 页面管理列 = 封面 / 游戏名 / 游戏ID / 平台 / 热度 / …', pageCols.join('|'));
 ok(/\.fxrow td\{height:56px/.test(ADMIN), 'B4 固定行高 56px（height 才会真的等高，min-height 会被长标题撑开）');
-ok(/\.fxrow \.cv\{width:42px;height:42px/.test(ADMIN), 'B5 行内封面 42×42');
+/* ★ v10.94：42×42 方框装 460×215 的 Steam 横图，配 `object-fit:cover` 会把左右裁掉，
+ *   用户实测「游戏图片显示不全」⇒ 改成 64×42 + contain。这条断言随实现一起改，
+ *   否则下轮有人看到红就去「修」回 42×42，等于把用户的问题重新种回去。
+ *   ⚠️ 断言对象必须是 `.fxrow .cv`（更具体、真正生效的那条），`.cv` 单独写 64 会被它覆盖。 */
+ok(/\.fxrow \.cv\{width:64px;height:42px/.test(ADMIN), 'B5 行内封面 64×42（v10.94 横图 contain）');
 ok(/<img class="cv" loading="lazy" src="' \+ esc\(g\.cover\)/.test(ADMIN), 'B6 页面管理真的渲染封面图（不是占位方块）');
 ok(/onclick="openProf\(' \+ i \+ ',\\'pages\\',event\)">查看</.test(ADMIN),
   'B7 「查看」= 编辑（打开资料弹窗的爬虫字段形态）');

@@ -183,5 +183,9 @@ sink.on('close', () => { /* noop */ });
   ok(/nPcRaw: gamesRaw\.length, nMerged: dedupeRes\.merged/.test(ROSTER), 'D20 meta 同时给原始条数与合并数（不糊弄总数）');
 
   console.log('\n结果：通过 ' + pass + ' / ' + (pass + fail) + (fail ? '  · 失败 ' + fail : ''));
-  if (fail) { console.log('失败项：\n  - ' + fails.join('\n  - ')); process.exit(1); }
+  /* ★ 必须是 `process.exit(fail ? 1 : 0)` 这种形态：run-all 的 exitTiedToFailures()
+   *   用正则认「第一参是 fail/fails/failures… 三元式」，写成 `if (fail) process.exit(1)`
+   *   会被判成「退出码不随失败变」（本轮实测被点名），单独跑时红绿不分、反证也验不了。 */
+  if (fail) console.log('失败项：\n  - ' + fails.join('\n  - '));
+  process.exit(fail ? 1 : 0);
 })();
