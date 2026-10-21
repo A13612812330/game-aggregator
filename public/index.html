@@ -6620,7 +6620,9 @@ async function fgcPoll() {
   const id = FGC.task && FGC.task.id;
   if (!id) return;
   try {
-    const j = await fetch(api('/api/downloads/tasks')).then((r) => r.json());
+    /* ★ 必须带 `?ids=`：线上实测同一浏览器两次请求的出口 IP 可能不同（NAT/多出口），
+       服务端按 IP 过滤会让「刚建的任务查不到」。id 本身是 80 bit 随机，即凭据。 */
+    const j = await fetch(api('/api/downloads/tasks?ids=' + encodeURIComponent(id))).then((r) => r.json());
     const t = (j.tasks || []).find((x) => x.id === id);
     if (!t) return;
     FGC.task = t;

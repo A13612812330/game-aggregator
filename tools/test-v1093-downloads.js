@@ -135,7 +135,11 @@ ok(/api\/downloads\/debug/.test(SERVER) && /if \(!adminGuard\(req, res\)\) retur
   'C7 debug 端点受 adminGuard 保护');
 ok(/startsWith\(path\.resolve\(base\) \+ path\.sep\)/.test(SERVER), 'C8 保存文件前做路径越界检查（种子文件名可构造）');
 ok(/if \(t\.state !== 'ready'\)/.test(SERVER), 'C9 未就绪不许下载（不许把半截文件给用户）');
-ok(/t\.ip !== clientIp\(req\) && !adminGuard\(req, res\)/.test(SERVER), 'C10 只能下自己任务的文件');
+/* ★ v10.93.2 改判：任务 id 从 6 位随机提到 80 bit，成为访问凭据；
+   IP 不再当唯一凭据（线上实测同一脚本两次请求出口 IP 不同）。 */
+ok(/crypto\.randomBytes\(10\)\.toString\('hex'\)/.test(require('fs').readFileSync(path.join(ROOT,'data','download-tasks.js'),'utf8')),
+  'C10 任务 id 用 80 bit 随机（id 即凭据，不可枚举）');
+ok(/ids\.length \? ids\.includes\(t\.id\) : t\.ip === ip/.test(SERVER), 'C10b 列表支持 ?ids= 显式查询（绕开 IP 漂移）');
 ok(!/torrentPath\s*:/.test(SERVER.slice(SERVER.indexOf('res.json({\n      ok: true, previewId'), SERVER.indexOf('res.json({\n      ok: true, previewId') + 700)),
   'C11 preview 响应不下发 torrentPath（前端传路径可读服务器任意文件）');
 ok(/DLP\.get\(String\(\(req\.body && req\.body\.previewId\)/.test(SERVER), 'C12 入队只认服务端发的 previewId');

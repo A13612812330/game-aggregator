@@ -2250,8 +2250,11 @@ app.get('/api/downloads/tasks', async (req, res) => {
     if (!all) await dlSync(false);
   } catch (e) { /* 引擎挂了也照样把表里已有的状态回给前端 */ }
   const ip = clientIp(req);
+  /* ★ `?ids=` 显式查询：id 是 80 bit 随机（见 download-tasks.newId），能拿到就是创建者。
+     线上实测同一脚本两次请求出口 IP 不同 ⇒ 单靠 IP 过滤会「刚建的任务查不到」。 */
+  const ids = String(req.query.ids || '').split(',').map((x) => x.trim()).filter(Boolean);
   const list = dlTasks.list()
-    .filter((t) => all || t.ip === ip)
+    .filter((t) => all || (ids.length ? ids.includes(t.id) : t.ip === ip))
     .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, 50)
     .map(dlTaskView);
@@ -2262,9 +2265,8 @@ app.get('/api/downloads/tasks', async (req, res) => {
 app.post('/api/downloads/tasks/:id/actions', async (req, res) => {
   const t = dlTasks.get(String(req.params.id || ''));
   if (!t) return res.status(404).json({ ok: false, error: '任务不存在' });
-  const ip = clientIp(req);
-  const mine = t.ip === ip;
-  if (!mine && !adminGuard(req, res)) return;
+  /* ★ 不按 IP 校验：任务 id 是 80 bit 随机，能拿到 id 就说明是创建者（见 newId 注释）。
+     IP 会因 NAT/多出口变化，拿它当唯一凭据会把本人挡在外面。 */
   const action = String((req.body && req.body.action) || '');
   if (!['pause', 'resume', 'cancel'].includes(action)) {
     return res.status(400).json({ ok: false, error: 'action 只能是 pause / resume / cancel' });
@@ -2290,7 +2292,7 @@ app.post('/api/downloads/tasks/:id/actions', async (req, res) => {
 app.get('/api/downloads/tasks/:id/files/:fid', async (req, res) => {
   const t = dlTasks.get(String(req.params.id || ''));
   if (!t) return res.status(404).json({ ok: false, error: '任务不存在' });
-  if (t.ip !== clientIp(req) && !adminGuard(req, res)) return;
+  /* 同上：id 即凭据，不按 IP 卡 */
   if (t.state !== 'ready') return res.status(409).json({ ok: false, error: '文件还没下载完' });
   const fid = Number(req.params.fid);
   const f = (t.files || []).find((x) => x.index === fid);

@@ -16,6 +16,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const ROOT = path.join(__dirname, 'downloads');
 const FILE = path.join(ROOT, 'tasks.json');
@@ -59,8 +60,14 @@ function save() {
   }
 }
 
+/**
+ * ★ v10.93.2：随机段从 6 位（Math.random，约 36^6≈2^31）提到 **20 位 hex（80 bit）**。
+ *   原因：任务 id 现在同时是**访问凭据**。线上实测同一脚本两次请求的出口 IP 不同
+ *   （NAT/多出口），按 IP 过滤会让用户「刚建的任务查不到」；改成 id 即凭据后，
+ *   id 的不可枚举性就成了安全边界 —— 2^31 在一台机器上是可以穷举的，2^80 不行。
+ */
 function newId() {
-  return 'dl_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+  return 'dl_' + Date.now().toString(36) + '_' + crypto.randomBytes(10).toString('hex');
 }
 
 function dirOf(id) {
