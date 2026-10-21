@@ -30,15 +30,43 @@
 | 4 | Range / 断点 | ✅ `206` + `Content-Range: bytes 0-262143/10997541`，首 256 KB md5 MATCH | 同上 |
 | 5 | 出站 HTTPS | ✅ 通 | parts 现抓 FitGirl 页面成功 |
 | 6 | 请求体上限 | ✅ 8 MB 通过；❌ 20 MB → **413** | 对 `POST /api/admin/login` 发 0.5/2/8/20 MB 实测 |
-| 7 | 磁盘容量 / 剩余 | ❓ 待探针 | — |
-| 8 | 容器平台与 CPU 架构 | ❓ 待探针（决定 aria2 拿 x64 还是 arm64） | — |
-| 9 | 是否已装 aria2 / 能否自带 | ❓ 待探针 | — |
-| 10 | BT 出站（TCP tracker / UDP DHT） | ❓ 待探针 | — |
-| 11 | 写盘是否**跨容器重建**存活 | ❓ 待探针（两次部署对比） | — |
+| 7 | 磁盘容量 / 剩余 | ✅ **256 GB total / 252.8 GB free**（`/workspace` 与 `/` 同盘） | `GET /api/admin/env` → `disk` |
+| 8 | 容器平台与 CPU 架构 | ✅ **linux / x64**，node v22.13.1，**32 vCPU**（AMD EPYC 9K65），内存 126 GB，**root**，**apt 可用** | 同上 → `env` |
+| 9 | 是否已装 aria2 / 能否自带 | ❌ **未安装**（`bin.aria2 = not-found`），但 **root + apt 可用** ⇒ 可 `apt-get install aria2` | 同上 → `bin` |
+| 10 | BT 出站（TCP tracker / UDP DHT） | ✅ **可行**：TCP tracker `connected` 163 ms（另一个 `ECONNREFUSED`，是那个 tracker 自己拒）；**UDP DHT `replied 56B`**（真回包） | 同上 → `egress` |
+| 11 | 写盘是否**跨容器重建**存活 | ❓ 仍待验（需两次发布比对，本轮未做） | — |
 
-> 探针已写好：`_probe-runtime/server.js`（只读，单端点，5s 全部超时兜底，本地已跑通）。
-> 部署后返回：platform/arch/node、磁盘 total+free、`aria2c` 是否在、DNS/HTTPS/TCP-tracker/UDP-DHT
-> 四路出站结果、以及「上次写入时间戳 vs 本次 pid」用于判定跨进程持久。
+> 探针落地方式：**主站只读端点 `GET /api/admin/env`**（adminGuard），不再部署独立 app
+> （独立目录交给部署工具会把**主站整个换掉**，见铁律 166）。
+
+### 2.1 线上自检端点实测（2026-10-21，v10.92 发布后）
+
+```
+GET /api/admin/env   HTTP 200 · 3.17s（6 路并行 + 单项 2.5s 上限）
+env    linux / x64 · node v22.13.1 · 32 cpus · AMD EPYC 9K65 · memTotal 126,278 MB
+       cwd=/workspace · isRoot=true · hasApt=true
+disk   cwd {total 256 GB, free 252.8 GB} · root 同盘
+bin    aria2 {ok:false, err:"not-found"} · shell /bin/sh → dash
+egress dns ok 3ms（github.com → 20.205.243.166）
+       https **false**「fetch-failed」（目标 raw.githubusercontent.com）
+       tcpTrackers [connected 163ms, ECONNREFUSED]
+       udpDht       [replied 56B ✅, timeout]
+tmp    writable true（/tmp）
+```
+
+**怎么读这三条**（不夸大成「全部能跑」也不写成「都不行」）：
+
+1. **平台够用**：32 核 / 126 GB 内存 / 252.8 GB 空盘 / root + apt ⇒ 装 aria2 与跑长驻引擎没有硬障碍；
+   86 GB 的单任务装得下（但仍必须做水位与配额，见第三节）。
+2. **BT 组网通了**：UDP DHT 有真实回包 + 一个公共 tracker TCP 连上 ⇒ 磁力 `bt-metadata-only` 这条路**可行**。
+   另一个 tracker `ECONNREFUSED` 是对方拒绝，不是我们出不去 —— **不要据此判「BT 被封」**。
+3. **HTTPS 那条 false 是「域名级」不是「全局」**：同一台机器抓 FitGirl 页面、抓机地接口都通，
+   只有 `raw.githubusercontent.com` 失败 ⇒ 结论必须写成「该域名不可达」，并据此选**不依赖 GitHub 的**
+   依赖安装方式（apt / npm 源另测）。
+
+> ⇒ 因此第四节选型定为 **A. aria2 RPC（apt 安装）**，前提已满足（linux x64 + root + apt）。
+> 仍需在下一轮实测的两件小事：`apt-get install aria2` 是否被镜像源允许、装完能否在**重启后仍存在**
+> （容器重建即丢 ⇒ 必须在启动脚本里做「无则安装」幂等引导）。
 
 ---
 
@@ -76,12 +104,15 @@ Arma 3 单任务 **86.10 GB**。服务器代下再转发 = 双份出口流量 + 
 
 ---
 
-## 四、引擎选型（等探针定，二选一，不做第三方案）
+## 四、引擎选型（已定 **A. aria2 RPC**，前提在 2.1 已实测满足）
+
+> 定案依据：线上 `linux/x64` + `root` + `apt` 可用 + 252.8 GB 空盘 + UDP DHT 有回包。
+> 仍要补的两条实测：apt 源是否允许装 aria2、容器重建后是否还在（⇒ 启动时幂等安装）。
 
 | 方案 | 前提 | 优点 | 代价 |
 |---|---|---|---|
-| **A. aria2 RPC**（首选） | 探针确认 Linux 架构 + 可执行权限 | 成熟、限速/暂停/多文件选择/Range 全有、CPU 占用低 | 要带二进制（GPLv2，须附 COPYING + 来源）；架构必须匹配 |
-| **B. 纯 JS（webtorrent）** | npm 可装、无 native 编译障碍 | 跨架构、无二进制分发问题、与 Node 同生命周期 | 性能与稳定性弱于 aria2；需自己补暂停/限速语义 |
+| **A. aria2 RPC**（★ 选定） | ✅ 已满足：Linux x64 + root + apt | 成熟、限速/暂停/多文件选择/Range 全有、CPU 占用低 | 要带二进制（GPLv2，须附 COPYING + 来源）；容器重建即丢 ⇒ 启动脚本「无则安装」 |
+| **B. 纯 JS（webtorrent）**（备选） | npm 可装、无 native 编译障碍 | 跨架构、无二进制分发问题、与 Node 同生命周期 | 性能与稳定性弱于 aria2；需自己补暂停/限速语义 |
 
 RPC 只绑 `127.0.0.1` + 随机端口 + 随机 secret，**绝不监听 0.0.0.0**（照 `Aria2Session.cs` 的边界）。
 
@@ -140,11 +171,15 @@ GET  /api/downloads/tasks/:id/files/:fileId   鉴权文件流，支持 Range
 
 ---
 
-## 八、未决项（需要你拍板，不擅自定）
+## 八、未决项（1、3 已拍板并落地，2 见下）
 
-1. **探针怎么跑**：独立只读 app（用完下线）/ 主站加只读端点随版本发布 / 暂不探针。
-2. **直链按钮语义**：打开镜像页 / 复制全部链接 / 干脆不做只留磁力。
-3. **本轮范围**：只做 UI 重排（可今天上线）／UI + 引擎一起／先只留计划。
+1. ~~**探针怎么跑**~~ → **已定并完成**：主站加只读端点 `GET /api/admin/env`（随 v10.92 发布，线上实测 200）。
+   独立 app 这条路**走不通**（部署工具按工作区绑 appId，会把主站整个替换掉，铁律 166）。
+2. **直链按钮语义**：~~打开镜像页~~ **已定**：弹窗选镜像 + 分卷清单（逐条打开 / 复制全部），
+   并在弹窗里写明「实际下载在镜像站网页里完成（不是本站代下）」。
+3. ~~**本轮范围**~~ → **已定并完成**：只做 UI 重排（v10.92 已上线，五页 md5 全 MATCH）。
+4. **新增**：磁力「云下载」按钮的**体积门槛**要不要按 repack 大小分级（如 > 30 GB 只给「建议用磁力客户端」
+   + 复制磁力），还是统一走云下载 + 服务端拒绝？—— 这是产品口径，下一轮开工前定。
 
 ---
 

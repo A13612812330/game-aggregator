@@ -889,6 +889,12 @@ python tools/clean-excel.py       # 读 E:/新建文件夹/基础测试数据.xl
 > （`test-youxia-match` 缓存口径漂移 1 条 + `test-v1018` 联网补全 3 条，与本版无关）。
 > ★ 前置闸那条是本轮自己弄红的：回调式 `execFile(cmd,args,{timeout},cb)` 的 options 不在最后一位，
 > stdio 守卫判 UNKNOWN ⇒ 改 `promisify(execFile)` 让 options 落回末位（**铁律 168**）。<br>
+> **已发布（2026-10-21）**：五页 md5 **5/5 MATCH**（`a95f6945 / a9bf438d / 5908ec5f / 9e6ec909 / 630927f0`）；
+> `verify-online` **37/41**（4 条失败全在「机型→芯片联网补全」既有红，本版未触碰该链路）。<br>
+> **线上运行时实测（`/api/admin/env` 200 · 3.17s）**：`linux/x64` · node v22.13.1 · **32 vCPU / 126 GB** ·
+> **root + apt 可用** · 磁盘 **256 GB（free 252.8）** · aria2 **未预装** · DNS ✅ 3ms ·
+> HTTPS 仅 `raw.githubusercontent.com` 失败（域名级）· TCP tracker ✅ 163ms · **UDP DHT ✅ replied 56B**
+> ⇒ 引擎定 **aria2 RPC + apt 幂等安装**；仍缺「写盘跨容器重建是否存活」一条。<br>
 > 计划与未实现部分见 [docs/ONLINE-DOWNLOAD-PLAN.md](docs/ONLINE-DOWNLOAD-PLAN.md)，本轮记录见
 > [docs/versions/v10.92.md](docs/versions/v10.92.md)。
 
