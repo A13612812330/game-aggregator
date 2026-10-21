@@ -2287,6 +2287,44 @@
     border:1px solid #C9DCFF;border-radius:6px;padding:2px 8px;background:#fff}
   .fgdl-p .op:hover{background:var(--c-primary);color:#fff}
   .fgdl-empty{font-size:11.5px;line-height:1.8;color:var(--c-t3);padding:10px 2px}
+  /* ── v10.93 云下载弹窗（磁力 → 服务端下载 → 保存到电脑） ──
+     层级必须高于 #fgDl(120)：它从「下载与资源」(.dlpop,110) 里点开，
+     两层弹窗叠在一起时「元素存在且可点」全成立，但视觉上被盖住 —— 最难发现的那类假绿。 */
+  #fgCloud{z-index:125}
+  #fgCloud .dlpop-box{max-height:min(86vh,860px)}
+  .fgc-hint{font-size:11.5px;line-height:1.8;color:var(--c-t2);background:#F7F9FC;border:1px solid #E7EEF9;
+    border-radius:8px;padding:8px 11px}
+  .fgc-hint b{color:var(--c-t1)}
+  .fgc-list{margin-top:9px;max-height:250px;overflow:auto;border:1px solid var(--c-border);
+    border-radius:9px;background:#FCFDFF}
+  .fgc-file{display:flex;align-items:center;gap:8px;padding:5px 10px;border-top:1px solid #F0F4FA}
+  .fgc-file:first-child{border-top:0}
+  .fgc-file input{flex:none;width:13px;height:13px;accent-color:#2F6FED;cursor:pointer}
+  .fgc-file .nm{flex:1 1 auto;min-width:0;font-size:11.5px;color:var(--c-t1);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fgc-file .sz{flex:none;font:750 10.5px/1.5 var(--font-num);color:var(--c-t3)}
+  .fgc-bar{height:7px;border-radius:4px;background:#E8EFFD;overflow:hidden;margin-top:11px}
+  .fgc-bar>i{display:block;height:100%;width:0;border-radius:4px;
+    background:linear-gradient(90deg,#0F766E,#14B8A6);transition:width .45s ease}
+  .fgc-bar>i.err{background:linear-gradient(90deg,#B4232A,#E0585F)}
+  .fgc-stat{display:flex;gap:12px;flex-wrap:wrap;margin-top:7px;
+    font:750 11px/1.6 var(--font-num);color:var(--c-t2)}
+  .fgc-stat .st{font-family:inherit;font-weight:800;color:#0F766E}
+  .fgc-stat .st.warn{color:#B45309}
+  .fgc-stat .st.bad{color:#B4232A}
+  .fgc-acts{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+  .fgc-btn{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:800;
+    padding:6px 14px;border-radius:8px;border:1px solid transparent;cursor:pointer;
+    color:#fff;background:linear-gradient(135deg,#0F766E,#14B8A6)}
+  .fgc-btn:hover{filter:brightness(1.07)}
+  .fgc-btn:disabled{opacity:.5;cursor:not-allowed;filter:none}
+  .fgc-btn.ghost{color:var(--c-primary);background:var(--c-primary-soft);border-color:#C9DCFF}
+  .fgc-btn.ghost:hover{background:var(--c-primary);color:#fff}
+  .fgc-err{margin-top:9px;font-size:11.5px;line-height:1.8;color:#B4232A;background:#FDECEC;
+    border:1px solid #F6C9CB;border-radius:8px;padding:8px 11px}
+  .fgc-spin{display:inline-block;width:11px;height:11px;border:2px solid #C9DCFF;
+    border-top-color:#2F6FED;border-radius:50%;animation:fgcspin .7s linear infinite;vertical-align:-1px}
+  @keyframes fgcspin{to{transform:rotate(360deg)}}
   .dlpop .emu-loading{padding:22px 4px;text-align:center;font-size:12.5px;color:var(--c-t2)}
   .dlpop .emu-empty{padding:20px 4px;text-align:center;font-size:12.5px;line-height:1.8;color:var(--c-t3)}
   .dl-note+.dl-sv-list{margin-top:9px}
@@ -2974,6 +3012,24 @@
     </div>
     <div class="dlpop-b" id="fgDlBody"></div>
     <div class="dlpop-f" id="fgDlFoot"></div>
+  </div>
+</div>
+
+<!-- ===== ☁ v10.93 云下载弹窗：磁力 → 服务器下载 → 保存到电脑 =====
+     用户口径（2026-10-21）：「用户只操作线上网页，不安装本地下载工具、不唤起第三方客户端；
+     下载引擎运行在我们自己的服务器；服务器文件就绪后，提供『保存到电脑』」。
+     ★ 与 #fgDl 的关系：直链那条链是「带你去镜像站」，这条链是「服务器替你下」。
+       两条都不能删 —— 镜像站能按单卷挑，云下载能一觉醒来取文件，场景不同。 -->
+<div class="dlpop" id="fgCloud" hidden>
+  <div class="dlpop-bg" data-fgc="close"></div>
+  <div class="dlpop-box" role="dialog" aria-modal="true" aria-label="云下载">
+    <div class="dlpop-h">
+      <span class="ic">☁</span>
+      <div class="tx"><b id="fgcTitle">云下载</b><span id="fgcSub"></span></div>
+      <button class="dlpop-x" type="button" data-fgc="close" aria-label="关闭">✕</button>
+    </div>
+    <div class="dlpop-b" id="fgcBody"></div>
+    <div class="dlpop-f" id="fgcFoot"></div>
   </div>
 </div>
 
@@ -6371,52 +6427,38 @@ function dlUniPaintFg(fg) {
     return '<div class="df-row"><span class="ix">·</span><span class="bd">'
       + '<span class="t"><span class="tagx">FitGirl</span>' + ad + esc(it.title || it.slug) + '</span>'
       + '<span class="m">' + esc(String(it.date || '').slice(0, 10)) + '</span>'
-      /* ★ v10.92：只留两个按钮 —— 「⬇ 直链下载」打开镜像/分卷弹窗，「⧉ 磁力链」复制磁力。
-         「↗ 原站」降级成小字：帖子里还有安装说明、截图、语言包说明，不能删；
-         但它不是下载动作，不该和两个下载按钮抢视觉权重。
-         ★ 为什么直链按钮不是服务端代下：三站实测全是落地页（302 /download 或
-           Cloudflare 挑战页），没有可代下的文件直链 —— 见 docs/ONLINE-DOWNLOAD-PLAN.md。 */
+      /* ★ v10.93：按钮语义按实测改了 —— 三个镜像站**没有服务端可复现的文件直链**
+         （datanodes.to 的 download2 要过验证码，实测回 "Wrong captcha"；
+           fuckingfast.co 返回 403 + Cf-Mitigated: challenge；
+           filekeeper.net 是同类 302 落地页）。
+         ⇒ 「直链下载」这个名字对用户是**空承诺**，改叫「镜像分卷」并写明要去镜像站过验证码。
+         ⇒ 「⧉ 磁力链」从「只复制」升级成打开云下载弹窗（服务器替你下，见 #fgCloud）。
+         「↗ 原站」仍保留小字：帖子里还有安装说明与截图，不能删。 */
       + '<span class="fgbtns">'
       + '<button type="button" class="fgbtn dl" data-fg-dl="' + esc(it.slug) + '"'
-      + ' data-fg-title="' + esc(it.title || it.slug) + '">⬇ 直链下载</button>'
-      + '<button type="button" class="fgbtn mg" data-fg-magnet="' + esc(it.slug) + '">⧉ 磁力链</button>'
+      + ' data-fg-title="' + esc(it.title || it.slug) + '">⬇ 镜像分卷</button>'
+      + '<button type="button" class="fgbtn mg" data-fg-magnet="' + esc(it.slug) + '"'
+      + ' data-fg-title="' + esc(it.title || it.slug) + '">☁ 云下载</button>'
       + '<a class="fgorg" href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">↗ 原站</a>'
       + '</span></span></div>';
   }).join('');
   const sec = document.createElement('div');
   sec.className = 'dl-gcm';
   sec.innerHTML = '<div class="dl-note"><b>FitGirl Repack</b> 命中 <b>' + fg.items.length +
-    '</b> 个资源包 · 磁力链含全部内容，可按文件挑着下（Selective Download）；'
-    + '直链走镜像站的网页下载页</div>' + rows;
+    '</b> 个资源包 · <b>☁ 云下载</b>由本站服务器代下，下完点「保存到电脑」（不用装任何客户端）；'
+    + '<b>⬇ 镜像分卷</b>去镜像站下，可按卷挑，但要过一次验证码</div>' + rows;
   body.appendChild(sec);
 }
 
-/* 复制磁力（事件委托 —— 段是动态追加的；写 here 而不是段内绑定，换游戏重绘不重复绑） */
-document.addEventListener('click', async (e) => {
+/* ★ v10.93：「磁力链」按钮从「只复制到剪贴板」改成「打开云下载弹窗」。
+ *   用户口径是「只操作线上网页、不装本地工具」—— 复制磁力等于把最后一步又推回给用户
+ *   （还得自己找客户端）。复制能力保留，但降级成弹窗里的一个次按钮。
+ *   事件仍写在 document 上（委托）：段是动态追加的，段内绑定换游戏重绘会重复绑。 */
+document.addEventListener('click', (e) => {
   const a = e.target.closest && e.target.closest('[data-fg-magnet]');
   if (!a) return;
   e.preventDefault();
-  const slug = a.dataset.fgMagnet;
-  const old = a.textContent;
-  a.textContent = '… 抓取中';
-  try {
-    const j = await fetch(api('/api/fitgirl/magnet?slug=' + encodeURIComponent(slug))).then((r) => r.json());
-    if (!j.ok || !(j.magnets || []).length) throw new Error(j.error || '没有磁力');
-    /* 第一条 = FitGirl 官方种子（tracker 最多、含 Selective Download） */
-    const txt = j.magnets[0];
-    try {
-      await navigator.clipboard.writeText(txt);
-      a.textContent = '✓ 已复制';
-    } catch (ce) {
-      /* 剪贴板权限不可用（非安全上下文等）→ 手动复制兜底 */
-      window.prompt('自动复制不可用，请手动复制：', txt);
-      a.textContent = old;
-      return;
-    }
-  } catch (er) {
-    a.textContent = '✗ ' + String((er && er.message) || er).slice(0, 20);
-  }
-  setTimeout(() => { a.textContent = old; }, 2500);
+  fgcOpen(a.dataset.fgMagnet, a.dataset.fgTitle || '');
 });
 
 /* ★ v10.92 FitGirl 直链下载弹窗
@@ -6491,7 +6533,10 @@ function fgDlBodyHtml(j) {
     ? '<div class="fgdl-hint" style="margin-top:10px">⚠ ' + esc(j.warnings.join('；')) + '</div>'
     : '';
   let html = '<div class="fgdl-hint">三个镜像站是<b>同一套文件</b>的镜像，挑一个就行。'
-    + '这里给的是镜像站的文件页地址，<b>实际下载在镜像站网页里完成</b>（不是本站代下）。</div>';
+    + '这里给的是镜像站的文件页地址，<b>实际下载在镜像站网页里完成</b>（不是本站代下）。'
+    + '<br>⚠ 三个站都<b>需要过验证码 / 等倒计时</b>才出文件链接 —— 实测 datanodes 会回 “Wrong captcha”，'
+    + 'fuckingfast 走 Cloudflare 人机验证，所以本按钮<b>不可能</b>做成「点一下就直接下」。'
+    + '想免掉这一步，用旁边的 <b>☁ 云下载</b>。</div>';
   if (j && j.mode === 'container') {
     const cs = (j.containers || []).map((c) => '<a class="op" href="' + esc(c.url) + '"'
       + ' target="_blank" rel="noopener noreferrer">↗ ' + esc(c.host) + '</a>').join(' ');
@@ -6563,6 +6608,298 @@ function fgDlClose() {
   FGD.data = null;
   setTimeout(() => { if (!pop.classList.contains('on')) pop.hidden = true; }, 180);
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+ * ★ v10.93 云下载弹窗（FGC）
+ *
+ * 【为什么要有这一块】用户口径：「用户只操作线上网页，不安装本地下载工具、
+ *   不唤起第三方客户端；下载引擎运行在我们自己的服务器；服务器文件就绪后
+ *   提供『保存到电脑』」。
+ *   上一版「磁力链」按钮只做复制 —— 等于把最后一步又推回用户（自己找客户端）。
+ *
+ * 【为什么分两段：解析 → 选文件】磁力链接**不含体积**，要判「≤30 GB」
+ *   必须先拉元数据（实测 4–9 秒）。合成一步会让用户等 8 秒才被告知「太大」，
+ *   而这 8 秒已经占掉了配额。分两步，看到清单就能放弃，不占配额。
+ *
+ * 【为什么进度轮询是 2 秒、且用 setTimeout 递归】setInterval 在慢网下会堆积请求；
+ *   递归 setTimeout 保证「上一次回来才发下一次」。任务表本身有 500ms 服务端节流。
+ * ══════════════════════════════════════════════════════════════════════ */
+
+/* state: idle | loading | files | starting | downloading | paused | ready | error | too-large */
+const FGC = {
+  slug: '', title: '', state: 'idle', magnet: '', preview: null, task: null,
+  err: '', warn: '', timer: 0, busy: false,
+};
+
+const FGC_LABEL = {
+  idle: '—', loading: '解析中', files: '待选择', starting: '提交中',
+  downloading: '下载中', paused: '已暂停', ready: '已就绪', error: '失败', 'too-large': '超出上限',
+};
+
+function fgcFmt(b) {
+  const n = Number(b) || 0;
+  if (n >= 1024 ** 3) return (n / 1024 ** 3).toFixed(2) + ' GB';
+  if (n >= 1024 ** 2) return (n / 1024 ** 2).toFixed(1) + ' MB';
+  if (n >= 1024) return (n / 1024).toFixed(0) + ' KB';
+  return n + ' B';
+}
+
+/** 纯函数：只吃 FGC 状态，不碰 DOM —— 静态套件可以 new Function 直接验四类形态。 */
+function fgcBodyHtml(s) {
+  const H = (x) => '<div class="fgc-hint">' + x + '</div>';
+  const errBox = (x) => '<div class="fgc-err">' + x + '</div>';
+
+  if (s.state === 'loading' || s.state === 'starting') {
+    return H('<span class="fgc-spin"></span> ' +
+      (s.state === 'loading' ? '正在解析种子元数据…' : '正在提交下载任务…') +
+      '<br>' + (s.state === 'loading' ? '只拉种子文件、不下载正文，通常 4–10 秒' : '服务器正在建立 BT 连接'));
+  }
+
+  if (s.state === 'error' || s.state === 'too-large') {
+    let h = errBox(esc(s.err || '未知错误'));
+    if (s.state === 'too-large') {
+      h += H('服务端代下是<b>两段带宽</b>（先下到服务器、再由你下载），包越大越不划算。'
+        + '这种体积建议点下面的「⧉ 复制磁力」，用本机 BT 客户端直接下 —— 更快，也不用等。');
+    } else {
+      h += H('如果是<b>死种</b>（很久没人做种），服务器也下不动 —— 换一篇，或改用「⬇ 镜像分卷」。');
+    }
+    return h;
+  }
+
+  if (s.state === 'files' && s.preview) {
+    const p = s.preview;
+    let h = H('服务器替你下载，下完点「保存到电脑」。<b>不用装任何客户端。</b>'
+      + '<br>单任务 ≤ 30 GB · 每人同时 1 个 · 24 小时内 3 个 · 文件在服务器保留 24 小时');
+    if (s.warn) h += errBox(esc(s.warn));
+    h += '<div class="fgc-list">' + (p.files || []).map((f) =>
+      '<label class="fgc-file"><input type="checkbox" data-fgcf="' + f.index + '" checked>'
+      + '<span class="nm" title="' + esc(f.name) + '">' + esc(f.name) + '</span>'
+      + '<span class="sz">' + fgcFmt(f.length) + '</span></label>').join('') + '</div>';
+    h += '<div class="fgc-stat"><span>共 ' + (p.files || []).length + ' 个文件</span>'
+      + '<span>合计 ' + fgcFmt(p.totalBytes) + '</span>'
+      + (p.btih ? '<span>' + esc(String(p.btih).slice(0, 12)) + '…</span>' : '') + '</div>';
+    return h;
+  }
+
+  if (s.state === 'downloading' || s.state === 'paused' || s.state === 'ready') {
+    const t = s.task || {};
+    const total = Number(t.totalBytes) || 0;
+    const done = Number(t.completedBytes) || 0;
+    const pct = total > 0 ? Math.min(100, (100 * done) / total) : 0;
+    let h = '';
+    if (s.state === 'ready') {
+      h += H('<b>文件已在服务器上就绪。</b>点下面按钮保存到你的电脑 —— 支持断点续传，关掉网页也不会丢。'
+        + '<br>服务器只保留 24 小时，过期自动清理。');
+    } else if (s.state === 'paused') {
+      h += H('已暂停。点「继续」接着下，或直接取消。');
+    } else {
+      h += H('服务器正在下载。<b>这个页面可以关掉</b>，回来点同一篇的「☁ 云下载」还能看到进度。');
+    }
+    h += '<div class="fgc-bar"><i class="' + (s.state === 'error' ? ' err' : '') +
+      '" style="width:' + pct.toFixed(1) + '%"></i></div>';
+    h += '<div class="fgc-stat"><span class="st' + (s.state === 'ready' ? '' : ' warn') + '">' +
+      (FGC_LABEL[s.state] || s.state) + '</span>'
+      + '<span>' + fgcFmt(done) + ' / ' + fgcFmt(total) + '</span>'
+      + (s.state === 'downloading'
+        ? '<span>' + (Number(t.speed) > 0 ? fgcFmt(t.speed) + '/s' : '连接中…') + '</span>' : '')
+      + '</div>';
+    return h;
+  }
+  return H('准备中…');
+}
+
+function fgcFootHtml(s) {
+  const a = [];
+  const btn = (k, label, cls) => '<button type="button" class="fgc-btn' + (cls ? ' ' + cls : '') +
+    '" data-fgc="' + k + '">' + label + '</button>';
+  if (s.state === 'files') a.push(btn('start', '⬇ 开始服务器下载'));
+  if (s.state === 'downloading') { a.push(btn('pause', '⏸ 暂停', 'ghost'), btn('cancel', '✕ 取消', 'ghost')); }
+  if (s.state === 'paused') { a.push(btn('resume', '▶ 继续'), btn('cancel', '✕ 取消', 'ghost')); }
+  if (s.state === 'ready' && s.task) {
+    (s.task.files || []).forEach((f) => {
+      a.push('<a class="fgc-btn" href="' +
+        api('/api/downloads/tasks/' + encodeURIComponent(s.task.id) + '/files/' + encodeURIComponent(f.index)) +
+        '" download>⬇ 保存 ' + esc(f.name) + '</a>');
+    });
+    a.push(btn('cancel', '✕ 删除服务器文件', 'ghost'));
+  }
+  /* 复制磁力常驻：不管成功失败，用户都可能想用本机客户端 —— 这是唯一不受服务器状态影响的出路。 */
+  if (s.magnet) a.push(btn('copy', '⧉ 复制磁力', 'ghost'));
+  return a.join('');
+}
+
+function fgcRender() {
+  const b = $('#fgcBody');
+  if (!b) return;
+  b.innerHTML = fgcBodyHtml(FGC);
+  const f = $('#fgcFoot');
+  if (f) f.innerHTML = fgcFootHtml(FGC);
+  const sub = $('#fgcSub');
+  if (sub) sub.textContent = FGC.title + (FGC.preview && FGC.preview.totalBytes ? ' · ' + fgcFmt(FGC.preview.totalBytes) : '');
+}
+
+function fgcClose() {
+  const pop = $('#fgCloud');
+  if (!pop || pop.hidden) return;
+  clearTimeout(FGC.timer);
+  FGC.timer = 0;
+  pop.classList.remove('on');
+  FGC.slug = '';
+  setTimeout(() => { if (!pop.classList.contains('on')) pop.hidden = true; }, 180);
+}
+
+async function fgcOpen(slug, title) {
+  const pop = $('#fgCloud');
+  if (!pop || !slug) return;
+  clearTimeout(FGC.timer);
+  FGC.slug = slug;
+  FGC.title = title || slug;
+  FGC.state = 'loading';
+  FGC.err = '';
+  FGC.warn = '';
+  FGC.preview = null;
+  FGC.task = null;
+  FGC.magnet = '';
+  FGC.busy = false;
+  $('#fgcTitle').textContent = '云下载';
+  fgcRender();
+  pop.hidden = false;
+  requestAnimationFrame(() => pop.classList.add('on'));
+  try {
+    const mj = await fetch(api('/api/fitgirl/magnet?slug=' + encodeURIComponent(slug))).then((r) => r.json());
+    if (FGC.slug !== slug) return;              /* 连点两篇：丢弃旧结果 */
+    if (!mj.ok || !(mj.magnets || []).length) throw new Error(mj.error || '这篇没有磁力链接');
+    FGC.magnet = mj.magnets[0];
+    fgcRender();
+    const r = await fetch(api('/api/downloads/previews'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ magnet: FGC.magnet }),
+    });
+    const j = await r.json().catch(() => ({ ok: false, error: 'HTTP ' + r.status }));
+    if (FGC.slug !== slug) return;
+    if (!j.ok) {
+      FGC.state = j.code === 'too-large' ? 'too-large' : 'error';
+      FGC.err = (j.error || ('HTTP ' + r.status)) + (j.totalBytes ? '（' + fgcFmt(j.totalBytes) + '）' : '');
+      fgcRender();
+      return;
+    }
+    FGC.preview = j;
+    FGC.state = 'files';
+    fgcRender();
+  } catch (er) {
+    if (FGC.slug !== slug) return;
+    FGC.state = 'error';
+    FGC.err = String((er && er.message) || er);
+    fgcRender();
+  }
+}
+
+async function fgcStart() {
+  if (FGC.busy || !FGC.preview) return;
+  const picked = [];
+  document.querySelectorAll('#fgcBody [data-fgcf]').forEach((el) => {
+    if (el.checked) picked.push(Number(el.dataset.fgcf));
+  });
+  if (!picked.length) { FGC.warn = '请至少勾选一个文件'; fgcRender(); return; }
+  FGC.busy = true;
+  FGC.warn = '';
+  FGC.state = 'starting';
+  fgcRender();
+  try {
+    const r = await fetch(api('/api/downloads/batches'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ previewId: FGC.preview.previewId, files: picked }),
+    });
+    const j = await r.json().catch(() => ({ ok: false, error: 'HTTP ' + r.status }));
+    if (!j.ok) {
+      FGC.state = 'error';
+      FGC.err = j.error || ('HTTP ' + r.status);
+      FGC.busy = false;
+      fgcRender();
+      return;
+    }
+    FGC.task = j.task;
+    FGC.state = 'downloading';
+    FGC.busy = false;
+    fgcRender();
+    fgcPoll();
+  } catch (er) {
+    FGC.state = 'error';
+    FGC.err = String((er && er.message) || er);
+    FGC.busy = false;
+    fgcRender();
+  }
+}
+
+/** 只轮询自己的任务；状态到终态就停，不留一个永远跑着的定时器。 */
+async function fgcPoll() {
+  clearTimeout(FGC.timer);
+  FGC.timer = 0;
+  const id = FGC.task && FGC.task.id;
+  if (!id) return;
+  try {
+    const j = await fetch(api('/api/downloads/tasks')).then((r) => r.json());
+    const t = (j.tasks || []).find((x) => x.id === id);
+    if (!t) return;
+    FGC.task = t;
+    if (t.state === 'ready') FGC.state = 'ready';
+    else if (t.state === 'paused') FGC.state = 'paused';
+    else if (t.state === 'failed') { FGC.state = 'error'; FGC.err = t.error || '下载失败（可能是死种）'; }
+    else if (t.state === 'cancelled') { FGC.state = 'error'; FGC.err = '任务已删除'; }
+    else FGC.state = 'downloading';
+    fgcRender();
+    if (FGC.state === 'downloading' || FGC.state === 'paused') FGC.timer = setTimeout(fgcPoll, 2000);
+  } catch (e) {
+    FGC.timer = setTimeout(fgcPoll, 5000);
+  }
+}
+
+async function fgcAct(action) {
+  const id = FGC.task && FGC.task.id;
+  if (!id) return;
+  try {
+    const j = await fetch(api('/api/downloads/tasks/' + encodeURIComponent(id) + '/actions'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    }).then((r) => r.json());
+    if (!j.ok) { FGC.state = 'error'; FGC.err = j.error || '操作失败'; fgcRender(); return; }
+    if (action === 'cancel') { FGC.state = 'error'; FGC.err = '任务已删除，服务器上的文件也一并清掉了'; fgcRender(); return; }
+    FGC.task = j.task;
+    FGC.state = action === 'pause' ? 'paused' : 'downloading';
+    fgcRender();
+    if (action === 'resume') fgcPoll();
+  } catch (er) {
+    FGC.state = 'error';
+    FGC.err = String((er && er.message) || er);
+    fgcRender();
+  }
+}
+
+async function fgcCopy() {
+  if (!FGC.magnet) return;
+  try {
+    await navigator.clipboard.writeText(FGC.magnet);
+    FGC.warn = '磁力已复制，可以粘到任何 BT 客户端里';
+    fgcRender();
+  } catch (e) {
+    window.prompt('自动复制不可用，请手动复制：', FGC.magnet);
+  }
+}
+
+/* 云下载弹窗内交互（委托在 document 上：内容每次重建，逐次绑定会叠加） */
+document.addEventListener('click', (e) => {
+  const t = e.target.closest && e.target.closest('[data-fgc]');
+  if (!t) return;
+  const k = t.dataset.fgc;
+  if (k === 'close') { e.preventDefault(); fgcClose(); return; }
+  if (k === 'start') { e.preventDefault(); fgcStart(); return; }
+  if (k === 'pause' || k === 'resume' || k === 'cancel') { e.preventDefault(); fgcAct(k); return; }
+  if (k === 'copy') { e.preventDefault(); fgcCopy(); return; }
+});
+
 
 /* FitGirl 两个按钮 + 弹窗内交互（全部事件委托：段落与弹窗内容都是动态重建的，
    逐次绑定会在换游戏重绘后叠加多次，点一次触发 N 次） */
@@ -7156,6 +7493,14 @@ $('#mask').addEventListener('click', closeDetail);
 
 /* ================= 启动 ================= */
 async function init() {
+  /* ★ v10.93：URL 参数必须在**第一个 await 之前**读出来。
+     踩坑（run-all 报「test-emulator-page.js 异常退出」）：这行原本在
+     `await fetch('/api/health')` 之后，jsdom 测试里 health 一慢，测试断言跑完、
+     window 已销毁，回调才继续执行到 `location.search` ⇒
+     `TypeError: Cannot read properties of null (reading '_location')`，
+     整个测试进程崩掉。真实场景同理：用户在加载途中跳走，异步回调不该再碰 window。
+     ⇒ 提到最前面同步读，异步段之后只用 `sp`，不再碰 `location`。 */
+  const sp = new URLSearchParams(location.search);
   /* bindRankUI：派生页无榜单 UI，跳过 */
   /* renderSide：派生页无右栏，跳过 */
   /* renderCats：派生页无分类行，跳过 */
@@ -7179,8 +7524,7 @@ async function init() {
     }
     $('#liveTxt').textContent = '快照';
   }
-  // URL 直达：?q= 搜索 / ?c= 分类 / ?sort= / ?open= 详情与资源弹窗
-  const sp = new URLSearchParams(location.search);
+  // URL 直达：?q= 搜索 / ?c= 分类 / ?sort= / ?open= 详情与资源弹窗（sp 已在函数开头读好）
   const qp = sp.get('q'); if (qp && qp.trim()) openSearch(qp.trim()); // 直达：自动打开搜索弹窗并出结果
   const cp = sp.get('c'); if (cp && CATS.includes(cp)) { curCat = cp; renderCats(); renderList(true); }
   const sp2 = sp.get('sort'); if (sp2 && SORTS.some(s => s.k === sp2)) { curSort = sp2; renderCats(); renderList(true); }
@@ -8157,6 +8501,10 @@ function dModLinks() {
         否则用户在位置弹窗上按 ESC，会看到下面那层也一起没了（「一下关两层」）。 */
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
+    /* ★ v10.93：云下载弹窗 z-index 125，在直链弹窗(120)之上 ⇒ 判断顺序必须 125 → 120 → 其余。
+       顺序错了不会报错、元素也都在，表现是「按一次 ESC 关掉两层」——最难发现的那类假绿。 */
+    const fgc = $('#fgCloud');
+    if (fgc && !fgc.hidden) { e.stopPropagation(); fgcClose(); return; }
     /* ★ v10.92：直链弹窗 z-index 120，叠在「下载与资源」(110) 之上 ⇒ 它必须是第一优先，
        否则按一次 ESC 会把底下那层一起关掉（v10.46 位置弹窗踩过同一个坑）。 */
     const fgdl = $('#fgDl');

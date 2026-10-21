@@ -151,8 +151,12 @@ ok(!threw3, 'D4 null 回包不抛（取数失败时页面不能白屏）');
 
 console.log('\n-- E. 页面接线 --');
 ok(/data-fg-dl="' \+ esc\(it\.slug\)/.test(HTML), 'E1 FitGirl 行有「直链下载」入口（slug 经 esc）');
-ok(/class="fgbtn dl"[^>]*>⬇ 直链下载/.test(HTML), 'E2 两个按钮之一：⬇ 直链下载');
-ok(/class="fgbtn mg" data-fg-magnet="' \+ esc\(it\.slug\)[^>]*>⧉ 磁力链/.test(HTML), 'E3 两个按钮之二：⧉ 磁力链');
+/* ★ v10.93 改判：文案按实测改了 —— 三镜像站没有服务端可复现的直链
+   （datanodes 回 "Wrong captcha" / fuckingfast 403+Cf-Mitigated），
+   继续叫「直链下载」是对用户空承诺 ⇒ 改为「⬇ 镜像分卷」；
+   磁力按钮从「复制」升级成「☁ 云下载」（服务器代下）。 */
+ok(/class="fgbtn dl"[^>]*>⬇ 镜像分卷/.test(HTML), 'E2 两个按钮之一：⬇ 镜像分卷');
+ok(/class="fgbtn mg" data-fg-magnet="' \+ esc\(it\.slug\)[^>]*>☁ 云下载/.test(HTML), 'E3 两个按钮之二：☁ 云下载');
 ok(!/data-fg-parts/.test(HTML), 'E4 行内「分卷清单」旧入口已移除（不留两条并行路径）');
 ok(/const FG_PARTS = Object\.create\(null\)/.test(HTML), 'E5 回包有前端缓存（换镜像不重复请求）');
 ok(/fetch\(api\('\/api\/fitgirl\/parts\?slug='/.test(HTML), 'E6 走带 base 的 api() 拼地址（file:// 也能用）');

@@ -21,6 +21,11 @@ const shotsLib = require('./fetchers/shots');
 const specDict = require('./data/spec-dict');
 const specMatch = require('./data/spec-match');
 const extractor = require('./data/extractor');
+/* ★ v10.93 云下载引擎：磁力 → 元数据 → 选文件 → 服务端下载 → 保存到电脑。
+ *   三个模块都是「加载无副作用」的纯定义（引擎进程懒启动、任务表懒读盘）⇒ 顶层 require 安全。 */
+const dlGuard = require('./data/download-guard');
+const dlTasks = require('./data/download-tasks');
+const dlEngine = require('./data/download-engine');
 
 /* ★ v10.42：端口自增兜底改为「显式开关」，**默认关闭**。
  *   旧行为：`EADDRINUSE ⇒ listen(port + 1, triesLeft - 1)`，最多自增 30 次
@@ -2016,6 +2021,364 @@ app.get('/api/fitgirl/parts', async (req, res) => {
     res.status(502).json({ ok: false, error: 'FitGirl 下载源抓取失败: ' + String((e && e.message) || e) });
   }
 });
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * ★ v10.93 云下载引擎：磁力 → 元数据 → 选文件 → 服务端下载 → 保存到电脑
+ *
+ * 用户口径（2026-10-21）：
+ *   「用户只操作线上网页，不安装本地下载工具、不唤起第三方客户端；
+ *     下载引擎运行在我们自己的服务器。」
+ *
+ * ★ 为什么 preview 与 batches 必须分成两步，不能一个接口吃下磁力就开下：
+ *   磁力链接**不含体积**。要判「≤30 GB」必须先把元数据拉下来（4–9 秒）。
+ *   合成一个接口的结果是：用户点了「下载」，等 8 秒，然后被告知「太大了」——
+ *   而这 8 秒已经把配额占掉了。分成两步，用户能在看到文件清单时就放弃，不占配额。
+ *
+ * ★ 为什么 previewId 必须由服务端发、不能把种子路径回传给前端：
+ *   一旦前端能传路径，`torrentPath=/etc/passwd` 就能被 addTorrent 读出来。
+ *   预览结果留在服务端内存里，前端只拿到一个不透明 id。
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+/** previewId → { at, magnet, btih, name, totalBytes, files, torrentPath, dir } —— 含服务器路径，绝不下发 */
+const DLP = new Map();
+/** ip → [时间戳] —— 预览频次（预览会触发真实 DHT 流量，不设限等于开放 DHT 查询代理） */
+const DLP_RATE = new Map();
+let dlPreviewBusy = 0;
+const DL_PREVIEW_CONCURRENCY = 2;
+
+function dlPurge() {
+  const now = Date.now();
+  for (const [k, v] of DLP) if (now - v.at > dlGuard.PREVIEW_TTL_MS) DLP.delete(k);
+  for (const [k, arr] of DLP_RATE) {
+    const keep = arr.filter((t) => now - t < 300000);
+    if (keep.length) DLP_RATE.set(k, keep); else DLP_RATE.delete(k);
+  }
+}
+
+function dlRateOk(ip) {
+  const now = Date.now();
+  const arr = (DLP_RATE.get(ip) || []).filter((t) => now - t < 300000);
+  if (arr.length >= 10) return false;
+  arr.push(now);
+  DLP_RATE.set(ip, arr);
+  return true;
+}
+
+function diskFreeBytes() {
+  try {
+    fs.mkdirSync(dlEngine.ROOT, { recursive: true });
+    const s = fs.statfsSync(dlEngine.ROOT);
+    const free = Number(s.bavail) * Number(s.bsize);
+    return Number.isFinite(free) && free > 0 ? free : -1;
+  } catch (e) { return -1; }
+}
+
+/** 对外视图：剥掉 rel / absPath 等服务器内部字段 */
+function dlTaskView(t) {
+  return {
+    id: t.id,
+    name: t.name,
+    btih: t.btih,
+    state: t.state,
+    totalBytes: t.totalBytes,
+    completedBytes: t.completedBytes,
+    speed: t.speed,
+    error: t.error,
+    createdAt: t.createdAt,
+    expiresAt: t.expiresAt,
+    files: (t.files || []).map((f) => ({ index: f.index, name: f.name, length: f.length })),
+  };
+}
+
+/* 进度同步：500ms 节流。★ 只写内存不落盘（见 download-tasks.patch 的 persist 说明），
+   但**状态位变化**必须落盘 —— 否则容器重启后任务表里全是上次的 downloading。 */
+let dlLastSync = 0;
+let dlSyncing = null;
+const DL_TERMINAL = new Set(['ready', 'failed', 'cancelled', 'expired']);
+async function dlSync(force) {
+  const now = Date.now();
+  if (!force && now - dlLastSync < 500) return;
+  if (dlSyncing) return dlSyncing;
+  dlSyncing = (async () => {
+    for (const t of dlTasks.list()) {
+      if (!t.gid || DL_TERMINAL.has(t.state)) continue;
+      const s = await dlEngine.status(t.gid);
+      if (!s.ok) continue;
+      const stateChanged = s.state !== t.state;
+      const fields = {
+        state: s.state,
+        completedBytes: s.completedBytes,
+        speed: s.speed,
+        error: s.error || '',
+      };
+      if (s.totalBytes > 0 && !t.totalBytes) fields.totalBytes = s.totalBytes;
+      if (s.state === 'ready') fields.expiresAt = Date.now() + dlGuard.TASK_TTL_MS;
+      dlTasks.patch(t.id, fields, { persist: stateChanged });
+    }
+    dlLastSync = Date.now();
+  })().finally(() => { dlSyncing = null; });
+  return dlSyncing;
+}
+
+/* ── ① POST /api/downloads/previews  { magnet } ── */
+app.post('/api/downloads/previews', async (req, res) => {
+  const ip = clientIp(req);
+  if (!dlRateOk(ip)) return res.status(429).json({ ok: false, error: '预览请求过于频繁，请 5 分钟后再试' });
+  const mg = dlGuard.parseMagnet(req.body && req.body.magnet);
+  if (!mg.ok) return res.status(400).json({ ok: false, error: mg.reason });
+  if (dlPreviewBusy >= DL_PREVIEW_CONCURRENCY) {
+    return res.status(429).json({ ok: false, error: '服务器正在解析其他种子，请稍后重试' });
+  }
+  dlPreviewBusy++;
+  const t0 = Date.now();
+  try {
+    const p = await dlEngine.preview(String(req.body.magnet).trim(), {
+      dir: path.join(dlEngine.PREVIEW_ROOT, mg.btih),
+    });
+    if (!p.ok) return res.status(502).json({ ok: false, error: p.error || '解析失败' });
+    if (!p.files.length) return res.status(502).json({ ok: false, error: '种子内没有文件' });
+    if (p.totalBytes > dlGuard.MAX_TASK_BYTES) {
+      /* 体积超限**不给 previewId**：给了 id 就等于留了一条「稍后再试」的暗示，
+         而体积是不会变的。直接回结构化判据，前端据此展示「建议本机客户端」。 */
+      return res.status(200).json({
+        ok: false, code: 'too-large', name: p.name, totalBytes: p.totalBytes,
+        error: '任务体积 ' + dlGuard.gb(p.totalBytes) + ' GB，超过本站单任务上限 '
+          + dlGuard.gb(dlGuard.MAX_TASK_BYTES) + ' GB',
+      });
+    }
+    const id = 'pv_' + crypto.randomBytes(9).toString('hex');
+    dlPurge();
+    if (DLP.size > 200) DLP.delete(DLP.keys().next().value);
+    DLP.set(id, {
+      at: Date.now(), magnet: String(req.body.magnet).trim(), btih: p.btih,
+      name: p.name, totalBytes: p.totalBytes, files: p.files,
+      torrentPath: p.torrentPath, dir: p.dir,
+    });
+    res.json({
+      ok: true, previewId: id, name: p.name, btih: p.btih,
+      totalBytes: p.totalBytes, tookMs: Date.now() - t0,
+      files: p.files.map((f) => ({ index: f.index, name: f.name, length: f.length })),
+      limits: {
+        maxTaskBytes: dlGuard.MAX_TASK_BYTES,
+        maxFiles: dlGuard.MAX_FILES,
+      },
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: '解析失败: ' + String((e && e.message) || e) });
+  } finally {
+    dlPreviewBusy--;
+  }
+});
+
+/* ── ② POST /api/downloads/batches  { previewId, files:[index...] } ── */
+app.post('/api/downloads/batches', async (req, res) => {
+  const ip = clientIp(req);
+  dlPurge();
+  const pv = DLP.get(String((req.body && req.body.previewId) || ''));
+  if (!pv) return res.status(400).json({ ok: false, error: '预览已过期（30 分钟），请重新解析磁力' });
+  const q = dlGuard.checkQuota(ip, dlTasks.list(), Date.now());
+  if (!q.ok) return res.status(429).json({ ok: false, code: q.code, error: q.reason });
+  const sz = dlGuard.checkSize(pv.totalBytes);
+  if (!sz.ok) return res.status(400).json({ ok: false, code: sz.code, error: sz.reason });
+  const free = diskFreeBytes();
+  if (free > 0) {
+    const d = dlGuard.checkDisk(free);
+    if (!d.ok) return res.status(503).json({ ok: false, code: d.code, error: d.reason, freeBytes: free });
+  }
+  /* 选择集：只认 preview 里真实存在的 index（前端传什么都行，服务端重新求交） */
+  const want = Array.isArray(req.body.files) ? req.body.files.map(Number) : [];
+  const valid = pv.files.filter((f) => !want.length || want.includes(f.index));
+  if (!valid.length) return res.status(400).json({ ok: false, error: '没有选中任何文件' });
+  const pickedBytes = valid.reduce((a, f) => a + f.length, 0);
+  if (pickedBytes <= 0) return res.status(400).json({ ok: false, error: '选中文件体积为 0' });
+  const sz2 = dlGuard.checkSize(pickedBytes);
+  if (!sz2.ok) return res.status(400).json({ ok: false, code: sz2.code, error: sz2.reason });
+
+  const task = dlTasks.create({
+    ip, magnet: pv.magnet, btih: pv.btih, name: pv.name,
+    /* ★ 分母用「选中文件之和」，不用种子总长：实测只勾 setup.exe 时 aria2 报
+       totalLength=5.09MB，而文件实际 4.27MB（差的是种子内元数据/块对齐）。
+       拿它当分母会得到「进度 84% 就 ready」这种读数，用户会以为文件不完整。 */
+    totalBytes: pickedBytes, state: 'queued', files: [],
+  });
+  const dir = dlTasks.dirOf(task.id);
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    /* 种子复制进任务目录：预览目录会被定期清理，任务不能依赖它活着 */
+    const localTorrent = path.join(dir, '.job.torrent');
+    fs.copyFileSync(pv.torrentPath, localTorrent);
+    const gid = await dlEngine.addTorrentFile(
+      { dir, files: pv.files }, localTorrent, valid.map((f) => f.index),
+    );
+    let files = [];
+    for (let i = 0; i < 12 && !files.length; i++) {
+      try {
+        const st = await dlEngine.rpc('aria2.tellStatus', [gid, ['files']]);
+        const all = dlGuard.sanitizeFiles(st.files || []);
+        /* ★ 只保留**已选中**的文件：aria2 的 tellStatus.files 会返回种子内全部条目，
+             只是用 selected 标记。若原样存进任务表，「保存到电脑」会列出 48 个分卷里
+             根本没下的 47 个，用户点进去得到 404。
+           ★ 兜底：万一某些 aria2 版本不回 selected 字段，过滤后会空 ⇒ 退回全部，
+             不然任务会变成「有进度但没有可下载文件」。 */
+        const sel = all.filter((f) => f.selected);
+        files = sel.length ? sel : all;
+      } catch (e) { /* 刚入队可能还查不到 */ }
+      if (!files.length) await new Promise((r) => setTimeout(r, 250));
+    }
+    /* rel：文件相对任务目录的路径，保存到电脑时按它定位（对外只给 basename） */
+    const withRel = (await dlEngine.rpc('aria2.tellStatus', [gid, ['files']]).catch(() => ({ files: [] })))
+      .files || [];
+    const relOf = new Map(withRel.map((f) => [Number(f.index), String(f.path || '')]));
+    const finalFiles = files.map((f) => {
+      const abs = relOf.get(f.index) || '';
+      const rel = abs ? path.relative(dir, abs) : f.name;
+      return { index: f.index, name: f.name, length: f.length, rel };
+    });
+    dlTasks.patch(task.id, { gid, state: 'downloading', files: finalFiles, selected: valid.map((f) => f.index) });
+    res.json({ ok: true, task: dlTaskView(dlTasks.get(task.id)) });
+  } catch (e) {
+    dlTasks.patch(task.id, { state: 'failed', error: String((e && e.message) || e) });
+    res.status(500).json({ ok: false, error: '入队失败: ' + String((e && e.message) || e) });
+  }
+});
+
+/* ── ③ GET /api/downloads/tasks  （默认只看自己的 / ?all=1 需管理员） ── */
+app.get('/api/downloads/tasks', async (req, res) => {
+  const all = String(req.query.all || '') === '1';
+  if (all && !adminGuard(req, res)) return;
+  try {
+    if (!all) await dlSync(false);
+  } catch (e) { /* 引擎挂了也照样把表里已有的状态回给前端 */ }
+  const ip = clientIp(req);
+  const list = dlTasks.list()
+    .filter((t) => all || t.ip === ip)
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, 50)
+    .map(dlTaskView);
+  res.json({ ok: true, count: list.length, engine: dlEngine.info(), tasks: list });
+});
+
+/* ── ④ POST /api/downloads/tasks/:id/actions  { action: pause|resume|cancel } ── */
+app.post('/api/downloads/tasks/:id/actions', async (req, res) => {
+  const t = dlTasks.get(String(req.params.id || ''));
+  if (!t) return res.status(404).json({ ok: false, error: '任务不存在' });
+  const ip = clientIp(req);
+  const mine = t.ip === ip;
+  if (!mine && !adminGuard(req, res)) return;
+  const action = String((req.body && req.body.action) || '');
+  if (!['pause', 'resume', 'cancel'].includes(action)) {
+    return res.status(400).json({ ok: false, error: 'action 只能是 pause / resume / cancel' });
+  }
+  try {
+    if (action === 'cancel') {
+      if (t.gid) { try { await dlEngine.act(t.gid, 'cancel'); } catch (e) { /* 引擎里已没有 */ } }
+      dlTasks.patch(t.id, { state: 'cancelled', speed: 0, expiresAt: Date.now() + 60 * 60 * 1000 });
+      dlTasks.rmDir(t.id);
+    } else {
+      if (!t.gid) return res.status(409).json({ ok: false, error: '任务没有可操作的下载句柄（引擎可能重启过）' });
+      await dlEngine.act(t.gid, action);
+      dlTasks.patch(t.id, { state: action === 'pause' ? 'paused' : 'downloading' });
+    }
+    await dlSync(true);
+    res.json({ ok: true, task: dlTaskView(dlTasks.get(t.id)) });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String((e && e.message) || e) });
+  }
+});
+
+/* ── ⑤ GET /api/downloads/tasks/:id/files/:fid  （保存到电脑） ── */
+app.get('/api/downloads/tasks/:id/files/:fid', async (req, res) => {
+  const t = dlTasks.get(String(req.params.id || ''));
+  if (!t) return res.status(404).json({ ok: false, error: '任务不存在' });
+  if (t.ip !== clientIp(req) && !adminGuard(req, res)) return;
+  if (t.state !== 'ready') return res.status(409).json({ ok: false, error: '文件还没下载完' });
+  const fid = Number(req.params.fid);
+  const f = (t.files || []).find((x) => x.index === fid);
+  if (!f) return res.status(404).json({ ok: false, error: '文件不存在' });
+  const base = dlTasks.dirOf(t.id);
+  const abs = path.resolve(base, f.rel || f.name);
+  /* 路径越界检查：种子里的文件名是可以构造的（`../../etc/passwd`），
+     虽然 aria2 会净化，但这是**唯一一个把服务器路径直接交给 fs 的地方**，必须自己再判一次。 */
+  if (!abs.startsWith(path.resolve(base) + path.sep)) {
+    return res.status(400).json({ ok: false, error: '文件路径越界' });
+  }
+  if (!fs.existsSync(abs)) return res.status(404).json({ ok: false, error: '文件已不在服务器上（可能已过期清理）' });
+  res.download(abs, f.name, (err) => {
+    if (err && !res.headersSent) res.status(500).json({ ok: false, error: '读取失败' });
+  });
+});
+
+/* ── ⑦ GET /api/downloads/debug  （仅管理员：引擎日志 + 原始 tellStatus） ──
+ * ★ 为什么必须有这个端点：BT 下载失败有九成不是代码错，而是「没有 seeder / tracker 拒绝 /
+ *   端口被封」。只回一个 "failed" 会让人在代码里瞎找。aria2 的 stderr 与 tellStatus 的
+ *   numSeeders/connections 才是现场证据。日志含内网路径，所以挂 adminGuard。 */
+app.get('/api/downloads/debug', async (req, res) => {
+  if (!adminGuard(req, res)) return;
+  /* ★ 先 ready()：rpc() 依赖启动时生成的 rpcUrl，没启动时是空串 ⇒
+     fetch('') 抛 "Failed to parse URL from "，看起来像代码错，实际只是「引擎还没起」。
+     诊断端点自己必须能把引擎拉起来，否则它连「引擎起不起得来」都测不出。 */
+  try { await dlEngine.ready(); } catch (e) { /* 下面如实回报 */ }
+  const t = req.query.id ? dlTasks.get(String(req.query.id)) : null;
+  let raw = null;
+  if (t && t.gid) {
+    try {
+      raw = await dlEngine.rpc('aria2.tellStatus', [t.gid, [
+        'status', 'totalLength', 'completedLength', 'downloadSpeed', 'uploadSpeed',
+        'numSeeders', 'connections', 'errorMessage', 'errorCode', 'infoHash', 'dir',
+      ]]);
+    } catch (e) { raw = { error: String(e && e.message) }; }
+  } else if (!t) {
+    try { raw = { global: await dlEngine.rpc('aria2.getGlobalStat', []) }; } catch (e) { raw = { error: String(e && e.message) }; }
+  }
+  res.json({ ok: true, engine: dlEngine.info(), aria2: raw, log: dlEngine.log().slice(-2500), tasks: dlTasks.list().length });
+});
+
+/* ── ⑥ GET /api/downloads/quota  （前端先问一句，避免点完才被告知超限） ── */
+app.get('/api/downloads/quota', (req, res) => {
+  const ip = clientIp(req);
+  const q = dlGuard.checkQuota(ip, dlTasks.list(), Date.now());
+  const free = diskFreeBytes();
+  res.json({
+    ok: true,
+    canStart: q.ok && (free < 0 || free >= dlGuard.MIN_FREE_BYTES),
+    reason: q.ok ? '' : q.reason,
+    limits: {
+      maxTaskBytes: dlGuard.MAX_TASK_BYTES,
+      maxActivePerIp: dlGuard.MAX_ACTIVE_PER_IP,
+      maxDailyPerIp: dlGuard.MAX_DAILY_PER_IP,
+      minFreeBytes: dlGuard.MIN_FREE_BYTES,
+      taskTtlMs: dlGuard.TASK_TTL_MS,
+    },
+    freeBytes: free,
+    engine: dlEngine.info(),
+  });
+});
+
+/* 启动 5 秒后后台预热下载引擎。
+ * ★ 延迟 5 秒是因为它要 spawn/apt，放在监听刚建立时会和首屏并发生抢；
+ *   5 秒后首屏已出，装东西不再影响任何人。装不上不报错 —— 用户点下载时还有同步兜底。 */
+setTimeout(() => {
+  try { dlEngine.warmup(); } catch (e) { /* 预热失败不影响站点 */ }
+}, 5000).unref();
+
+/* 过期清理与进程收尾。★ 定时器必须 unref：否则测试脚本 require 了 server 就永远不退出。 */
+setInterval(() => {
+  try {
+    const dead = dlTasks.sweep(Date.now());
+    for (const t of dead) dlTasks.rmDir(t.id);
+    dlPurge();
+    /* 预览目录 30 分钟一清（里面有 .torrent，几十 KB，量小但会积） */
+    const now = Date.now();
+    try {
+      for (const d of fs.readdirSync(dlEngine.PREVIEW_ROOT)) {
+        const p = path.join(dlEngine.PREVIEW_ROOT, d);
+        const st = fs.statSync(p);
+        if (now - st.mtimeMs > dlGuard.PREVIEW_TTL_MS) fs.rmSync(p, { recursive: true, force: true });
+      }
+    } catch (e) { /* 目录不存在 */ }
+  } catch (e) { /* 清理失败不影响服务 */ }
+}, 10 * 60 * 1000).unref();
+
 
 /* ★ v10.83 实测记录：曾在此加 /api/mx/mods（Modrinth 补充源），实测 0 产出
  *   （Modrinth 是纯 MC 生态平台，搜索描述命中会混入 MC 模组 —— 见 v10.83.md）⇒ 撤下。

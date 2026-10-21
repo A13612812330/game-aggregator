@@ -103,3 +103,14 @@ data/admin-token.json
 data/admin-log.jsonl
 #   v10.91：管理员账号（只存 scrypt 派生值 + salt，但仍是凭据文件 ⇒ 不入库）
 data/admin-account.json
+
+#   v10.93：云下载任务与正文（用户下到一半的文件 + aria2 会话 + 种子缓存）。
+#   ★ 必须忽略：单任务上限 30 GB，一个任务就能把仓库撑爆；
+#     而且里面是**用户的下载内容**，不是项目数据。
+#   ★ 整目录忽略而不是逐个文件：aria2 会在这里放 .aria2 控制文件、.torrent、dht.dat，
+#     名字都不固定，逐个点名必然漏（v10.22 / v10.28 的教训）。
+data/downloads/
+
+#   v10.93：自带的 aria2 二进制（可选，用于「打包 EXE 分发」形态）。
+#   服务端版走 apt 安装，不放二进制进仓库；桌面版由构建脚本单独分发。
+vendor/aria2/

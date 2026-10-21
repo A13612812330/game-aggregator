@@ -859,6 +859,46 @@ python tools/clean-excel.py       # 读 E:/新建文件夹/基础测试数据.xl
 > 它们和 `docs/versions/v10.N.md` 是同一批内容的两次书写，并存只会各自漂移。
 > 需要旧摘要原本可走 `git show <sha>:README.md`，或本地归档 `_archived/README-v10.41-版本块全量.md`。
 
+### ★ v10.93 增量（2026-10-21）—— **云下载引擎**：磁力 → 服务端下载 → 保存到电脑（「直链」这条否掉并给出证据）
+
+> **用户两个问题**：①「FitGirl Repack 中直链下载不是直接下载」②「磁力链能否把 Komo-Convert 的
+> 下载磁力链工具直接学习并入」。一个否掉、一个做成。<br>
+> **① 直链做不到（实测）**：`datanodes.to` 落地页表单 `op=download1` 后带页内 `rand` POST `download2`
+> **回 `<p>Wrong captcha</p>`**；`fuckingfast.co` **`403` + `Cf-Mitigated: challenge`**；
+> `filekeeper.net` `302 → /download` 同构 ⇒ 服务端拿不到文件直链，唯一路子是无头浏览器替人过验证码（**不做**）。
+> ⇒ 按钮**改名「⬇ 镜像分卷」**，弹窗里如实写「三站都要过验证码，本按钮不可能做成一键直下」。<br>
+> **② 磁力做成**：移植 Komo-Convert `Aria2Session.cs` / `DownloadProbe.cs` 的**语义**到
+> `data/download-engine.js`（启动参数逐条对齐 · 随机端口 + `randomBytes(32)` secret + **仅绑 127.0.0.1** ·
+> `bt-metadata-only`+`bt-save-metadata` · `select-file` · `--save-session` 恢复）。三处按部署形态改：
+> **无 aria2 则 `apt-get install`（幂等只试一次）** · **只放行磁力**（少一类 SSRF 面）·
+> **用 `infoHash` 对账恢复**（gid 会变、文件名会被 auto-rename）。<br>
+> **规模**：`download-guard.js` 165 行纯判据（30 GB 上限 / 40 GB 磁盘水位 / 每 IP 同时 1 个 +
+> 滚动 24h 3 个 / `sanitizeFiles` 剥绝对路径）· `download-tasks.js` 168 行（原子写 tmp+rename、
+> 坏文件改名留证不阻断启动、进度刷新 `persist:false` 不写盘）· `download-engine.js` 386 行 ·
+> `server.js` +330 行七条接口 `previews|batches|tasks|actions|files|quota|debug`。<br>
+> **为什么 preview 与 batches 分两步**：磁力**不含体积**，判 30 GB 要先拉元数据（实测 4.1–4.9s），
+> 合成一步会让用户等 8 秒才被告知超限、而配额已经吃掉。**previewId 由服务端发** ——
+> 前端能传 `torrentPath` 就能读服务器任意文件。<br>
+> **前端**：`☁ 云下载` 弹窗 `#fgCloud`（z=125，高于 `#fgDl` 的 120，**ESC 判断顺序 125→120**）·
+> 渲染拆 `fgcBodyHtml/fgcFootHtml` 纯函数 · 状态机 `loading→files→starting→downloading/paused→ready` ·
+> **「复制磁力」常驻**（服务器不可用时用户仍有出路）。<br>
+> **真链路实测**（aria2 1.37.0 + 真实 Astrobuilder 磁力）：preview **4,062 ms / 7 文件 / 2.70 GB**；
+> 只选 `setup.exe` → **162 s 下完 4,270,111 B** → 保存 **200 / SIZE MATCH /
+> `md5 e1444aa678148b2a49e470992551b64d`** → `Range` **206 + 1024 B 前缀一致**；
+> `pause`/`resume`/`cancel` 全通（`paused spd=0` → `active spd=180,838` → `cancelled` + 目录已删）。<br>
+> **踩坑 7 条**（最贵的一条）：★★ **90 s 超时被误判成 DHT 不通，真因是那个种没 seeder**
+> （`conn=0 seeders=0`；同一引擎换 Astrobuilder **5.0 s** 成功）⇒ 诊断只看 `numSeeders`，
+> 不看「有没有报错」。其余：`--dht-listen-port=49152-65535` 宽范围反而拿不到元数据（防火墙逐端口丢包）·
+> debug 端点直接调 `rpc()` 没 `ready()` ⇒ `Failed to parse URL from ` · 进度分母用 `totalLength`
+> 比真实文件大 0.8 MB（改「选中文件之和」）· `tellStatus.files` 返回种子内全部条目（按 `selected` 过滤）·
+> `(cmd &)` 起的实例在 Bash 调用结束被回收。<br>
+> **防线**：`test-v1093-downloads` **85/85**（新，登记 run-all，纯判据 + 源码护栏 + 前端渲染，
+> **不跑真下载**）· v1089 **42/42**（E2/E3 改判新文案）· v1086 **20/20** · pages-sync **58/58** ·
+> inline-syntax **4/4**。<br>
+> **未验**：**写盘是否跨容器重建存活**（要两次发布比对）· 线上 apt 耗时与出口带宽 ·
+> 重启恢复真实演练 · 全局任务中心 UI（目前只在同一篇 repack 的弹窗看进度）。<br>
+> 全文：[docs/versions/v10.93.md](docs/versions/v10.93.md)。
+
 ### ★ v10.92 增量（2026-10-20）—— FitGirl 源整理成**两个按钮**（⬇ 直链下载 / ⧉ 磁力链）+ 线上运行时只读自检
 
 > **用户口径**：「将 FitGirl 的源整理成只显示直链下载 + 磁力链下载按钮」。同时要求先读 Komo-Convert 的
@@ -978,22 +1018,11 @@ python tools/clean-excel.py       # 读 E:/新建文件夹/基础测试数据.xl
 > `overview` 只回计数、**保持公开**并留阳性对照断言（防「安全修成不可用」）。
 > `verify-online.js` 新增四页 md5 逐字节 + **无令牌 403 哨兵**（发布即验）。
 
-### ★ v10.87 增量（2026-10-20）—— **游戏库详细管理后台 `/admin`**：线上管理鉴权 + 七路资源聚合抽屉 + 操作日志
+### ★ v10.87 块的摘要按「只留最近 6 版」规范移出（v10.93 加新版、去掉 v10.87）
 
-> **用户口径**：「要的，游戏管理也我需要一个很详细的页面进行管理」⇒ 放开线上管理写操作（加鉴权）+ 独立详细管理页。<br>
-> **鉴权双轨**：回环放行保留（本机 8123/8124 体验不变）+ 线上 `X-Admin-Token`（真源
-> env > `data/admin-token.json`，48 位 hex 随机，.gitignore 不入库、随发布载荷上线；每请求现读 ⇒ 换令牌不用重启）。<br>
-> **★ 发布当轮修正（v10.87.1）**：线上实测到**真漏洞** —— 托管反代把 socket 对端变成回环，
-> 只判 IP 的「回环放行」让 `GET /api/admin/log`、`hide-overrides` 以及 **POST 写豁免**全部
-> **无令牌 200**。回环豁免改为**三条件 AND**（socket 回环 **且** Host 是本地三形态 **且** 无任何转发头），
-> 令牌加 `?token=` / `body.token` 两条降级通道；日志 `via` 取 guard 判定结果。
-> 修复后线上实测：无令牌 **403** / 令牌头 **200** / query **200**。教训入 PITFALLS **铁律 158**。<br>
-> **`/admin` 管理页**（独立页，非主源派生页）：统计卡一发拿全（冷门口径 + 库构成 + 六源 stats）·
-> 列表管理视角全量池（每行 hidden/cold **服务端回填**，隐藏态池前筛选与分页计数一致）·
-> 详情抽屉 **七路资源聚合**（机地帖三分类 + FLiNG/TCS + 云存档 + GT + FitGirl + Thunderstore，孪生兜底走 `resFor` 同源）·
-> 豁免操作（隐藏/显示/清除即时生效）· **操作日志**（jsonl 追加留痕，via=loopback|token）。roster 顶栏挂入口。<br>
-> **防线**：test-v1087-admin **32/32**（新，登记 run-all）· 探针 **24/24**（含反代形态反证：伪造
-> `Host`+`X-Forwarded-For` 必须 403）· run-all **4386/4**（4 红为已知数据漂移）。详见 [docs/versions/v10.87.md](docs/versions/v10.87.md)。
+> 全文 [docs/versions/v10.87.md](docs/versions/v10.87.md)。当时两条教训仍有效：
+> 托管反代把 socket 对端变成回环 ⇒ 只判 IP 的「回环放行」会让管理写操作无令牌 200
+> （修成三条件 AND，**铁律 158**）；令牌真源 env > `data/admin-token.json`，每请求现读。
 
 ### ★ v10.86 块的摘要按「只留最近 6 版」规范移出（v10.92 加新版、去掉 v10.86）
 
