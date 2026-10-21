@@ -90,6 +90,13 @@ const SUITES = [
    *       短行误判成小节标题）。这些全是纯函数，jsdom 直调最稳，不进浏览器探针。
    * 同 test-resource-page.js，它也要 8123 在跑（只用来取 admin.html 源码）。 */
   'test-admin-modal.js',
+  /* ★ v10.98 新增：端游资源卡 → 详情 → 「查看 <模块> 资源」→ 弹窗默认页签。
+   * 起因：整卡点击的落点一个版本里改过两次（v10.97 让给弹窗、v10.98 退回详情），
+   *       而分区名与弹窗页签键**不同名**（saves/trainers ↔ save/modifier）——
+   *       传错时 openUniDownload 会静默落回 body，按钮看着正常、点开永远停在本体页签。
+   * 四个分区各走一遍完整链路（含本体区走 URL 而非库 id 的那条岔路）。
+   * 同 test-resource-page.js，它也要 8123 在跑。 */
+  'test-v1098-card-detail.js',
   'test-saves-match.js',
   /* ★ v10.46 新增：「游侠存档 × 端游库」**名称匹配**层（前缀通道 + 代际护栏口径）。
    * 起因：这条链路此前零覆盖（test-saves-match.js 测的是 Ludusavi 路径匹配，另一条路），

@@ -326,19 +326,39 @@ t('XD 详情返回标签 tags（新版 .article-tags）', /\.article-tags a/.tes
  *        废形态同时加进反向断言，防止哪天被捡回来。 */
 t('★ 组卡卡面动作在（.grp-more 展开全部 + .cov-btn 进详情，正向锚点）',
   /class="grp-more"/.test(rsec) && /class="cov-btn"/.test(rsec) && /data-grp-more/.test(rsec));
-/* ★★ v10.97：卡面已无 `<a>`（条目行搬进弹窗）⇒ 旧的「点链早退」判据失去意义，
-   换成守**分流顺序**：`[data-grp-more]` → `.cov-btn` → 整卡兜底，前两个都必须 stopPropagation。
-   顺序错了就是 bug（点「查看 N 条下载」会同时触发整卡兜底，一次点击两次请求）。 */
-t('★ 卡内动作先于整卡分流（data-grp-more / .cov-btn 都 stopPropagation 早退，再兜底整卡）',
+/* ★★ v10.98：整卡点击回到「打开详情」（v10.97 那版让给了弹窗，方向错了）。
+   ⇒ 分流仍是三步，但**第三步换了落点**：
+      ① `[data-grp-more]` 卡底按钮 → 直达该模块弹窗（必须 stopPropagation，否则一次点击两次请求）
+      ② `.cov-btn`（封面「查看游戏详情」）与整卡走**同一条**路（openResDetail）
+      ③ 其余整卡 → openResDetail(card) → 详情抽屉
+   反向锚点：`bindGrpGrid` 里**不能**再出现 `grpAllPop(card)` —— 那是 v10.97 的形态。
+      （兜底那份 grpAllPop(card) 在 openResDetail 里，只服务「没有本地库记录」的组。） */
+t('★ 卡内动作先于整卡分流（[data-grp-more] stopPropagation 早退，其余整卡走 openResDetail）',
   /closest\('\[data-grp-more\]'\)/.test(rsec)
   && /e\.stopPropagation\(\); grpAllPop\(more\); return;/.test(rsec)
-  && /closest\('\.cov-btn'\)/.test(rsec)
+  && /openResDetail\(card\)/.test(rsec));
+t('★★ v10.98 反向：整卡分流不再直接开弹窗（grpAllPop(card) 已从 bindGrpGrid 移出）', (() => {
+  const i = rsec.indexOf('function bindGrpGrid');
+  const j = rsec.indexOf('/* ============================================================================', i);
+  const body = rsec.slice(i, j > i ? j : i + 1200);
+  return i >= 0 && !/grpAllPop\(card\)/.test(body);
+})());
+/* ★★ v10.98：分区 → 弹窗页签键的映射必须显式（saves/trainers ≠ save/modifier）。
+   传错时 openUniDownload 对非法 tab **静默**落回 body ⇒ 从存档卡点进去永远停在本体页签，
+   页面不报错、按钮看着也对 —— 正是本项目最怕的「不报错的错」。 */
+t('★ v10.98 分区 → 弹窗页签键映射齐全（saves→save / trainers→modifier）',
+  /RES_UNI_TAB\s*=\s*\{[^}]*body:\s*'body'[^}]*mod:\s*'mod'[^}]*saves:\s*'save'[^}]*trainers:\s*'modifier'/.test(rsec));
+t('★ v10.98 详情带模块语境（openDetailById 第三参 = ctx，含 tab / cat / id）',
+  /openDetailById\(lib,[^)]*ctx\)/.test(rsec) && /tab:\s*RES_UNI_TAB\[cat\]/.test(rsec));
+/* ★★ v10.98：没有本地库记录的组不能「点了没反应」。
+   资源组里确实有这类（机地话题没被合并过）—— 详情靠 /api/library/item，查不到就开不了。
+   所以兜底必须给一条出口：toast 说明 + 打开该模块的条目弹窗。
+   ⚠️ 断言写「有兜底」而不是「无 toast」：这里的 toast 是**必要的解释**，
+      没有它用户会以为卡片坏了。 */
+t('★ v10.98：无端游库命中的组仍有出口（toast 说明 + 兜底打开该模块条目）',
+  /if \(shown\) return;/.test(rsec)
+  && /toast\('这款未关联本地端游库/.test(rsec)
   && /grpAllPop\(card\);/.test(rsec));
-/* ★★ v10.97：整卡主行为反转（进详情 → 看全部条目）⇒ 没有 libId 的组以前只 toast
-   「未收录进本地端游库」然后什么也不发生，现在照样能展开全部条目。
-   ⚠️ 反向：那句 toast 必须消失 —— 留着说明还有分支在「点了没反应」。 */
-t('★ v10.97：无端游库命中的组也能用（整卡兜底打开全部条目，不再只 toast「未收录」）',
-  /grpAllPop\(card\);/.test(rsec) && !/未收录进本地端游库/.test(rsec));
 t('★★ 反向断言：卡面实现里已无 .paths 铺路径（v10.45 核心诉求）',
   !/class="paths"/.test(rsec) && !/closest\('\.paths'\)/.test(rsec));
 t('★★ 反向断言：copyText 已从派生页驱动里删除（复制搬进了弹窗的 #svLoc 位置弹窗）',

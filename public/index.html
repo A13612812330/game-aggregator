@@ -1836,6 +1836,18 @@
      在视觉上收拢成一个动作 —— 单色绿会让人以为「这只管本体」。 */
   .ds-all{background:linear-gradient(120deg,#0F9D58,#0B7BFF 52%,#7C3AED);color:#fff;
     box-shadow:0 6px 16px rgba(11,123,255,.3)}
+  /* ★ v10.98：从端游资源页的卡片进详情时，底栏多一个「查看 <模块> 资源」。
+     它和右边那个「⬇ 下载与资源」开的是**同一个** #dlPop（同一套页签 / 同一套取数），
+     唯一差别是默认页签落在用户刚才所在的那个模块（mod / save / modifier / body）。
+     ⚠️ 用描边而不是第二块实心渐变：两个实心并排会互相抢，「下载与资源」才是全局动作，
+        这条是"针对我刚看的那个模块"的定向动作。
+     ⚠️ 选择器写成 `.dl-strip > .ds.ds-res`（三层）：`.dl-strip > .ds` 里有 `border:0`，
+        只写 `.ds-res` 会被它压掉，描边直接消失（这条与铁律 181 同源：样式"没生效"不报错）。 */
+  .dl-strip > .ds.ds-res{background:#F8F5FF;border:1.5px solid #C4B5FD;color:#6D28D9;box-shadow:none}
+  .dl-strip > .ds.ds-res.mod{background:#F8F5FF;border-color:#C4B5FD;color:#6D28D9}
+  .dl-strip > .ds.ds-res.save{background:#F1FBF6;border-color:#86EFAC;color:#047857}
+  .dl-strip > .ds.ds-res.modifier{background:#FFF6ED;border-color:#FDBA74;color:#C2410C}
+  .dl-strip > .ds.ds-res.body{background:#F1F7FF;border-color:#93C5FD;color:#1D4ED8}
   /* ★ v10.25：详情页**竖向定位条**（用户口径：「详情页弹窗能有个定位条（竖着的）」，
      位置选了「右侧固定」）。默认只露序号圆点、悬停整条展开标签，避免长期遮住正文。
      ⚠️ 它必须是 `.drawer` 的**兄弟节点**而不是子节点：抽屉隐藏时是
@@ -4556,12 +4568,22 @@ function goEmuPage(hash) { location.href = EMU_PAGE_HREF + (hash ? '#' + hash : 
 
 /* ================= 详情抽屉 ================= */
 let drawerMode = 'game';   // 'game'=游戏详情 | 'bh'=BannerHub 社区配置面板 | 'pc'=实测配置面板
+/* ★ v10.98：用户从**端游资源页的哪张卡**进来的（null = 普通入口）。
+   卡片点击 = 打开详情；详情底栏因此多一个「查看 <模块> 资源」按钮，
+   点它开的是与「下载与资源」同一个 #dlPop，只是默认页签落在这个模块。
+   为什么挂在模块作用域而不是塞进 fb：
+     fb 是**库内记录**的镜像（字段名与 /api/library/item 一一对应），
+     混进「用户从哪个页面点进来的」这种会话信息后，下一个人读 fb.xxx 会以为它是库字段。
+   为什么在 openDetail() 里赋值为 `resTab || null`（而不是只在有值时覆盖）：
+     同一次会话里先点资源卡、再点搜索结果，若不清空，第二个详情页会带着上一个模块的按钮。 */
+let detailResTab = null;
 /* 关闭详情抽屉（✕ / 遮罩 / Esc 共用）—— 原先缺失导致关闭报错且滚动被锁 */
 function closeDetail() {
   const d = $('#drawer');
   if (!d.classList.contains('show')) return;
   d.classList.remove('show');
   $('#mask').classList.remove('show');
+  detailResTab = null;   /* ★ v10.98：模块语境随抽屉一起结束 */
   const rail = $('#dRail'); if (rail) rail.hidden = true;   // ★ v10.25 定位条随详情页收起
   $$('.on-drawer').forEach(x => x.classList.remove('on-drawer'));
   if (drawerMode !== 'game') { drawerMode = 'game'; unlockBody(); return; }  // 配置面板：关掉即回页面
@@ -4577,15 +4599,18 @@ function closeBtnHtml() {
 /* 从手机两库（社区配置 / 实测配置）的卡片直达游戏详情。
    卡片只持有匹配到的本地库 id → 先按 id 取本地库条目，再走统一详情链路。
    fb 兜底数据一次性给全（title/cover/score/size/genres/dateLabel），
-   这样源站抓取慢或失败时抽屉里也有完整信息，不会白屏。 */
-async function openDetailById(id, fallbackTitle) {
-  if (!id) return;
+   这样源站抓取慢或失败时抽屉里也有完整信息，不会白屏。
+   ★ v10.98：第三个参数 resTab 透传给 openDetail（端游资源页的模块语境）；
+     返回 true/false —— 调用方（资源卡）需要知道「这一款到底有没有本地库记录」，
+     没有就得给另一条出口，不能只 toast 一句然后什么也不发生（铁律：点了没反应）。 */
+async function openDetailById(id, fallbackTitle, resTab) {
+  if (!id) return false;
   let it = null;
   try {
     const j = await fetch(api('/api/library/item?id=' + encodeURIComponent(id))).then(r => r.json());
     if (j && j.ok) it = j.item;
   } catch (e) { /* 取不到就用本地卡片已有的标题兜底 */ }
-  if (!it) { toast('本地库未收录该游戏'); return; }
+  if (!it) { toast('本地库未收录该游戏'); return false; }
   const fb = {
     id: it.id || '',
     title: it.title || fallbackTitle || '',
@@ -4596,12 +4621,14 @@ async function openDetailById(id, fallbackTitle) {
     dateLabel: it.dateLabel || '',
     jidiUrl: it.jidiUrl || '',    /* v10.22：手机专区卡片直达详情后，下载弹窗也能取双源 */
   };
-  openDetail(it.url, encodeURIComponent(JSON.stringify(fb)), false);
+  openDetail(it.url, encodeURIComponent(JSON.stringify(fb)), false, resTab);
+  return true;
 }
 
-function openDetail(url, fbEnc, fromSearch) {
+function openDetail(url, fbEnc, fromSearch, resTab) {
   if (!url) return;
   drawerMode = 'game';
+  detailResTab = resTab || null;   /* ★ v10.98：普通入口传空 = 清掉上一次的模块语境 */
   detailFromSearch = !!fromSearch; // 记录来路：true=详情关闭后回到搜索弹窗
   lastDetailUrl = url;
   let fb = {};
@@ -4787,6 +4814,33 @@ function paintDetail(d, fb, merge) {
   const title = d.title || fb.title || '';
   const n = splitName(title);
   const s = SRC[d.source] || { nm: 'XDGAME', cls: 'xd' };
+  /* ★ v10.98：从端游资源页的卡片进来时，底栏多一个「查看 <模块> 资源」。
+     它与「⬇ 下载与资源」开**同一个** #dlPop（同一套页签、同一套取数），
+     唯一差别是 `data-dl-tab` 让默认页签直接落在用户刚才看的那个模块 ——
+     否则从「修改器」卡点进来，还要在弹窗里再手动点一次「修改器」页签。
+     ⚠️ `rt.id` 必须优先：资源分组的 libId 才是这一模块条目的归属记录
+        （赛博朋克2077 的 717 个 MOD 挂在 xd-191，而详情页的 fb.id 可能是机地那条
+         jidi-3277800 —— 拿后者去 /api/mods/match 会查空，只能靠名称模糊兜底）。
+     ⚠️ 本体卡传 resTab.id=''（话题没有库记录）：本体页签靠 ctx.url 取数，不靠 id。 */
+  const RES_UNI = {
+    body: { ic: '📦', btn: '查看本体资源' },
+    mod: { ic: '🧩', btn: '查看 MOD 资源' },
+    save: { ic: '💾', btn: '查看存档资源' },
+    modifier: { ic: '🛠', btn: '查看修改器资源' },
+  };
+  const rt = (detailResTab && RES_UNI[detailResTab.tab]) ? detailResTab : null;
+  /* ⚠️ 按钮上**不显示条数**（虽然 ctx 里有 count）：四个模块里「修改器」这一档
+     资源页与合并弹窗用的不是同一份数据（资源页是 GTrainers + GCM，弹窗的修改器页签是
+     机地修改器帖），实测赛博朋克2077 分别是 22 条与 2 条。按钮写死一个数、点开却是
+     另一个数，等于把一处既有口径差直接摆到用户眼前。条数交给弹窗页签上的徽标去说。 */
+  const resBtn = rt
+    ? '<button class="ds ds-res ' + rt.tab + '" type="button" data-dl-open data-dl-tab="' + rt.tab + '"'
+      + ' data-dl-title="' + esc(title) + '" data-dl-sub="' + esc(n.en || '') + '"'
+      + ' data-dl-url="' + esc(d.url || '') + '" data-dl-jidi="' + esc(fb.jidiUrl || '') + '"'
+      + ' data-dl-id="' + esc(rt.id || fb.id || d.id || '') + '">'
+      + RES_UNI[rt.tab].ic + ' <em>' + RES_UNI[rt.tab].btn + '</em>'
+      + '</button>'
+    : '';
   const kv = [];
   if (d.source === 'jidi') {
     if (d.releaseDate) kv.push(['发行日期', d.releaseDate]);
@@ -4931,6 +4985,7 @@ function paintDetail(d, fb, merge) {
                但盘口要登录；而它的 Mod 有 60 条）。入口的可见性不该由「本体能不能取到」
                决定。所以无条件渲染，四模块在弹窗里各自取数、各自给空态说明。
              ⚠️ 本段在模板串内部：注释里**不能出现反引号**（会把模板串提前闭合）。 -->
+        ${resBtn}
         <button class="ds ds-all" type="button" id="dlBtn" data-dl-open
           data-dl-title="${esc(title)}" data-dl-sub="${esc(n.en || '')}"
           data-dl-url="${esc(d.url || '')}" data-dl-jidi="${esc(fb.jidiUrl || '')}"
@@ -8506,6 +8561,9 @@ function dModLinks() {
       url: b.dataset.dlUrl || '',
       jidi: b.dataset.dlJidi || '',
       id: b.dataset.dlId || '',
+      /* ★ v10.98：详情页底栏那个「查看 <模块> 资源」带 data-dl-tab；
+         普通「下载与资源」没有这个属性 ⇒ undefined ⇒ openUniDownload 落回 body。 */
+      tab: b.dataset.dlTab || '',
     });
   });
 })();

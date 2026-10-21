@@ -172,10 +172,17 @@ async function main() {
     && q('#resSaves').classList.contains('et-hide')
     && q('#resTrainers').classList.contains('et-hide'));
   /* ⚠️ 数字胶囊只要求 MOD/存档/修改器三个**回填**：本体那个来自另一个接口
-     （/api/jiditopics/stats），jsdom 里拿不到就留「—」是**正确**的降级，不该算红。 */
-  ok('MOD / 存档 / 修改器三个页签数字胶囊都已回填（非占位 —）',
-    !qa('#resTabs .res-tab').slice(1).some((t) => /^[—\-]$/.test((t.querySelector('b') || {}).textContent || '')),
-    qa('#resTabs .res-tab b').map((b) => b.textContent.trim()).join(' / '));
+     （/api/jiditopics/stats），jsdom 里拿不到就留「—」是**正确**的降级，不该算红。
+     ⚠️ 先轮询等一会（最多 6s）：fillTabNums 是 boot 后的异步请求，固定 sleep 在机器忙时
+        会取样到「—」，把它误判成「从来没回填」（本轮实测红过一次，非回归）。 */
+  {
+    const pending = () => qa('#resTabs .res-tab').slice(1)
+      .some((t) => /^[—\-]$/.test(((t.querySelector('b') || {}).textContent || '').trim()));
+    for (let i = 0; i < 40 && pending(); i++) await sleep(150);
+    ok('MOD / 存档 / 修改器三个页签数字胶囊都已回填（非占位 —）',
+      !pending(),
+      qa('#resTabs .res-tab b').map((b) => b.textContent.trim()).join(' / '));
+  }
 
   /* ============================================================
    * 一·B、v10.97 本体分区（默认页签）卡形 —— 与另三区同一张脸
@@ -291,11 +298,11 @@ async function main() {
   ok('MOD 计数文案是「共 N 款游戏」（卡是游戏粒度，写「条」会和卡内条数打架）',
     /共 [\d,]+ 款游戏/.test(q('#mdCount').textContent || ''), q('#mdCount').textContent || '');
   ok('MOD 统计条已回填 4 格', qa('#mdStats .st').length === 4, `实际 ${qa('#mdStats .st').length}`);
-  /* 点封面按钮：有 libId 就进详情；没命中要给出明确提示（不能点了没反应）
-   * ★ v10.97：**整卡点击的主行为反转了** —— 以前点正文进详情、点 3 条里某条才下载；
-   *   现在整卡 = 打开全部条目弹窗，游戏详情只走封面上的 `.cov-btn`。
-   *   ⇒ 这里必须只点 `.cov-btn`，不能再 `|| querySelector('h4')` 兜底 ——
-   *     那个兜底会点到卡片主体、弹出下载弹窗，然后断言抽屉打开就红了（实测过）。 */
+  /* 封面按钮：压在封面上的「查看游戏详情」，与整卡点击**同一个动作**（都进详情）。
+   * ★ v10.98：两条路合并成一条（`openResDetail(card)`），所以这里验的是「按钮还在、
+   *   且它确实走得通」—— 不再需要区分「点按钮进详情 / 点正文进弹窗」。
+   *   ⚠️ 详情是**异步**的（先 /api/library/item 再 /api/detail/merged），
+   *     固定 sleep(1500) 在机器忙时会取样到「还没开」，必须轮询等待（本轮实测红过一次）。 */
   {
     const withLib = qa('#mdGrid .emu-card').find((c) => c.dataset.lib);
     if (withLib) {
@@ -303,7 +310,7 @@ async function main() {
       ok('带 libId 的组卡有「查看游戏详情」按钮（.cov-btn，压在封面上）', !!btn);
       if (btn) {
         click(btn);
-        await sleep(1500);
+        for (let i = 0; i < 80 && !q('#drawer').classList.contains('show'); i++) await sleep(200);
         ok('点组卡封面按钮 → 打开游戏详情抽屉',
           q('#drawer').classList.contains('show'), q('#drawer').className);
         W.closeDetail(); await sleep(300);
@@ -312,27 +319,58 @@ async function main() {
       ok('组卡封面按钮（本轮无命中样本，跳过）', true, '无 data-lib 卡片');
     }
   }
-  /* ★★ v10.97 整卡点击 = 打开「全部条目」弹窗（不再进详情）
-     ⚠️ 必须点**卡片正文**（h4），不能点 `.cov-btn` —— 那是上一条测的另一种分流。
-     正向锚点：弹窗真的开了且里面有行；反向锚点：详情抽屉**没**被同时打开。 */
+  /* ★★ v10.98 整卡点击 = 打开**游戏详情**（v10.97 那版让给了弹窗，方向错了）
+     用户口径：「端游模块的卡片点击是弹详情页，然后有个按钮 —— 点击查看对应模块的弹窗
+     （同下载按钮，不过默认页面自动选择到默认模块）」。
+     ⇒ 判据三层，缺一层就会假绿：
+        ① 详情抽屉真的开了；
+        ② 反向：这一刻**没有**顺手把下载弹窗也开了（一次点击只做一个动作）；
+        ③ 详情底栏多出「查看 <模块> 资源」，data-dl-tab 是**弹窗页签键**（mod），
+           点它才开弹窗、且默认页签落在 mod。
+     ⚠️ 为什么要断 ③ 的 data-dl-tab 而不是只看按钮在不在：分区名与页签键不同
+        （saves/trainers ↔ save/modifier），传错时 openUniDownload 会**静默**落回 body，
+        按钮看起来一样、点开永远是「本体」。 */
   {
-    const card = qa('#mdGrid .emu-card')[0];
+    const card = qa('#mdGrid .emu-card').find((c) => c.dataset.lib);
     if (card) {
       const errN = e1.length;
-      click(card.querySelector('h4') || card);
-      await sleep(2200);
-      ok('★★ v10.97 点整卡正文 → 打开「全部条目」弹窗（整卡主行为从「进详情」改为「看下载」）',
-        !!q('#dlPop') && !q('#dlPop').hidden && !q('#dlPop').hidden,
+      click(card.querySelector('h4'));
+      for (let i = 0; i < 80 && !q('#drawer').classList.contains('show'); i++) await sleep(200);
+      ok('★★ v10.98 点整卡正文 → 打开游戏详情抽屉',
+        q('#drawer').classList.contains('show'), q('#drawer').className);
+      ok('★★ v10.98 反向：点整卡**不**同时开下载弹窗（一次点击只做一个动作）',
+        !q('#dlPop') || q('#dlPop').hidden,
         q('#dlPop') ? `hidden=${q('#dlPop').hidden}` : '(无 #dlPop)');
-      ok('★★ v10.97 反向：点整卡**不**同时打开游戏详情抽屉（一次点击只做一个动作）',
-        !q('#drawer').classList.contains('show'), q('#drawer').className);
-      ok('★ 整卡点击那一次弹窗里确实有行（不是空壳弹窗）',
-        qa('#grpAllList .gl-i').length > 0, `${qa('#grpAllList .gl-i').length} 行`);
-      ok('点整卡打开弹窗不抛异常', e1.length === errN, e1.slice(errN).join(' | '));
-      if (typeof W.closeDownload === 'function') W.closeDownload();
-      await sleep(260);
+      const rb = q('#dlStrip .ds-res');
+      ok('★★ v10.98 详情底栏出现「查看 MOD 资源」按钮', !!rb,
+        rb ? rb.textContent.trim().replace(/\s+/g, ' ') : (q('#dlStrip') || {}).textContent);
+      ok('★ 该按钮 data-dl-tab = mod（页签键，不是分区名 md）',
+        !!rb && rb.dataset.dlTab === 'mod', rb ? 'tab=' + rb.dataset.dlTab : '');
+      ok('★ 该按钮的 id 取卡上的 libId（模块条目归属记录）',
+        !!rb && rb.dataset.dlId === card.dataset.lib,
+        rb ? rb.dataset.dlId + ' vs ' + card.dataset.lib : '');
+      if (rb) {
+        click(rb);
+        for (let i = 0; i < 80 && (!q('#dlPop') || q('#dlPop').hidden); i++) await sleep(200);
+        const on = q('#dlModTabs .dlm.on');
+        ok('★★ 点它 → 打开下载弹窗且默认页签自动落在 MOD（不用再手点一次）',
+          !!q('#dlPop') && !q('#dlPop').hidden && !!on && on.dataset.dlm === 'mod',
+          on ? 'on=' + on.dataset.dlm : '(无页签)');
+        ok('点模块按钮打开弹窗不抛异常', e1.length === errN, e1.slice(errN).join(' | '));
+        if (typeof W.closeDownload === 'function') W.closeDownload();
+        await sleep(260);
+      }
+      W.closeDetail(); await sleep(300);
+      /* ⚠️ 不能在关详情后直接判 `.ds-res` 消失：closeDetail 只是去掉 .show，
+         抽屉 DOM 还是上一次那份，判它必然红（本轮实测踩到）。
+         真正的行为是「下次打开会重画」—— 所以用**普通入口**再开一次来验语境已清。 */
+      await W.openDetailById(card.dataset.lib, card.dataset.name);
+      for (let i = 0; i < 80 && !q('#drawer').classList.contains('show'); i++) await sleep(200);
+      ok('★ 关详情后模块语境被清掉（普通入口再开，底栏没有「查看 <模块> 资源」）',
+        !q('#dlStrip .ds-res'), ((q('#dlStrip') || {}).textContent || '').trim().slice(0, 40));
+      W.closeDetail(); await sleep(300);
     } else {
-      ok('整卡点击（本轮无卡片样本，跳过）', true, '无 .emu-card');
+      ok('整卡点击（本轮无带 libId 的卡，跳过）', true, '无 data-lib');
     }
   }
   /* ★★ v10.48 + v10.97：卡底「查看 N 条下载」= 打开**弹窗**列全量 + 弹窗内搜索。

@@ -69,6 +69,13 @@ const GRP_META = {
   },
 };
 
+/* 端游资源分区 → 合并下载弹窗的页签键。
+ * ⚠️ 两套键名**不完全一样**，不能直接把 cat 当 tab 传：
+ *    资源分区叫 saves / trainers，弹窗页签叫 save / modifier（见 index.html 的 DL_UNI）。
+ *    传错不会报错 —— openUniDownload 对非法 tab 会静默落回 body，
+ *    表现成「从存档卡点进去，弹窗停在本体页签」。 */
+const RES_UNI_TAB = { body: 'body', mod: 'mod', saves: 'save', trainers: 'modifier' };
+
 /* 三个分区的运行时状态（结构与语义完全同形，只是分开存）
  * ★ v10.97 默认 `sort: 'hot'` —— 与 GRP_META.sorts[0] 必须一致，否则首次加载按热度、
  *   排序条却高亮「条目最多」（排序条高亮是按数组下标画的）。 */
@@ -330,13 +337,49 @@ async function grpAllPop(btn) {
   }
 }
 
-/** 网格点击分流（三个分区同一套）：查看全部 / 封面按钮进详情 / 整卡进全部条目
+/** 端游资源卡 → 游戏详情抽屉
  *
- * ★ v10.97：卡内不再铺条目行 ⇒ **整卡点击 = 打开「全部条目」弹窗**（不再是「进游戏详情」）。
- *   为什么把整卡主行为让给下载：这一页叫「端游资源」，用户点卡片就是要下载；
- *   游戏详情仍有**明确入口**（封面上的「查看游戏详情」按钮），两件事各有一个动作，
- *   不再像以前那样「点正文进详情、点 3 条里某条才下载」—— 主次反了。
- *   ⚠️ 没有 `libId` 的组以前会 toast「未收录」然后什么也不发生；现在照样能展开全部条目。
+ * ★ v10.98 用户口径：「端游模块的卡片点击是弹详情页，然后有个按钮 ——
+ *   点击查看对应模块的弹窗（同下载按钮，不过默认页面自动选择到默认模块）」。
+ *   ⇒ 卡面只保留**一个主行为**：整卡（含封面按钮）= 打开游戏详情；
+ *     模块弹窗退到卡底那颗 `[data-grp-more]` 按钮，以及详情页底栏的
+ *     「查看 <模块> 资源」（`detailResTab` 把模块语境带进详情）。
+ *
+ * 为什么把 libId 也传进去（`ctx.id`）：
+ *   详情页拿到的 fb.id 可能不是这一模块条目的归属记录（赛博朋克2077 的 717 个 MOD
+ *   挂在 xd-191，而详情页 fb.id 可能是机地那条 jidi-3277800）。组卡的 libId
+ *   就是该模块的归属记录，用它开模块弹窗才能跟卡面「N 条」对上。
+ *
+ * `await openDetailById` 的布尔返回必须接住：有 libId 也可能查不到库记录
+ * （机地话题没被合并过的那类）。那种情况**不能只 toast 一句就结束** ——
+ * 用户点完页面一动不动，等于把卡片做成死链。退回「看这一模块的条目」。
+ */
+async function openResDetail(card) {
+  const cat = card.dataset.cat || '';
+  const lib = card.dataset.lib || '';
+  const name = card.dataset.name || '';
+  const ctx = {
+    tab: RES_UNI_TAB[cat] || 'body',
+    cat,
+    id: lib,
+    name,
+  };
+  if (lib && typeof openDetailById === 'function') {
+    const shown = await openDetailById(lib, card.dataset.libt || name, ctx);
+    if (shown) return;
+  }
+  if (typeof toast === 'function') {
+    toast('这款未关联本地端游库，先看它在' + ((GRP_META[cat] && GRP_META[cat].label) || '该模块') + '的条目');
+  }
+  grpAllPop(card);
+}
+
+/** 网格点击分流（三个分区同一套）：卡底「查看 N 条」→ 弹窗；其余整卡 → 详情
+ *
+ * ★ v10.98：整卡点击重新交给**详情页**（v10.97 那版让给了弹窗，方向错了）——
+ *   用户要的层级是「卡 → 详情 → 对应模块弹窗」，
+ *   而不是「卡 → 直接跳到某个模块的下载列表」（跳过了游戏本身的信息）。
+ *   卡底那颗按钮仍是直达弹窗的快捷方式，两条路都在。
  */
 function bindGrpGrid(cat) {
   const meta = GRP_META[cat];
@@ -344,17 +387,13 @@ function bindGrpGrid(cat) {
   if (!g || g.dataset.bound) return;
   g.dataset.bound = '1';
   g.addEventListener('click', (e) => {
+    /* ① 卡底「查看 N 条下载」—— 直达该模块弹窗，别冒泡成「开详情」 */
     const more = e.target.closest('[data-grp-more]');
     if (more) { e.stopPropagation(); grpAllPop(more); return; }
-    const btn = e.target.closest('.cov-btn');
-    if (btn && btn.dataset.lib && typeof openDetailById === 'function') {
-      e.stopPropagation();
-      openDetailById(btn.dataset.lib, btn.dataset.title || '');
-      return;
-    }
+    /* ② 其余任意位置（封面 / 标题 / 空白）= 打开游戏详情 */
     const card = e.target.closest('.emu-card');
     if (!card) return;
-    grpAllPop(card);
+    openResDetail(card);
   });
 }
 
@@ -663,6 +702,36 @@ async function bdFetchOne(card, tid, url, force) {
   }
 }
 
+/** 本体卡 → 游戏详情抽屉
+ *
+ * ★ v10.98 与另三区统一：整卡点击 = 详情页（详情底栏给「查看本资源」按钮）。
+ *
+ * ⚠️ 这里**不走 openDetailById**：本体卡是机地话题（tid），只有一小部分有端游库记录
+ *    （实测 17,220 条话题里 3,621 条进过库 = 21%），走库 id 会有近八成点开就报
+ *    「本地库未收录」。openDetail 直接吃源站 URL，任何话题都能开，
+ *    而且它本来就是这个站所有详情的入口（搜索 / 榜单一律走它）。
+ */
+function bdOpenDetail(card) {
+  const tid = card.dataset.tid;
+  const g = bdState.items.find((x) => String(x.tid) === String(tid)) || {};
+  const title = g.title || card.dataset.name || '';
+  const url = g.url || ('https://jidiyouxi.com/topic/detail/' + tid);
+  const fb = {
+    id: 'jidi-' + tid,
+    title,
+    cover: g.cover || '',
+    score: g.score || '',
+    size: g.size || '',
+    genres: g.genres || [],
+    dateLabel: g.releaseDate || '',
+    jidiUrl: url,
+  };
+  /* 已抓过也不往按钮上写条数：详情页那颗「查看本体资源」同样只给模块名 */
+  openDetail(url, encodeURIComponent(JSON.stringify(fb)), false, {
+    tab: 'body', cat: 'body', id: '', name: title,
+  });
+}
+
 /** 一卡全部资源帖 → 弹窗（复用主站 #dlPop 外壳，列表独立渲染） */
 function bdAllPop(tid) {
   const c = bdLinks[tid];
@@ -752,14 +821,12 @@ async function initBd() {
       }
       const more = e.target.closest('[data-bd-more]');
       if (more) { e.preventDefault(); e.stopPropagation(); bdAllPop(more.dataset.bdMore); return; }
-      /* ★ v10.97：整卡点击 = 有结果就看结果，没结果就当场抓（卡内已无「查」以外的内容） */
+      /* ★ v10.98：整卡点击 = 打开游戏详情（与另三区同一条口径）。
+         卡底的「查看 N 个资源帖」/「查本体下载」各自是**明确的按钮动作**，
+         仍然直达弹窗 / 现抓 —— 整卡不再是「跳过游戏信息直接看下载列表」。 */
       const card = e.target.closest('.bd-card');
       if (!card) return;
-      const tid = card.dataset.tid;
-      const c = bdLinks[tid];
-      if (c && c.posts && c.posts.length) { bdAllPop(tid); return; }
-      const btn = card.querySelector('[data-bd-tid]');
-      if (btn) bdFetchOne(card, tid, btn.dataset.bdUrl, btn.dataset.bdForce === '1');
+      bdOpenDetail(card);
     });
   }
 
