@@ -143,7 +143,22 @@ for (const k of ['quark', 'baidu', 'xunlei', 'ali', '123', 'lanzou', 'uc', '139'
     'D17 盘口样式 bd-' + k + ' 可用');
 }
 ok(/function bdGroupByPost/.test(SECT_CODE), 'D18 按帖子聚合（一条 item 一个盘口，同帖要收进一行）');
-ok(/slice\(0, 3\)/.test(SECT_CODE), 'D19 卡内只铺前 3 帖（与另三区「前 3 条」同口径）');
+/* ★★ v10.97：卡形改了 —— 卡面**不再铺前 3 帖**（用户口径「只需要游戏名称+游戏原名+大小热度」），
+   帖子全收进 `#dlPop` 弹窗。原来那条 `slice(0, 3)` 判据随之失效（不是红，是**找不到依据**）。
+   ⇒ 换成两条守同一件事：① 卡面渲染器里**不出现** `bdPostRow`（不铺行）；
+      ② 正向锚点：`bdPostRow` 仍然存在且被 `bdAllPop` 用着（帖子没丢，只是搬进弹窗）。
+   ⚠️ 只删不加 ⇒ 「卡面干脆不渲染任何帖子」也会绿，而那正是本轮要避免的另一半。 */
+{
+  const iCard = SECT_CODE.indexOf('function bdCard');
+  const iFetch = SECT_CODE.indexOf('async function bdFetchOne');
+  const cardSeg = (iCard >= 0 && iFetch > iCard) ? SECT_CODE.slice(iCard, iFetch) : '';
+  ok(cardSeg.length > 0 && !/bdPostRow\(/.test(cardSeg),
+    'D19 卡面不铺帖子行（v10.97 卡形：只留名称/原名/大小/热度 + 卡底按钮）',
+    cardSeg ? `${cardSeg.length} 字符片段` : '切片失败(选择器/detect 不对)');
+  ok(/function bdPostRow/.test(SECT_CODE) && /function bdAllPop/.test(SECT_CODE)
+    && /bdPostRow\(/.test(SECT_CODE.slice(SECT_CODE.indexOf('function bdAllPop'))),
+    'D19b 正向锚点：帖子行渲染仍在，且被弹窗用着（帖子是搬家不是删除）');
+}
 ok(/data-bd-more/.test(SECT_CODE) && /function bdAllPop/.test(SECT_CODE),
   'D20 超出部分进弹窗看全量');
 /* 反向：不许在 init 里**批量**抓。

@@ -151,8 +151,9 @@ const BODY_HTML = `
     <span class="ic">🎮</span>
     <div class="tx">
       <b>先把游戏拿到，再谈 MOD 与存档</b>——这一页列出<b>机地社区有话题的全部游戏</b>，
-      每张卡点「<b>🔍 查本体下载</b>」即<b>实时去机地抓</b>它话题下的本体资源帖，
-      抓到后卡内直接铺<b>网盘盘口</b>（百度 / 夸克 / 迅雷 / 阿里 / 天翼…），点盘口就到网盘页。
+      每张卡点「<b>🔍 查本体下载</b>」即<b>实时去机地抓</b>它话题下的本体资源帖；
+      抓完卡上会变成「<b>查看 N 个资源帖</b>」，点开就是全部<b>网盘盘口</b>
+      （百度 / 夸克 / 迅雷 / 阿里 / 天翼…），点盘口直接到网盘页。
       抓过的会<b>存在本机</b>，下次打开不用重抓。
       <span style="opacity:.75">本站只做聚合与指路，<b>不转存、不提供文件</b>。安装与解压请以原贴说明为准。</span>
       <span id="bdBuilt" style="opacity:.75"></span>
@@ -185,8 +186,8 @@ const MODS_HTML = `
     <span class="ic">🧩</span>
     <div class="tx">
       <b>PC 游戏 MOD，按游戏看，一屏一款</b>——数据来自<b>机地社区 MOD 专区</b>，
-      每条都带<b>网盘直链</b>；卡内先列<b>前 3 条</b>，点「查看全部」在<b>弹窗里</b>看全量、可搜索。
-      点封面或卡身<b>直接进游戏详情</b>。
+      每条都带<b>网盘直链</b>；卡面只给<b>条数 / 体积 / 热度</b>，点「<b>查看 N 条下载</b>」在<b>弹窗里</b>看全量、可搜索。
+      封面上的「查看游戏详情」进端游详情页。
       <span style="opacity:.75">本站只做聚合与指路，<b>不转存、不提供文件</b>。装 MOD 前请先备份存档。</span>
       <span id="mdBuilt" style="opacity:.75"></span>
     </div>
@@ -219,7 +220,7 @@ const SAVES_HTML = `
     <div class="tx">
       <b>找存档，直接给能下载的</b>——这一页只列<b>真有存档文件</b>的游戏：
       来自<b>游侠补丁网存档区</b>与 <b>GTrainers</b>，每条都给<b>真实下载链</b>
-      （直链 / 网盘 / eD2K），点开就能取件；卡内先列<b>前 3 条</b>，点「查看全部」在<b>弹窗里</b>看全量、可搜索。
+      （直链 / 网盘 / eD2K），点开就能取件；卡面只给<b>条数 / 体积 / 热度</b>，点「<b>查看 N 条下载</b>」在<b>弹窗里</b>看全量、可搜索。
       <span style="opacity:.75">想要「存档放在哪个目录」请点进游戏详情 —— 那里有独立的<b>存档位置</b>视图（含注册表项与云同步支持）。</span>
       <span id="svBuilt" style="opacity:.75"></span>
     </div>
@@ -257,7 +258,7 @@ const TRAINERS_HTML = `
       <b>单机游戏修改器，按游戏看</b>——合了两个来源：<b>GTrainers</b> 修改器区（给<b>真实下载链</b>），
       以及 <b>Game Cheats Manager</b> 的公开清单（本体走一次性签名链接，本站不代为分发；
       但每条都配了<b>来源站跳转</b>，点一下直接去原作者页）。
-      卡内先列<b>前 3 条</b>，点「查看全部」在<b>弹窗里</b>看全量、可搜索。
+      卡面只给<b>条数 / 体积 / 热度</b>，点「<b>查看 N 条下载</b>」在<b>弹窗里</b>看全量、可搜索。
       <span style="opacity:.75">拿到的修改器多为<b>独立 exe / CE 表</b>，<b>不用放进游戏目录</b>，运行后自行挂上进程；用前请先备份存档。</span>
       <span id="trBuilt" style="opacity:.75"></span>
     </div>
@@ -446,13 +447,15 @@ const out = [
      ⚠️ 本段在模板串内部：注释里**不能出现反引号**（会提前闭合模板串）。 */
   .bar.body{background:linear-gradient(90deg,#7C3AED,#A855F7)}
   .emu-intro.body{background:linear-gradient(135deg,#F5F1FF,#FAF7FF);border-color:#E6DAFF}
-  /* 本体卡专属：卡内那个「查本体下载」按钮。刻意做成**实心主色块**而不是普通按钮 ——
-     它是本区唯一的动作入口，视觉上必须一眼看见（另三区的卡内条目是链接，不是按钮）。 */
-  .bd-get{display:block;width:100%;margin:2px 0 0;padding:9px 10px;border-radius:8px;cursor:pointer;
-    font:750 12px/1.2 var(--font);color:#fff;border:0;
-    background:linear-gradient(135deg,#7C3AED,#6366F1);transition:.15s}
-  .bd-get:hover{filter:brightness(1.08);transform:translateY(-1px)}
-  .bd-get:disabled{opacity:.65;cursor:default;transform:none}
+  /* 本体卡专属：「查本体下载 / 重新查」按钮。
+     ★ v10.97：从「实心主色块」改成与另三区 .grp-more **同一套按钮语言**（浅底 + 主色字）——
+       四个分区现在共用一张卡脸，卡底动作也该长得一样；实心紫会让本区看起来像另一个页面。
+       它仍是本区**唯一**会打机地的入口，所以文案带 🔍 / ↻，一眼能认出来。
+       ⚠️ 本段在模板串内部：注释里不能出现反引号（会提前闭合模板串）。 */
+  .bd-get{display:block;width:100%;margin-top:7px;padding:7px 0;border-radius:8px;cursor:pointer;
+    font:750 11.5px/1.2 var(--font);color:#6D28D9;background:#F7F4FF;border:1px solid #DDD6FE;transition:.15s}
+  .bd-get:hover{background:#F1ECFF;border-color:#C4B5FD}
+  .bd-get:disabled{opacity:.65;cursor:default}
   .bd-empty-s{padding:9px 2px;color:#8A94A6;font-size:12px;line-height:1.55}
   .bd-empty-s b{color:#5A6478}
   .bar.md{background:linear-gradient(90deg,#2E6BFF,#4F8CFF)}

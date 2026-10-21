@@ -102,16 +102,34 @@ ok('D3 有 MOD 的款数 ≤ 覆盖款数且 > 0', cntMod > 0 && cntMod <= (cove
 ok('D4 三类覆盖款数都比 0 大（否则该列恒空）',
   (cover.mod || 0) > 0 && (cover.saves || 0) > 0 && (cover.trainers || 0) > 0,
   JSON.stringify(cover));
-/* ★ v10.85：冷门隐藏数与 cold-hide 口径现算夹逼 —— 快照标记 ≠ 口径现算即说明生成器
-   用的不是同一口径模块（抄一份规则 = 两份实现必然漂移）。 */
 const nHidden = R.filter((r) => r[13] === 1).length;
 ok('D5 ★ v10.85 行内冷门隐藏数 === meta.nHidden', nHidden === (M.nHidden || 0),
   `${nHidden} vs ${M.nHidden}`);
-ok('D6 ★ 折叠前隐藏数 === cold-hide 口径对 games.json 现算', (() => {
+/* ★ v10.85：冷门隐藏数与 cold-hide 口径现算夹逼 —— 快照标记 ≠ 口径现算即说明生成器
+   用的不是同一口径模块（抄一份规则 = 两份实现必然漂移）。
+   ★★ v10.97：这条判据本身是**时间函数**，直接比会每天假红一两次（本轮实测踩到）。
+   `cold-hide` 的口径里有「近 90 天新游保护」，用的是 `Date.now()` ——
+   快照生成之后，仍然会有一条条游戏陆续跨过 90 天线，每跨一条现算值就 +1。
+   实测：快照 06:12 生成 `nHiddenRaw=8565`，08:29 现算 8566，**数据一个字都没改**。
+   ⇒ 补偿项写成**精确值**而不是容差：把「快照时刻之后才跨线、且现在确实被隐藏」的条数减回去。
+      判据仍是等号，只是换成「同一时刻的口径」；真出现规则漂移（例如有人改了 hot 判定）时，
+      `crossed` 补不平这个缺口，照样报红。
+   ⚠️ 别改成 `Math.abs(a-b) <= 5` 之类的容差：那会让「抄了一份规则、差 3 条」永远漏过去。 */
+const D6 = (() => {
   const coldHide = require(path.join(ROOT, 'data', 'cold-hide'));
   const games = require(path.join(ROOT, 'data', 'games.json'));
-  return games.filter((g) => coldHide.isHidden(g)).length === (M.nHiddenRaw || 0);
-})(), 'nHiddenRaw=' + M.nHiddenRaw);
+  const RECENT_MS = 90 * 864e5;                    // 与 cold-hide 的 90 天热启动期同源
+  let snapTs = Date.now();
+  try { snapTs = fs.statSync(SNAP).mtimeMs; } catch (e) { /* 拿不到就退化成不补偿 */ }
+  const nowN = games.filter((g) => coldHide.isHidden(g)).length;
+  const crossed = games.filter((g) => coldHide.isHidden(g)
+    && g.publishTs && g.publishTs + RECENT_MS > snapTs).length;
+  return { nowN, crossed, effN: nowN - crossed, snapN: M.nHiddenRaw || 0, ts: snapTs };
+})();
+ok('D6 ★ 折叠前隐藏数 === cold-hide 口径对 games.json 现算（按快照时刻对齐）',
+  D6.effN === D6.snapN,
+  `现算 ${D6.nowN} − 跨线 ${D6.crossed} = ${D6.effN} vs 快照 ${D6.snapN}`
+  + ` ｜ 快照时刻 ${new Date(D6.ts).toISOString().slice(0, 16)}`);
 ok('D6b ★ v10.94 折叠只会减少隐藏行，不会凭空增加', (M.nHidden || 0) <= (M.nHiddenRaw || 0),
   `${M.nHidden} <= ${M.nHiddenRaw}`);
 

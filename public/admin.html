@@ -149,10 +149,45 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
 .kv{font-size:12.5px;line-height:1.95}
 .kv i{font-style:normal;color:var(--sub);display:inline-block;min-width:74px}
 .kv b{font-weight:600}
-/* ═══ v10.94 条目查看弹窗（模块页「查看」）═══
-   帖子类条目必须能读到**完整正文**：机地帖的价值全在正文里（网盘口令、安装步骤、
-   前置依赖），只给一个「原帖 ↗」等于把用户又推回站外。 */
-.rmv-sec{margin-bottom:15px}
+/* ═══ v10.97 条目查看弹窗（模块页「查看」）═══
+ * ★ 为什么要重做（用户口径：给了一张帖子详情页截图，「管理页面点击后的弹窗我想要也这样的」）：
+ *   v10.94 那版把正文塞进一个灰底 <pre>，再把字段/链接堆在下面 —— 能读，但像**日志**。
+ *   而机地帖的价值恰恰在正文本身（网盘口令、安装步骤、前置依赖），
+ *   参照的样子是**一篇文章**：大封面 → 板块/作者/时间/浏览 → 原链 → 分节正文。
+ * ★ 正文渲染是「有损但可控」的：只认三类结构（小节标题 / 编号步骤 / 段落），
+ *   其余一律按段落走。**不做 markdown 全解析** —— 帖子正文不是 markdown，
+ *   硬套会吃掉它自己的排版符号（`➡️`、`【】`、行内 emoji 都是作者刻意打的）。
+ * ⚠️ 每个用户输入片段都必须过 esc()；链接先切分再分别转义（见 rmvInline）。 */
+.rmv{max-width:720px;display:flex;flex-direction:column;max-height:calc(100vh - 88px)}
+.rmv-hd{display:flex;align-items:flex-start;gap:10px;padding:14px 18px 11px}
+.rmv-ico{flex:none;width:22px;height:22px;border-radius:6px;background:#eef2ff;color:#4338ca;
+  display:grid;place-items:center;margin-top:1px}
+.rmv-ico svg{width:13px;height:13px;display:block}
+.rmv-hd .t{flex:1;min-width:0}
+.rmv-hd h3{font-size:14.5px;line-height:1.45;font-weight:750;color:#111827;word-break:break-word}
+.rmv-sub{font-size:11.5px;color:var(--sub);margin-top:3px;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.rmv-scroll{padding:0 18px 16px;overflow:auto;flex:1}
+.rmv-hero{border-radius:10px;overflow:hidden;background:#eef2f7;margin:2px 0 12px}
+.rmv-hero img{width:100%;max-height:270px;object-fit:cover;display:block}
+.rmv-chips{display:flex;flex-wrap:wrap;gap:7px;align-items:center;font-size:11.5px;color:#475569;margin-bottom:9px}
+.rmv-chips .k{color:#94a3b8}
+.rmv-chips .dot{color:#cbd5e1}
+.rmv-chips b{font-weight:650;color:#1f2937}
+.rmv-chip{background:#eef2ff;color:#4338ca;border-radius:6px;padding:2px 8px;font-weight:700}
+.rmv-url{display:block;font:11.8px/1.6 Consolas,monospace;color:#2563eb;word-break:break-all;margin-bottom:12px}
+.rmv-url:hover{text-decoration:underline}
+.rmv-doc{font-size:13px;line-height:1.9;color:#1f2937;word-break:break-word}
+.rmv-doc h5{font-size:12.5px;font-weight:800;color:#111827;margin:15px 0 5px}
+.rmv-doc h5:first-child{margin-top:0}
+.rmv-doc p{margin:0 0 7px}
+.rmv-doc .li{display:flex;gap:7px;margin:0 0 4px;padding-left:2px}
+.rmv-doc .li i{flex:none;font-style:normal;color:#94a3b8;font-variant-numeric:tabular-nums}
+.rmv-doc a{color:#2563eb;text-decoration:underline;text-underline-offset:2px;word-break:break-all}
+.rmv-doc b{font-weight:750;color:#111827}
+.rmv-shots{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0 14px}
+.rmv-shots a{display:block;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#eef2f7}
+.rmv-shots img{width:100%;height:74px;object-fit:cover;display:block}
+.rmv-sec{margin-top:15px;border-top:1px solid var(--line);padding-top:12px}
 .rmv-sec>h4{font-size:12px;color:var(--sub);font-weight:700;margin-bottom:7px;letter-spacing:.3px}
 .rmv-pre{white-space:pre-wrap;word-break:break-word;font:12.8px/1.78 inherit;background:#f8fafc;
   border:1px solid var(--line);border-radius:10px;padding:12px 14px;max-height:44vh;overflow:auto}
@@ -601,21 +636,23 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
     </div>
   </div>
 </div>
-<!-- ═══ v10.94 条目查看弹窗（模块页每行「查看」）═══
+<!-- ═══ v10.97 条目查看弹窗（模块页每行「查看」）═══
      设计口径：**这一条条目的全部内容都在这里**，不需要再跳源站。
+     版式参照用户给的帖子详情页截图：文档图标 + 标题 + 作者行 → 大封面 →
+     板块/原作者/时间/浏览量 → 原链 → 分节正文 →（结构化来源）字段与链接。
      帖子类（机地 MOD / 修改器）渲染 content 全文；结构化来源（FitGirl / Thunderstore /
      修改器库 / 存档）渲染字段 + 链接。源站外链保留，但不再是唯一出路。 -->
 <div class="mask" id="rmView" onclick="if(event.target===this)rmvClose()">
-  <div class="modal" style="max-width:780px">
-    <div class="mh">
-      <img id="rmvImg" alt="" onerror="this.style.display='none'">
-      <div style="min-width:0;flex:1">
+  <div class="modal rmv">
+    <div class="rmv-hd">
+      <span class="rmv-ico" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 1.6h5.4L13 5.2v9.2H4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M9.2 1.7v3.6h3.7" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg></span>
+      <div class="t">
         <h3 id="rmvTitle">—</h3>
-        <div class="meta" id="rmvMeta"></div>
+        <div class="rmv-sub" id="rmvSub"></div>
       </div>
       <button class="mclose" onclick="rmvClose()">✕</button>
     </div>
-    <div style="padding:16px 18px;max-height:70vh;overflow:auto" id="rmvBody"></div>
+    <div class="rmv-scroll" id="rmvBody"></div>
   </div>
 </div>
 <!-- ═══ 资料 / 爬虫字段弹窗（页面管理 + 游戏库共用一套表单）═══
@@ -1383,12 +1420,20 @@ const RM = {
   save: { label: '存档', srcs: [['save', '存档位置'], ['cloud', '云存档']] },
 };
 
-/* ═══════════ v10.94 条目查看弹窗 ═══════════
- * 用户口径：「模块页面仅展示对应的模块内容，需要一个查看弹窗，展示对应的内容
+/* ═══════════ v10.97 条目查看弹窗（模块页每行「查看」）═══════════
+ * 用户口径（v10.94）：「模块页面仅展示对应的模块内容，需要一个查看弹窗，展示对应的内容
  *           （帖子的话需要完整内容）」。
+ * 用户口径（v10.97）：「管理页面点击后的弹窗我想要也这样的」（附一张帖子详情页截图）。
+ *
  * 数据来源：列表接口本身就带 content 全文（mods 8,942/8,943 条有），
  *   所以点开**不发新请求**、不转圈、不受源站限流影响。
- * ⚠️ 不要改成「点开再拉 /api/mods/item」—— 列表已带全文，多一跳只会更慢且会失败。 */
+ * ⚠️ 不要改成「点开再拉 /api/mods/item」—— 列表已带全文，多一跳只会更慢且会失败。
+ *
+ * ★ 与 v10.94 的区别不是「换皮」，是**正文从纯文本变成有结构的排版**：
+ *   机地帖正文本身分成「内容详情 / 安装说明 / 下载链接 / 注意事项」几段，
+ *   以前整段塞进 <pre>，作者写的小节标题混在正文里，读起来是一堵墙。
+ *   现在识别三类结构（小节标题 / 编号步骤 / 段落），并把 URL 变成可点链接。
+ */
 const RMV_SRC = {
   fitgirl: 'FitGirl Repack', mod: '机地 MOD 帖', ts: 'Thunderstore',
   trainers: '修改器库', jidi: '机地修改器帖', save: '存档位置', cloud: '云存档',
@@ -1402,48 +1447,151 @@ function rmvFmtTs(v) {
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
     + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
 }
+
+/* 行内渲染：**转义优先**，URL 单独切出来再分别转义（否则 href 里的 & 会把属性截断）。
+ * ★ 为什么不用「先 esc 全文再正则替换」：转义后 `&` 是 `&amp;`，再拼进 href 会被浏览器
+ *   解码成 `&` —— 看起来能用，但只要 URL 里出现 `&#39;` 这类序列就会解错。
+ *   切分原始文本再分别转义，只有一条路径，不存在二次解码。 */
+const RMV_URL_RE = /(https?:\/\/[^\s<>"'）)】]+|ed2k:\/\/[^\s<>"']+|magnet:\?[^\s<>"']+)/g;
+function rmvInline(s) {
+  const t = String(s == null ? '' : s);
+  let out = '', last = 0, m;
+  RMV_URL_RE.lastIndex = 0;
+  while ((m = RMV_URL_RE.exec(t))) {
+    out += esc(t.slice(last, m.index));
+    let u = m[0];
+    /* 句末标点不算 URL（实测正文里大量 `链接：https://…。` 的写法） */
+    const tail = (u.match(/[.,;:!?。，；：！？、）)】]+$/) || [''])[0];
+    if (tail) u = u.slice(0, -tail.length);
+    out += '<a href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + esc(u) + '</a>'
+      + esc(tail);
+    last = m.index + m[0].length;
+  }
+  out += esc(t.slice(last));
+  return out;
+}
+
+/* 小节标题判定（**保守白名单**，不是「短行即标题」）。
+ * 为什么保守：正文里「分享文件：xxx」「链接：xxx」这类短行很多，
+ * 一旦整类当标题，正文会被切得七零八落 —— 那比不识别更糟。
+ * 只认两种：`【xxx】` 整行包裹，或**以常见小节词结尾**的短行（≤18 字、无句末标点）。 */
+const RMV_SEC_TAIL = ['说明', '介绍', '方法', '步骤', '链接', '地址', '注意', '日志', '更新',
+  '要求', '教程', '问题', '内容', '详情', '前言', '简介', '功能', '兼容', '安装', '卸载',
+  '配置', '设置', '声明', '须知', '事项', '提示'];
+function rmvIsHead(t) {
+  if (/^【[^】]{1,20}】$/.test(t)) return true;
+  if (t.length > 18) return false;
+  if (/[。！？!?；;，,、：:.…]$/.test(t)) return false;
+  if (/^(http|ed2k|magnet)/i.test(t)) return false;
+  return RMV_SEC_TAIL.some((w) => t.endsWith(w));
+}
+
+/** 正文 → HTML（小节标题 / 编号步骤 / 段落三段式） */
+function rmvDoc(text) {
+  const lines = String(text || '').replace(/\r/g, '').split('\n');
+  let out = '', buf = [];
+  const flush = () => {
+    if (!buf.length) return;
+    out += '<p>' + buf.join('<br>') + '</p>';
+    buf = [];
+  };
+  for (const raw of lines) {
+    const t = raw.trim();
+    if (!t) { flush(); continue; }
+    if (rmvIsHead(t)) {
+      flush();
+      out += '<h5>' + rmvInline(t.replace(/^【/, '').replace(/】$/, '')) + '</h5>';
+      continue;
+    }
+    const m = t.match(/^(\d{1,2})[.、)]\s*(.+)$/);
+    if (m) {
+      flush();
+      out += '<div class="li"><i>' + esc(m[1]) + '.</i><span>' + rmvInline(m[2]) + '</span></div>';
+      continue;
+    }
+    buf.push(rmvInline(t));
+  }
+  flush();
+  /* 作者偶尔会打 **粗体**：转义后 `**` 仍在，就地换成 <b>（限定不含标签的片段，避免咬进 href） */
+  return out.replace(/\*\*([^*<>]{1,80})\*\*/g, '<b>$1</b>');
+}
+
 function rmvOpen(i) {
   const r = (window.__rmItems || [])[i];
   if (!r) return;
   const x = r.raw || {};
   const srcN = RMV_SRC[rmSrc] || rmSrc || '资源';
-  $('rmvTitle').textContent = r.title || x.title || '(无标题)';
-  const img = $('rmvImg');
-  const cover = x.cover || '';
-  img.style.display = cover ? 'block' : 'none';
-  if (cover) img.src = cover;
+  const title = r.title || x.title || '(无标题)';
+  $('rmvTitle').textContent = title;
 
-  const meta = ['<span class="bdg b-jd">' + esc(srcN) + '</span>'];
+  /* 副标题：游戏名 + 主键（主键一眼能对回库） */
   const gt = r.gameTitle || x.libTitle || x.game || '';
-  if (gt) {
-    meta.push('<span>游戏 <b>' + esc(gt) + '</b>'
-      + ((r.gameId || x.libId) ? ' <small class="mut">' + esc(r.gameId || x.libId) + '</small>' : '') + '</span>');
-  }
-  if (x.author) meta.push('<span>作者 ' + esc(x.author) + '</span>');
-  if (x.src && /Thunderstore/.test(x.src)) meta.push('<span>' + esc(x.src) + '</span>');
-  const when = rmvFmtTs(x.ut || x.ct);
-  if (when) meta.push('<span>' + when + '</span>');
-  $('rmvMeta').innerHTML = meta.join('');
+  const gid = r.gameId || x.libId || '';
+  $('rmvSub').innerHTML = (gt ? '<span>' + esc(gt) + '</span>' : '')
+    + (gid ? '<span class="mut">' + esc(gid) + '</span>' : '')
+    + '<span class="mut">' + esc(srcN) + '</span>';
 
   let h = '';
-  /* ① 正文：帖子类（mod / jidi）有 content 全文；结构化来源如实说「没有正文」 */
-  const content = String(x.content || x.intro || x.desc || '').trim();
-  h += '<div class="rmv-sec"><h4>正文' + (content ? '（完整 · ' + content.length + ' 字）' : '') + '</h4>'
-    + (content
-      ? '<div class="rmv-pre">' + esc(content) + '</div>'
-      : '<div class="rmv-pre empty">这一条来自 ' + esc(srcN) + '，源站没有正文段落 —'
-        + ' 下面的字段与链接就是它的全部内容。</div>')
-    + '</div>';
 
-  /* ② 字段：只列有值的（空值不占位，避免一屏「—」） */
+  /* ① 大封面（帖子没有封面时退回库封面；都没有就整块不占位） */
+  const cover = x.cover || x.libCover || '';
+  if (cover) {
+    h += '<div class="rmv-hero"><img src="' + esc(cover) + '" alt=""'
+      + ' onerror="this.parentNode.style.display=\'none\'"></div>';
+  }
+
+  /* ② chip 行：板块 / 原作者 / 时间 / 浏览量 —— 与参照页同序 */
+  const chips = ['<span class="k">板块</span><span class="rmv-chip">' + esc(srcN) + '</span>'];
+  if (x.author) chips.push('<span class="k">原作者</span><b>' + esc(x.author) + '</b>');
+  if (x.src && /Thunderstore/.test(x.src)) chips.push('<span>' + esc(x.src) + '</span>');
+  const when = rmvFmtTs(x.ut || x.ct);
+  if (when) chips.push('<span>' + esc(when) + '</span>');
+  if (Number(x.pv) > 0) chips.push('<span title="浏览量">👁 ' + nf(x.pv) + '</span>');
+  h += '<div class="rmv-chips">' + chips.join('<span class="dot">·</span>') + '</div>';
+
+  /* ③ 原链：优先给**第一条下载链**（参照页那行就是网盘直链），没有才给源站帖 */
+  let rawUrl = '';
+  if (Array.isArray(x.links) && x.links.length) rawUrl = (x.links[0] || {}).url || '';
+  if (!rawUrl) rawUrl = x.url || '';
+  if (rawUrl) {
+    h += '<a class="rmv-url" href="' + esc(rawUrl) + '" target="_blank" rel="noopener noreferrer">'
+      + esc(rawUrl) + '</a>';
+  }
+
+  /* ④ 正文：帖子类有 content 全文；结构化来源如实说「没有正文」 */
+  const content = String(x.content || x.intro || x.desc || '').trim();
+  if (content) {
+    h += '<div class="rmv-doc">' + rmvDoc(content) + '</div>';
+  } else if (['mod', 'jidi', 'ts'].indexOf(rmSrc) >= 0) {
+    h += '<div class="rmv-doc"><p style="color:#94a3b8">这一条来自 ' + esc(srcN)
+      + '，源站没有正文段落 — 下面的字段与链接就是它的全部内容。</p></div>';
+  }
+
+  /* ⑤ 游侠存档等来源的「安装步骤」是结构化数组（head + text），按同样的小节样式渲染 */
+  const steps = Array.isArray(x.steps) ? x.steps : [];
+  if (steps.length) {
+    h += '<div class="rmv-doc">' + steps.map((s) => (s && (s.head || s.text))
+      ? '<h5>' + rmvInline(s.head || '') + '</h5><p>' + rmvInline(s.text || '') + '</p>' : '').join('') + '</div>';
+  }
+
+  /* ⑥ 游戏截图（游侠存档 57% 有）：三列缩略，点开原图 */
+  const shots = Array.isArray(x.shots) ? x.shots.filter((u) => u && /^https?:/i.test(String(u))) : [];
+  if (shots.length) {
+    h += '<div class="rmv-shots">' + shots.slice(0, 9).map((u) =>
+      '<a href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">'
+      + '<img src="' + esc(u) + '" alt="" loading="lazy" onerror="this.parentNode.style.display=\'none\'"></a>').join('')
+      + '</div>';
+  }
+
+  /* ⑦ 字段：只列有值的（空值不占位，避免一屏「—」） */
   const kv = [];
   const push = (k, v) => {
     if (v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length)) return;
     kv.push('<div><i>' + esc(k) + '</i><b>' + esc(String(v)) + '</b></div>');
   };
   push('类型', x.kind === 'modifier' ? '修改器' : (x.kind === 'mod' ? 'MOD' : ''));
-  push('热度', x.pv);
-  push('收藏', x.favors);
+  /* ★ v10.97：0 值不占位 —— 「收藏 0」不是信息，是噪声（与「空值不占位」同一条口径） */
+  push('收藏', Number(x.favors) || '');
   push('版本', (x.extra && x.extra.version) || x.version);
   push('下载量', (x.extra && x.extra.downloads) || x.downloads);
   push('体积', (x.extra && x.extra.size) || x.size);
@@ -1454,18 +1602,26 @@ function rmvOpen(i) {
   if (x.extra && x.extra.adult) kv.push('<div><i>标记</i><b>18+</b></div>');
   if (kv.length) h += '<div class="rmv-sec"><h4>字段</h4><div class="kv">' + kv.join('') + '</div></div>';
 
-  /* ③ 数组字段（存档模块的路径 / 注册表 / 云平台）：逐行铺开，不折成逗号串 */
+  /* ⑧ 数组字段（存档模块的路径 / 注册表 / 云平台）：逐行铺开，不折成逗号串
+   * ★ v10.97 修：`paths` 的元素是**对象**（{raw, shown, notes, tags}），
+   *   老代码直接 `String(s)` ⇒ 弹窗里 44 行全是「[object Object]」（显示不报错，最难发现那种）。
+   *   ⇒ 统一过一层 fmt：对象优先取 `shown`（已把 `<base>` 换成人话），其次 `raw`。
+   *   ⚠️ 别只改 paths 不改 regs —— 两个字段的形状由同一份 Ludusavi 数据决定，随时可能一起变。 */
+  const arrText = (s) => {
+    if (s && typeof s === 'object') return String(s.shown || s.raw || s.path || '');
+    return String(s == null ? '' : s);
+  };
   const arrSec = (name, arr) => {
-    const a = Array.isArray(arr) ? arr.filter((s) => String(s || '').trim()) : [];
+    const a = Array.isArray(arr) ? arr.map(arrText).filter((s) => String(s || '').trim()) : [];
     if (!a.length) return '';
     return '<div class="rmv-sec"><h4>' + name + '（' + a.length + '）</h4><div class="rmv-pre">'
-      + a.map((s) => esc(String(s))).join('\n') + '</div></div>';
+      + a.map((s) => esc(s)).join('\n') + '</div></div>';
   };
   h += arrSec('存档路径', x.paths);
   h += arrSec('注册表', x.regs);
   h += arrSec('云存档平台', x.cloud);
 
-  /* ④ 链接：mod 的 x.links 带 kind（迅雷网盘 / 夸克 / 其他），比列表行的单条链接全 */
+  /* ⑨ 链接：mod 的 x.links 带 kind（迅雷网盘 / 夸克 / 其他），比列表行的单条链接全 */
   let links = [];
   if (Array.isArray(x.links) && x.links.length) {
     links = x.links.map((l) => ({ label: l.kind || l.label || l.url, url: l.url, kind: l.kind }));
@@ -1483,6 +1639,7 @@ function rmvOpen(i) {
   }
 
   $('rmvBody').innerHTML = h;
+  $('rmvBody').scrollTop = 0;
   $('rmView').classList.add('on');
 }
 function rmvClose() { $('rmView').classList.remove('on'); }

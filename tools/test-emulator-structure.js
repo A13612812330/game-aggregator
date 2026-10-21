@@ -326,10 +326,19 @@ t('XD 详情返回标签 tags（新版 .article-tags）', /\.article-tags a/.tes
  *        废形态同时加进反向断言，防止哪天被捡回来。 */
 t('★ 组卡卡面动作在（.grp-more 展开全部 + .cov-btn 进详情，正向锚点）',
   /class="grp-more"/.test(rsec) && /class="cov-btn"/.test(rsec) && /data-grp-more/.test(rsec));
-t('★ 卡内下载通道是外链，不被整卡点击吞掉（closest(\'.gl-lk a\') 早退）',
-  /closest\('\.gl-lk a'\)/.test(rsec));
-t('★ 未命中端游库时给明确提示（toast），不能变成「点了没反应」',
-  /typeof toast === 'function'/.test(rsec) && /未收录进本地端游库/.test(rsec));
+/* ★★ v10.97：卡面已无 `<a>`（条目行搬进弹窗）⇒ 旧的「点链早退」判据失去意义，
+   换成守**分流顺序**：`[data-grp-more]` → `.cov-btn` → 整卡兜底，前两个都必须 stopPropagation。
+   顺序错了就是 bug（点「查看 N 条下载」会同时触发整卡兜底，一次点击两次请求）。 */
+t('★ 卡内动作先于整卡分流（data-grp-more / .cov-btn 都 stopPropagation 早退，再兜底整卡）',
+  /closest\('\[data-grp-more\]'\)/.test(rsec)
+  && /e\.stopPropagation\(\); grpAllPop\(more\); return;/.test(rsec)
+  && /closest\('\.cov-btn'\)/.test(rsec)
+  && /grpAllPop\(card\);/.test(rsec));
+/* ★★ v10.97：整卡主行为反转（进详情 → 看全部条目）⇒ 没有 libId 的组以前只 toast
+   「未收录进本地端游库」然后什么也不发生，现在照样能展开全部条目。
+   ⚠️ 反向：那句 toast 必须消失 —— 留着说明还有分支在「点了没反应」。 */
+t('★ v10.97：无端游库命中的组也能用（整卡兜底打开全部条目，不再只 toast「未收录」）',
+  /grpAllPop\(card\);/.test(rsec) && !/未收录进本地端游库/.test(rsec));
 t('★★ 反向断言：卡面实现里已无 .paths 铺路径（v10.45 核心诉求）',
   !/class="paths"/.test(rsec) && !/closest\('\.paths'\)/.test(rsec));
 t('★★ 反向断言：copyText 已从派生页驱动里删除（复制搬进了弹窗的 #svLoc 位置弹窗）',
@@ -576,8 +585,12 @@ t('★★ 旧卡面样式整组已删（反向：主源 + 派生页的 paths / s
   DEAD_SEL.filter((s) => idx.includes(s) || res.includes(s)).join(', ') || '全部已删');
 t('★ 正向锚点：组卡样式在（.emu-grid.grp / .emu-card.grp .gl / .emu-card.grp .grp-more）',
   /\.emu-grid\.grp\{/.test(res) && /\.emu-card\.grp \.gl\{/.test(res) && /\.emu-card\.grp \.grp-more\{/.test(res));
-t('组卡封面比「一卡一条」矮（92 → 78px）：主体信息在卡内列表，封面只做识别',
-  /\.emu-card\.grp \.cov\{height:78px/.test(res));
+/* ★★ v10.97：封面从 78 抬回 **92px** —— 卡内行删掉后，识别任务全落在封面上，
+   与手游中心（.emu-card .cov 92px）对齐，两个页面才是一套视觉。
+   ⚠️ 这条判据必须写成**精确值**：`check-card-rules.js` 的 IMG_EXCEPT 把 92 钉成例外期望值，
+   两处不一致会直接报红（那个闸门就是为了防「样式悄悄改回去」）。 */
+t('组卡封面与手游中心对齐（92px）：卡内行已删，识别任务全落在封面',
+  /\.emu-card\.grp \.cov\{height:92px/.test(res));
 t('组卡通道按钮与卡内展开按钮都走卡片内小圆角（不走 --cd-r，否则像卡里嵌卡）',
   /\.emu-card\.grp \.gl-lk a\{[^}]*border-radius:6px/.test(res)
   && /\.emu-card\.grp \.grp-more\{[^}]*border-radius:8px/.test(res));
@@ -595,8 +608,12 @@ t('★ v10.48：弹窗内全量列表 + 搜索条样式在（.grp-pop-s 与卡�
 t('★★ v10.48 反向：旧的「原地展开」实现（grpExpand）已从资源页脚本里消失',
   !/function grpExpand\s*\(/.test(res),
   /function grpExpand\s*\(/.test(res) ? '仍存在 ⇒ 行为没真正改' : '已删');
-t('★ v10.48：卡内按钮文案改成「查看全部 N 条 ▸」（行为已不是原地展开，文案不能留在旧说法）',
-  /查看全部 ' \+ Number/.test(res) && !/展开全部 ' \+ Number/.test(res));
+/* ★★ v10.97：文案从「查看全部 N 条」改为「查看 N 条下载」——
+   卡内已不铺条目，「全部」失去了参照物（对比的是「卡内那 3 条」），写「N 条下载」才自洽。 */
+t('★ v10.97：卡底按钮文案是「查看 N 条下载 ▸」（卡内已无条目，「全部」失去参照物）',
+  /* ⚠️ 判据要跨行：文案在模板串里被拆成两行拼接（`'">查看 '` + Number(...) + `' 条下载 ▸`），
+     写成单行字面量会恒红。 */
+  /查看 '[\s\S]{0,80}?条下载 ▸/.test(res) && !/查看全部 ' \+ Number/.test(res));
 /* ★★ v10.49：卡内条目标题改**单行省略**（用户口径「卡片中的内容每条显示一行即可多余字显示省略号即可」）。
    ★ 必须**主源 + 派生页都查**：主源是唯一真源，但线上加载的是派生页 ——
      只查派生页 ⇒ 有人只改主源不重建照样绿；只查主源 ⇒ 改完不重建也绿。
@@ -688,8 +705,15 @@ const GN = require(path.join(root, 'data', 'game-name'));
   t('★★ v10.50：条目按 `canPost = !!it.hasPost` 决定入口（无正文的行不加 class、不加按钮）',
     /const canPost = !!it\.hasPost/.test(rsec) && /data-post-open/.test(rsec)
     && /' has-post' : ''/.test(rsec));
-  t('★ v10.50：卡内点击放行原贴入口（否则整卡分流会先把点击吃掉、弹窗永远打不开）',
-    /closest\('\[data-post-open\]'\)/.test(rsec) && /closest\('\.gl-i\.has-post'\)/.test(rsec));
+  /* ★★ v10.97：条目行只在弹窗里 ⇒ 卡面分流不再需要「放行原贴入口」，
+     这条路整个交给 `bindPostDelegation`（主源共享资产）。判据因此改读 `idx`（主源），
+     并要求三件事同时成立：入口按钮 / 整行 / `a[href]` 让行。
+     ⚠️ 只改数据源不改判据（仍读 rsec）会**恒红**；删掉则是零覆盖 —— 所以是搬家不是删除。 */
+  t('★ v10.97：原贴入口由全局委托 `bindPostDelegation` 统一处理（按钮 / 整行 / 外链让行）',
+    /function bindPostDelegation\(\)/.test(idx)
+    && /closest\('\[data-post-open\]'\)/.test(idx)
+    && /closest\('\.gl-i\.has-post'\)/.test(idx)
+    && /closest\('a\[href\]'\)/.test(idx));
   t('★ v10.50：详情页资源行也有同一个入口（.d-res-po + data-post-open，共用一套委托）',
     /class="d-res-po"[\s\S]{0,160}data-post-open/.test(idx) && /\.d-res-it \.d-res-po\{/.test(idx));
 

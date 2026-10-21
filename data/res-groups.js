@@ -41,6 +41,13 @@ const gt = require('./gtrainers');
 /* ★ v10.58：`require('./fr')` 已摘除（见文件头四路来源说明 + docs/sop/FR-fearlessrevolution-抓取SOP.md） */
 const gcm = require('./trainers');
 const gamesDb = require('./gamesDb');
+/* ★ v10.97：热度来源。端游资源页四个分区（本体/MOD/存档/修改器）统一按「热度」排序，
+   而本聚合层原先**没有任何热度字段** —— 分组只有条数、条目只有下载量。
+   热度的唯一口径取「机地话题浏览量 dpv」（`data/jidi-topics.json`，17,220 条全量库）：
+   它是整站唯一一份**跨四个分区都能对上的游戏级热度**，本体分区本来就在用它排序。
+   ⚠️ 只需要 libId → gamesDb.jidiId → tid 的一次查表；不做名称模糊匹配
+      （跨源按名对齐在本项目是明令禁止的，见 PITFALLS 里的同名误配记录）。 */
+const jidiTopics = require('./jiditopics');
 const { normKey, cleanModTitle } = require('./name-normalize');
 const { displayName, enName } = require('./game-name');
 const { cleanPostText } = require('../shared');
@@ -202,6 +209,16 @@ function filesSig() {
     }).join('|');
 }
 
+/** 名称键长度护栏：中文 ≥ 2 字 / 拉丁 ≥ 4 字符。
+ *  为什么按字族分开：`length >= 3` 一刀切会把 `剑星` / `鸣潮` 这类 2 字中文名整类误杀
+ *  （本项目在 cross-source-name-matching 里记过这条），而 `AC` / `FF` 这种 2 字符拉丁
+ *  又确实是撞名高发区 —— 两个方向必须用两个阈值。 */
+function nameKeyOk(k) {
+  const s = String(k || '');
+  const cjk = (s.match(/[\u3400-\u9fff]/g) || []).length;
+  return cjk >= 2 || s.length >= 4;
+}
+
 function build() {
   const s = filesSig();
   if (cache && s === sig) return cache;
@@ -214,6 +231,32 @@ function build() {
     gamesDb.load();
     lib = new Map((gamesDb.all() || []).map((g) => [g.id, g]));
   } catch (e) { /* 库没起来也不致命：只是没有封面兜底 */ }
+
+  /* ★ v10.97：tid → 机地话题（热度 dpv / 体积）。话题库没落盘时**静默降级**为
+     「只用组内条目下载量」——热度排序仍然可用，只是退化成「MOD 下载热度」口径。 */
+  const topicByTid = new Map();
+  /* 名称 → tid（**只收唯一键**）。为什么要这一层：端游库里 13,448 条有 jidiId，
+     但实测热门组（剑星 / 泰拉瑞亚 / 消逝的光芒）的 XD 记录**没有 appid ⇒ 从来没被合并过**
+     （sync-jidi-library 靠 appid 对齐，XD 分类页那条没有 appid）⇒ 直接按 id 查不到热度。
+     兜底用**严格同名**：normKey 完全相等、且该名字在话题库里唯一（撞名记 'AMB' 丢弃）。
+     ⚠️ 三条护栏缺一不可 —— 本项目被「按名匹配」坑过（ZTE Blade A73 → Samsung Galaxy A73）：
+        ① 只做**完全相等**，不做包含/相似度；② 名字必须**唯一**；③ 键太短不认（见 nameKeyOk）。 */
+  const topicByName = new Map();
+  try {
+    const d = jidiTopics.load();
+    for (const t of (d.items || [])) {
+      if (!t || t.tid == null) continue;
+      const tid = String(t.tid);
+      topicByTid.set(tid, t);
+      for (const n of [t.title, t.titleEn]) {
+        const k = normKey(n);
+        if (!k || !nameKeyOk(k)) continue;
+        const old = topicByName.get(k);
+        if (old === undefined) topicByName.set(k, tid);
+        else if (old !== tid) topicByName.set(k, 'AMB');
+      }
+    }
+  } catch (e) { /* 同上：降级不报错 */ }
 
   const groups = new Map();      /* key → group */
   const byCat = { mod: [], saves: [], trainers: [] };
@@ -244,10 +287,39 @@ function build() {
         libTitle: it.libTitle || (g && g.title) || '',
         cover: it.cover || '',
         n: 0, bySrc: {}, cats: {},
+        /* ★ v10.97 卡面三项「重要信息」：体积 / 热度 /（count = 条数，下面累加）。
+         *   · size    取端游库字段（19,250 / 19,732 有值），缺了再用机地话题的体积兜底
+         *   · hotTopic 机地话题浏览量 dpv（游戏级热度）
+         *   · hotDl    组内条目下载量之和（话题库覆盖不到时的**同分区**热度兜底）
+         *   ⚠️ 三个字段一次算好挂在组上，别在排序比较函数里现算（那是 O(组×条)）。 */
+        size: (g && g.size) || '',
+        hotTopic: 0,
+        hotDl: 0,
       };
+      const jid = (g && g.jidiId) ? String(g.jidiId).replace(/^jidi-/, '') : '';
+      let tp = jid ? topicByTid.get(jid) : null;
+      /* ① 端游库自带 hot（sync-jidi-library 合并时写进来的 dpv）—— 最可信，先用它 */
+      let hotTopic = Number(g && g.hot) || 0;
+      if (!hotTopic && tp) hotTopic = Number(tp.dpv) || 0;
+      /* ② 库记录没对上话题 ⇒ 严格同名兜一次（唯一 + 长度护栏，见上面 topicByName 的注释） */
+      if (!hotTopic) {
+        const nk = normKey(gr.name);
+        const byName = (nk && nameKeyOk(nk)) ? topicByName.get(nk) : null;
+        if (byName && byName !== 'AMB') {
+          tp = topicByTid.get(byName) || null;
+          if (tp) hotTopic = Number(tp.dpv) || 0;
+        }
+      }
+      if (tp) {
+        gr.hotTopic = hotTopic;
+        if (!gr.size && tp.size) gr.size = String(tp.size);
+      } else {
+        gr.hotTopic = hotTopic;
+      }
       groups.set(key, gr);
     }
     gr.n++;
+    gr.hotDl += Number(it.downloads) || 0;
     gr.bySrc[it.src] = (gr.bySrc[it.src] || 0) + 1;
     gr.cats[it.cat] = (gr.cats[it.cat] || 0) + 1;
     if (!gr.cover && it.cover) gr.cover = it.cover;
@@ -306,7 +378,10 @@ function groupItems(cat, key) {
  *   cat    'mod' | 'saves' | 'trainers'
  *   q      关键词（匹配组名 / 库名 / 组内任意条目标题）
  *   src    只看「含有该来源条目」的组（gt / yx / gcm / mod）★ v10.58 起 fr 已摘除
- *   sort   'count'(默认,条目多的在前) | 'game'(按名) | 'new'(组内最新)
+ *   sort   'hot'(默认,热度) | 'count'(条目多) | 'game'(按名) | 'new'(组内最新)
+ *          ★ v10.97 默认由 count 改为 **hot**（用户口径：「端游四个模块都需默认按照热度排序」）。
+ *          热度口径 = 机地话题浏览量 dpv；话题库没覆盖到的组回落「组内条目下载量之和」。
+ *          两者都取不到 ⇒ 0，排到后面（**不编造热度**）。
  *   limit / offset
  */
 function groups(cat, opts = {}) {
@@ -314,7 +389,9 @@ function groups(cat, opts = {}) {
   const list = b.gByCat[cat] || [];
   const q = String(opts.q || '').trim();
   const src = String(opts.src || '').trim();
-  const sort = opts.sort || 'count';
+  /* 只认这四个值，其余（拼错 / 老前端传 count）一律回落到默认的 hot */
+  const sort = ['hot', 'count', 'game', 'new'].indexOf(String(opts.sort || '')) >= 0
+    ? String(opts.sort) : 'hot';
   let pool = list;
 
   /* ★ src 筛在**组**粒度：一个组可能混源（存档 = 游侠 + GTrainers），
@@ -327,18 +404,29 @@ function groups(cat, opts = {}) {
     pool = pool.filter((g) => hit.has(g.key));
   }
 
+  /* ★ v10.97b：搜索时**名称命中**的组要排在「只有条目撞词」的组前面。
+   *   为什么必须这样：`②` 那条是「组内条目标题命中也算」（用户搜「整合包」要搜得到），
+   *   但默认排序改成热度之后，跨界 MOD 会把不相关的游戏顶上来 —— 实测搜「赛博朋克」，
+   *   剑星（话题热度 348,068）压过赛博朋克2077（238,529），只因剑星组里有一条
+   *   「武士运动服 赛博朋克2077」。用户搜的是**游戏名**，先给名字对的。
+   *   ⚠️ 只在 `q` 非空时生效：无关键词时 `nameHit` 为 null，排序结果与纯热度完全一致。 */
+  let nameHit = null;
   if (q) {
     const ql = q.toLowerCase();
     const qk = normKey(q);
     const hitKeys = new Set();
+    nameHit = new Set();
     /* ① 组名直接命中 */
     for (const g of pool) {
       const gr = b.groups.get(g.key);
       if (!gr) continue;
       const names = [gr.name, gr.nameEn, gr.game, gr.libTitle].filter(Boolean);
-      if (names.some((n) => String(n).toLowerCase().includes(ql) || (qk && normKey(n).includes(qk)))) hitKeys.add(g.key);
+      if (names.some((n) => String(n).toLowerCase().includes(ql) || (qk && normKey(n).includes(qk)))) {
+        hitKeys.add(g.key);
+        nameHit.add(g.key);
+      }
     }
-    /* ② 组内条目标题命中（用户搜「整合包」也该搜得到） */
+    /* ② 组内条目标题命中（用户搜「整合包」也该搜得到）——只算命中，不算「名称命中」 */
     for (const it of b.byCat[cat]) {
       if (hitKeys.has(it._g)) continue;
       const t = it.title || '';
@@ -353,8 +441,24 @@ function groups(cat, opts = {}) {
    *   用原串会先比到一个 CJK/Latin 混排的怪序列（`abc…` 落在中文前后不定）；
    *   展示名基本是中文名，localeCompare 'zh' 才真的按拼音排。 */
   const sortName = (k) => String(grp(k).name || grp(k).game || '');
-  if (sort === 'game') arr.sort((x, y) => sortName(x.key).localeCompare(sortName(y.key), 'zh'));
-  else if (sort === 'new') {
+  /* 组的热度 —— 一次取值统一口径：话题浏览量优先，缺了用组内下载量。
+   * ★ v10.97：两种量纲**不能直接比大小**（dpv 常见 10 万级、下载量合计常见千级），
+   *   所以排序用 `[有话题热度, 热度值]` 两级键：知道热度的排前面，没收录话题的
+   *   按本模块下载量排在其后 —— 否则「下载量大的冷门游戏」会压过「热度已知的热门游戏」。 */
+  const hotPair = (k) => {
+    const g = grp(k);
+    if (!g) return [0, 0];
+    if (g.hotTopic > 0) return [2, g.hotTopic];
+    if (g.hotDl > 0) return [1, g.hotDl];
+    return [0, 0];
+  };
+  /* ★ v10.97b：搜索时「名称命中」优先。`rel` 作为**主键**插在每种排序最前面，
+   *   其余排序键在各自档位内照旧 —— 用户点了「按游戏名」也应当先看到名对的组。 */
+  const rel = (k) => (nameHit && nameHit.has(k) ? 1 : 0);
+  if (sort === 'game') {
+    arr.sort((x, y) => (rel(y.key) - rel(x.key))
+      || sortName(x.key).localeCompare(sortName(y.key), 'zh'));
+  } else if (sort === 'new') {
     /* 组内最新时间戳 —— 用预计算表，别在比较函数里全表扫 */
     const newestOf = new Map();
     for (const g of arr) {
@@ -363,9 +467,21 @@ function groups(cat, opts = {}) {
       for (const it of list) if ((it.ts || 0) > m) m = it.ts || 0;
       newestOf.set(g.key, m);
     }
-    arr.sort((x, y) => (newestOf.get(y.key) || 0) - (newestOf.get(x.key) || 0)
+    arr.sort((x, y) => (rel(y.key) - rel(x.key))
+      || (newestOf.get(y.key) || 0) - (newestOf.get(x.key) || 0)
       || y.n - x.n);
-  } else arr.sort((x, y) => y.n - x.n || sortName(x.key).localeCompare(sortName(y.key), 'zh'));
+  } else if (sort === 'count') {
+    arr.sort((x, y) => (rel(y.key) - rel(x.key)) || y.n - x.n
+      || sortName(x.key).localeCompare(sortName(y.key), 'zh'));
+  } else {
+    /* ★ v10.97 默认档：热度降序 → 条数降序 → 名称。
+       第二档用条数而不是名称：热度打平时「资源多的」确实更值得排在前面。 */
+    arr.sort((x, y) => {
+      const a = hotPair(x.key); const b2 = hotPair(y.key);
+      return (rel(y.key) - rel(x.key)) || (b2[0] - a[0]) || (b2[1] - a[1]) || (y.n - x.n)
+        || sortName(x.key).localeCompare(sortName(y.key), 'zh');
+    });
+  }
 
   const limit = Math.min(parseInt(opts.limit, 10) || 24, 200);
   const offset = parseInt(opts.offset, 10) || 0;
@@ -387,10 +503,20 @@ function groups(cat, opts = {}) {
        *   cats 字段保留跨分区口径（「这款游戏还有什么资源」），语义不同，别混用。 */
       const bySrc = {};
       for (const x of all) bySrc[x.src] = (bySrc[x.src] || 0) + 1;
+      const hotTopic = gr.hotTopic || 0;
+      const hotDl = gr.hotDl || 0;
       return {
         key: g.key, game: gr.game, name: gr.name, nameEn: gr.nameEn,
         libId: gr.libId, libTitle: gr.libTitle, cover: gr.cover,
         count: g.n, bySrc, cats: gr.cats,
+        /* ★ v10.97 卡面「重要信息」三项 —— 前端只读，不再自己算：
+         *   size    游戏体积（库字段，缺了用话题体积）
+         *   hot     热度数值；hotSrc 说明这个数的**来源**（topic=话题浏览量 / dl=条目下载量 / ''=无）
+         *   ★ 为什么要 hotSrc：两种量纲差两个数量级（dpv 30 万 vs 下载量几千），
+         *     不标注来源的话，「为什么这个游戏热度 348,068、旁边那个只有 2,300」没法解释。 */
+        size: gr.size || '',
+        hot: hotTopic > 0 ? hotTopic : hotDl,
+        hotSrc: hotTopic > 0 ? 'topic' : (hotDl > 0 ? 'dl' : ''),
         items: all.slice(0, PREVIEW),
         more: Math.max(0, all.length - PREVIEW),
       };

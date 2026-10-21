@@ -675,6 +675,9 @@
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .emu-card .meta{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
   .emu-card .pill.fps{font-weight:800;font-family:var(--font-num)}
+  /* ★ v10.97：热度胶囊（🔥 348,068）。端游资源四区的卡面统一挂它，
+     与「条数 / 体积」区分开：热度是**排序依据**，视觉上要能一眼找到。 */
+  .emu-card .pill.hot{color:#C2410C;background:#FFF3EA;font-weight:750;font-family:var(--font-num)}
   .emu-card .pill.fps.smooth{color:#15803D;background:#DCFCE7}
   .emu-card .pill.fps.ok{color:#0369A1;background:#E0F2FE}
   .emu-card .pill.fps.low{color:#B45309;background:#FEF3C7}
@@ -739,21 +742,25 @@
   .emu-grid.tr .emu-card{border-color:#D5F2EA}
   .emu-grid.tr .emu-card:hover{border-color:#5EEAD4;box-shadow:0 8px 22px rgba(13,148,136,.15)}
 
-  /* ============ 🗂 端游资源「按游戏聚合」组卡（v10.47 · 三页签共用一套卡形） ============
-     用户口径：「MOD 按游戏做卡片而不是按 MOD」「存档只展示真有存档的而不是存档位置的」
-     「（修改器）同样按游戏聚合」+「卡内列前 3 条 + 展开全部」。
-     ⇒ 卡从「一卡一条（.emu-card 旧形态）」变成「一卡一款游戏，卡内铺 3 条条目」。
+  /* ============ 🗂 端游资源「按游戏聚合」组卡（v10.47 建 · v10.97 改形） ============
+     用户口径（v10.47）：「MOD 按游戏做卡片而不是按 MOD」「存档只展示真有存档的而不是
+     存档位置的」「（修改器）同样按游戏聚合」。
+     用户口径（v10.97）：「端游在页面显示参考手游，只需要游戏名称+游戏原名+大小热度等
+     重要信息」⇒ **卡内不再铺条目行**，只留 封面 / 名称 / 原名 / 条数·体积·热度 / 一个下载入口，
+     与手游中心（`.emu-card` 主形）同一张脸。
 
-     两处尺寸是专门调过的，不是随手写的：
-       · 网格更宽（248 → 316px）：条目行要同时放「序号 + 标题 + 通道按钮」，
-         248px 下标题只剩 6~7 个汉字就省略号，等于没写；
-       · 封面更矮（92 → 78px）：组卡的**主体信息在卡内列表**，封面只是识别用，
-         留 92px 会把每张卡顶得很高、一屏看不到两组。
+     ★ 尺寸随改形回调（v10.97）：
+       · 网格 316 → **248px**：卡内不再有「序号 + 标题 + 通道按钮」那三列，
+         316px 会让一张卡空出一大片白；248 与手游中心一致，一屏可看 5 张。
+       · 封面 78 → **92px**：卡面信息少了，识别任务全落到封面上（手游中心也是 92）。
        ⚠️ 封面这条属于「图片槽定高」，必须在 tools/check-card-rules.js 的 IMG_EXCEPT
-         里显式登记（含理由与期望值），否则前置闸会报「定高且无 aspect-ratio」。 */
-  .emu-grid.grp{grid-template-columns:repeat(auto-fill,minmax(316px,1fr));gap:11px}
+         里显式登记（含理由与期望值），否则前置闸会报「定高且无 aspect-ratio」。
+     ⚠️ `.emu-card.grp .gl` / `.gl-i` 那组样式**仍然保留且必须保留** ——
+        它们现在只服务「查看 N 条下载」弹窗（`.grp-pop .emu-card.grp` + `glRow`），
+        删掉弹窗里就变成一坨没有排版的文字。 */
+  .emu-grid.grp{grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:11px}
   .emu-card.grp{padding:11px 12px;gap:6px}
-  .emu-card.grp .cov{height:78px;margin:-2px -2px 1px}
+  .emu-card.grp .cov{height:92px;margin:-2px -2px 1px}
   .emu-card.grp h4{font-size:13.5px;font-weight:750;line-height:1.35;margin:0;
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
   .emu-card.grp .meta{margin-top:1px}
@@ -819,9 +826,9 @@
          否则下一个人读到这里会以为它还在原地展开。
      它是卡片**内部**的整宽按钮，圆角比卡片小一号（与 .cfg-btn 同类）⇒
      登记在 check-card-rules.js 的 RAD_EXCEPT。 */
-  .emu-card.grp .grp-more{width:100%;margin-top:7px;font-family:var(--font);font-size:11px;font-weight:750;
+  .emu-card.grp .grp-more{width:100%;margin-top:7px;font-family:var(--font);font-size:11.5px;font-weight:750;
     color:var(--c-primary);background:#F5F7FC;border:1px solid var(--c-border);border-radius:8px;
-    padding:6px 0;cursor:pointer;transition:.15s}
+    padding:7px 0;cursor:pointer;transition:.15s}
   .emu-card.grp .grp-more:hover{background:#EEF2FA;border-color:#C9D4E8}
   .emu-card.grp .grp-more[disabled]{opacity:.55;cursor:default}
   .emu-card.grp .gl-i.more-row .t{color:var(--c-t3)}

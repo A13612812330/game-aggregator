@@ -84,6 +84,12 @@ const SUITES = [
    *       这三类资源就会**看起来有防线、实际零覆盖**（用例删了但没人发现）。
    * 同 test-emulator-page.js，它也要 8123 在跑。 */
   'test-resource-page.js',
+  /* ★ v10.97 新增：后台「查看」弹窗的渲染层（rmv* 家族）。
+   * 起因：弹窗从「<pre> 一堵墙」改成「小节 / 步骤 / 段落」三段式，
+   *       里面有三个**不报错的错**（URL 二次转义、`String(对象)` → [object Object]、
+   *       短行误判成小节标题）。这些全是纯函数，jsdom 直调最稳，不进浏览器探针。
+   * 同 test-resource-page.js，它也要 8123 在跑（只用来取 admin.html 源码）。 */
+  'test-admin-modal.js',
   'test-saves-match.js',
   /* ★ v10.46 新增：「游侠存档 × 端游库」**名称匹配**层（前缀通道 + 代际护栏口径）。
    * 起因：这条链路此前零覆盖（test-saves-match.js 测的是 Ludusavi 路径匹配，另一条路），

@@ -165,7 +165,12 @@ sink.on('close', () => { /* noop */ });
   ok(/function rmvOpen\(/.test(ADMIN) && /function rmvClose\(/.test(ADMIN), 'D4 rmvOpen / rmvClose 已实现');
   ok(/Object\.assign\(def\.norm\(x\), \{ raw: x \}\)/.test(ADMIN), 'D5 列表行保留原始对象（否则弹窗没正文）');
   ok(/data-rmv="' \+ i \+ '"/.test(ADMIN), 'D6 每行有「查看」按钮');
-  ok(/content\.length \+ ' 字/.test(ADMIN), 'D7 正文标注完整字数（证明是全文而非截断）');
+  /* ★ v10.97：正文从 `<pre>` 换成三段式渲染（`.rmv-doc`），原来那句「（N 字）」标注随之消失。
+     但**意图不变**：这条守的是「渲染的是全文，不是截断版」。
+     ⇒ 判据换成「整段 content 直接喂给 rmvDoc，且代码里没有对 content 做 slice/截断」。
+     ⚠️ 别把这条删掉：正文一旦被 slice(1000)，页面上照样有排版、照样不报错 —— 只有用户发现「少了半截」。 */
+  ok(/rmvDoc\(content\)/.test(ADMIN) && !/content\.slice\(/.test(ADMIN) && !/content\.substr/.test(ADMIN),
+    'D7 正文整段渲染（rmvDoc(content) 且无 slice —— 证明是全文而非截断）');
   ok(/x\.content \|\| x\.intro \|\| x\.desc/.test(ADMIN), 'D8 正文取值链覆盖帖子/结构化来源');
   ok(/arrSec\('存档路径', x\.paths\)/.test(ADMIN) && /arrSec\('注册表', x\.regs\)/.test(ADMIN),
     'D9 存档模块的数组字段逐行铺开');

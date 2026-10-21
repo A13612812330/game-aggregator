@@ -50,29 +50,32 @@ const GRP_META = {
     kindCls: 'k-mod', label: 'MOD',
     /* 卡面统计口径：条目数 / 覆盖游戏 / 带下载通道的条目数 / 通道覆盖率 */
     statLabel: ['覆盖游戏', 'MOD 条数', '带下载通道', '通道覆盖率'],
-    sorts: [['count', '条目最多'], ['new', '最近更新'], ['game', '按游戏名']],
+    /* ★ v10.97：「最热门」排第一 ⇒ 进页面默认就按热度（GRP_META 首项 = 默认档） */
+    sorts: [['hot', '最热门'], ['count', '条目最多'], ['new', '最近更新'], ['game', '按游戏名']],
   },
   saves: {
     grid: 'svGrid', count: 'svCount', stats: 'svStats', built: 'svBuilt',
     more: 'svMore', search: 'svSearch', sortsBox: 'svSorts', srcBox: 'svSrc',
     kindCls: 'k-saves', label: '存档',
     statLabel: ['覆盖游戏', '可下载存档', '带下载通道', '通道覆盖率'],
-    sorts: [['count', '存档最多'], ['new', '最近更新'], ['game', '按游戏名']],
+    sorts: [['hot', '最热门'], ['count', '存档最多'], ['new', '最近更新'], ['game', '按游戏名']],
   },
   trainers: {
     grid: 'trGrid', count: 'trCount', stats: 'trStats', built: 'trBuilt',
     more: 'trMore', search: 'trSearch', sortsBox: 'trSorts', srcBox: 'trSrc',
     kindCls: 'k-trainers', label: '修改器',
     statLabel: ['覆盖游戏', '修改器条数', '可下载条数', '可下载占比'],
-    sorts: [['count', '条目最多'], ['game', '按游戏名'], ['new', '最近更新']],
+    sorts: [['hot', '最热门'], ['count', '条目最多'], ['game', '按游戏名'], ['new', '最近更新']],
   },
 };
 
-/* 三个分区的运行时状态（结构与语义完全同形，只是分开存） */
+/* 三个分区的运行时状态（结构与语义完全同形，只是分开存）
+ * ★ v10.97 默认 `sort: 'hot'` —— 与 GRP_META.sorts[0] 必须一致，否则首次加载按热度、
+ *   排序条却高亮「条目最多」（排序条高亮是按数组下标画的）。 */
 const grpState = {
-  mod: { q: '', sort: 'count', src: '', offset: 0, total: 0, items: [], inited: false, loading: false },
-  saves: { q: '', sort: 'count', src: '', offset: 0, total: 0, items: [], inited: false, loading: false },
-  trainers: { q: '', sort: 'count', src: '', offset: 0, total: 0, items: [], inited: false, loading: false },
+  mod: { q: '', sort: 'hot', src: '', offset: 0, total: 0, items: [], inited: false, loading: false },
+  saves: { q: '', sort: 'hot', src: '', offset: 0, total: 0, items: [], inited: false, loading: false },
+  trainers: { q: '', sort: 'hot', src: '', offset: 0, total: 0, items: [], inited: false, loading: false },
 };
 
 /* 来源展示名。★ 与 data/res-groups.js 的 SRC_LABEL 是同一份口径，
@@ -133,24 +136,37 @@ function glRow(cat, it, n) {
     + '</div>';
 }
 
-/** 一张游戏组卡 */
+/** 一张游戏组卡
+ *
+ * ★★ v10.97 改形（本轮最大改动）：
+ *   用户口径：「端游在页面显示参考手游，只需要游戏名称+游戏原名+大小热度等重要信息」。
+ *   ⇒ 卡内**不再铺前 3 条条目行**（`.gl` / `.gl-i`），只留四样：
+ *     封面 · 游戏名称 · 游戏原名 · 三个数字（条数 / 体积 / 热度）。
+ *     下载入口收成卡底一个整宽按钮「查看 N 条下载 ▸」→ 走既有的 `#dlPop` 弹窗。
+ *
+ *   为什么必须删掉卡内行（不是「少铺两条」）：
+ *     · 卡内行是 **717 条里随便 3 条**（组内按下载量排），同一游戏的卡片在 MOD 区
+ *       与存档区看起来完全无关 —— 用户无法从卡片判断「值不值得点」；
+ *     · 行数固定 3 条时，卡高看起来一致，实际被长标题/多通道按钮撑得参差；
+ *     · 手游卡片（`.emu-card` 主形）本来就是「封面 + 名称 + 原名 + 徽标」，
+ *       端游资源页复用同一张脸，两个页面才是一套设计语言。
+ *
+ *   ⚠️ 删的是**卡面入口**，不是功能：全部条目仍在弹窗里（可搜索、可看原贴）。
+ *      `grpAllPop` / `glRow` 一行没动，弹窗内照旧铺全量。
+ */
 function grpCard(cat, g) {
   const meta = GRP_META[cat];
-  /* ★ v10.50：卡面标题用**展示名**（`name`），不再是库名原串。
-   *   原串是 `中文名/英文名/标签`，实测 16,248/19,430 款含 `/` ⇒ 标题折 2~3 行、卡片被撑高。
-   *   `game`（原串）**留着**：它是搜索/匹配/审计的口径，挂进 hover 提示，信息一点没丢。 */
+  /* 卡面标题用**展示名**（`name`），不再是库名原串（原串含 `/` 会折 2~3 行） */
   const game = g.name || g.game || '?';
   const gameFull = g.game || game;
   const libTitle = g.libTitle || '';
-  /* 灰字副标题 = 英文名（用户拍板：中文名 + 下方灰字英文名）。
-   * 没有英文名（纯英文游戏名 / 单段名）就**不占那一行**，卡片更矮。 */
+  /* 灰字副标题 = 原名（英文名）。没有就不占那一行，卡片更矮。 */
   const sub = g.nameEn
     ? '<div class="alt" title="' + esc(g.nameEn) + '">' + esc(String(g.nameEn).slice(0, 46))
       + (String(g.nameEn).length > 46 ? '…' : '') + '</div>'
     : '';
 
-  /* 封面：有就用真图（组卡封面取自端游库/条目），没有就沿用既有 .cov.ph 占位块
-     （同尺寸、只放缩写 —— 不这么写网格被拉齐后卡顶会空出一块）。 */
+  /* 封面：有就用真图，没有就沿用既有 .cov.ph 占位块（同尺寸 —— 否则网格拉齐后卡顶会空一块） */
   const covBtn = g.libId
     ? '<button class="cov-btn" data-lib="' + esc(g.libId) + '" data-title="' + esc(libTitle || gameFull) + '" type="button">查看游戏详情</button>'
     : '';
@@ -158,20 +174,28 @@ function grpCard(cat, g) {
     ? '<div class="cov"><img src="' + esc(g.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' + covBtn + '</div>'
     : '<div class="cov ph"><span>' + esc(String(game).slice(0, 2).toUpperCase()) + '</span></div>';
 
-  /* 来源徽标：这张卡里的条目分别来自哪些源（卡内可能混源，例如存档 = 游侠 + GTrainers） */
+  /* 来源徽标：这张卡里的条目分别来自哪些源（存档卡可能混源：游侠 + GTrainers） */
   const srcTags = Object.keys(g.bySrc || {})
     .sort((a, b) => (g.bySrc[b] || 0) - (g.bySrc[a] || 0))
     .map((k) => '<span class="tg src ' + esc(k) + '">' + esc(grpSrcName(k)) + '</span>')
     .join('');
 
-  const rows = (g.items || []).map((it, i) => glRow(cat, it, i + 1)).join('');
-  /* ★ v10.48：文案从「展开全部 N 条 ▾」改成「查看全部 N 条 ▸」——
-     行为已经不是「在卡内展开」了，箭头也跟着从「向下」改成「向右（进弹窗）」。
-     文案与行为不一致是上一轮踩过的坑（用户明确说「不要展开」）。 */
-  const moreBtn = g.more
-    ? '<button class="grp-more" type="button" data-grp-more data-cat="' + cat + '" data-key="' + esc(g.key) + '" data-title="'
-      + esc(game) + '">查看全部 ' + Number(g.count).toLocaleString() + ' 条 ▸</button>'
+  /* 体积 / 热度（v10.97）。热度 tooltip 写明**这个数从哪来** ——
+     话题浏览量与本模块下载量差两个数量级，不标明来源就没法解释。 */
+  const sizePill = g.size
+    ? '<span class="pill" title="游戏体积">' + esc(String(g.size).slice(0, 12)) + '</span>'
     : '';
+  const hotNum = Number(g.hot) || 0;
+  const hotPill = hotNum > 0
+    ? '<span class="pill hot" title="'
+      + (g.hotSrc === 'topic' ? '热度：机地话题浏览量' : '热度：本分区条目下载量合计') + '">🔥 '
+      + hotNum.toLocaleString() + '</span>'
+    : '';
+
+  /* 卡底唯一动作：进弹窗看全部条目（卡内不再铺行，见函数头注释） */
+  const moreBtn = '<button class="grp-more" type="button" data-grp-more data-cat="' + cat
+    + '" data-key="' + esc(g.key) + '" data-title="' + esc(game) + '">查看 '
+    + Number(g.count).toLocaleString() + ' 条下载 ▸</button>';
 
   return '<article class="emu-card grp' + (g.cover ? ' has-cov' : '') + '" data-cat="' + cat + '" data-key="' + esc(g.key) + '"'
     + ' data-lib="' + esc(g.libId || '') + '" data-libt="' + esc(libTitle || gameFull) + '" data-name="' + esc(game) + '">'
@@ -183,9 +207,10 @@ function grpCard(cat, g) {
     + '<div class="meta">'
     + '<span class="tg ' + meta.kindCls + '">' + esc(meta.label) + '</span>'
     + '<span class="pill">' + Number(g.count).toLocaleString() + ' 条</span>'
+    + sizePill
+    + hotPill
     + (srcTags || '')
     + '</div>'
-    + '<div class="gl">' + rows + '</div>'
     + moreBtn
     + '</div>'
     + '</article>';
@@ -256,14 +281,16 @@ function grpAllPaint(cat, items, game, j) {
   if (foot) foot.innerHTML = '<b>' + esc(game || '') + '</b> · 点右上角 ✕ 或按 Esc 关闭';
 }
 
-/** 点「查看全部 N 条」的入口：拉全量 → 开弹窗 */
+/** 点「查看 N 条下载」的入口：拉全量 → 开弹窗
+ *  ★ v10.97：整卡点击也会走到这里（卡内已无条目行），所以 `btn` 可能是**卡片**
+ *    而不是按钮 —— 卡片上带的是 `data-name`，按钮上带的是 `data-title`。 */
 async function grpAllPop(btn) {
   if (btn.dataset.busy === '1') return;
   btn.dataset.busy = '1';
   const cat = btn.dataset.cat;
   const key = btn.dataset.key;
   const meta = GRP_META[cat];
-  const game = btn.dataset.title || '';
+  const game = btn.dataset.title || btn.dataset.name || '';
   const pop = document.getElementById('dlPop');
   const bodyEl = document.getElementById('dlBody');
   if (!pop || !bodyEl) { btn.dataset.busy = ''; return; }
@@ -303,14 +330,14 @@ async function grpAllPop(btn) {
   }
 }
 
-/** 网格点击分流（三个分区同一套）：查看全部 / 原贴 / 卡内通道外链 / 封面按钮 / 整卡进详情
+/** 网格点击分流（三个分区同一套）：查看全部 / 封面按钮进详情 / 整卡进全部条目
  *
- * ★ v10.50：「原贴」入口（行内按钮 + 整行可点）**故意不在这里处理**，只做一次
- *   `return` 放行 —— 真正处理它的是主源里那个 document 级委托（见 index.html 的
- *   `bindPostDelegation`）。理由：同一个入口还出现在「查看全部」弹窗与详情页资源行里，
- *   那两处的 innerHTML 都是整体重建的；三处各绑一次必然分叉。
- *   ⚠️ 这里**不能** `e.stopPropagation()` —— 那样会连 document 上的委托一起掐掉，
- *      变成「点了原贴什么也不发生」。 */
+ * ★ v10.97：卡内不再铺条目行 ⇒ **整卡点击 = 打开「全部条目」弹窗**（不再是「进游戏详情」）。
+ *   为什么把整卡主行为让给下载：这一页叫「端游资源」，用户点卡片就是要下载；
+ *   游戏详情仍有**明确入口**（封面上的「查看游戏详情」按钮），两件事各有一个动作，
+ *   不再像以前那样「点正文进详情、点 3 条里某条才下载」—— 主次反了。
+ *   ⚠️ 没有 `libId` 的组以前会 toast「未收录」然后什么也不发生；现在照样能展开全部条目。
+ */
 function bindGrpGrid(cat) {
   const meta = GRP_META[cat];
   const g = document.getElementById(meta.grid);
@@ -319,23 +346,15 @@ function bindGrpGrid(cat) {
   g.addEventListener('click', (e) => {
     const more = e.target.closest('[data-grp-more]');
     if (more) { e.stopPropagation(); grpAllPop(more); return; }
-    /* 原贴入口：放行给 document 级委托（`[data-post-open]` 在行内、`.has-post` 是整行） */
-    if (e.target.closest('[data-post-open]') || e.target.closest('.gl-i.has-post')) return;
-    /* 卡内的下载通道是外链，别被整卡的点击吞掉 */
-    if (e.target.closest('.gl-lk a')) return;
     const btn = e.target.closest('.cov-btn');
-    const card = e.target.closest('.emu-card');
-    if (!card) return;
     if (btn && btn.dataset.lib && typeof openDetailById === 'function') {
       e.stopPropagation();
-      openDetailById(btn.dataset.lib, btn.dataset.title || card.dataset.libt || card.dataset.name);
+      openDetailById(btn.dataset.lib, btn.dataset.title || '');
       return;
     }
-    if (card.dataset.lib && typeof openDetailById === 'function') {
-      openDetailById(card.dataset.lib, card.dataset.libt || card.dataset.name);
-      return;
-    }
-    if (typeof toast === 'function') toast('这款未收录进本地端游库，暂无详情页');
+    const card = e.target.closest('.emu-card');
+    if (!card) return;
+    grpAllPop(card);
   });
 }
 
@@ -564,45 +583,62 @@ function bdPostRow(p, n) {
     + '</div>';
 }
 
-/** 一张本体卡。`cached` 有值就**直接铺结果**，不显示「查」按钮。 */
+/** 一张本体卡。
+ *
+ * ★ v10.97 与另三区**统一卡形**（用户口径：「端游在页面显示参考手游，只需要游戏名称+
+ *   游戏原名+大小热度等重要信息」）：封面 · 名称 · 原名 · 体积 / 热度 / 评分 ·
+ *   卡底一个动作。**抓到的条目不再铺在卡里**（原来最多铺 3 帖，卡高参差），
+ *   改为「查看 N 个资源帖 ▸」进 `#dlPop` 弹窗 —— 与 MOD/存档/修改器完全一致。
+ *
+ * 三种状态，卡底动作随之变化：
+ *   ① 没查过        → 「🔍 查本体下载」（点它才发请求，进页面 0 请求的设计不变）
+ *   ② 查过且有链接  → 「查看 N 个资源帖（M 个盘口）▸」→ 弹窗
+ *   ③ 查过但没有    → 如实写「机地话题下没有本体资源帖」+「↻ 重新查」（带 refresh=1）
+ */
 function bdCard(g) {
   const title = g.title || '?';
   const en = g.titleEn ? '<div class="alt" title="' + esc(g.titleEn) + '">' + esc(String(g.titleEn).slice(0, 46)) + '</div>' : '';
   const cov = g.cover
     ? '<div class="cov"><img src="' + esc(g.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer"></div>'
     : '<div class="cov ph"><span>' + esc(String(title).slice(0, 2).toUpperCase()) + '</span></div>';
-  const hot = Number(g.dpv) > 0 ? '<span class="pill">🔥 ' + Number(g.dpv).toLocaleString() + '</span>' : '';
-  const size = g.size ? '<span class="pill">' + esc(String(g.size).slice(0, 10)) + '</span>' : '';
-  const score = Number(g.score) > 0 ? '<span class="pill">' + g.score + ' 分</span>' : '';
+  const hot = Number(g.dpv) > 0
+    ? '<span class="pill hot" title="热度：机地话题浏览量">🔥 ' + Number(g.dpv).toLocaleString() + '</span>' : '';
+  const size = g.size ? '<span class="pill" title="游戏体积">' + esc(String(g.size).slice(0, 10)) + '</span>' : '';
+  const score = Number(g.score) > 0
+    ? '<span class="pill" title="机地评分">' + g.score + ' 分</span>' : '';
+
+  const tid = String(g.tid);
+  const url = g.url || ('https://jidiyouxi.com/topic/detail/' + g.tid);
   const c = bdLinks[g.tid];
-  const inner = c
-    ? (c.posts && c.posts.length
-      ? c.posts.slice(0, 3).map((p, i) => bdPostRow(p, i)).join('')
-      : '<div class="bd-empty-s">这款的机地话题下<b>没有本体资源帖</b>（可能只在别处发布）</div>')
-    : '<button class="bd-get" type="button" data-bd-tid="' + esc(String(g.tid)) + '"'
-      + ' data-bd-url="' + esc(g.url || ('https://jidiyouxi.com/topic/detail/' + g.tid)) + '">🔍 查本体下载</button>';
-  const total = c && c.posts ? c.posts.reduce((n, p) => n + p.links.length, 0) : 0;
-  const moreBtn = (c && c.posts && c.posts.length > 3)
-    ? '<button class="grp-more" type="button" data-bd-more="' + esc(String(g.tid)) + '">查看全部 '
-      + c.posts.length + ' 个资源帖（' + total + ' 个盘口）▸</button>'
-    : '';
-  return '<article class="emu-card grp' + (g.cover ? ' has-cov' : '') + ' bd-card" data-tid="' + esc(String(g.tid)) + '">'
+  const total = (c && c.posts) ? c.posts.reduce((n, p) => n + p.links.length, 0) : 0;
+  let action;
+  if (!c) {
+    action = '<button class="bd-get" type="button" data-bd-tid="' + esc(tid) + '" data-bd-url="' + esc(url)
+      + '">🔍 查本体下载</button>';
+  } else if (c.posts && c.posts.length && total) {
+    action = '<button class="grp-more" type="button" data-bd-more="' + esc(tid) + '">查看 '
+      + c.posts.length + ' 个资源帖（' + total + ' 个盘口）▸</button>';
+  } else {
+    action = '<div class="bd-empty-s">机地话题下<b>没有本体资源帖</b>（可能只在别处发布）</div>'
+      + '<button class="bd-get" type="button" data-bd-tid="' + esc(tid) + '" data-bd-url="' + esc(url)
+      + '" data-bd-force="1">↻ 重新查</button>';
+  }
+
+  return '<article class="emu-card grp' + (g.cover ? ' has-cov' : '') + ' bd-card" data-tid="' + esc(tid)
+    + '" data-name="' + esc(title) + '">'
     + cov
     + '<div class="bd">'
     + '<h4 title="' + esc(title) + '">' + esc(title) + '</h4>'
     + en
     + '<div class="meta"><span class="tg k-body">本体</span>' + size + hot + score + '</div>'
-    + '<div class="gl">' + inner + '</div>'
-    + moreBtn
+    + action
     + '</div></article>';
 }
 
-/** 抓一款游戏的本体链接并写进卡里（不动其它卡） */
+/** 抓一款游戏的本体链接（只重绘这一张卡） */
 async function bdFetchOne(card, tid, url, force) {
-  const gl = card.querySelector('.gl');
-  if (!gl) return;
-  const old = gl.querySelector('[data-bd-tid]');
-  if (old) { old.disabled = true; old.textContent = '正在抓取…'; }
+  const btn = card.querySelector('[data-bd-tid]');
+  if (btn) { btn.disabled = true; btn.textContent = '正在抓取…'; }
   try {
     const j = await fetch(api('/api/download?url=' + encodeURIComponent(url) + (force ? '&refresh=1' : '')))
       .then((r) => r.json());
@@ -613,7 +649,8 @@ async function bdFetchOne(card, tid, url, force) {
     bdLinks[tid] = rec;
     bdSaveLinks();
     /* 只重绘这一张卡（重绘整页会让滚动位置和已展开的卡全部复位） */
-    const g = bdState.items.find((x) => String(x.tid) === String(tid)) || { tid };
+    const g = bdState.items.find((x) => String(x.tid) === String(tid))
+      || { tid, title: card.dataset.name || '' };
     const wrap = document.createElement('div');
     wrap.innerHTML = bdCard(g);
     const fresh = wrap.firstElementChild;
@@ -621,7 +658,7 @@ async function bdFetchOne(card, tid, url, force) {
     const secErr = (j.sections || []).find((s) => s.key === 'body' && s.error);
     if (secErr && typeof toast === 'function') toast('机地这次没取到：' + String(secErr.error).slice(0, 60));
   } catch (e) {
-    if (old) { old.disabled = false; old.textContent = '🔍 重试：' + String(e.message || '').slice(0, 24); }
+    if (btn) { btn.disabled = false; btn.textContent = '↻ 重试：' + String(e.message || '').slice(0, 24); }
     else if (typeof toast === 'function') toast('抓取失败：' + String(e.message || '').slice(0, 60));
   }
 }
@@ -710,11 +747,19 @@ async function initBd() {
       if (get) {
         e.preventDefault(); e.stopPropagation();
         const card = get.closest('.bd-card');
-        if (card) bdFetchOne(card, get.dataset.bdTid, get.dataset.bdUrl, false);
+        if (card) bdFetchOne(card, get.dataset.bdTid, get.dataset.bdUrl, get.dataset.bdForce === '1');
         return;
       }
       const more = e.target.closest('[data-bd-more]');
-      if (more) { e.preventDefault(); e.stopPropagation(); bdAllPop(more.dataset.bdMore); }
+      if (more) { e.preventDefault(); e.stopPropagation(); bdAllPop(more.dataset.bdMore); return; }
+      /* ★ v10.97：整卡点击 = 有结果就看结果，没结果就当场抓（卡内已无「查」以外的内容） */
+      const card = e.target.closest('.bd-card');
+      if (!card) return;
+      const tid = card.dataset.tid;
+      const c = bdLinks[tid];
+      if (c && c.posts && c.posts.length) { bdAllPop(tid); return; }
+      const btn = card.querySelector('[data-bd-tid]');
+      if (btn) bdFetchOne(card, tid, btn.dataset.bdUrl, btn.dataset.bdForce === '1');
     });
   }
 

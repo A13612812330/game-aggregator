@@ -86,7 +86,16 @@ async function makeDom(url) {
   return { dom, errs };
 }
 
-/* 三区共用的卡形取样器 —— 「按游戏聚合」的核心判据只有这一套，别在三个区各写一遍 */
+/* 四区共用的卡形取样器 —— 「按游戏聚合」的核心判据只有这一套，别在四个区各写一遍
+ *
+ * ★★ v10.97 口径又变了一次（用户：「端游在页面显示参考手游，只需要游戏名称 +
+ *    游戏原名 + 大小热度等重要信息」）：
+ *    卡面**不再铺条目行**（`.gl` / `.gl-i`），只留 封面 · 名称 · 原名 · 数字胶囊 · 卡底按钮。
+ *    ⇒ 取样器里 `gl` 从「应该等于 n」翻成「应该等于 0」，
+ *      新增 `name` / `pill` / `hot` / `more` 四条正向判据。
+ *    ⚠️ `gl` 这一项**必须留着**（别删）：它现在是反向断言，专门拦「有人把卡内行铺回来」。
+ *       只删不加的话，卡形退回旧形态照样全绿。
+ */
 function shapeOf(qa, sel) {
   const cards = qa(sel + ' .emu-card');
   return {
@@ -94,15 +103,25 @@ function shapeOf(qa, sel) {
     grp: cards.filter((c) => c.classList.contains('grp')).length,
     cov: cards.filter((c) => c.querySelector('.cov')).length,
     meta: cards.filter((c) => c.querySelector('.meta .tg')).length,
+    /* 卡面名称 == data-name（展示名只有一份，渲染时不会又拼回 `/` 分隔原串） */
+    name: cards.filter((c) => {
+      const h = c.querySelector('h4');
+      return !!h && (h.textContent || '') === (c.dataset.name || '');
+    }).length,
+    /* 条数胶囊（每张卡必有）+ 热度胶囊（有热度才有） */
+    pill: cards.filter((c) => c.querySelector('.meta .pill')).length,
+    hot: cards.filter((c) => c.querySelector('.meta .pill.hot')).length,
+    /* 卡底唯一动作（本体区叫 .bd-get / .grp-more 两种，见 bdCard 三态） */
+    more: cards.filter((c) => c.querySelector('.grp-more, .bd-get')).length,
+    /* ↓ 反向判据：卡面不该再有条目行（v10.97 删的就是它） */
     gl: cards.filter((c) => c.querySelector('.gl .gl-i')).length,
-    over3: cards.filter((c) => c.querySelectorAll('.gl .gl-i').length > 3).length,
     deadEl: cards.filter((c) => c.querySelector('.md-lk,.md-go,.sv-open,.tr-go,.tr-note,.paths,.cp')).length,
     noCat: cards.filter((c) => !c.dataset.cat).length,
-    noOut: cards.filter((c) => [...c.querySelectorAll('.gl .gl-i')].some((r) => !r.querySelector('.gl-lk a'))).length,
   };
 }
-const shapeStr = (s) => `卡 ${s.n} ｜ grp ${s.grp} ｜ cov ${s.cov} ｜ meta ${s.meta} ｜ gl ${s.gl}`
-  + ` ｜ 超 3 条 ${s.over3} ｜ 残留旧元素 ${s.deadEl} ｜ 无 data-cat ${s.noCat} ｜ 行内无出口 ${s.noOut}`;
+const shapeStr = (s) => `卡 ${s.n} ｜ grp ${s.grp} ｜ cov ${s.cov} ｜ meta ${s.meta}`
+  + ` ｜ 名对 ${s.name} ｜ 条数胶囊 ${s.pill} ｜ 热度胶囊 ${s.hot} ｜ 卡底动作 ${s.more}`
+  + ` ｜ 卡内行 ${s.gl}（应为 0）｜ 残留旧元素 ${s.deadEl} ｜ 无 data-cat ${s.noCat}`;
 
 async function main() {
   const { dom: d1, errs: e1 } = await makeDom(BASE + PAGE);
@@ -158,6 +177,48 @@ async function main() {
     !qa('#resTabs .res-tab').slice(1).some((t) => /^[—\-]$/.test((t.querySelector('b') || {}).textContent || '')),
     qa('#resTabs .res-tab b').map((b) => b.textContent.trim()).join(' / '));
 
+  /* ============================================================
+   * 一·B、v10.97 本体分区（默认页签）卡形 —— 与另三区同一张脸
+   * ============================================================
+   * 用户口径：「端游在页面显示参考手游，只需要游戏名称 + 游戏原名 + 大小热度等重要信息」。
+   * ⚠️ 本体卡**没有** `data-cat`（它不走 `grpCard`，是 `bdCard` 另一套渲染器）——
+   *    所以不能直接拿 `shapeOf().noCat` 判它，改用 `data-tid` 是它自己的主键。
+   */
+  {
+    for (let i = 0; i < 80 && qa('#bdGrid .emu-card').length === 0; i++) await sleep(150);
+    const bd = shapeOf(qa, '#bdGrid');
+    ok('★ v10.97 本体网格已渲染组卡（默认页签，进页面就加载）', bd.n > 0, `实际 ${bd.n} 张`);
+    ok('★ v10.97 本体卡都是聚合卡 .emu-card.grp（与 MOD/存档/修改器同一张脸）',
+      bd.n > 0 && bd.grp === bd.n, `${bd.grp} / ${bd.n}`);
+    ok('★ v10.97 本体卡都有封面槽 / 分类徽标 / 条数胶囊',
+      bd.n > 0 && bd.cov === bd.n && bd.meta === bd.n && bd.pill === bd.n, shapeStr(bd));
+    ok('★★ v10.97 本体卡面**没有**条目行（用户口径：只留名称/原名/大小热度）',
+      bd.n > 0 && bd.gl === 0, `卡内行 ${bd.gl} 张`);
+    ok('★ v10.97 正向锚点：本体卡底都有一个动作（未抓过「查本体下载」/ 抓过「查看 N 个资源帖」）',
+      bd.n > 0 && bd.more === bd.n, `卡底动作 ${bd.more} / ${bd.n}`);
+    ok('★ v10.97 本体卡带 data-tid（抓取/弹窗都靠它认话题）',
+      bd.n > 0 && qa('#bdGrid .emu-card').every((c) => !!c.dataset.tid));
+    /* 热度胶囊：本体区的热度直接来自话题浏览量（dpv），覆盖率近 100% ⇒ 必须真的渲染出来。
+       这一条是上一条反向断言的正向锚点 —— 卡面要是整块没渲染，`gl === 0` 会平白变绿。 */
+    ok('★ v10.97 正向锚点：本体卡真的渲染出热度胶囊 🔥（卡不是空壳）',
+      bd.hot > 0, `带热度胶囊 ${bd.hot} / ${bd.n} 张`);
+    /* ★★ v10.97：用户要的三样「重要信息」都要在卡面上 —— 原名 / 体积 / 热度。
+       判据与接口对齐（不是断「≥80%」这种阈值）：接口有几款带该字段，卡面就该渲染几个。 */
+    {
+      let j = null;
+      try { j = await fetch(BASE + '/api/jiditopics/list?sort=hot&limit=24&offset=0').then((r) => r.json()); } catch (e) {}
+      const items = (j && j.items) || [];
+      const nEn = items.filter((x) => x.titleEn).length;
+      const nSize = items.filter((x) => x.size).length;
+      ok('★★ v10.97 本体卡原名（.alt）数量 == 接口里有 titleEn 的条数（「游戏原名」上卡面）',
+        nEn > 0 ? qa('#bdGrid .bd-card > .bd > .alt').length === nEn : true,
+        `卡面 ${qa('#bdGrid .bd-card > .bd > .alt').length} ｜ 接口 ${nEn}`);
+      ok('★★ v10.97 本体卡体积胶囊数量 == 接口里有 size 的条数（「大小」上卡面）',
+        nSize > 0 ? qa('#bdGrid .bd-card .meta .pill[title="游戏体积"]').length === nSize : true,
+        `卡面 ${qa('#bdGrid .bd-card .meta .pill[title="游戏体积"]').length} ｜ 接口 ${nSize}`);
+    }
+  }
+
   /* ---- 顶栏搜索入口（共享资产，曾因绑定埋在 bindRankUI 内而彻底失效） ---- */
   const smodal = q('#smodal'), sOpenBtn = q('#searchOpen');
   ok('端游资源页有顶栏搜索按钮 #searchOpen', !!sOpenBtn);
@@ -188,81 +249,134 @@ async function main() {
     `${md.meta} / ${md.n}`);
   ok('每张组卡都带 data-cat（点卡进详情要靠它认分区）', md.n > 0 && md.noCat === 0,
     `无 data-cat ${md.noCat} 张`);
-  /* ★★ 用户口径「卡内列前 3 条 + 展开全部」：未展开时**卡内行数不得超过 3** */
-  ok('★★ 卡内明文最多 3 条（未展开时）——「前 3 条」是用户明确口径',
-    md.n > 0 && md.over3 === 0, `超 3 条的卡 ${md.over3} 张`);
-  ok('★ 组卡真的铺出了卡内行 .gl .gl-i（正向锚点：上一条「≤3」不能因整卡空掉而变绿）',
-    md.n > 0 && md.gl === md.n, `${md.gl} / ${md.n}`);
-  /* ★ 铁律「存在 ≠ 可见」的正向落点：卡内每一行都必须有一个**可点的去处**
-     （有通道给通道按钮，没通道给「源站」兜底出口）—— 不能出现一行什么都没有。 */
-  ok('★ 卡内每一行都有可点出口（有链给链，没链给「源站」兜底）',
-    md.n > 0 && md.noOut === 0, `行内无出口的卡 ${md.noOut} 张`);
-  /* ★★ 反向断言组：旧「一卡一条」形态的痕迹必须清零。
-     ⚠️ 单独一条反向断言会被「整卡没渲染」满足 ⇒ 上面已有 grp/cov/gl 三条正向锚点。 */
+  /* ★★ v10.97 卡面改形（用户口径「只需要游戏名称+游戏原名+大小热度等重要信息」）：
+     卡内**不再铺前 3 条条目行**，全部条目收进卡底按钮打开的弹窗。
+     ⚠️ 这一组是**反向**断言（旧形态归零），下面紧跟三条正向锚点（名称/胶囊/卡底按钮）——
+        没有正向锚点的话，「整张卡没渲染」会让反向断言全部平白变绿。 */
+  ok('★★ v10.97 反向：MOD 卡面不再铺条目行 .gl .gl-i（旧「卡内前 3 条」形态已废）',
+    md.n > 0 && md.gl === 0, `还铺了行的卡 ${md.gl} 张`);
+  ok('★ v10.97 正向锚点：卡面名称 == data-name（显示的是展示名，不是 `/` 拼接原串）',
+    md.n > 0 && md.name === md.n, `${md.name} / ${md.n}`);
+  ok('★ v10.97 正向锚点：每张卡都有条数胶囊（.meta .pill「N 条」）',
+    md.n > 0 && md.pill === md.n, `${md.pill} / ${md.n}`);
+  ok('★★ v10.97 每张卡底都有唯一动作按钮（.grp-more「查看 N 条下载 ▸」）',
+    md.n > 0 && md.more === md.n, `${md.more} / ${md.n}`);
+  /* 热度是真的算出来了，不是渲染个空壳 —— 用户明确要求「大小热度」上卡面。
+     ⚠️ 只断「有 .pill.hot」不对：数值可能全是 0 还画个 🔥 0。所以同时断数值 > 0。 */
+  {
+    const hotPills = qa('#mdGrid .emu-card .meta .pill.hot');
+    const hotNums = hotPills.map((p) => Number(String(p.textContent).replace(/[^\d]/g, '')) || 0);
+    ok('★★ v10.97 MOD 卡真的渲染出「热度」胶囊，且数值 > 0（不是 🔥 0 空壳）',
+      hotPills.length > 0 && hotNums.filter((v) => v > 0).length === hotPills.length,
+      `${hotPills.length} 个 ｜ 首个 ${hotPills[0] ? hotPills[0].textContent.trim() : '(无)'}`);
+    ok('★ v10.97 热度胶囊带 title，写明**这个数从哪来**（话题浏览量 / 下载量合计差两个数量级）',
+      hotPills.length > 0 && hotPills.every((p) => /热度：/.test(p.getAttribute('title') || '')),
+      (hotPills[0] || {}).getAttribute ? hotPills[0].getAttribute('title') : '(无)');
+  }
   ok('★★ 反向：MOD 卡面已无旧「一卡一条」元素（.md-lk / .md-go 归零）',
     md.deadEl === 0, `残留 ${md.deadEl} 张`);
   ok('★★ 反向：三个恒真/废口径的旧开关已删（#mdToggleLib / #svPhone / #trToggleLib）',
     ['mdToggleLib', 'svPhone', 'trToggleLib'].every((i) => !q('#' + i)));
   ok('★ 正向锚点：三个分区各有新的「来源」下拉（#mdSrc / #svSrc / #trSrc）',
     ['mdSrc', 'svSrc', 'trSrc'].every((i) => !!q('#' + i)));
-  ok('★ 正向锚点：组卡有「展开全部 N 条」按钮（.grp-more）',
-    qa('#mdGrid .emu-card .grp-more').length > 0,
-    `实际 ${qa('#mdGrid .emu-card .grp-more').length} 个`);
-  /* 盘口按钮是这一区的核心：用户要的是**能直接取件**的出口，不是跳源站首页 */
-  {
-    const a = q('#mdGrid .emu-card .gl-lk a');
-    const links = qa('#mdGrid .emu-card .gl-lk a');
-    ok('MOD 卡内通道是真外链（href 非 # 、target=_blank）',
-      !!a && /^https?:/.test(a.getAttribute('href') || '') && a.getAttribute('target') === '_blank',
-      a ? a.getAttribute('href') : '(缺失)');
-    ok('通道按钮挂了盘口配色类 bd-*（与详情页下载弹窗同源语义）',
-      links.filter((x) => /(^|\s)bd-/.test(x.className)).length > 0,
-      `${links.filter((x) => /(^|\s)bd-/.test(x.className)).length} / ${links.length}`);
-  }
+  /* ★★ v10.97 排序默认值：用户口径「端游四个模块都需默认按照热度排序」。
+     排序条由 JS 从 GRP_META.sorts 生成，第 1 项必须就是「最热门」，且初始高亮在它上面。
+     ⚠️ 断言同时钉「项数 4」与「首项文本」：只钉项数的话，把 hot 挪到末位照样绿。 */
+  ok('★★ v10.97 MOD 排序项由 GRP_META 生成（4 项，首项「最热门」且默认高亮）',
+    qa('#mdSorts .emu-sort').length === 4
+    && /最热门/.test((qa('#mdSorts .emu-sort')[0] || {}).textContent || '')
+    && qa('#mdSorts .emu-sort')[0].classList.contains('on'),
+    `实际 ${qa('#mdSorts .emu-sort').length} 项 ｜ 首项 ${(qa('#mdSorts .emu-sort')[0] || {}).textContent}`
+    + ` ｜ on=${(q('#mdSorts .emu-sort.on') || {}).textContent || '(无)'}`);
   ok('MOD 计数文案是「共 N 款游戏」（卡是游戏粒度，写「条」会和卡内条数打架）',
     /共 [\d,]+ 款游戏/.test(q('#mdCount').textContent || ''), q('#mdCount').textContent || '');
   ok('MOD 统计条已回填 4 格', qa('#mdStats .st').length === 4, `实际 ${qa('#mdStats .st').length}`);
-  ok('MOD 排序项由 JS 从 GRP_META 生成（3 个 .emu-sort，第一个默认 on）',
-    qa('#mdSorts .emu-sort').length === 3 && qa('#mdSorts .emu-sort')[0].classList.contains('on'),
-    `实际 ${qa('#mdSorts .emu-sort').length} 项 ｜ on=${(q('#mdSorts .emu-sort.on') || {}).textContent || '(无)'}`);
-  /* 点封面按钮：有 libId 就进详情；没命中要给出明确提示（不能点了没反应） */
+  /* 点封面按钮：有 libId 就进详情；没命中要给出明确提示（不能点了没反应）
+   * ★ v10.97：**整卡点击的主行为反转了** —— 以前点正文进详情、点 3 条里某条才下载；
+   *   现在整卡 = 打开全部条目弹窗，游戏详情只走封面上的 `.cov-btn`。
+   *   ⇒ 这里必须只点 `.cov-btn`，不能再 `|| querySelector('h4')` 兜底 ——
+   *     那个兜底会点到卡片主体、弹出下载弹窗，然后断言抽屉打开就红了（实测过）。 */
   {
     const withLib = qa('#mdGrid .emu-card').find((c) => c.dataset.lib);
     if (withLib) {
       const btn = withLib.querySelector('.cov-btn');
       ok('带 libId 的组卡有「查看游戏详情」按钮（.cov-btn，压在封面上）', !!btn);
-      click(btn || withLib.querySelector('h4'));
-      await sleep(1500);
-      ok('点组卡封面按钮 → 打开游戏详情抽屉',
-        q('#drawer').classList.contains('show'), q('#drawer').className);
-      W.closeDetail(); await sleep(300);
+      if (btn) {
+        click(btn);
+        await sleep(1500);
+        ok('点组卡封面按钮 → 打开游戏详情抽屉',
+          q('#drawer').classList.contains('show'), q('#drawer').className);
+        W.closeDetail(); await sleep(300);
+      }
     } else {
-      ok('组卡正文点击（本轮无命中样本，跳过）', true, '无 data-lib 卡片');
+      ok('组卡封面按钮（本轮无命中样本，跳过）', true, '无 data-lib 卡片');
     }
   }
-  /* ★★ v10.48：「查看全部 N 条」= 打开**弹窗**列全量 + 弹窗内搜索。
-     ⚠️ 这组断言守的是**行为变了**，不是「换个地方还能用」：
-        旧实现是原地铺开（`grpExpand`，上限 300），用户口径「不要展开」。
-        所以必须同时断「弹窗开了」**和**「卡内行数没变」——只断前者的话，
-        有人把原地铺开加回来也照样绿。 */
+  /* ★★ v10.97 整卡点击 = 打开「全部条目」弹窗（不再进详情）
+     ⚠️ 必须点**卡片正文**（h4），不能点 `.cov-btn` —— 那是上一条测的另一种分流。
+     正向锚点：弹窗真的开了且里面有行；反向锚点：详情抽屉**没**被同时打开。 */
+  {
+    const card = qa('#mdGrid .emu-card')[0];
+    if (card) {
+      const errN = e1.length;
+      click(card.querySelector('h4') || card);
+      await sleep(2200);
+      ok('★★ v10.97 点整卡正文 → 打开「全部条目」弹窗（整卡主行为从「进详情」改为「看下载」）',
+        !!q('#dlPop') && !q('#dlPop').hidden && !q('#dlPop').hidden,
+        q('#dlPop') ? `hidden=${q('#dlPop').hidden}` : '(无 #dlPop)');
+      ok('★★ v10.97 反向：点整卡**不**同时打开游戏详情抽屉（一次点击只做一个动作）',
+        !q('#drawer').classList.contains('show'), q('#drawer').className);
+      ok('★ 整卡点击那一次弹窗里确实有行（不是空壳弹窗）',
+        qa('#grpAllList .gl-i').length > 0, `${qa('#grpAllList .gl-i').length} 行`);
+      ok('点整卡打开弹窗不抛异常', e1.length === errN, e1.slice(errN).join(' | '));
+      if (typeof W.closeDownload === 'function') W.closeDownload();
+      await sleep(260);
+    } else {
+      ok('整卡点击（本轮无卡片样本，跳过）', true, '无 .emu-card');
+    }
+  }
+  /* ★★ v10.48 + v10.97：卡底「查看 N 条下载」= 打开**弹窗**列全量 + 弹窗内搜索。
+     ⚠️ 这组断言 v10.97 起承担了**双份**职责 —— 卡面改成「不给条目」之后，
+        原先挂在卡内行上的判据（真外链 / 盘口配色 / 每行 title）全部迁移到这里。
+        别以为是「顺手搬家」：条目现在**只**活在弹窗里，弹窗里不验就等于没验。 */
   {
     const more = qa('#mdGrid .emu-card .grp-more')[0];
     if (more) {
       const card = more.closest('.emu-card');
+      /* v10.97：卡内本就没有行，before 恒为 0 —— 这个 0 就是「卡面干净」的基线 */
       const before = card.querySelectorAll('.gl .gl-i').length;
       const errN = e1.length;
       click(more);
       await sleep(2200);
       const pop = q('#dlPop');
-      ok('★★ 点「查看全部 N 条」→ 打开弹窗（不再原地铺开）', !!pop && !pop.hidden);
+      ok('★★ 点卡底「查看 N 条下载」→ 打开弹窗（不再原地铺开）', !!pop && !pop.hidden);
       const after = card.querySelectorAll('.gl .gl-i').length;
-      ok('★★ 反向：卡内行数**没变**（原地铺开已废弃，卡片不再被撑长）',
-        after === before, `${before} → ${after} 行`);
+      ok('★★ 反向：卡内行数仍是 0（原地铺开已废弃，卡片不再被撑长）',
+        before === 0 && after === 0, `${before} → ${after} 行`);
       const box = q('#grpAllList');
-      const rows = box ? box.querySelectorAll('.gl-i').length : 0;
-      ok('★ 弹窗内铺出全量条目（多于卡内明文 3 条）', rows > before, `${before} → ${rows} 行`);
+      const rowsArr = box ? [...box.querySelectorAll('.gl-i')] : [];
+      const rows = rowsArr.length;
+      ok('★ 正向锚点：弹窗内铺出全量条目（上一条「卡内 0 行」不能因弹窗也空而变绿）',
+        rows > 0, `${rows} 行`);
       ok('★ 弹窗内每行都有可点出口（有链给链 / 没链给「源站」兜底）',
-        rows > 0 && [...box.querySelectorAll('.gl-i')].every((r) => r.querySelector('.gl-lk a')));
+        rows > 0 && rowsArr.every((r) => r.querySelector('.gl-lk a')));
+      /* ↓ 从卡面迁过来的三条：真外链 / 盘口配色 / 每行 title */
+      const links = rowsArr.flatMap((r) => [...r.querySelectorAll('.gl-lk a')]);
+      const ext = links.filter((a) => /^https?:/.test(a.getAttribute('href') || ''));
+      ok('★ 弹窗内通道是真外链（href 非 # 、target=_blank）',
+        ext.length > 0 && ext.every((a) => a.getAttribute('target') === '_blank'),
+        `${ext.length} / ${links.length} 条是 http(s) ｜ 例 ${(ext[0] || {}).getAttribute ? String(ext[0].getAttribute('href')).slice(0, 50) : '(无)'}`);
+      ok('★ 通道按钮挂了盘口配色类 bd-*（与详情页下载弹窗同源语义）',
+        ext.filter((a) => /(^|\s)bd-/.test(a.className)).length > 0,
+        `${ext.filter((a) => /(^|\s)bd-/.test(a.className)).length} / ${ext.length}`);
+      {
+        const withT = rowsArr.filter((r) => {
+          const t = r.querySelector('.t');
+          return !!t && !!t.getAttribute('title');
+        });
+        ok('★★ 每行标题都带 title（单行省略后悬停仍能读全文 —— 折叠，不是删除）',
+          rows > 0 && withT.length === rows, `${withT.length} / ${rows} 行`);
+      }
       ok('★ 弹窗副标题写明总数（「共 N 条 · 可在下方搜索」）',
         /共\s*[\d,]+\s*条/.test((q('#dlSub') || {}).textContent || ''), (q('#dlSub') || {}).textContent || '');
       /* 搜索：本地过滤已取回的数组。正反两条都要 ——
@@ -289,24 +403,26 @@ async function main() {
       ok('打开弹窗 / 搜索过程中不抛异常', e1.length === errN, e1.slice(errN).join(' | '));
       if (typeof W.closeDownload === 'function') W.closeDownload();
       await sleep(220);
-      ok('★ 关弹窗后卡内行数仍是 3（不会把全量留在卡里）',
-        card.querySelectorAll('.gl .gl-i').length === before,
+      ok('★ 关弹窗后卡内仍然是 0 行（不会把全量留在卡里）',
+        card.querySelectorAll('.gl .gl-i').length === 0,
         `${card.querySelectorAll('.gl .gl-i').length} 行`);
     } else {
-      ok('查看全部（本轮无 overflow 组，跳过）', true, '无 .grp-more');
+      ok('查看全部（本轮无 .grp-more 样本，跳过）', true, '无 .grp-more');
     }
   }
   /* ★★ v10.49：条目标题**单行省略**（用户口径「卡片中的内容每条显示一行即可多余字显示省略号即可」）。
+     ⚠️ v10.97 起这条规则**只服务弹窗**（`.emu-card.grp#grpAllList` 里的行）——
+        卡面已经不再铺行了。所以这里既要断「规则还在」（弹窗靠它排版），
+        也要断「没被顺手删掉」（删了弹窗内就是一坨没排版的文字）。
      ⚠️ 这是**样式**断言 —— jsdom 不做布局（拿不到真实 text-overflow 效果），只能读 CSS 规则文本。
-        所以必须再配一条 **DOM** 断言钉住「省略不丢信息」：
-        每行 `.t` 都得带 `title`，否则「单行省略」就是把标题**永久删掉**，而不是折叠。
+        行级 DOM 判据（每行带 title）已迁到上面弹窗块里，此处只管规则体。
      ⚠️ 反向断言不可省：`-webkit-line-clamp` 若被写回来，浏览器里 nowrap 与 clamp 同时存在时
         clamp 会赢（它自带 overflow:hidden 的换行语义），单行省略会**静默失效**。 */
   {
     const H = await fetch(BASE + PAGE).then((r) => r.text());
     const m = /\.emu-card\.grp \.gl-i \.t\{([^}]*)\}/.exec(H);
     const rule = m ? m[1] : '';
-    ok('★ 卡内条目标题规则取到（正向锚点：选择器打错时下面几条会平白变绿）',
+    ok('★ 条目标题规则取到（正向锚点：选择器打错时下面几条会平白变绿）',
       rule.length > 0, rule.slice(0, 90));
     ok('★★ 条目标题单行省略（white-space:nowrap + text-overflow:ellipsis）',
       /white-space:nowrap/.test(rule) && /text-overflow:ellipsis/.test(rule), rule);
@@ -317,13 +433,12 @@ async function main() {
     ok('★★ 弹窗里不再有单独覆盖 `.grp-pop .gl-i .t`（与卡内同一条规则，一处真源）',
       !/\.grp-pop \.gl-i \.t\{/.test(H),
       (H.match(/\.grp-pop \.gl-i \.t\{[^}]*\}/) || ['(无)'])[0]);
-    const rows = qa('.emu-card.grp .gl .gl-i');
-    const withT = rows.filter((r) => {
-      const t = r.querySelector('.t');
-      return !!t && !!t.getAttribute('title');
-    });
-    ok('★★ 每行标题都带 title（单行省略后悬停仍能读全文 —— 折叠，不是删除）',
-      rows.length > 0 && withT.length === rows.length, `${withT.length} / ${rows.length} 行`);
+    /* ★ v10.97 新增：卡面删行之后，`.emu-card.grp .gl` / `.gl-i` 这组样式**必须保留** ——
+       它现在只服务弹窗（`.grp-pop .emu-card.grp` + glRow）。删掉弹窗就散架。
+       ⚠️ 用 `{` 前带空格的写法区分 `.emu-card.grp .gl{` 与 `.gl-i{`，两者都要在。 */
+    ok('★★ v10.97：卡面删行后，弹窗用的 `.emu-card.grp .gl` / `.gl-i` 样式仍然在（删了弹窗会散架）',
+      /\.emu-card\.grp \.gl\{/.test(H) && /\.emu-card\.grp \.gl-i\{/.test(H),
+      `.gl{ ${/\.emu-card\.grp \.gl\{/.test(H)} ｜ .gl-i{ ${/\.emu-card\.grp \.gl-i\{/.test(H)}`);
   }
   /* ★ 搜索真的接了后端（来源下拉在本轮数据下多为单源，用搜索验接口更稳） */
   {
@@ -337,9 +452,18 @@ async function main() {
       const after = qa('#mdGrid .emu-card').length;
       ok('★ 搜索词 → 列表按关键词收窄（证明前端真的打 /api/res/groups?q=…）',
         after > 0 && after < before, `${before} → ${after} 张`);
-      ok('搜索命中的第一张卡就是「赛博朋克2077」',
-        /赛博朋克/.test((q('#mdGrid .emu-card') || {}).dataset?.name || ''),
-        (q('#mdGrid .emu-card') || {}).dataset?.name || '(缺失)');
+      /* ★★ v10.97b：搜索时「名称命中」必须排在「只有条目撞词」之前。
+         实测事故：默认排序改热度后，搜「赛博朋克」第一张是**剑星**（热度 348,068），
+         只因剑星组里有一条「武士运动服 赛博朋克2077」—— 用户搜的是游戏名，这属于跑偏。
+         ⚠️ 反向判据也要：结果里必须**仍有**名称不含关键词的组（条目撞词那条路没被砍掉，
+            否则「名称优先」是靠「只留名称命中」作弊实现的）。
+         两条都要有 ⇒ 单断第一条会被「过滤到只剩 1 个」满足。 */
+      const names = qa('#mdGrid .emu-card').map((c) => c.dataset.name || '');
+      ok('★★ v10.97b 搜索第一名是**名称命中**的组（不再被热度更高的「条目撞词」组顶掉）',
+        names.length > 0 && /赛博朋克/.test(names[0]), `第一名 ${names[0] || '(缺失)'}`);
+      ok('★★ v10.97b 反向：条目撞词的组**仍在结果里**（名称优先 ≠ 把 ② 那条路砍掉）',
+        names.filter((n) => !/赛博朋克/.test(n)).length > 0,
+        `${names.length} 张里 ${names.filter((n) => !/赛博朋克/.test(n)).length} 张非名称命中`);
       si.value = '';
       si.dispatchEvent(new W.Event('input', { bubbles: true }));
       await sleep(1500);
@@ -371,9 +495,22 @@ async function main() {
         const h = c.querySelector('h4');
         return !!h && h.textContent === (c.dataset.name || '');
       }));
-    /* 灰字副标题 = 英文名（不是第二个中文别名） */
+    /* 灰字副标题 = 英文名（不是第二个中文别名）
+     * ★★ v10.97 用户口径明确要求「游戏名称 + **游戏原名**」上卡面 ⇒ 覆盖率不再能只断「存在」。
+     *   但也不能一刀切 `=== 卡数`：源站库名本身是 `中文名/英文名[/标签]` 拼串，
+     *   有的游戏原串就没有英文（钢铁雄心IV / 荒野大镖客2 实测如此），
+     *   不渲染那一行是**如实**，编一个英文名才是错的。
+     *   ⇒ 判据改成「与接口返回的 nameEn 对齐」：接口有几款有原名，卡面就应渲染几个 .alt。
+     *     这样既守住覆盖率，又不会因为数据本身缺英文而假红。 */
     const alts = qa('#mdGrid .emu-card > .bd > .alt');
-    ok('★ v10.50：存在灰字英文名副标题 .alt', alts.length > 0, `${alts.length} 个`);
+    let apiWithEn = -1;
+    try {
+      const j = await fetch(BASE + '/api/res/groups?cat=mod&sort=hot&limit=24&offset=0').then((r) => r.json());
+      apiWithEn = (j.items || []).filter((x) => x.nameEn).length;
+    } catch (e) { /* 接口异常时退化为「至少有一个」 */ }
+    ok('★★ v10.97：卡面原名（.alt）数量 == 接口里有原名的组数（用户要的「游戏原名」真的铺出来了）',
+      alts.length > 0 && (apiWithEn < 0 || alts.length === apiWithEn),
+      `${alts.length} 个 .alt ｜ 接口 ${apiWithEn} 款有原名`);
     const cjk = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
     const badAlt = alts.filter((a) => cjk.test(a.textContent));
     ok('★★ v10.50：英文名副标题里**不含 CJK**（灰字那行必须是英文名，不能是第二个中文别名）',
@@ -392,10 +529,15 @@ async function main() {
    *   只是列表投影按设计只留了摘要字段 ⇒ 改的是投影与界面，不是采集。
    */
   {
-    const btns = qa('#mdGrid .gl-i [data-post-open]');
-    const rowsHas = qa('#mdGrid .gl-i.has-post');
-    ok('★ v10.50 正向锚点：MOD 卡内出现「原贴」入口（机地帖 content 覆盖 100%）',
-      btns.length > 0, `${btns.length} 个`);
+    /* ★★ v10.97：条目行只在弹窗里 —— 先开「查看 N 条下载」，再从 `#grpAllList` 取样。
+       ⚠️ 别改回 `#mdGrid .gl-i`：卡面已无行，那样取到 0 个，整段会退化成「跳过」，
+          看上去全绿实际什么都没验（本轮最容易踩的假绿）。 */
+    const mdMore0 = qa('#mdGrid .emu-card .grp-more')[0];
+    if (mdMore0) { click(mdMore0); await sleep(2200); }
+    const btns = qa('#grpAllList .gl-i [data-post-open]');
+    const rowsHas = qa('#grpAllList .gl-i.has-post');
+    ok('★ v10.50 正向锚点：MOD 弹窗内出现「原贴」入口（机地帖 content 覆盖 100%）',
+      btns.length > 0, `${btns.length} 个 ｜ 弹窗是否开着 ${!!(q('#dlPop') && !q('#dlPop').hidden)}`);
     ok('★ v10.50：入口按钮与「整行可点」一一对应（按钮数 == .has-post 行数）',
       btns.length > 0 && btns.length === rowsHas.length, `${btns.length} vs ${rowsHas.length}`);
     ok('★ v10.50：入口按钮带 data-src / data-id（缺一个就打不开对应那条）',
@@ -516,6 +658,10 @@ async function main() {
     } else {
       ok('整行点击打开原贴（本轮无 .has-post 行，跳过）', true, '无 .gl-i.has-post');
     }
+    /* ★ v10.97：收尾把「全部条目」弹窗关掉 —— 下一段（存档）要去点页签，
+       #dlPop 若还开着，jsdom 里虽不挡点击，但留着会污染后续断言（弹出层叠着）。 */
+    if (typeof W.closeDownload === 'function') W.closeDownload();
+    await sleep(260);
   }
 
   /* ============================================================
@@ -531,17 +677,29 @@ async function main() {
     ok('存档网格已渲染组卡', sv.n > 0, `实际 ${sv.n} 张`);
     ok('★★ 存档卡全部是聚合卡 .emu-card.grp（与 MOD 同一种卡形）', sv.n > 0 && sv.grp === sv.n,
       `${sv.grp} / ${sv.n}`);
-    ok('存档卡都有封面槽 / 分类徽标 / 卡内行（三处同形）',
-      sv.n > 0 && sv.cov === sv.n && sv.meta === sv.n && sv.gl === sv.n, shapeStr(sv));
-    ok('★★ 存档卡内明文最多 3 条（未展开时）', sv.n > 0 && sv.over3 === 0, `超 3 条的卡 ${sv.over3} 张`);
+    ok('存档卡都有封面槽 / 分类徽标 / 条数胶囊（三处同形）',
+      sv.n > 0 && sv.cov === sv.n && sv.meta === sv.n && sv.pill === sv.n, shapeStr(sv));
+    ok('★★ v10.97 存档卡面也没有条目行（与 MOD 同一张脸）', sv.n > 0 && sv.gl === 0,
+      `还铺了行的卡 ${sv.gl} 张`);
+    ok('★★ v10.97 存档每张卡底都有「查看 N 条下载」按钮', sv.n > 0 && sv.more === sv.n,
+      `${sv.more} / ${sv.n}`);
+    ok('★★ v10.97 存档排序首项是「最热门」（用户口径：四个模块默认按热度排序）',
+      qa('#svSorts .emu-sort').length === 4
+      && /最热门/.test((qa('#svSorts .emu-sort')[0] || {}).textContent || '')
+      && qa('#svSorts .emu-sort')[0].classList.contains('on'),
+      `${qa('#svSorts .emu-sort').length} 项 ｜ 首项 ${(qa('#svSorts .emu-sort')[0] || {}).textContent}`);
     ok('★★ 反向：存档卡面已无旧「位置卡」元素（.paths / .cp / .sv-open 归零）',
       sv.deadEl === 0, `残留 ${sv.deadEl} 张`);
-    /* ★★ 本轮核心口径：这一页只列「真有存档」的游戏 ⇒ 卡内每一行都应有**下载通道**。
+    /* ★★ 本轮核心口径：这一页只列「真有存档」的游戏 ⇒ **每行**都应有真实下载通道。
        实测 /api/res/stats?cat=saves 的 withLink = items（100%）。所以这条不该有例外；
-       若哪天出现「只有源站兜底」的行，说明混进了没有文件的条目 —— 正是用户要去掉的形态。 */
-    const rows = qa('#svGrid .emu-card .gl .gl-i');
+       若哪天出现「只有源站兜底」的行，说明混进了没有文件的条目 —— 正是用户要去掉的形态。
+       ⚠️ v10.97 起行只在弹窗里，必须开一张卡取样（`#svGrid .gl .gl-i` 现在恒为 0，
+          直接查会「0 行」把正反两条一起判红 —— 或更糟：改成 `>=` 就假绿）。 */
+    const svMore = qa('#svGrid .emu-card .grp-more')[0];
+    if (svMore) { click(svMore); await sleep(2200); }
+    const rows = qa('#grpAllList .gl-i');
     const withCh = rows.filter((r) => r.querySelector('.gl-lk a:not(.bd-other)')).length;
-    ok('★★ 存档卡内每行都带**真实下载通道**（不是「去源站」兜底）——「只展示真有存档的」',
+    ok('★★ 存档弹窗内每行都带**真实下载通道**（不是「去源站」兜底）——「只展示真有存档的」',
       rows.length > 0 && withCh === rows.length,
       `${withCh} / ${rows.length} 行有真通道`);
     ok('存档计数文案是「共 N 款游戏」', /共 [\d,]+ 款游戏/.test(q('#svCount').textContent || ''),
@@ -550,9 +708,10 @@ async function main() {
     ok('存档来源下拉已填充（「全部来源」+ 至少 1 个源）', qa('#svSrc option').length >= 2,
       qa('#svSrc option').map((o) => o.textContent).join(' ｜ '));
     /* ★ v10.50：存档原贴（游侠帖）—— desc / steps / shots 三个字段的取数入口。
-       实证口径：desc 100% · 有截图 1,172 条（57.4%）。 */
-    const svBtn = q('#svGrid .gl-i [data-post-open]');
-    ok('★ v10.50 正向锚点：存档卡内出现「原贴」入口（游侠帖 desc 覆盖 100%）', !!svBtn);
+       实证口径：desc 100% · 有截图 1,172 条（57.4%）。v10.97 同样改从弹窗取样。 */
+    const svBtn = q('#grpAllList .gl-i [data-post-open]');
+    ok('★ v10.50 正向锚点：存档弹窗内出现「原贴」入口（游侠帖 desc 覆盖 100%）',
+      !!svBtn, `${rows.length} 行里 ${qa('#grpAllList [data-post-open]').length} 个入口`);
     if (svBtn) {
       const j = await fetch(BASE + '/api/res/post?src=' + encodeURIComponent(svBtn.dataset.src)
         + '&id=' + encodeURIComponent(svBtn.dataset.id)).then((r) => r.json());
@@ -562,17 +721,19 @@ async function main() {
         !!j && j.ok === true && j.has === true && anyBody,
         `content ${String((j || {}).content || '').length} 字 ｜ steps ${((j || {}).steps || []).length} ｜ shots ${((j || {}).shots || []).length}`);
     }
+    if (typeof W.closeDownload === 'function') W.closeDownload();
+    await sleep(260);
   }
-  /* 点整卡 → 进详情（组卡的统一分流） */
+  /* 点封面按钮 → 进详情（组卡的统一分流；v10.97 起只有这个入口进详情） */
   {
-    const svCard = qa('#svGrid .emu-card').find((c) => c.dataset.lib);
+    const svCard = qa('#svGrid .emu-card').find((c) => c.dataset.lib && c.querySelector('.cov-btn'));
     if (svCard) {
-      click(svCard.querySelector('.cov-btn') || svCard.querySelector('h4'));
+      click(svCard.querySelector('.cov-btn'));
       await sleep(1500);
-      ok('点存档组卡 → 打开游戏详情抽屉', q('#drawer').classList.contains('show'), q('#drawer').className);
+      ok('点存档组卡封面按钮 → 打开游戏详情抽屉', q('#drawer').classList.contains('show'), q('#drawer').className);
       W.closeDetail(); await sleep(300);
     } else {
-      ok('存档组卡点击（本轮无命中样本，跳过）', true, '无 data-lib 卡片');
+      ok('存档组卡封面按钮（本轮无命中样本，跳过）', true, '无 data-lib + .cov-btn 卡片');
     }
   }
 
@@ -589,31 +750,30 @@ async function main() {
     ok('修改器网格已渲染组卡', tr.n > 0, `实际 ${tr.n} 张`);
     ok('★★ 修改器卡全部是聚合卡 .emu-card.grp（三区统一卡形）', tr.n > 0 && tr.grp === tr.n,
       `${tr.grp} / ${tr.n}`);
-    ok('修改器卡都有封面槽 / 分类徽标 / 卡内行（三处同形）',
-      tr.n > 0 && tr.cov === tr.n && tr.meta === tr.n && tr.gl === tr.n, shapeStr(tr));
-    ok('★★ 修改器卡内明文最多 3 条（未展开时）', tr.n > 0 && tr.over3 === 0, `超 3 条的卡 ${tr.over3} 张`);
+    ok('修改器卡都有封面槽 / 分类徽标 / 条数胶囊（三处同形）',
+      tr.n > 0 && tr.cov === tr.n && tr.meta === tr.n && tr.pill === tr.n, shapeStr(tr));
+    ok('★★ v10.97 修改器卡面也没有条目行（四区同一张脸）', tr.n > 0 && tr.gl === 0,
+      `还铺了行的卡 ${tr.gl} 张`);
+    ok('★★ v10.97 修改器每张卡底都有「查看 N 条下载」按钮', tr.n > 0 && tr.more === tr.n,
+      `${tr.more} / ${tr.n}`);
+    ok('★★ v10.97 修改器排序首项是「最热门」（用户口径：四个模块默认按热度排序）',
+      qa('#trSorts .emu-sort').length === 4
+      && /最热门/.test((qa('#trSorts .emu-sort')[0] || {}).textContent || '')
+      && qa('#trSorts .emu-sort')[0].classList.contains('on'),
+      `${qa('#trSorts .emu-sort').length} 项 ｜ 首项 ${(qa('#trSorts .emu-sort')[0] || {}).textContent}`);
     ok('★★ 反向：修改器卡面已无旧「导流卡」元素（.tr-go / .tr-note 归零）',
       tr.deadEl === 0, `残留 ${tr.deadEl} 张`);
     ok('修改器卡带来源徽标 .tg.src（卡内可能混源，要能看出条目来自哪）',
       qa('#trGrid .emu-card .tg.src').length > 0, `实际 ${qa('#trGrid .emu-card .tg.src').length} 个`);
-    ok('修改器卡内每行都有可点出口（有链给链，GCM 走来源站兜底）',
-      tr.n > 0 && tr.noOut === 0, `行内无出口的卡 ${tr.noOut} 张`);
-    /* ★★ v10.50 反向：修改器两源（GTrainers / GCM；★ v10.58 起 FR 已摘除）都是**纯链接源**，
-       没有原贴正文 ⇒ 不给「点开是空的」入口（宁可少一个按钮，也不给一个空弹窗）。
-       ⚠️ 配正向锚点：本区确实渲染出了条目行 —— 否则「零入口」会因整区空白而假绿。
-       ⚠️ 若哪天修改器源开始带正文，这条会红：那时应改成「入口数 == 接口 has:true 的条数」，
-          而不是把断言删掉。 */
-    ok('★ v10.50 正向锚点：修改器卡内确实渲染了条目行（防下一条因整区空白而假绿）',
-      qa('#trGrid .emu-card .gl .gl-i').length > 0, `实际 ${qa('#trGrid .emu-card .gl .gl-i').length} 行`);
-    ok('★★ v10.50 反向：修改器分区**没有**原贴入口（纯链接源无正文）',
-      qa('#trGrid [data-post-open]').length === 0 && qa('#trGrid .gl-i.has-post').length === 0,
-      `入口 ${qa('#trGrid [data-post-open]').length} ｜ 整行 ${qa('#trGrid .gl-i.has-post').length}`);
     /* ★★ v10.48：修改器「第三方来源」跳转链（用户口径：
        「修改器中的第三方修改器来源我也需要你提供跳转链接」）。
        根因回顾：上游 official_url 一直有（93.7%），是抓取器把它丢了，
        且 res-groups 原先的 page 指向 libUrl（**端游库**的 xdgame 链接）。
-       ⚠️ 必须通过「查看全部」弹窗取全量来验：卡内只铺 3 条，
-          GCM 条目按 ts 排在 gt 之后，光看卡面会因为样本缺失而恒真。 */
+       ★ v10.97：卡面不再铺行 ⇒ 这条**本来就必须**走弹窗（原先的注释里已经写了
+         「光看卡面会因为样本缺失而恒真」，现在卡面连样本都没有了）。
+       ⚠️ 同一次弹窗里顺带验「每行都有可点出口」与「没有原贴入口」——
+          卡面删行后，`#trGrid [data-post-open] === 0` 是一条**恒真空断言**
+          （卡里根本没有行可挂入口），必须搬进弹窗才有判别力。 */
     {
       const trMore = qa('#trGrid .emu-card .grp-more')[0];
       if (trMore) {
@@ -621,6 +781,21 @@ async function main() {
         click(trMore);
         await sleep(2200);
         const box = q('#grpAllList');
+        const trRows = box ? [...box.querySelectorAll('.gl-i')] : [];
+        ok('★ 正向锚点：修改器弹窗内确实渲染了条目行（防下两条因整区空白而假绿）',
+          trRows.length > 0, `${trRows.length} 行`);
+        ok('★ 修改器弹窗内每行都有可点出口（有链给链，GCM 走来源站兜底）',
+          trRows.length > 0 && trRows.every((r) => r.querySelector('.gl-lk a')),
+          `${trRows.filter((r) => r.querySelector('.gl-lk a')).length} / ${trRows.length} 行`);
+        /* ★★ v10.50 反向：修改器两源（GTrainers / GCM；v10.58 起 FR 已摘除）都是**纯链接源**，
+           没有原贴正文 ⇒ 不给「点开是空的」入口（宁可少一个按钮，也不给一个空弹窗）。
+           ⚠️ 若哪天修改器源开始带正文，这条会红：那时应改成
+              「入口数 == 接口 has:true 的条数」，而不是把断言删掉。 */
+        ok('★★ v10.50 反向：修改器弹窗内**没有**原贴入口（纯链接源无正文）',
+          box && box.querySelectorAll('[data-post-open]').length === 0
+          && box.querySelectorAll('.gl-i.has-post').length === 0,
+          `入口 ${box ? box.querySelectorAll('[data-post-open]').length : '?'}`
+          + ` ｜ 整行 ${box ? box.querySelectorAll('.gl-i.has-post').length : '?'}`);
         const sel = 'a[class*="bd-fling"],a[class*="bd-cheat"],a[class*="bd-src"]';
         const srcLinks = box ? [...box.querySelectorAll(sel)] : [];
         ok('★★ 修改器「查看全部」弹窗里出现第三方来源跳转按钮（bd-fling / bd-cheat / bd-src）',
@@ -639,7 +814,7 @@ async function main() {
         if (typeof W.closeDownload === 'function') W.closeDownload();
         await sleep(220);
       } else {
-        ok('修改器「查看全部」（无 overflow 组，跳过）', true, '无 .grp-more');
+        ok('修改器「查看全部」（无 .grp-more 样本，跳过）', true, '无 .grp-more');
       }
     }
     ok('修改器计数文案是「共 N 款游戏」', /共 [\d,]+ 款游戏/.test(q('#trCount').textContent || ''),
@@ -647,16 +822,22 @@ async function main() {
     ok('修改器统计条已回填 4 格', qa('#trStats .st').length === 4, `实际 ${qa('#trStats .st').length}`);
     ok('修改器来源下拉已填充（「全部来源」+ 至少 1 个源）', qa('#trSrc option').length >= 2,
       qa('#trSrc option').map((o) => o.textContent).join(' ｜ '));
-    /* 排序项点一下：证明排序真的接后端（顺序变化不稳，这里只钉「不抛异常 + on 转移」） */
+    /* 排序项点一下：证明排序真的接后端（顺序变化不稳，这里只钉「不抛异常 + on 转移」）
+       ★ v10.97：项数 3 → 4（新增「最热门」在最前）。
+       ⚠️ 断言文案**不写死具体档位名** —— 三个分区的 sorts 末项并不相同
+          （修改器是 最近更新，MOD/存档是 按游戏名），写死会在换分区时变成假红/假绿。
+          这里只用按钮自己的文本回显。 */
     const sorts = qa('#trSorts .emu-sort');
-    if (sorts.length >= 3) {
+    const lastSort = sorts[sorts.length - 1];
+    if (sorts.length >= 4 && lastSort) {
       const errN = e1.length;
-      click(sorts[2]);
+      click(lastSort);
       await sleep(1800);
-      ok('点排序项「按游戏名」→ 不抛异常且高亮转移（证明排序真的打后端）',
-        e1.length === errN && sorts[2].classList.contains('on'), `${sorts[2].textContent} on=${sorts[2].classList.contains('on')}`);
+      ok('点排序项（末项）→ 不抛异常且高亮转移（证明排序真的打后端）',
+        e1.length === errN && lastSort.classList.contains('on'),
+        `${lastSort.textContent} on=${lastSort.classList.contains('on')}`);
     } else {
-      ok('修改器排序项（不足 3 项，跳过）', true, `实际 ${sorts.length} 项`);
+      ok('修改器排序项（不足 4 项，跳过）', true, `实际 ${sorts.length} 项`);
     }
   }
 
