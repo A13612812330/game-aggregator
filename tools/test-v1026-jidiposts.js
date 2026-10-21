@@ -159,9 +159,11 @@ eq(byReply[0].id, 'r2', 'sort=reply 时按回复数降序');
  * ============================================================ */
 console.log('\n=== ④ jidiSigned 的 envPath ===');
 const signed = read('fetchers/jidiSigned.js');
-ok(/async function signedPost\(\{ api, referer, envPath/.test(signed),
+/* ★ v10.95：signedPost 改成 `signedPost(o)` + 内部解构（为了加「失败换 env 重试」）。
+   守的是「envPath 与 referer 是两个独立入口」这个**语义**，不是函数签名的字面形态。 */
+ok(/async function signedPost\(o\)/.test(signed) && /const \{ api, referer, envPath/.test(signed),
   '★ signedPost 拆出 envPath 参数（详情页 env 无 host，用详情页取 env 会抛「未内嵌 env」）');
-ok(/getEnv\(envPath \|\| referer/.test(signed),
+ok(/const envP = envPath \|\| referer;/.test(signed) && /getEnv\(envP, \{ host, force \}\)/.test(signed),
   '★ 取 env 用 envPath，缺省退回 referer（老调用点行为不变）');
 const jposts = read('fetchers/jidiPosts.js');
 ok(/envPath:\s*'\/topic\/list'/.test(jposts),

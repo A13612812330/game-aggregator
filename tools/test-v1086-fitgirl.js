@@ -73,9 +73,13 @@ ok('B5 不做流代理（FitGirl filehoster 不可服务端复刻 —— 终局�
 /* ============ C. 前端 ============ */
 console.log('\n── C 前端接线 ──');
 const HTML = read('public/index.html');
+/* ★ v10.95：`dlUniFetchBody` 多了第二个参数（force 重试）。断言放宽成「可带参数」——
+   守的是「FitGirl 段与本体并行取，不拖慢 302 解析」这个**语义**，不是调用字面量。
+   ⚠️ 别把这条改回只认 `dlUniFetchBody(st.ctx)`：那会让下次加参数时又红一次，
+      而红的原因跟 FitGirl 一点关系都没有。 */
 ok('C1 dlUniFetchFg 定义且与 dlUniFetchBody 并行（Promise.all）',
   /async function dlUniFetchFg\(/.test(HTML)
-  && /Promise\.all\(\[\s*dlUniFetchBody\(st\.ctx\),\s*dlUniFetchFg\(st\.ctx\)\.catch/.test(HTML));
+  && /Promise\.all\(\[\s*dlUniFetchBody\(st\.ctx[^)]*\),\s*dlUniFetchFg\(st\.ctx\)\.catch/.test(HTML));
 ok('C2 body 页签渲染后追加 FitGirl 段（dlUniPaintFg）',
   /dlUniPaintBody\(d\);\s*dlUniPaintFg\(st\.data\.fg\);/.test(HTML));
 /* ★ v10.92 契约变更：行内从「↗ 打开 Repack 页 / ⧉ 复制磁力 / ▸ 分卷清单」三链接

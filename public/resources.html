@@ -2569,10 +2569,24 @@
     background:#FFF8E6;border:1px solid rgba(217,166,33,.34);border-radius:var(--r-md);padding:10px 11px}
   .dl-blocked::before{content:'⚠';flex:none;font-size:12px;line-height:1.6}
   .dl-blocked b{color:#6B4A00}
+  /* ★ v10.95：真实错误原文（等宽、可选中，方便直接贴给我排查） */
+  .dl-err{margin-top:6px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:11px;line-height:1.65;color:#8A6100;background:rgba(217,166,33,.09);
+    border-radius:6px;padding:6px 8px;word-break:break-all;user-select:text}
   .dl-go{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:11.5px;font-weight:750;
     color:var(--c-xd);background:rgba(11,123,255,.08);border:1px solid rgba(11,123,255,.28);
     border-radius:8px;padding:6px 11px;transition:.14s}
   .dl-go:hover{background:var(--c-xd);color:#fff;border-color:transparent}
+  /* ★ v10.95：机地「这次没取到」的重试条 —— 与上面的 .dl-go 并列，别做成主按钮，
+     它只是给一次自愈机会（服务端失败只缓存 60 秒，多数情况点一下就回来了）。 */
+  .dl-retry{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:9px}
+  .dl-retry-b{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:750;
+    color:var(--c-jidi,#7C3AED);background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);
+    border-radius:8px;padding:6px 11px;transition:.14s;cursor:pointer;font-family:inherit}
+  .dl-retry-b:hover{background:var(--c-jidi,#7C3AED);color:#fff;border-color:transparent}
+  .dl-retry span{font-size:11px;color:var(--c-t3);line-height:1.6}
+  /* 重试条在「成功但有专区报错」的窄提示里也要能用 —— 复用同一个类，只压缩上边距 */
+  .dl-note .dl-retry{margin-top:6px}
 
   /* ============ 「⬇ 直接下载」= 下载 + 自动逐层解压 + 进度浮层（v10.72 起，v10.73 定型）
    * 需求原话（2026-10-14）：「如果我想直接通过下载按钮的话怎么样自动解压」
@@ -6434,6 +6448,21 @@ function dlGoModule(k) {
   dlUniPane();
 }
 
+/** ★ v10.95：重抓某个模块（目前只有「本体」用得到）。
+ *  ① 必须先 `delete data[k]` 并把 busy 复位 —— 否则 dlUniLoad 会因「已有数据」直接返回，
+ *     用户点重试看起来毫无反应；
+ *  ② 立刻出加载态：机地现抓约 0.7~1.2 秒，没有反馈会被当成「按钮坏了」。 */
+function dlRetry(k) {
+  if (!dlUni || dlUni.busy[k]) return;
+  delete dlUni.data[k];
+  dlUni.busy[k] = false;
+  if (dlUni.tab === k) {
+    $('#dlBody').innerHTML = '<div class="emu-loading">正在重新抓取…</div>';
+    $('#dlFoot').innerHTML = '';
+  }
+  dlUniLoad(k, true);
+}
+
 /** 画当前模块：先出加载态（或缓存内容），再按需取数 */
 function dlUniPane() {
   if (!dlUni) return;
@@ -6455,17 +6484,19 @@ function dlUniPane() {
   dlUniPaintSave(d);
 }
 
-/** 取数（每个模块只取一次；失败也记进 data，切回来能看到原因而不是无限转圈） */
-async function dlUniLoad(k) {
+/** 取数（每个模块只取一次；失败也记进 data，切回来能看到原因而不是无限转圈）
+ *  ★ v10.95：`force=true` 用于「重试」按钮 —— 忽略已有数据、带 `refresh=1` 重抓。 */
+async function dlUniLoad(k, force) {
   const st = dlUni;
-  if (!st || st.data[k] !== undefined || st.busy[k]) return;
+  if (!st || st.busy[k]) return;
+  if (st.data[k] !== undefined && !force) return;
   st.busy[k] = true;
   try {
     if (k === 'body') {
       /* ★ v10.86：FitGirl Repack 段并行取 —— 服务端本地索引毫秒级，不拖慢
          /api/download 的 302 解析；失败静默为 null（本体页签照常画，FitGirl 段不出现）。 */
       const [d, fg] = await Promise.all([
-        dlUniFetchBody(st.ctx),
+        dlUniFetchBody(st.ctx, !!force),
         dlUniFetchFg(st.ctx).catch(() => null),
       ]);
       st.data.body = d;
@@ -6530,8 +6561,13 @@ async function dlUniResolveItem(ctx) {
 }
 
 /** ① 本体：`/api/download`。只保留「本体」专区 —— Mod / 修改器有自己的模块，
- *  且那边走 /api/mods/match（本地索引，覆盖更全），没必要把同一批帖渲染两遍。 */
-async function dlUniFetchBody(ctx) {
+ *  且那边走 /api/mods/match（本地索引，覆盖更全），没必要把同一批帖渲染两遍。
+ *
+ *  ★ v10.95 `force`：带 `&refresh=1` 绕过服务端缓存。
+ *    用户口径「机地有很多免费的本体链接，为什么只显示 XD 的」——根因是机地取 env 偶发
+ *    拿到挑战页 ⇒ 本体专区 405、0 帖，这份「0 帖」被缓存 30 分钟。服务端已改成
+ *    「失败只缓存 60 秒」，这里再给一个**用户能自己按的重试**：不让他等、也不让他以为「真没有」。 */
+async function dlUniFetchBody(ctx, force) {
   if (!ctx.url) {
     const it = await dlUniResolveItem(ctx);
     if (it) { ctx.url = it.url || ''; ctx.jidi = it.jidiUrl || ctx.jidi; }
@@ -6547,7 +6583,7 @@ async function dlUniFetchBody(ctx) {
     if (dlPre && dlPre.url === j.u && dlPre.data && dlPre.data.ok) {
       return Promise.resolve({ tag: j.tag, d: dlPre.data });
     }
-    return fetch(api('/api/download?url=' + encodeURIComponent(j.u)))
+    return fetch(api('/api/download?url=' + encodeURIComponent(j.u) + (force ? '&refresh=1' : '')))
       .then((r) => r.json()).then((d) => ({ tag: j.tag, d }))
       .catch((e) => ({ tag: j.tag, d: { ok: false, error: e.message } }));
   }));
@@ -6568,10 +6604,20 @@ async function dlUniFetchBody(ctx) {
     secs = [{ key: 'body', name: '本体', count: jiAll.length, returned: jiAll.length, merged: false, items: jiAll }];
   }
   const links = xdItems.length + secs.reduce((n, s) => n + s.items.length, 0);
+  /* ★ v10.95：机地「这次没取到」与「确实没有」必须分开带出去。
+     服务端 sections[].error 是现成的痕迹（例：`/api/misc/post_list HTTP 405`），
+     以前只在「一条都没有」时才靠 blocked 显示一句笼统的「临时故障」。
+     现在把本体专区的 error 单独摘出来，空态就能说清原因 + 给重试。 */
+  const bodySec = rawSecs.find((s) => s.key === 'body');
+  const jiErr = rawSecs.filter((s) => s.error)
+    .map((s) => ({ key: s.key, name: s.name || s.key, error: String(s.error) }));
   return {
     links,
     posts: secs.reduce((n, s) => n + dlGroupByPost(s.items).length, 0),
     xdItems, secs,
+    /* 本体专区报错（≠ 没有资源）；前端据此给「重试」而不是「没有」 */
+    bodyErr: (bodySec && bodySec.error) ? String(bodySec.error) : '',
+    jiErr,
     head: good.map((x) => x.d.title).filter(Boolean)[0] || '',
     sub: good.map((x) => x.d.version || x.d.subtitle).filter(Boolean)[0] || '',
     topicUrl: (ji && ji.d.url) || 'https://jidiyouxi.com/',
@@ -6776,10 +6822,25 @@ function dlUniPaintBody(d) {
     const blocks = [];
     if (d.blocked.xd) blocks.push(dlBlocked('XDGAME 官方盘口', 'xd', 'XD', d.blocked.xd));
     if (d.blocked.ji) blocks.push(dlBlocked('机地社区分享', 'jidi', '机地', d.blocked.ji));
-    body.innerHTML = '<div class="dl-note">这款游戏暂时<b>没有可直接打开的网盘地址</b>，下面是原因与出口</div>' +
+    /* ★ v10.95：机地**这次没取到**（专区带 error）≠「机地没有」。以前这种情况会掉到
+       下面那句「可能只是话题、尚无资源帖」，把一次 405 说成「源站没资源」——
+       用户就会以为我们漏抓了（事实上就是漏了，只是漏得会自愈）。
+       所以这里单开一块：写清原因、给重试、并说明「不是没有」。 */
+    const jiFailed = !!(d.bodyErr || (d.jiErr && d.jiErr.length));
+    if (jiFailed && !blocks.length) {
+      blocks.push(dlBlocked('机地社区分享', 'jidi', '机地', {
+        error: d.bodyErr || (d.jiErr || []).map((e) => e.key + '：' + e.error).join('；'),
+        url: d.topicUrl,
+      }));
+    }
+    let html = '<div class="dl-note">' +
+      (jiFailed ? '机地这次<b>没取到</b>本体链接（不是没有，可重试）' : '这款游戏暂时<b>没有可直接打开的网盘地址</b>')
+      + '，下面是原因与出口</div>' +
       (blocks.length ? blocks.join('')
         : '<div class="dlpop-empty">这些条目在源站也可能只是话题、尚无资源帖' +
           '<br><span style="font-size:11.5px">Mod / 修改器 / 存档 请点上面的页签</span></div>');
+    if (jiFailed) html += dlRetryHtml();
+    body.innerHTML = html;
     return;
   }
   const sec = {};
@@ -6792,6 +6853,9 @@ function dlUniPaintBody(d) {
     xdItems: d.xdItems, jiItems,
     items: d.xdItems.concat(jiItems),
     secs: d.secs, sec,
+    /* ★ v10.95：机地本体这次报错（此时可能仍有 XD 的盘口在正常显示）——
+       非空时 paintDownload 会在说明行后补一条「机地没取到 + 重试」。 */
+    bodyErr: d.bodyErr || '',
     topicUrl: d.topicUrl,
   };
   paintDownload();
@@ -8348,12 +8412,19 @@ function paintDownload() {
   const gp = dlGroupByPost(v.items);
   const nJi = gp.filter((g) => g.src === 'ji').length;
   const nXd = gp.length - nJi;
+  /* ★ v10.95：XD 正常、机地这次失败 —— 必须说出来。
+     否则页面看起来「一切正常」（有 XD 盘口可点），用户只会得出「机地没资源」的结论，
+     而这正是本轮报障的形态：源站有几十条网盘帖，我们这边一条都没显示。 */
+  const jiWarn = (v.bodyErr && !v.secs.length)
+    ? '<div class="dl-blocked" style="margin-bottom:10px">机地这次<b>没取到</b>本体链接：' +
+      esc(v.bodyErr) + '。<br>这不是「机地没有」—— 点下面重试一次基本上就回来了。</div>' + dlRetryHtml()
+    : '';
   const srcTxt = '来自 <b>' + nJi + '</b> 个机地资源帖'
     + (nXd ? ' + <b>' + nXd + '</b> 个 XDGAME 官方盘口' : '');
   const note = '<div class="dl-note">共 <b>' + v.items.length + '</b> 个可直接打开的网盘地址（' + srcTxt + '）' +
     (v.filt ? '，筛选 <b>' + esc(DL_BRAND_NAME[v.filt] || v.filt) + '</b> 后本分区剩 <b>' + usable + '</b> 帖' : '') +
     ' · 链接均为源站实时解析</div>';
-  body.innerHTML = dlBarHtml() + note +
+  body.innerHTML = dlBarHtml() + note + jiWarn +
     (usable ? panel : '<div class="dlpop-empty">本分区在当前筛选下没有可用的网盘地址<br>' +
       '<span style="font-size:11.5px">点上面的「全部」看所有盘口，或换个分区</span></div>');
   body.scrollTop = keep;
@@ -8387,12 +8458,26 @@ function dlBlocked(title, srcCls, srcName, d) {
     ? '源站对这款游戏要求<b>登录 / 权限</b>才能取到网盘地址（返回「你没有权限下载」）。' +
       '这不是本站抓取失败 —— <b>去源站页面登录后即可获取</b>。'
     : '源站这次没有返回可用的跳转地址（可能是改版或临时故障）。可以稍后重试，或直接去源站页面取。';
+  /* ★ v10.95：把**真实错误**带上。以前这里只有一句笼统的「临时故障」，
+     排查时既分不清是 405 还是 WAF，也没法判断该不该重试。
+     现在 error 来自服务端 sections[].error（例：`/api/misc/post_list HTTP 405`）。 */
+  const detail = (typeof d.error === 'string' && d.error)
+    ? '<div class="dl-err">原因：' + esc(d.error) + '</div>' : '';
   const go = d.url
     ? '<a class="dl-go" href="' + esc(d.url) + '" target="_blank" rel="noopener">前往源站页面 ↗</a>' : '';
   return '<div class="dl-grp"><div class="h"><b>' + esc(title) + '</b>' +
     '<span class="src ' + srcCls + '">' + esc(srcName) + '</span>' +
     '<span class="n">0 / ' + n + ' 条可用</span></div>' +
-    '<div class="dl-blocked">' + why + '</div>' + go + '</div>';
+    '<div class="dl-blocked">' + why + '</div>' + detail + go + '</div>';
+}
+
+/** ★ v10.95：机地「这次没取到」的重试条（本体页签）。
+ *  服务端失败只缓存 60 秒（见 dlCacheTtl），所以多数情况点一下就回来；
+ *  但**不能自动重试**：机地是按请求数限流的，自动连打会把偶发失败放大成真限流。 */
+function dlRetryHtml() {
+  return '<div class="dl-retry">' +
+    '<button type="button" class="dl-retry-b" data-dl-retry="body">↻ 重新抓取机地链接</button>' +
+    '<span>机地偶尔会拒一次请求（源站限流），重试通常立刻就好</span></div>';
 }
 function dlCopy(el) {
   const txt = el.dataset.dlCopy || '';
@@ -9008,6 +9093,11 @@ function dModLinks() {
        `data-dl-*` 控件不重叠，但先判能省掉一串 closest()。 */
     const dm = e.target.closest('[data-dlm]');
     if (dm && dlUni) { e.preventDefault(); e.stopPropagation(); dlGoModule(dm.dataset.dlm); return; }
+    /* ★ v10.95：机地「这次没取到」的重试（带 refresh=1 绕缓存）。
+       必须在 [data-dl-open] 之前判 —— 重试按钮在弹窗**内部**，冒泡到上面那层
+       会被当成「再开一次弹窗」，白闪一下却不重抓。 */
+    const rt = e.target.closest('[data-dl-retry]');
+    if (rt) { e.preventDefault(); e.stopPropagation(); dlRetry(rt.dataset.dlRetry || 'body'); return; }
     const b = e.target.closest('[data-dl-open]');
     if (!b) return;
     e.preventDefault();

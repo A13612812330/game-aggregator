@@ -291,8 +291,10 @@ eq(dl.serverOf('https://store.steampowered.com/app/1/'), '其他链接',
   /* ★ 惰性加载：只加载当前页签，但三个便宜的先并行发出（本地索引，毫秒级） */
   ok(/for \(const k of \['mod', 'modifier', 'save'\]\) dlUniLoad\(k\)/.test(idx),
     '★ 打开弹窗时三个本地索引模块并行预热（页签条数尽快填上；最贵的 /api/download 留给当前页签）');
-  ok(/dlUniLoad\(k\)/.test(idx) && /st\.data\[k\] !== undefined \|\| st\.busy\[k\]/.test(idx),
-    '★ 每个模块只取一次数（切回已加载的页签不再打请求）');
+  /* ★ v10.95：守卫拆成两句（`busy` 先判、`force` 才允许重取）—— 守的是
+     「切回已加载的页签不再打请求」这个行为，同时把「重试必须显式传 force」也钉住。 */
+  ok(/if \(!st \|\| st\.busy\[k\]\) return;/.test(idx) && /if \(st\.data\[k\] !== undefined && !force\) return;/.test(idx),
+    '★ 每个模块只取一次数（切回已加载的页签不再打请求；只有 force 重试才重取）');
   ok(/box\.hidden = true; box\.innerHTML = ''/.test(idx),
     '★ 关弹窗 / 打开「查看全部」子视图时把页签条藏掉（两套导航不许并存）');
   ok(/function openDlSecPop\(/.test(idx) && /data-df-open/.test(idx),

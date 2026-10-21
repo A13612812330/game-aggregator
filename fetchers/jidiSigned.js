@@ -103,32 +103,57 @@ async function getEnv(path = '/modify/list', { force = false, host = 'https://ji
  *   而 `post_list`（话题资源列表）需要的是**列表页那份带 host 的 env**，
  *   Referer 用详情页更贴切。两者本可以不同，所以分开传。
  *   （实测：env 取 `/topic/list` + Referer 用 `/topic/detail/<tid>` → ret:1 正常返回。）
+ *
+ * ★ v10.95：**失败必须重试一次，且重试前强制换 env**。
+ *   实测（2026-10-21，tid=640827939 星砂岛）：同一个进程里
+ *     · 第一次 topicPosts → 本体专区 `HTTP 405`、0 帖；
+ *     · 2 秒后同一话题再抓 → 本体 3 帖 / 5 条网盘链接。
+ *   说明 405 不是「这块没资源」，而是**取 env 那一步偶发拿到挑战页/空页**
+ *   （envCache 里存的 env 一旦带病，10 分钟内每次签名都 405）。
+ *   ⇒ 只要失败就 `envCache.delete(path)` + 强制重取一次，仍是失败才向上抛。
+ *   ⚠️ 只重试 **1 次**：机地的限流是按请求数算的，多重重试会把偶发失败放大成真限流。
  */
-async function signedPost({ api, referer, envPath, body = {}, host = 'https://jidiyouxi.com', timeout = REQ_TIMEOUT }) {
-  const env = await getEnv(envPath || referer, { host });
-  const full = Object.assign({}, env, body, { h_ts: Date.now(), h_ch: body.h_ch || 'other' });
-  full.h_did = full.h_did || '';
-  const sign = websign(full);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  const r = await fetch(host + api + '?websign=' + encodeURIComponent(sign), {
-    method: 'POST',
-    headers: {
-      'User-Agent': UA,
-      'content-type': 'text/plain',
-      Referer: host + referer,
-    },
-    body: JSON.stringify(full),
-    signal: AbortSignal.timeout(timeout),
-  });
-  if (!r.ok) throw new Error(api + ' HTTP ' + r.status);
-  let j;
-  try { j = await r.json(); } catch {
-    throw new Error(api + ' 返回非 JSON');
+async function signedPost(o) {
+  const { api, referer, envPath, body = {}, host = 'https://jidiyouxi.com', timeout = REQ_TIMEOUT, retry = 1 } = o;
+  const envP = envPath || referer;
+  let lastErr = null;
+
+  for (let attempt = 0; attempt <= retry; attempt++) {
+    const force = attempt > 0;
+    try {
+      if (force) envCache.delete(envP);         // 带病的 env 必须先扔掉
+      const env = await getEnv(envP, { host, force });
+      const full = Object.assign({}, env, body, { h_ts: Date.now(), h_ch: body.h_ch || 'other' });
+      full.h_did = full.h_did || '';
+      const sign = websign(full);
+
+      const r = await fetch(host + api + '?websign=' + encodeURIComponent(sign), {
+        method: 'POST',
+        headers: {
+          'User-Agent': UA,
+          'content-type': 'text/plain',
+          Referer: host + referer,
+        },
+        body: JSON.stringify(full),
+        signal: AbortSignal.timeout(timeout),
+      });
+      if (!r.ok) throw new Error(api + ' HTTP ' + r.status);
+      let j;
+      try { j = await r.json(); } catch {
+        throw new Error(api + ' 返回非 JSON');
+      }
+      if (!j || j.ret !== 1) {
+        throw new Error(api + ' 返回异常: ' + JSON.stringify(j).slice(0, 200));
+      }
+      return j.data || {};
+    } catch (e) {
+      lastErr = e;
+      if (attempt < retry) await sleep(250);
+    }
   }
-  if (!j || j.ret !== 1) {
-    throw new Error(api + ' 返回异常: ' + JSON.stringify(j).slice(0, 200));
-  }
-  return j.data || {};
+  throw lastErr || new Error(api + ' 未知失败');
 }
 
 module.exports = { BODY_SALT, REQ_TIMEOUT, ENV_TTL, md5, websign, extractEnv, getEnv, signedPost };

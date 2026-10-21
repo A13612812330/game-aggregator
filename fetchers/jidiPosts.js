@@ -351,16 +351,34 @@ async function topicPosts({ tid, sort = 'hot', perSection = 50, sections = SECTI
 
   /* ★ 三专区**并行**：实测各 300~540ms，串行要 1.2s+，并行 624ms。
      用 allSettled —— 某一个专区挂掉（或该专区被源站关权限）不该让整轮白跑，
-     但**失败必须有痕迹**：该专区返回 `error` 而不是假装「这个专区没有资源」。 */
-  const settled = await Promise.allSettled(
-    list.map((sec) => fetchSectionSmart({
-      tid,
-      resourceType: sec.resourceType,
-      sort: s,
-      max: perSection > 0 ? perSection : 0,
-      mergeNew,
-    }))
-  );
+     但**失败必须有痕迹**：该专区返回 `error` 而不是假装「这个专区没有资源」。
+   *
+   * ★★ v10.95：失败的专区要**串行补抓一次**。
+   *   实测（2026-10-21，同一话题连打三次）：三专区并行时偶有一个回 405 /
+   *   「页面未内嵌 env」（机地对并发突发比较敏感）；隔 2 秒再抓就好了。
+   *   只在 signedPost 里重试**不够** —— 两次尝试都落在同一个挑战窗口里时仍会失败，
+   *   而这个失败会被当成「本体没有链接」，用户看到的就是「只有 XD 的盘口」。
+   *   ⇒ 并行的批次跑完后，**对失败的专区一个个重来**（不再并发），间隔 400ms。
+   *   ⚠️ 只补一轮：机地是按请求数限流的，补两轮以上会把偶发失败放大成真限流。 */
+  const runOne = (sec) => fetchSectionSmart({
+    tid,
+    resourceType: sec.resourceType,
+    sort: s,
+    max: perSection > 0 ? perSection : 0,
+    mergeNew,
+  });
+
+  const settled = await Promise.allSettled(list.map(runOne));
+
+  const retried = [];
+  for (let i = 0; i < settled.length; i++) {
+    if (settled[i].status === 'fulfilled') continue;
+    retried.push(i);
+    await new Promise((r) => setTimeout(r, 400));      // 避开同一个挑战窗口
+    try {
+      settled[i] = { status: 'fulfilled', value: await runOne(list[i]) };
+    } catch (e) { /* 仍失败 ⇒ 保留下面的 error 痕迹 */ }
+  }
 
   const out = [];
   let total = 0;
@@ -371,6 +389,8 @@ async function topicPosts({ tid, sort = 'hot', perSection = 50, sections = SECTI
         key: sec.key, name: sec.name, resourceType: sec.resourceType,
         count: 0, returned: 0, pages: 0, error: String((r.reason && r.reason.message) || r.reason),
         merged: false, mergedAdded: 0, newError: null,
+        /** v10.95：这个专区是不是「并行失败 → 串行补抓后仍然失败」 */
+        retried: retried.includes(i),
         items: [],
       });
       return;
@@ -391,6 +411,8 @@ async function topicPosts({ tid, sort = 'hot', perSection = 50, sections = SECTI
       merged: !!v.merged,
       mergedAdded: v.added || 0,
       newError: v.newError || null,
+      /** v10.95：这一批是不是「并行失败 → 串行补抓后成功」 */
+      retried: retried.includes(i),
       /** 有网盘直链的条数 —— 下载场景真正能用的那部分 */
       withLinks: items.filter((x) => x.links.length).length,
       items,

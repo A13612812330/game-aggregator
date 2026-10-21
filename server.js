@@ -71,8 +71,13 @@ const cache = new Map();
 function cached(key, ttlMs, builder) {
   const hit = cache.get(key);
   /* `hit.ttl` 还是函数 = builder 尚在跑（没定型）⇒ 按调用方默认 TTL 判「新鲜」，
-     这样并发的第二个请求仍然复用同一个 in-flight promise（与改前行为一致）。 */
+     这样并发的第二个请求仍然复用同一个 in-flight promise（与改前行为一致）。
+     ★ v10.95 修：TTL 支持**函数形态**后（按结果决定缓存多久），上面那句「按调用方默认
+       TTL 判」就落空了 —— `typeof t === 'number'` 为假，会直接走到下面**再建一个 builder**，
+       并发去重整段失效（一次弹窗能打出 3 次机地抓取，反而更容易被限流）。
+       ⇒ 函数态一律当「还在跑」，直接复用。 */
   if (hit) {
+    if (typeof hit.ttl === 'function') return hit.value;
     const t = typeof hit.ttl === 'number' ? hit.ttl : ttlMs;
     if (typeof t === 'number' && Date.now() - hit.ts < t) return hit.value;
   }
@@ -3847,6 +3852,18 @@ app.get('/api/jiditopics/list', (req, res) => {
 //
 //   ★ 为什么带缓存：XD 一次要解 6 个盘口的 302（6 次外部请求），机地要拉一整张详情页。
 //     资源列表在几小时内不会变，缓存 30 分钟足够。
+//
+//   ★★ v10.95：「缓存 30 分钟」只适用于**完整成功**的那一次。
+//     用户口径「机地有很多免费的下载本体链接，为什么只显示 XD 的」——
+//     实测根因（2026-10-21）：机地取 env 偶发拿到挑战页 ⇒ 本体专区回 405、0 帖，
+//     而这份「0 帖」被当成正常结果缓存了 30 分钟；同一进程里 2 秒后现抓同一话题
+//     （tid 640827939 星砂岛）→ 本体 3 帖 / 5 条网盘链接。这就是全程只看到 XD 的原因。
+//     ⇒ 时长策略单独放进 `data/dl-cache-ttl.js`（能单测）：有专区报错只缓存 60 秒、
+//       SSR 兜底 120 秒、完整成功才 30 分钟。
+//     ⚠️ 判据是「有没有 error」而不是「有没有链接」——「帖在但没写网盘」是正常空结果，
+//        照常缓存，否则每次打开都重打源站，反而更快触发限流。
+const { dlCacheTtl } = require('./data/dl-cache-ttl');
+
 app.get('/api/download', async (req, res) => {
   const rawUrl = String(req.query.url || '').trim();
   let target = null;
@@ -3862,8 +3879,12 @@ app.get('/api/download', async (req, res) => {
     target = { source, id, host: String(req.query.host || '').trim() || undefined };
   }
   const key = 'dl:' + target.source + ':' + (target.host || '') + ':' + target.id;
+  /* ★ v10.95：`refresh=1` 强制重抓 —— 与 /api/detail 同一个开关。
+   *   起因：机地偶发 405 会把「0 条链接」写进 30 分钟缓存，用户点开只看到 XD 的盘口，
+   *   而源站明明有几十条网盘帖。前端「重试」按钮就调这个参数。 */
+  if (String(req.query.refresh || '') === '1') cache.delete(key);
   try {
-    const data = await cached(key, 30 * 60_000, () => download.resolve({
+    const data = await cached(key, dlCacheTtl, () => download.resolve({
       source: target.source,
       id: target.id,
       host: target.host,
