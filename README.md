@@ -872,10 +872,10 @@ python tools/clean-excel.py       # 读 E:/新建文件夹/基础测试数据.xl
 > `bt-metadata-only`+`bt-save-metadata` · `select-file` · `--save-session` 恢复）。三处按部署形态改：
 > **无 aria2 则 `apt-get install`（幂等只试一次）** · **只放行磁力**（少一类 SSRF 面）·
 > **用 `infoHash` 对账恢复**（gid 会变、文件名会被 auto-rename）。<br>
-> **规模**：`download-guard.js` 165 行纯判据（30 GB 上限 / 40 GB 磁盘水位 / 每 IP 同时 1 个 +
-> 滚动 24h 3 个 / `sanitizeFiles` 剥绝对路径）· `download-tasks.js` 168 行（原子写 tmp+rename、
-> 坏文件改名留证不阻断启动、进度刷新 `persist:false` 不写盘）· `download-engine.js` 386 行 ·
-> `server.js` +330 行七条接口 `previews|batches|tasks|actions|files|quota|debug`。<br>
+> **规模**：`download-guard.js` 171 行纯判据（30 GB 上限 / 40 GB 磁盘水位 / 每 IP 同时 1 个 +
+> 滚动 24h 3 个 / `sanitizeFiles` 剥绝对路径）· `download-tasks.js` 158 行（原子写 tmp+rename、
+> 坏文件改名留证不阻断启动、进度刷新 `persist:false` 不写盘）· `download-engine.js` 534 行 ·
+> `server.js` +365 行七条接口 `previews|batches|tasks|actions|files|quota|debug`。<br>
 > **为什么 preview 与 batches 分两步**：磁力**不含体积**，判 30 GB 要先拉元数据（实测 4.1–4.9s），
 > 合成一步会让用户等 8 秒才被告知超限、而配额已经吃掉。**previewId 由服务端发** ——
 > 前端能传 `torrentPath` 就能读服务器任意文件。<br>
@@ -886,17 +886,29 @@ python tools/clean-excel.py       # 读 E:/新建文件夹/基础测试数据.xl
 > 只选 `setup.exe` → **162 s 下完 4,270,111 B** → 保存 **200 / SIZE MATCH /
 > `md5 e1444aa678148b2a49e470992551b64d`** → `Range` **206 + 1024 B 前缀一致**；
 > `pause`/`resume`/`cancel` 全通（`paused spd=0` → `active spd=180,838` → `cancelled` + 目录已删）。<br>
-> **踩坑 7 条**（最贵的一条）：★★ **90 s 超时被误判成 DHT 不通，真因是那个种没 seeder**
+> **线上实测**（`gamehub-agg-v4.app.workbuddy.host` · linux 容器 · 2026-10-21）：aria2 **50 秒内**装完
+> （`aria2 version 1.37.0`）· preview **3.0–5.8 s / 7 文件**（Astrobuilder 2.70 GB、Chained Together 4.95 GB）·
+> 建任务 → 下完 → 保存 **27 秒**全链路（`spd=358,412 B/s`）· 保存 **200 / SIZE MATCH /
+> `md5 a3a1d3f8…`**（两次独立任务结果一致）· `Range` **206（`bytes 0-63/69`）前缀一致** ·
+> 五页 md5 **5/5 MATCH** · 磁盘 **252.8 GB**。同容器两个种差 **10 倍**：`Astrobuilder` 只 1 个 seeder
+> ⇒ 传 2.8 MB 后 `spd=0` 卡死 90 s；`Chained Together` seeder 充足 ⇒ **20 秒**下完 4 MiB。
+> ⇒ 引擎没问题，**速度完全取决于种子生态**。<br>
+> **踩坑 13 条**（最贵的两条）：★★ **90 s 超时被误判成 DHT 不通，真因是那个种没 seeder**
 > （`conn=0 seeders=0`；同一引擎换 Astrobuilder **5.0 s** 成功）⇒ 诊断只看 `numSeeders`，
-> 不看「有没有报错」。其余：`--dht-listen-port=49152-65535` 宽范围反而拿不到元数据（防火墙逐端口丢包）·
-> debug 端点直接调 `rpc()` 没 `ready()` ⇒ `Failed to parse URL from ` · 进度分母用 `totalLength`
-> 比真实文件大 0.8 MB（改「选中文件之和」）· `tellStatus.files` 返回种子内全部条目（按 `selected` 过滤）·
-> `(cmd &)` 起的实例在 Bash 调用结束被回收。<br>
-> **防线**：`test-v1093-downloads` **85/85**（新，登记 run-all，纯判据 + 源码护栏 + 前端渲染，
-> **不跑真下载**）· v1089 **42/42**（E2/E3 改判新文案）· v1086 **20/20** · pages-sync **58/58** ·
-> inline-syntax **4/4**。<br>
-> **未验**：**写盘是否跨容器重建存活**（要两次发布比对）· 线上 apt 耗时与出口带宽 ·
-> 重启恢复真实演练 · 全局任务中心 UI（目前只在同一篇 repack 的弹窗看进度）。<br>
+> 不看「有没有报错」。★★ **进度分子分母必须同口径**：勾 1 个 **69 B** 的 `.bat`，aria2 传输量是
+> **4,079,169 B**（一整块），混用口径会显示「4,079,169 / 69」。其余：`--dht-listen-port=49152-65535`
+> 宽范围反而拿不到元数据（防火墙逐端口丢包）· debug 端点直接调 `rpc()` 没 `ready()` ⇒ `Failed to parse URL from ` ·
+> `tellStatus.files` 返回种子内全部条目（按 `selected` 过滤）· `(cmd &)` 起的实例在 Bash 调用结束被回收 ·
+> **`quota` 这种高频公开 GET 里顺手调安装逻辑，会把 `installTried` 提前置真 ⇒ 引擎永远装不上**（只读端点不许有副作用）·
+> 新容器 **apt 包索引为空**，`apt-get install` 前必须 `apt-get update -qq` ·
+> `spawnSync` 装包阻塞事件循环把平台 60 s 健康检查拖死（改异步 + 收 stderr）·
+> **反代后同客户端出口 IP 会变** ⇒ 拿 IP 当身份会「刚建的任务查不到」，改用 **80 bit 随机 id 即凭据** ·
+> **字段白名单漏一行 ⇒ 前端恒 `undefined`**（`selBytes` 存进了对象却没下发，UI 显示「所选 0B」）。<br>
+> **防线**：`test-v1093-downloads` **97/97**（新，登记 run-all，纯判据 + 源码护栏 + 前端渲染，
+> **不跑真下载**）· v1089 **42/42**（E2/E3 改判新文案）· v1086 **20/20** · v1090 **82/82** ·
+> pages-sync **58/58** · inline-syntax **4/4**。<br>
+> **未验**：**写盘是否跨容器重建存活**（要两次发布比对）· 重启恢复真实演练 ·
+> 全局任务中心 UI（目前只在同一篇 repack 的弹窗看进度）· 打包 EXE / 切本机执行端。<br>
 > 全文：[docs/versions/v10.93.md](docs/versions/v10.93.md)。
 
 ### ★ v10.92 增量（2026-10-20）—— FitGirl 源整理成**两个按钮**（⬇ 直链下载 / ⧉ 磁力链）+ 线上运行时只读自检

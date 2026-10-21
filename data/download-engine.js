@@ -466,11 +466,28 @@ async function status(gid) {
       'gid', 'status', 'totalLength', 'completedLength', 'downloadSpeed',
       'errorMessage', 'errorCode', 'infoHash', 'files',
     ]]);
+    /* ★ 进度口径：分子分母**必须都用 aria2 的 torrent 级字段**（totalLength / completedLength），
+       它们同口径 ⇒ 永远不会出现「分子 > 分母」，且进度真实平滑。
+       ★ 反过来做（分母用「选中文件之和」）会出两个坑，都是实测踩到的：
+         ① 线上勾 1 个 69 B 的 .bat，aria2 的 completedLength 已经是 4,079,169 B
+            ⇒ 显示「4,079,169 / 69」，荒谬；
+         ② 若分子改用选中文件的 completedLength，piece 没下完时它恒为 0
+            ⇒ 进度条长时间停在 0%，用户以为卡死（BT 是按块校验的）。
+       ⇒ 所以「传输量」当进度，「所选文件体积」另用 selTotalBytes 单独告知用户。 */
+    const files = Array.isArray(st.files) ? st.files : [];
+    const picked = files.filter((f) => f && (f.selected === 'true' || f.selected === true));
+    const pool = picked.length ? picked : files;
+    const selTotal = pool.reduce((a, f) => a + (Number(f.length) || 0), 0);
+    const totalBytes = Number(st.totalLength) || 0;
+    let completedBytes = Number(st.completedLength) || 0;
+    if (completedBytes > totalBytes) completedBytes = totalBytes;
+    if (String(st.status) === 'complete') completedBytes = totalBytes;
     return {
       ok: true,
       state: STATE_MAP[String(st.status)] || 'failed',
-      totalBytes: Number(st.totalLength) || 0,
-      completedBytes: Number(st.completedLength) || 0,
+      totalBytes,
+      completedBytes,
+      selTotalBytes: selTotal,
       speed: Number(st.downloadSpeed) || 0,
       error: String(st.errorMessage || ''),
       infoHash: String(st.infoHash || ''),

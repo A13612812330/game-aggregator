@@ -123,6 +123,30 @@ ok(/delete env\[k\]/.test(ENGINE), 'B14 启动时清掉代理环境变量（BT �
 ok(/apt-get/.test(ENGINE) && /installTried/.test(ENGINE), 'B15 无 aria2 时 apt 幂等安装（只试一次）');
 ok(/reconcile/.test(ENGINE) && /infoHash/i.test(ENGINE), 'B16 重启用 infoHash 对账（gid 会变）');
 
+/* ★ 进度口径：分子分母**必须同口径**（都取 aria2 的 torrent 级字段），否则线上出过两种荒谬读数：
+   · 分子用 completedLength、分母用「所选文件之和」⇒「4,079,169 / 69」（勾了 1 个 69 B 的 .bat）；
+   · 反过来 ⇒ 进度长期 0%（piece 没下完时文件的 completedLength 不动）。
+   现在「传输量」当进度、「所选文件体积」用 selTotalBytes 单独展示，两个字段不许合并回去。 */
+const ENGINE_CODE = ENGINE
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+
+ok(/Number\(st\.totalLength\)/.test(ENGINE_CODE) && /Number\(st\.completedLength\)/.test(ENGINE_CODE),
+  'B17 进度分子分母都取 torrent 级字段（同口径）');
+ok(!/selDone/.test(ENGINE_CODE), 'B18 不许把「选中文件的完成量」当分子（会长期 0%）');
+ok(/selTotalBytes/.test(ENGINE_CODE) && /f\.selected === 'true'/.test(ENGINE_CODE),
+  'B18b 仍保留「所选文件体积」单独字段（供 UI 展示）');
+ok(/if\s*\(completedBytes\s*>\s*totalBytes\)\s*completedBytes\s*=\s*totalBytes/.test(ENGINE_CODE),
+  'B19 完成字节夹紧，不许超过传输总量');
+ok(/===\s*'complete'\)\s*completedBytes\s*=\s*totalBytes/.test(ENGINE_CODE), 'B20 complete 时强制 100%（块对齐余量不显示 98%）');
+
+/* 服务端：建任务时 totalBytes 必须留 0 交给引擎回填，selBytes 记所选体积 —— 合并成一个字段就会复发上面的错。 */
+ok(/selBytes:\s*pickedBytes,\s*totalBytes:\s*0/.test(SERVER), 'B21 建任务时 selBytes=所选体积、totalBytes 留 0 待回填');
+ok(/fields\.selBytes/.test(SERVER) && /fields\.totalBytes\s*=\s*s\.totalBytes/.test(SERVER), 'B22 dlSync 两个体积分别回填');
+/* ★ 存进任务对象不等于前端收得到：dlTaskView 是字段白名单，漏一个字段线上就是 undefined
+   （v10.93.3 实测踩到：selBytes 明明写进了任务表，UI 却显示「所选 0B」）。 */
+ok(/selBytes:\s*t\.selBytes/.test(SERVER), 'B23 dlTaskView 下发 selBytes（白名单漏字段 = 前端恒 undefined）');
+
 /* ══════════════ C. server.js 护栏 ══════════════ */
 console.log('── C 服务端护栏 ──');
 
@@ -212,6 +236,16 @@ if (V) {
   ok(/download/.test(RDY), 'D24 保存按钮带 download 属性');
   const XSS = V.body({ state: 'error', err: 'A<b>C' });
   ok(XSS.includes('&lt;b&gt;') && !XSS.includes('<b>C'), 'D25 错误文案被转义（不许把后端文本当 HTML 插进去）');
+  /* ★ 线上实测：只勾 1 个 103 KB 的 QuickSFV.EXE，80 秒仍在下载、aria2 报已完成 2.7 MB。
+     根因是 BT 按 piece 下载（该块 MB 级，必须整块下完才能校验）。
+     用户不知道这一点就会认为「小文件都这么慢，产品坏了」⇒ 下载态必须有这句。 */
+  ok(/按块下载/.test(DL) && /整块/.test(DL), 'D26 下载态说明「BT 按块下载」，否则小文件慢会被当成故障');
+  const OVER = V.body({ state: 'downloading', task: { totalBytes: 100, completedBytes: 999, speed: 0, files: [] } });
+  ok(/width:100\.0%/.test(OVER) && !/width:999/.test(OVER), 'D27 完成数超过总量时夹紧到 100%（线上出现过 992KB/101KB）');
+  /* 线上真实个案：勾 1 个 69 B 的 .bat，服务器实际要传 4,079,169 B（一个 piece）。
+     进度按传输量算，但必须让用户看得到「我勾的只有 69 B」。 */
+  const SEL = V.body({ state: 'downloading', task: { totalBytes: 4079169, completedBytes: 1000000, selBytes: 69, speed: 0, files: [] } });
+  ok(/所选文件 69 B/.test(SEL), 'D28 传输量远大于所选文件时，单独标出「所选文件」体积');
 }
 
 /* ══════════════ E. 派生页继承 ══════════════ */

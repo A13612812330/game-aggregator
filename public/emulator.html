@@ -2293,6 +2293,8 @@
   .fgc-hint{font-size:11.5px;line-height:1.8;color:var(--c-t2);background:#F7F9FC;border:1px solid #E7EEF9;
     border-radius:8px;padding:8px 11px}
   .fgc-hint b{color:var(--c-t1)}
+  .fgc-note{color:#7A8797}
+  .fgc-note strong{color:#5B6675}
   .fgc-list{margin-top:9px;max-height:250px;overflow:auto;border:1px solid var(--c-border);
     border-radius:9px;background:#FCFDFF}
   .fgc-file{display:flex;align-items:center;gap:8px;padding:5px 10px;border-top:1px solid #F0F4FA}
@@ -7654,8 +7656,13 @@ function fgcBodyHtml(s) {
 
   if (s.state === 'downloading' || s.state === 'paused' || s.state === 'ready') {
     const t = s.task || {};
+    /* ★ total/done 必须是**同一口径**（都是服务器实际传输的字节）。混用会出现两种荒谬读数：
+       分子用传输量、分母用所选文件体积 ⇒「4,079,169 / 69 B」（线上实测）；
+       分母用传输量、分子用所选文件体积 ⇒ 进度长期 0%（piece 没下完时文件体积没动）。
+       所以这里两个都用传输口径，「所选文件多大」单独一格显示。 */
     const total = Number(t.totalBytes) || 0;
     const done = Number(t.completedBytes) || 0;
+    const sel = Number(t.selBytes) || 0;
     const pct = total > 0 ? Math.min(100, (100 * done) / total) : 0;
     let h = '';
     if (s.state === 'ready') {
@@ -7664,13 +7671,16 @@ function fgcBodyHtml(s) {
     } else if (s.state === 'paused') {
       h += H('已暂停。点「继续」接着下，或直接取消。');
     } else {
-      h += H('服务器正在下载。<b>这个页面可以关掉</b>，回来点同一篇的「☁ 云下载」还能看到进度。');
+      h += H('服务器正在下载。<b>这个页面可以关掉</b>，回来点同一篇的「☁ 云下载」还能看到进度。'
+        + '<br><span class="fgc-note">BT 按块下载：传输量通常<strong>大于</strong>你勾选的文件'
+        + '（要下完它所在的整块，常见 1–4 MB），所以进度是一跳一跳的。</span>');
     }
     h += '<div class="fgc-bar"><i class="' + (s.state === 'error' ? ' err' : '') +
       '" style="width:' + pct.toFixed(1) + '%"></i></div>';
     h += '<div class="fgc-stat"><span class="st' + (s.state === 'ready' ? '' : ' warn') + '">' +
       (FGC_LABEL[s.state] || s.state) + '</span>'
-      + '<span>' + fgcFmt(done) + ' / ' + fgcFmt(total) + '</span>'
+      + '<span>传输 ' + fgcFmt(done) + ' / ' + fgcFmt(total) + '</span>'
+      + (sel > 0 && total > sel * 1.02 ? '<span>所选文件 ' + fgcFmt(sel) + '</span>' : '')
       + (s.state === 'downloading'
         ? '<span>' + (Number(t.speed) > 0 ? fgcFmt(t.speed) + '/s' : '连接中…') + '</span>' : '')
       + '</div>';

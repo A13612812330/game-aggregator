@@ -2080,7 +2080,11 @@ function dlTaskView(t) {
     name: t.name,
     btih: t.btih,
     state: t.state,
+    /* ★ 两个体积必须都对外：totalBytes = 实际传输量（进度分母，引擎回填），
+       selBytes = 所选文件之和（用户勾了什么）。只发前者 ⇒ 勾 69 B 的用户看到「传输 3.9 MB」会困惑；
+       只发后者 ⇒ 分母与分子口径不一致，进度会出现 >100%。 */
     totalBytes: t.totalBytes,
+    selBytes: t.selBytes || 0,
     completedBytes: t.completedBytes,
     speed: t.speed,
     error: t.error,
@@ -2111,7 +2115,10 @@ async function dlSync(force) {
         speed: s.speed,
         error: s.error || '',
       };
-      if (s.totalBytes > 0 && !t.totalBytes) fields.totalBytes = s.totalBytes;
+      /* totalBytes 由引擎回填「实际传输量」（建任务时留 0）：BT 按块传，
+         这个数会大于所选文件之和，且它是进度条的**唯一**分母（同口径才不会分子>分母）。 */
+      if (s.totalBytes > 0) fields.totalBytes = s.totalBytes;
+      if (s.selTotalBytes > 0 && !t.selBytes) fields.selBytes = s.selTotalBytes;
       if (s.state === 'ready') fields.expiresAt = Date.now() + dlGuard.TASK_TTL_MS;
       dlTasks.patch(t.id, fields, { persist: stateChanged });
     }
@@ -2196,10 +2203,12 @@ app.post('/api/downloads/batches', async (req, res) => {
 
   const task = dlTasks.create({
     ip, magnet: pv.magnet, btih: pv.btih, name: pv.name,
-    /* ★ 分母用「选中文件之和」，不用种子总长：实测只勾 setup.exe 时 aria2 报
-       totalLength=5.09MB，而文件实际 4.27MB（差的是种子内元数据/块对齐）。
-       拿它当分母会得到「进度 84% 就 ready」这种读数，用户会以为文件不完整。 */
-    totalBytes: pickedBytes, state: 'queued', files: [],
+    /* ★ 两个体积不能混成一个字段（线上实测两次踩到）：
+       · `selBytes` = 所选文件之和 —— 用户**勾了什么**，用于体积上限判定与「所选 69 B」展示；
+       · `totalBytes` = 实际**要传多少字节**，交给 aria2 回填（BT 按块传，含同块其它数据）。
+       勾 1 个 69 B 的 .bat 实测传输量 4,079,169 B；勾 1 个 103 KB 的 .EXE 传输量 4,194,304 B。
+       把它们混用 ⇒「4,079,169 / 69」或「84% 就 ready」，两种错法都出现过。 */
+    selBytes: pickedBytes, totalBytes: 0, state: 'queued', files: [],
   });
   const dir = dlTasks.dirOf(task.id);
   try {
