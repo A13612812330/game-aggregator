@@ -904,7 +904,7 @@ python tools/clean-excel.py       # 读 E:/新建文件夹/基础测试数据.xl
 > **防线**：`_audit-v1096-api` **40/40** · `_audit-v1096-ui` **43/43**（K1 无 JS 报错 / K2 无 404）·
 > `_probe-v1096-bd` **14/14** · `test-v1096-audit-fixes` **66/66**（新，登记 run-all）·
 > `test-v1095-jidi-body-links` **32/32**（补登记）· `test-resource-page` **137/137** ·
-> `test-emulator-structure` **286/286**。全量 12 条红**逐条归属**：8 条本轮已修 + 游侠 stats 漂移 1 + v1018 联网 3（均为既有基线）。<br>
+> `test-emulator-structure` **286/286**。全量 **5,002 / 失败 4**（修前 4,959 / 12），剩余红**逐条归属**：8 条本轮已修 + 游侠 stats 漂移 1 + v1018 联网 3（均为既有基线）。<br>
 > 详见 [docs/versions/v10.96.md](docs/versions/v10.96.md)。
 
 ### ★ v10.95 增量（2026-10-21）—— 机地本体链接「只显示 XD」：**失败被缓存成了结论**
