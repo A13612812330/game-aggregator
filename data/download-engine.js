@@ -42,6 +42,8 @@ let starting = null;
 let binPath = null;
 let installTried = false;
 let installing = null;
+let binVersion = '';
+let warmupErr = '';
 let lastLog = '';
 
 /* ── 二进制探测与幂等安装 ── */
@@ -75,8 +77,9 @@ function isRoot() {
  *   没有它的话，本地 Windows 调试就必须手工往 PATH 里加 aria2，否则 `bin:null`
  *   会让所有下载端点直接 503，而报错信息看起来像「功能没做」。
  */
-function ensureBinary() {
+function ensureBinary(opts) {
   if (binPath) return { ok: true, path: binPath };
+  const probeOnly = !!(opts && opts.probeOnly);
   const exe = process.platform === 'win32' ? 'aria2c.exe' : 'aria2c';
   const cands = [];
   if (process.env.GAMEHUB_ARIA2) cands.push(process.env.GAMEHUB_ARIA2);
@@ -86,8 +89,9 @@ function ensureBinary() {
   for (const c of cands) {
     if (c !== exe && !fs.existsSync(c)) continue;
     const r = which(c);
-    if (r.ok) { binPath = c; return { ok: true, path: c, version: r.version }; }
+    if (r.ok) { binPath = c; binVersion = r.version; return { ok: true, path: c, version: r.version }; }
   }
+  if (probeOnly) return { ok: false, reason: '未找到 aria2c（仅探测，未尝试安装）' };
   if (installing) return { ok: false, reason: 'aria2c 正在后台安装，请等十几秒再试' };
   if (installTried) return { ok: false, reason: 'aria2c 不存在，且本进程已尝试安装过（不重复尝试）' };
   installTried = true;
@@ -97,12 +101,16 @@ function ensureBinary() {
      它会阻塞事件循环最多 180s —— 所以正常路径必须靠 `warmup()`（异步），
      不能指望这条。首次部署时用户如果抢在预热前点下载，会在这里等一次是**可接受**的，
      但绝不能让「每个请求都走这条」（installTried 已经保证了）。 */
-  const inst = spawnSync('apt-get', ['install', '-y', '--no-install-recommends', 'aria2'], {
-    encoding: 'utf8', timeout: 180000, stdio: ['ignore', 'pipe', 'pipe'],
+  /* ★ 必须先 update：新容器里 apt 包索引是空的，直接 install 会
+     「E: Unable to locate package aria2」。v10.92 只验了 `apt` 命令存在（hasApt=true），
+     没验过真装 —— 这就是线上第一次装失败的原因。 */
+  const inst = spawnSync('sh', ['-c', 'apt-get update -qq && apt-get install -y --no-install-recommends aria2'], {
+    encoding: 'utf8', timeout: 240000, stdio: ['ignore', 'pipe', 'pipe'],
     env: Object.assign({}, process.env, { DEBIAN_FRONTEND: 'noninteractive' }),
   });
+  warmupErr = String((inst && (inst.stderr || inst.stdout)) || '').slice(-300) || ('apt exit=' + (inst && inst.status));
   const again = which('aria2c');
-  if (again.ok) { binPath = again.path; return { ok: true, path: again.path, version: again.version, installed: true }; }
+  if (again.ok) { binPath = again.path; binVersion = again.version; return { ok: true, path: again.path, version: again.version, installed: true }; }
   return {
     ok: false,
     reason: 'apt-get install aria2 失败（status=' + (inst && inst.status) + '）',
@@ -125,27 +133,54 @@ let warmupDone = false;
 function warmup() {
   if (warmupDone) return null;
   warmupDone = true;
-  const found = ensureBinary();
+  /* ★ 用 probeOnly：warmup 的整个意义就是「不要同步阻塞」，而 ensureBinary() 的 apt 分支是
+     spawnSync（最多 240s 把事件循环钉死）。只探测、由下面异步装。 */
+  const found = ensureBinary({ probeOnly: true });
   if (found.ok) return null;
   if (process.platform !== 'linux' || !isRoot() || installing) return null;
   installTried = true;
   installing = new Promise((resolve) => {
     let p;
+    let out = '';
+    let settled = false;
     try {
-      p = spawn('apt-get', ['install', '-y', '--no-install-recommends', 'aria2'], {
-        stdio: 'ignore',
+      /* ★ 必须 `apt-get update` 先跑：新容器包索引为空，直接 install 会
+         「E: Unable to locate package aria2」。线上第一次就是这么失败的。 */
+      p = spawn('sh', ['-c', 'apt-get update -qq && apt-get install -y --no-install-recommends aria2'], {
+        stdio: ['ignore', 'pipe', 'pipe'],
         env: Object.assign({}, process.env, { DEBIAN_FRONTEND: 'noninteractive' }),
       });
-    } catch (e) { installing = null; resolve({ ok: false, reason: String(e && e.message) }); return; }
-    const done = () => {
+    } catch (e) {
+      installing = null;
+      warmupErr = String(e && e.message);
+      resolve({ ok: false, reason: warmupErr });
+      return;
+    }
+    const collect = (d) => { out = (out + d.toString()).slice(-3000); };
+    if (p.stdout) p.stdout.on('data', collect);
+    if (p.stderr) p.stderr.on('data', collect);
+    const done = (code) => {
+      if (settled) return;
+      settled = true;
       installing = null;
       binPath = null;
       const again = which('aria2c');
-      if (again.ok) { binPath = again.path; lastLog = 'aria2 已安装：' + again.version; resolve({ ok: true, path: again.path }); }
-      else resolve({ ok: false, reason: 'apt 安装后仍找不到 aria2c' });
+      if (again.ok) {
+        binPath = again.path;
+        binVersion = again.version;
+        warmupErr = '';
+        lastLog = 'aria2 已安装：' + again.version;
+        resolve({ ok: true, path: again.path });
+      } else {
+        /* 失败原因必须留住：aria2 装不上的理由有十几种（没有源 / 没有网 / 磁盘满 / 权限），
+           只回「未安装」等于让人重跑一遍才发现是同一个原因。诊断端点直接吐这段。 */
+        warmupErr = ('apt exit=' + code + '\n' + out).slice(-400);
+        lastLog = warmupErr;
+        resolve({ ok: false, reason: warmupErr });
+      }
     };
-    p.on('exit', done);
-    p.on('error', done);
+    p.on('exit', (code) => done(code));
+    p.on('error', (e) => { out += '\n' + String(e && e.message); done('spawn-error'); });
   });
   return installing;
 }
@@ -187,8 +222,14 @@ async function start() {
   if (proc && !proc.killed && proc.exitCode === null) return { ok: true };
   if (starting) return starting;
   starting = (async () => {
+    /* 预热还没跑过就先踢一下（异步），避免落到 ensureBinary 的同步 apt 分支把事件循环钉死 */
+    if (!warmupDone && !binPath) { try { warmup(); } catch (e) { /* 下面如实报 */ } }
     const bin = ensureBinary();
-    if (!bin.ok) throw new Error(bin.reason);
+    if (!bin.ok) {
+      throw new Error(installing
+        ? '下载引擎正在安装 aria2（首次部署约 1–3 分钟），请稍后再点一次'
+        : bin.reason);
+    }
     fs.mkdirSync(ROOT, { recursive: true });
     fs.mkdirSync(PREVIEW_ROOT, { recursive: true });
     const port = await freePort();
@@ -259,8 +300,19 @@ function alive() {
 }
 
 function info() {
-  const bin = ensureBinary();
-  return { alive: alive(), bin: bin.ok ? bin.path : null, version: bin.version || '', error: bin.ok ? '' : bin.reason };
+  /* ★ v10.93.1 修：这里**不许**再调 `ensureBinary()`。
+   *   线上实测踩中：`/api/downloads/quota` 是高频公开端点，它调 `info()` → `ensureBinary()` →
+   *   把 `installTried` 置成 true ⇒ 启动 5 秒后的 `warmup()` 调 `ensureBinary()` 时看到
+   *   「已尝试过」直接返回 ⇒ **引擎永远装不上**，而报错文案还写着「已尝试安装过（不重复尝试）」，
+   *   看起来像「真的试过了」，实际上是「被一次只读查询挡掉的」。
+   *   ⇒ info() 变成纯只读：只看内部状态，不做任何探测、不产生任何副作用。 */
+  let err = '';
+  if (!binPath) {
+    if (installing) err = 'aria2c 正在后台安装，请稍后';
+    else if (!warmupDone) err = '尚未探测（启动 5 秒后自动预热）';
+    else err = warmupErr || 'aria2c 不可用';
+  }
+  return { alive: alive(), bin: binPath || null, version: binVersion, error: err };
 }
 
 /** 最近 4KB 的 aria2 stderr —— 只给管理员看，不下发到公开端点。 */
