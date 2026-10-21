@@ -335,7 +335,13 @@ async function main() {
     if (card) {
       const errN = e1.length;
       click(card.querySelector('h4'));
-      for (let i = 0; i < 80 && !q('#drawer').classList.contains('show'); i++) await sleep(200);
+      /* ⚠️⚠️ 必须等到 `.ds-res` 出现，**不能只等 `#drawer.show`**：
+         `openDetail()` 是**同步**先加 `.show` 的（还只是库内兜底那一屏），
+         真正的底栏 `.d-dock` 要等 `/api/detail/merged` 回来、`paintDetail` 才画出来。
+         只等 `.show` ⇒ 机器一忙（全量跑时）就会取样到「抽屉开了但底栏还没画」，
+         表现成「按钮不存在」，红得莫名其妙（本轮全量实测连续踩到）。 */
+      for (let i = 0; i < 150
+        && !(q('#drawer').classList.contains('show') && q('#dlStrip .ds-res')); i++) await sleep(200);
       ok('★★ v10.98 点整卡正文 → 打开游戏详情抽屉',
         q('#drawer').classList.contains('show'), q('#drawer').className);
       ok('★★ v10.98 反向：点整卡**不**同时开下载弹窗（一次点击只做一个动作）',
@@ -365,9 +371,12 @@ async function main() {
          抽屉 DOM 还是上一次那份，判它必然红（本轮实测踩到）。
          真正的行为是「下次打开会重画」—— 所以用**普通入口**再开一次来验语境已清。 */
       await W.openDetailById(card.dataset.lib, card.dataset.name);
-      for (let i = 0; i < 80 && !q('#drawer').classList.contains('show'); i++) await sleep(200);
+      /* 同上：等到底栏**真的画出来**再判 —— 否则「底栏还没渲染」会被当成
+         「没有 .ds-res」而平白变绿（这是最危险的一种：假绿比假红难发现）。 */
+      for (let i = 0; i < 150 && !q('#dlStrip'); i++) await sleep(200);
       ok('★ 关详情后模块语境被清掉（普通入口再开，底栏没有「查看 <模块> 资源」）',
-        !q('#dlStrip .ds-res'), ((q('#dlStrip') || {}).textContent || '').trim().slice(0, 40));
+        !!q('#dlStrip') && !q('#dlStrip .ds-res'),
+        ((q('#dlStrip') || {}).textContent || '').trim().slice(0, 40));
       W.closeDetail(); await sleep(300);
     } else {
       ok('整卡点击（本轮无带 libId 的卡，跳过）', true, '无 data-lib');
