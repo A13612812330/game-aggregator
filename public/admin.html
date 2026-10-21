@@ -97,7 +97,11 @@ th{position:sticky;top:0;background:#f8fafc;text-align:left;font-size:11.5px;col
 td{padding:8px 10px;border-bottom:1px solid #f1f4f8;vertical-align:middle}
 tr.row:last-child td{border-bottom:0}
 tr.row:hover{background:#f8fbff;cursor:pointer}
-.cv{width:38px;height:50px;border-radius:6px;object-fit:cover;background:#eef2f7;display:block}
+/* ★ v10.94：封面必须**完整显示**。原来 38×50 + object-fit:cover 把 Steam header
+   （460×215 横版）左右裁掉大半，只剩中间一条，游戏库里几乎认不出是哪款。
+   改成横向框 + contain：横图竖图都按比例缩放，不裁切，留白用底色补。
+   ⚠️ 别再改回 cover —— cover 只适合「容器比例与图一致」的场景。 */
+.cv{width:66px;height:40px;border-radius:5px;object-fit:contain;background:#eef2f7;display:block}
 .tt{font-weight:600;max-width:330px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tt small{display:block;font-weight:400;color:var(--sub);font-size:10.5px;font-family:Consolas,monospace;margin-top:1px}
 /* 资源管理表里的「游戏」列：可点开编辑弹窗（资源 → 游戏主键回溯） */
@@ -107,6 +111,9 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
 .b-hide{background:var(--dan-bg);color:var(--dan)} .b-vis{background:var(--ok-bg);color:var(--ok)}
 .b-cold{background:#f1f5f9;color:#475569} .b-xd{background:#eef2ff;color:#4338ca} .b-jd{background:#fff7ed;color:#c2410c}
 .b-note{background:#fefce8;color:#a16207}
+/* v10.94 同款折叠标记：与「人改」区分开（一个是人工覆盖，一个是同款多帖） */
+.dup{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:999px;font-size:10.5px;
+  font-weight:600;background:#eef2ff;color:#4338ca;vertical-align:1px;cursor:help}
 .mut{color:var(--sub);font-size:12px;font-variant-numeric:tabular-nums}
 .pager{display:flex;align-items:center;gap:9px;padding:11px 2px;font-size:12.5px;color:var(--sub)}
 .pager .sp{flex:1}
@@ -120,7 +127,8 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
 .acct{font-size:12.5px;font-weight:600;color:#334155;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @keyframes pop{from{transform:translateY(10px);opacity:.6}to{transform:none;opacity:1}}
 .mh{display:flex;align-items:flex-start;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)}
-.mh img{width:46px;height:62px;border-radius:7px;object-fit:cover;background:#eef2f7}
+/* 弹窗头封面：同样 contain（横版 header 不被裁），点一下看原图 */
+.mh img{width:76px;height:44px;border-radius:7px;object-fit:contain;background:#eef2f7;cursor:zoom-in}
 .mh h3{font-size:15.5px;line-height:1.35}
 .mh .meta{color:var(--sub);font-size:12px;margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .mh .sp{flex:1}
@@ -141,6 +149,20 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
 .kv{font-size:12.5px;line-height:1.95}
 .kv i{font-style:normal;color:var(--sub);display:inline-block;min-width:74px}
 .kv b{font-weight:600}
+/* ═══ v10.94 条目查看弹窗（模块页「查看」）═══
+   帖子类条目必须能读到**完整正文**：机地帖的价值全在正文里（网盘口令、安装步骤、
+   前置依赖），只给一个「原帖 ↗」等于把用户又推回站外。 */
+.rmv-sec{margin-bottom:15px}
+.rmv-sec>h4{font-size:12px;color:var(--sub);font-weight:700;margin-bottom:7px;letter-spacing:.3px}
+.rmv-pre{white-space:pre-wrap;word-break:break-word;font:12.8px/1.78 inherit;background:#f8fafc;
+  border:1px solid var(--line);border-radius:10px;padding:12px 14px;max-height:44vh;overflow:auto}
+.rmv-pre.empty{color:#94a3b8}
+.rmv-links{display:flex;flex-direction:column;gap:6px}
+.rmv-l{display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:9px;
+  padding:8px 11px;font-size:12.5px;background:#fff}
+.rmv-l .k{flex:0 0 auto;font-size:11px;color:#475569;background:#f1f5f9;border-radius:999px;padding:1px 8px}
+.rmv-l a{color:var(--acc);word-break:break-all;text-decoration:none;font-weight:600}
+.rmv-l a:hover{text-decoration:underline}
 .rgrp{margin-bottom:10px}
 .rgrp h4{font-size:12px;color:var(--sub);font-weight:700;margin-bottom:5px;display:flex;align-items:center;gap:6px}
 .rgrp h4 em{font-style:normal;background:var(--chip);color:#475569;border-radius:6px;padding:0 6px;font-size:11px}
@@ -165,7 +187,7 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
  * 为什么不用 min-height：内容长短不一时 min-height 会被撑开（长标题换行 ⇒ 行高跳动），
  * 表格看起来像被随机拉伸；height + overflow:hidden 才是真的等高。 */
 .fxrow td{height:56px;padding:4px 10px;overflow:hidden}
-.fxrow .cv{width:42px;height:42px;border-radius:7px}
+.fxrow .cv{width:64px;height:42px;border-radius:7px}
 .fxrow .tt{max-width:430px}
 .idcol{font-family:Consolas,monospace;font-size:11.5px;color:var(--sub);white-space:nowrap}
 
@@ -579,6 +601,23 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
     </div>
   </div>
 </div>
+<!-- ═══ v10.94 条目查看弹窗（模块页每行「查看」）═══
+     设计口径：**这一条条目的全部内容都在这里**，不需要再跳源站。
+     帖子类（机地 MOD / 修改器）渲染 content 全文；结构化来源（FitGirl / Thunderstore /
+     修改器库 / 存档）渲染字段 + 链接。源站外链保留，但不再是唯一出路。 -->
+<div class="mask" id="rmView" onclick="if(event.target===this)rmvClose()">
+  <div class="modal" style="max-width:780px">
+    <div class="mh">
+      <img id="rmvImg" alt="" onerror="this.style.display='none'">
+      <div style="min-width:0;flex:1">
+        <h3 id="rmvTitle">—</h3>
+        <div class="meta" id="rmvMeta"></div>
+      </div>
+      <button class="mclose" onclick="rmvClose()">✕</button>
+    </div>
+    <div style="padding:16px 18px;max-height:70vh;overflow:auto" id="rmvBody"></div>
+  </div>
+</div>
 <!-- ═══ 资料 / 爬虫字段弹窗（页面管理 + 游戏库共用一套表单）═══
      两个页面写的是同一份 data/game-profile.json，只是各暴露一组字段：
        页面管理 → 标题 / 封面 / 热度 / 平台链接（爬回来的东西）
@@ -924,6 +963,14 @@ function go(v) {
   }
 }
 document.querySelectorAll('.nav a').forEach((a) => a.addEventListener('click', () => go(a.dataset.v)));
+/* ★ v10.94：地址栏 hash 变化也要切视图。
+   原来只在首屏读一次 hash，页面已打开时改 hash（或点别人发来的 `/admin#m-mod` 链接）
+   界面纹丝不动 —— 用户会说「点了链接没反应」，而代码里看不出任何错。
+   `go()` 内部用 replaceState 回写 hash，不会二次触发 hashchange，所以不会打转。 */
+window.addEventListener('hashchange', () => {
+  const v = (location.hash || '#dash').slice(1);
+  if (VIEWS[v]) go(v);
+});
 
 /* ═══════════ 仪表盘（爬虫可视化 · 分模块） ═══════════ */
 const MODS = [
@@ -1094,6 +1141,9 @@ function qs() {
   const h = $('fHide').value; if (h) p.set('hidden', h);
   const s = $('fSrc').value; if (s) p.set('asrc', s);
   if (onlyNote) p.set('note', '1');
+  /* ★ v10.94：游戏库按「游戏」折叠，同款多个帖子（原版 + 支持网络联机版）合成一行。
+     页面管理（#pages）**不折叠** —— 那一页的职责就是看爬回来的每一条帖子。 */
+  p.set('group', '1');
   return '/api/library/browse?' + p.toString();
 }
 
@@ -1205,7 +1255,14 @@ async function reload(resetPage) {
     return '<tr class="row fxrow" data-i="' + i + '">'
       + '<td>' + (g.cover ? '<img class="cv" loading="lazy" src="' + esc(g.cover) + '" alt="" onerror="this.style.visibility=\'hidden\'">' : '<div class="cv"></div>') + '</td>'
       + '<td><div class="tt" title="' + esc(g.title) + '">' + esc(g.title || '—')
-      + ((g.prof || []).length ? '<span class="ovr" title="已人工覆盖：' + esc((g.prof || []).join(' / ')) + '">人改</span>' : '') + '</div></td>'
+      + ((g.prof || []).length ? '<span class="ovr" title="已人工覆盖：' + esc((g.prof || []).join(' / ')) + '">人改</span>' : '')
+      /* v10.94：同款多帖子折叠后，如实标出「还有几条」以及分别是哪些（悬停可看） */
+      + (Number(g.dupCount) > 1
+        ? '<span class="dup" title="同款还有 ' + (g.dupCount - 1) + ' 条帖子：'
+          + esc((g.alts || []).map((a) => a.title + '（' + (a.size || '—') + '）').join(' / ')) + '">+'
+          + (g.dupCount - 1) + ' 版本</span>'
+        : '')
+      + '</div></td>'
       + '<td class="idcol">' + esc(g.id) + '</td>'
       + '<td>' + srcBdgOf(g.source) + '</td>'
       + '<td>' + compBdg + '</td>'
@@ -1326,6 +1383,113 @@ const RM = {
   save: { label: '存档', srcs: [['save', '存档位置'], ['cloud', '云存档']] },
 };
 
+/* ═══════════ v10.94 条目查看弹窗 ═══════════
+ * 用户口径：「模块页面仅展示对应的模块内容，需要一个查看弹窗，展示对应的内容
+ *           （帖子的话需要完整内容）」。
+ * 数据来源：列表接口本身就带 content 全文（mods 8,942/8,943 条有），
+ *   所以点开**不发新请求**、不转圈、不受源站限流影响。
+ * ⚠️ 不要改成「点开再拉 /api/mods/item」—— 列表已带全文，多一跳只会更慢且会失败。 */
+const RMV_SRC = {
+  fitgirl: 'FitGirl Repack', mod: '机地 MOD 帖', ts: 'Thunderstore',
+  trainers: '修改器库', jidi: '机地修改器帖', save: '存档位置', cloud: '云存档',
+};
+function rmvFmtTs(v) {
+  const n = Number(v) || 0;
+  if (!n) return '';
+  const d = new Date(n > 1e12 ? n : n * 1000);
+  if (isNaN(d.getTime())) return '';
+  const p = (x) => String(x).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
+    + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function rmvOpen(i) {
+  const r = (window.__rmItems || [])[i];
+  if (!r) return;
+  const x = r.raw || {};
+  const srcN = RMV_SRC[rmSrc] || rmSrc || '资源';
+  $('rmvTitle').textContent = r.title || x.title || '(无标题)';
+  const img = $('rmvImg');
+  const cover = x.cover || '';
+  img.style.display = cover ? 'block' : 'none';
+  if (cover) img.src = cover;
+
+  const meta = ['<span class="bdg b-jd">' + esc(srcN) + '</span>'];
+  const gt = r.gameTitle || x.libTitle || x.game || '';
+  if (gt) {
+    meta.push('<span>游戏 <b>' + esc(gt) + '</b>'
+      + ((r.gameId || x.libId) ? ' <small class="mut">' + esc(r.gameId || x.libId) + '</small>' : '') + '</span>');
+  }
+  if (x.author) meta.push('<span>作者 ' + esc(x.author) + '</span>');
+  if (x.src && /Thunderstore/.test(x.src)) meta.push('<span>' + esc(x.src) + '</span>');
+  const when = rmvFmtTs(x.ut || x.ct);
+  if (when) meta.push('<span>' + when + '</span>');
+  $('rmvMeta').innerHTML = meta.join('');
+
+  let h = '';
+  /* ① 正文：帖子类（mod / jidi）有 content 全文；结构化来源如实说「没有正文」 */
+  const content = String(x.content || x.intro || x.desc || '').trim();
+  h += '<div class="rmv-sec"><h4>正文' + (content ? '（完整 · ' + content.length + ' 字）' : '') + '</h4>'
+    + (content
+      ? '<div class="rmv-pre">' + esc(content) + '</div>'
+      : '<div class="rmv-pre empty">这一条来自 ' + esc(srcN) + '，源站没有正文段落 —'
+        + ' 下面的字段与链接就是它的全部内容。</div>')
+    + '</div>';
+
+  /* ② 字段：只列有值的（空值不占位，避免一屏「—」） */
+  const kv = [];
+  const push = (k, v) => {
+    if (v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length)) return;
+    kv.push('<div><i>' + esc(k) + '</i><b>' + esc(String(v)) + '</b></div>');
+  };
+  push('类型', x.kind === 'modifier' ? '修改器' : (x.kind === 'mod' ? 'MOD' : ''));
+  push('热度', x.pv);
+  push('收藏', x.favors);
+  push('版本', (x.extra && x.extra.version) || x.version);
+  push('下载量', (x.extra && x.extra.downloads) || x.downloads);
+  push('体积', (x.extra && x.extra.size) || x.size);
+  push('发布日期', x.date);
+  push('来源', x.source || x.src);
+  push('Steam AppID', x.steamId);
+  push('匹配依据', x.matchBasis);
+  if (x.extra && x.extra.adult) kv.push('<div><i>标记</i><b>18+</b></div>');
+  if (kv.length) h += '<div class="rmv-sec"><h4>字段</h4><div class="kv">' + kv.join('') + '</div></div>';
+
+  /* ③ 数组字段（存档模块的路径 / 注册表 / 云平台）：逐行铺开，不折成逗号串 */
+  const arrSec = (name, arr) => {
+    const a = Array.isArray(arr) ? arr.filter((s) => String(s || '').trim()) : [];
+    if (!a.length) return '';
+    return '<div class="rmv-sec"><h4>' + name + '（' + a.length + '）</h4><div class="rmv-pre">'
+      + a.map((s) => esc(String(s))).join('\n') + '</div></div>';
+  };
+  h += arrSec('存档路径', x.paths);
+  h += arrSec('注册表', x.regs);
+  h += arrSec('云存档平台', x.cloud);
+
+  /* ④ 链接：mod 的 x.links 带 kind（迅雷网盘 / 夸克 / 其他），比列表行的单条链接全 */
+  let links = [];
+  if (Array.isArray(x.links) && x.links.length) {
+    links = x.links.map((l) => ({ label: l.kind || l.label || l.url, url: l.url, kind: l.kind }));
+  } else if (Array.isArray(r.links)) {
+    links = r.links.slice();
+  }
+  if (x.url && !links.some((l) => l.url === x.url)) links.unshift({ label: '原帖', url: x.url, kind: '源站' });
+  if (links.length) {
+    h += '<div class="rmv-sec"><h4>链接（' + links.length + '）</h4><div class="rmv-links">'
+      + links.map((l) => '<div class="rmv-l">'
+        + (l.kind ? '<span class="k">' + esc(l.kind) + '</span>' : '')
+        + '<a href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer">' + esc(l.label || l.url)
+        + ' ↗</a></div>').join('')
+      + '</div></div>';
+  }
+
+  $('rmvBody').innerHTML = h;
+  $('rmView').classList.add('on');
+}
+function rmvClose() { $('rmView').classList.remove('on'); }
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') rmvClose();
+});
+
 /* 点资源行的游戏 → 打开编辑弹窗（资源 + 备注 + 上下架）。
  * 为什么绕一次 openEdit：弹窗吃的是 `window.__items[i]` 那种完整库行，
  * 资源行只有 gameId。补一次 /api/admin/game 拿库内真值再复用 —— 四个模块零分叉。 */
@@ -1370,14 +1534,19 @@ async function resmReload() {
     return;
   }
   rmTotal = j.total || 0;
-  const items = (j.items || []).map((x) => def.norm(x));
+  /* ★ v10.94：「查看」弹窗要渲染**条目完整内容**，所以原始对象必须留在行上。
+     之前 def.norm 只挑 gameId/title/cells/links 四个字段，正文（content）、
+     体积、版本、注册表路径全被丢掉 ⇒ 弹窗写不出来，只能给一个「原帖 ↗」。
+     保留 raw 不额外发请求：mods 列表本身就带 content（实测 8,942 / 8,943 条有全文）。 */
+  const items = (j.items || []).map((x) => Object.assign(def.norm(x), { raw: x }));
   if (!items.length) {
     $('rmRows').innerHTML = '';
     $('rmEmpty').style.display = 'block';
     $('rmEmpty').textContent = '没有符合条件的条目' + (rmQ ? '（搜索词：' + rmQ + '）' : '');
   } else {
     $('rmEmpty').style.display = 'none';
-    $('rmRows').innerHTML = items.map((r) => {
+    window.__rmItems = items;
+    $('rmRows').innerHTML = items.map((r, i) => {
       /* 游戏列：有 gameId 就可点（打开编辑弹窗）；没有就如实写「未匹配」 */
       const gameCell = r.gameId
         ? '<span class="lnk" data-gid="' + esc(r.gameId) + '" data-gt="' + esc(r.gameTitle || '') + '">'
@@ -1385,13 +1554,19 @@ async function resmReload() {
         : '<span class="mut">未匹配</span>';
       const links = (r.links || []).map((l) =>
         '<a class="btn sm" style="margin-right:4px" href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer">' + esc(l.label) + ' ↗</a>').join('');
+      /* ★ v10.94：每行一个「查看」→ 弹窗展示这一条的完整内容。
+         「原帖」外链留着（要看源站样式/回帖时用），但正文不再逼用户跳出去看。 */
       return '<tr class="fxrow">'
         + '<td>' + gameCell + '</td>'
         + '<td><div class="tt" title="' + esc(r.title) + '">' + esc(r.title || '—') + '</div></td>'
         + r.cells.map((c) => '<td class="mut">' + c + '</td>').join('')
-        + '<td>' + (links || '<span class="mut">—</span>') + '</td>'
+        + '<td><button class="btn sm" data-rmv="' + i + '">查看</button>'
+        + (links ? '<span style="margin-left:5px">' + links + '</span>' : '') + '</td>'
         + '</tr>';
     }).join('');
+    document.querySelectorAll('#rmRows [data-rmv]').forEach((b) => {
+      b.addEventListener('click', (e) => { e.stopPropagation(); rmvOpen(+b.dataset.rmv); });
+    });
   }
   $('rmHint').textContent = '每一条都锚定游戏 id' + (rmQ ? ' · 搜索「' + rmQ + '」' : '');
   $('rmPgBar').innerHTML = pagerHtml(rmTotal, RM_LIMIT, rmOff);

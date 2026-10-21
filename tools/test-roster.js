@@ -65,12 +65,13 @@ ok('B2 rows.length === meta.nPc + meta.nMobOnly',
 const nMobRows = R.filter((r) => r[2] === 2).length;
 ok('B3 表内手游独有行数 === meta.nMobOnly', nMobRows === M.nMobOnly, `${nMobRows} vs ${M.nMobOnly}`);
 const nMobTag = R.filter((r) => r[10] === 1).length;
-ok('B4 「可手游」标记行数 === nMobMerged + nMobOnly',
-  nMobTag === (M.nMobMerged || 0) + (M.nMobOnly || 0),
-  `${nMobTag} vs ${(M.nMobMerged || 0)} + ${M.nMobOnly}`);
+ok('B4 ★ v10.94 手游关联 id 无丢失（折叠后 代表∪alts∪独有 覆盖全部 libId）',
+  M.mobMissing === 0, '丢失 ' + M.mobMissing + ' 个');
+ok('B4b 可手游标记行数 ≥ 手游独有行数（独有行必然标记）',
+  nMobTag >= (M.nMobOnly || 0), `${nMobTag} vs ${M.nMobOnly}`);
 
-console.log('\n── C 行结构（14 列，v10.85 +冷门隐藏态） ──');
-const LEN = 14;
+console.log('\n── C 行结构（15 列，v10.85 冷门隐藏态 + v10.94 同款数） ──');
+const LEN = 15;
 const badLen = R.filter((r) => !Array.isArray(r) || r.length !== LEN).length;
 ok(`C1 每行都是 ${LEN} 列数组`, badLen === 0, '异常 ' + badLen + ' 行');
 const badName = R.filter((r) => typeof r[0] !== 'string' || !r[0].trim()).length;
@@ -83,6 +84,10 @@ const bodyVals = [...new Set(R.map((r) => r[6]))].sort();
 ok('C5 本体态取值在 0..3', bodyVals.every((v) => v >= 0 && v <= 3), '实测取值 ' + JSON.stringify(bodyVals));
 const badHide = R.filter((r) => ![0, 1].includes(r[13])).length;
 ok('C6 ★ v10.85 冷门隐藏态只能是 0/1', badHide === 0, '异常 ' + badHide + ' 行');
+/* ★ v10.94：r[14] = 这一行折叠了几条同款帖子（≥1）。折叠若写错成 0/undefined，
+   名单弹窗会显示「同款 0 条已合并」这种荒唐数字。 */
+const badDup = R.filter((r) => !Number.isInteger(r[14]) || r[14] < 1).length;
+ok('C7 ★ v10.94 同款数必须是 ≥1 的整数', badDup === 0, '异常 ' + badDup + ' 行');
 const mhHidden = R.filter((r) => r[2] === 2 && r[13] !== 0).length;
 ok('C7 手游独有行不参与冷门口径（恒 0）', mhHidden === 0, '异常 ' + mhHidden + ' 行');
 
@@ -102,12 +107,13 @@ ok('D4 三类覆盖款数都比 0 大（否则该列恒空）',
 const nHidden = R.filter((r) => r[13] === 1).length;
 ok('D5 ★ v10.85 行内冷门隐藏数 === meta.nHidden', nHidden === (M.nHidden || 0),
   `${nHidden} vs ${M.nHidden}`);
-ok('D6 ★ 快照冷门隐藏数 === cold-hide 口径对 games.json 现算（夹逼）', (() => {
+ok('D6 ★ 折叠前隐藏数 === cold-hide 口径对 games.json 现算', (() => {
   const coldHide = require(path.join(ROOT, 'data', 'cold-hide'));
   const games = require(path.join(ROOT, 'data', 'games.json'));
-  const expect = games.filter((g) => coldHide.isHidden(g)).length;
-  return expect === (M.nHidden || 0);
-})());
+  return games.filter((g) => coldHide.isHidden(g)).length === (M.nHiddenRaw || 0);
+})(), 'nHiddenRaw=' + M.nHiddenRaw);
+ok('D6b ★ v10.94 折叠只会减少隐藏行，不会凭空增加', (M.nHidden || 0) <= (M.nHiddenRaw || 0),
+  `${M.nHidden} <= ${M.nHiddenRaw}`);
 
 console.log('\n── E 内联 JSON ──');
 const m = HTML.match(/<script id="roster-data" type="application\/json">([\s\S]*?)<\/script>/);

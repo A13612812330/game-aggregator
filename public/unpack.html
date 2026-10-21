@@ -2305,6 +2305,10 @@
   .fgc-file .nm{flex:1 1 auto;min-width:0;font-size:11.5px;color:var(--c-t1);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .fgc-file .sz{flex:none;font:750 10.5px/1.5 var(--font-num);color:var(--c-t3)}
+  /* v10.94：清单行右侧「单独下」——打包流式不支持续传，这里给逐文件的可续传入口 */
+  .fgc-mini{flex:none;font-size:10.5px;font-weight:700;color:#2F6FED;text-decoration:none;
+    border:1px solid #D6E2FB;border-radius:6px;padding:1px 7px;background:#fff}
+  .fgc-mini:hover{background:#EEF5FF}
   .fgc-bar{height:7px;border-radius:4px;background:#E8EFFD;overflow:hidden;margin-top:11px}
   .fgc-bar>i{display:block;height:100%;width:0;border-radius:4px;
     background:linear-gradient(90deg,#0F766E,#14B8A6);transition:width .45s ease}
@@ -6650,7 +6654,8 @@ function fgcBodyHtml(s) {
     const pct = total > 0 ? Math.min(100, (100 * done) / total) : 0;
     let h = '';
     if (s.state === 'ready') {
-      h += H('<b>文件已在服务器上就绪。</b>点下面按钮保存到你的电脑 —— 支持断点续传，关掉网页也不会丢。'
+      h += H('<b>文件已在服务器上就绪。</b>点下面「打包下载全部」一次拿走 —— 也可以只下其中某个分卷。'
+        + '<br>打包是边读边发（服务器不额外占磁盘），所以<b>不支持断点续传</b>；要续传就点某一行右侧的「单独下」。'
         + '<br>服务器只保留 24 小时，过期自动清理。');
     } else if (s.state === 'paused') {
       h += H('已暂停。点「继续」接着下，或直接取消。');
@@ -6668,6 +6673,20 @@ function fgcBodyHtml(s) {
       + (s.state === 'downloading'
         ? '<span>' + (Number(t.speed) > 0 ? fgcFmt(t.speed) + '/s' : '连接中…') + '</span>' : '')
       + '</div>';
+    /* v10.94：就绪后把「文件清单」直接铺出来（含逐个单下），
+       用户不必先点打包才知道包里有什么、每个多大。 */
+    if (s.state === 'ready' && s.task) {
+      const fl = s.task.files || [];
+      if (fl.length) {
+        h += '<div class="fgc-list">' + fl.map((f) =>
+          '<div class="fgc-file">'
+          + '<span class="nm" title="' + esc(f.name) + '">' + esc(f.name) + '</span>'
+          + '<span class="sz">' + fgcFmt(f.length) + '</span>'
+          + '<a class="fgc-mini" download href="' +
+            api('/api/downloads/tasks/' + encodeURIComponent(s.task.id) + '/files/' + encodeURIComponent(f.index)) +
+          '">单独下</a></div>').join('') + '</div>';
+      }
+    }
     return h;
   }
   return H('准备中…');
@@ -6681,11 +6700,18 @@ function fgcFootHtml(s) {
   if (s.state === 'downloading') { a.push(btn('pause', '⏸ 暂停', 'ghost'), btn('cancel', '✕ 取消', 'ghost')); }
   if (s.state === 'paused') { a.push(btn('resume', '▶ 继续'), btn('cancel', '✕ 取消', 'ghost')); }
   if (s.state === 'ready' && s.task) {
-    (s.task.files || []).forEach((f) => {
-      a.push('<a class="fgc-btn" href="' +
-        api('/api/downloads/tasks/' + encodeURIComponent(s.task.id) + '/files/' + encodeURIComponent(f.index)) +
-        '" download>⬇ 保存 ' + esc(f.name) + '</a>');
-    });
+    const fl = s.task.files || [];
+    const tid = encodeURIComponent(s.task.id);
+    /* v10.94：**一个**打包按钮，而不是每个分卷一个 —— 用户口径：
+       「点击下载后并没有拉起下载（自动打包下载到一个压缩包）」。 */
+    if (fl.length > 1) {
+      a.push('<a class="fgc-btn" download href="' + api('/api/downloads/tasks/' + tid + '/archive') +
+        '">⬇ 打包下载全部（' + fl.length + ' 个文件）</a>');
+    } else if (fl.length === 1) {
+      a.push('<a class="fgc-btn" download href="' +
+        api('/api/downloads/tasks/' + tid + '/files/' + encodeURIComponent(fl[0].index)) +
+        '">⬇ 保存 ' + esc(fl[0].name) + '</a>');
+    }
     a.push(btn('cancel', '✕ 删除服务器文件', 'ghost'));
   }
   /* 复制磁力常驻：不管成功失败，用户都可能想用本机客户端 —— 这是唯一不受服务器状态影响的出路。 */

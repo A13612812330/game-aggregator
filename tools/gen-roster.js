@@ -66,7 +66,14 @@ const coldHide = require('../data/cold-hide');
 
 /* ─────────────────────────── 读源 ─────────────────────────── */
 
-const games = require('../data/games.json');
+/* ★ v10.94 名单只展示「游戏」，不展示「帖子」。
+   端游库按帖子入账（同一款会有「原版 / 支持网络联机版」两条，实测 1,010 条冗余），
+   名单页是给人看全量游戏清单的，重复行没有任何信息价值。
+   折叠规则在 data/game-dedupe.js（与后台游戏库 ?group=1 同一份实现）。 */
+const gameDedupe = require('../data/game-dedupe');
+const gamesRaw = require('../data/games.json');
+const dedupeRes = gameDedupe.collapse(gamesRaw);
+const games = dedupeRes.items;
 mobilehub.ensure();
 const mobAll = mobilehub.all();
 
@@ -82,7 +89,9 @@ for (const m of mobAll) if (m.libId) {
   if (!mobByLib.has(m.libId)) mobByLib.set(m.libId, []);
   mobByLib.get(m.libId).push(m);
 }
-const pcIds = new Set(games.map((g) => g.id));
+/* ⚠️ 这份 id 集合必须用**折叠前**的全量：它用来判断「手游这条是否已经并入端游行」，
+   用折叠后的会漏掉被折叠掉的那些 id ⇒ 手游同款会被重复列一行。 */
+const pcIds = new Set(gamesRaw.map((g) => g.id));
 
 /* ─────────────────────────── 组装行 ─────────────────────────── */
 
@@ -115,7 +124,9 @@ for (const g of games) {
   const pr = probeRows[id];
   const body = pr ? (BODY_ST[pr.st] || 0) : 0;
   if (body) nBodyKnown++;
-  const inMob = mobByLib.has(id);
+  /* ★ v10.94：折叠后「可手游」标记要看**整组** —— 同款两条里代表行可能正好是没有
+     手游关联的那条，只看自己会让标记丢失（实测少 152 行，手游同款在名单里变成「不可手机玩」）。 */
+  const inMob = mobByLib.has(id) || (g.alts || []).some((a) => mobByLib.has(a.id));
   rows.push([
     String(g.title || g.id).trim(),
     id,
@@ -128,6 +139,7 @@ for (const g of games) {
     String(g.cover || ''),
     String(g.url || ''),
     coldHide.isHidden(g) ? 1 : 0,   /* v10.85 r[13]：冷门隐藏态（show 豁免 > hide 强制 > 规则） */
+    Number(g.dupCount) || 1,        /* v10.94 r[14]：同款帖子数（折叠后仍能告诉用户「还有几条」） */
   ]);
 }
 
@@ -152,14 +164,32 @@ for (const m of mobAll) {
     String(m.libCover || ''),
     String(m.libUrl || ''),
     0,                               /* v10.85 r[13]：手游独有行不参与冷门口径（games.json 之外） */
+    1,                               /* v10.94 r[14]：手游独有条目无同款折叠 */
   ]);
 }
 
 const meta = {
   nPc: games.length, nMob: mobAll.length, nMobMerged: mobByLib.size,
+  /* v10.94：名单按「游戏」折叠后的真实账 —— nPc 是游戏数，nPcRaw 是帖子行数，
+     两者相减就是「同一款被源站拆成多条」的数量，写在标题下方，避免用户以为丢数据。 */
+  nPcRaw: gamesRaw.length, nMerged: dedupeRes.merged,
   nMobOnly: rows.filter((r) => r[2] === SRC.mh).length,
   nRes: nHasRes, nBody: nBodyKnown,
   nHidden: rows.filter((r) => r[13] === 1).length,   /* v10.85：冷门隐藏行数（仅端游行会命中） */
+  /* v10.94：折叠前全量隐藏数。折叠后按「代表行」判定，这个值用来验证
+     「折叠只会减少隐藏行、不会凭空增加」—— 名单的隐性口径变化要能被测出来。 */
+  nHiddenRaw: gamesRaw.filter((g) => coldHide.isHidden(g)).length,
+  /* v10.94：手游关联的 id 有没有在折叠里丢失（丢了就说明同款被并错了组）。
+     正确口径 = 折叠后的代表行 id ∪ 各组的 alts id ∪ 手游独有行 id，必须覆盖全部手游 libId。 */
+  mobMissing: (() => {
+    const seen = new Set();
+    for (const g of games) {
+      seen.add(String(g.id));
+      for (const a of (g.alts || [])) seen.add(String(a.id));
+    }
+    for (const r of rows) if (r[2] === SRC.mh) seen.add(String(r[1]));
+    return mobAll.filter((m) => m.libId && !seen.has(String(m.libId))).length;
+  })(),
   probeTotal: Object.keys(probeRows).length,
   probeBuiltAt: (probe && probe.builtAt) || 0,
   cover: { mod: resGroups.libIdsFor('mod').size, saves: resGroups.libIdsFor('saves').size, trainers: resGroups.libIdsFor('trainers').size },
@@ -213,6 +243,8 @@ const html = `<!DOCTYPE html>
   .kpi{display:flex;gap:16px;margin-left:auto;flex-wrap:wrap}
   .kpi div{font-size:11px;color:var(--c-t3);text-align:right;line-height:1.25}
   .kpi b{display:block;font-size:15px;color:var(--c-t1);font-family:var(--font-num)}
+  /* v10.94：端游库下面标明「同款已并 N 条」—— 少了 1,010 条必须给得出解释 */
+  .kpi i{font-style:normal;color:var(--c-t3);font-size:10px;display:block;margin-top:1px}
   .wrap{max-width:1680px;margin:0 auto;padding:16px 18px 60px}
   .bar{background:var(--c-surface);border:1px solid var(--c-border);border-radius:12px;box-shadow:var(--shadow);
     padding:12px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
@@ -432,7 +464,7 @@ const html = `<!DOCTYPE html>
   <div class="brand"><span class="dot"></span><span>GameHub 完整名单 <small>ROSTER</small></span></div>
   <div class="kpi">
     <div>总条目<b id="kTotal">-</b></div>
-    <div>端游库<b id="kPc">-</b></div>
+    <div>端游库<b id="kPc">-</b><i id="kDedup">-</i></div>
     <div>手游中心<b id="kMob">-</b></div>
     <div>有三类资源<b id="kRes">-</b></div>
     <div>本体已实测<b id="kBody">-</b></div>
@@ -931,7 +963,9 @@ const html = `<!DOCTYPE html>
       + '<span class="mono">' + esc(String(r[1])) + '</span>'
       + (r[3] ? '<span class="mono">' + esc(r[3]) + '</span>' : '')
       + (r[12] ? '<a href="' + esc(r[12]) + '" target="_blank" rel="noopener">源站 ↗</a>' : '')
-      + (r[11] ? '<a href="' + esc(r[11]) + '" target="_blank" rel="noopener">封面 ↗</a>' : '');
+      + (r[11] ? '<a href="' + esc(r[11]) + '" target="_blank" rel="noopener">封面 ↗</a>' : '')
+      /* v10.94：这一行折叠了几条同款帖子（原版 / 支持网络联机版…），如实标出来 */
+      + (Number(r[14]) > 1 ? '<span class="tag">同款 ' + r[14] + ' 条已合并</span>' : '');
     /* v10.79：弹窗内容层与主站「网盘下载弹窗」同构 —— 模块页签（本体/修改器/MOD/存档，
        恒显四签带计数徽标）+ 点签切面板。壳样式 v10.78b 已对齐，这里对齐信息结构。
        字段 id（bodyBox/qBody/qBodyMsg）不变。 */
@@ -960,6 +994,10 @@ const html = `<!DOCTYPE html>
     $('#mask').classList.add('on');
     var qb = $('#qBody');
     if(qb) qb.addEventListener('click', function(){ queryBody(r, qb); });
+    /* ★ v10.94：打开弹窗即**自动抓取本体**（用户口径「点击后并没有自动抓取完整的下载弹窗内容」）。
+       之前要用户再点一次「实时查询本体」才出内容 ⇒ 看起来像「弹窗是空的」。
+       服务端 /api/download 有 30 分钟缓存，同一款反复点开不会重复打源站。 */
+    if(qb) setTimeout(function(){ if($('#mask').classList.contains('on')) queryBody(r, qb); }, 80);
   }
   function closeDlg(){ $('#mask').classList.remove('on'); $('#dActs').hidden = true; }
 
@@ -1198,6 +1236,8 @@ const html = `<!DOCTYPE html>
   $('#kTotal').textContent = R.length.toLocaleString('en-US');
   $('#kPc').textContent = (M.nPc || 0).toLocaleString('en-US');
   $('#kMob').textContent = (M.nMob || 0).toLocaleString('en-US');
+  /* v10.94 折叠账：端游 N 款（同一款多帖合并 X 条） */
+  if ($('#kDedup')) $('#kDedup').textContent = '同款已并 ' + (M.nMerged || 0).toLocaleString('en-US') + ' 条';
   $('#kRes').textContent = nRes.toLocaleString('en-US');
   $('#kBody').textContent = nBody.toLocaleString('en-US');
   $('#kCold').textContent = (M.nHidden != null ? M.nHidden : 0).toLocaleString('en-US');

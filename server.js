@@ -26,6 +26,9 @@ const extractor = require('./data/extractor');
 const dlGuard = require('./data/download-guard');
 const dlTasks = require('./data/download-tasks');
 const dlEngine = require('./data/download-engine');
+/* v10.94：零依赖流式 ZIP（store + ZIP64），把「多分卷」一次给用户。
+   不用 archiver —— 发布载荷不带 node_modules，多一个依赖就多一个装不上的风险。 */
+const zipStream = require('./data/zip-stream');
 
 /* ★ v10.42：端口自增兜底改为「显式开关」，**默认关闭**。
  *   旧行为：`EADDRINUSE ⇒ listen(port + 1, triesLeft - 1)`，最多自增 30 次
@@ -1412,6 +1415,10 @@ const gameNotes = require('./data/game-notes'); // ★ v10.88 管理备注（后
 /* ★ v10.90 资料覆盖层：管理页「页面管理 / 游戏库」改的展示字段（标题/封面/热度/简介/厂商…）
  *   落这里，不回写抓取产物。**只影响输出，不参与匹配**（见 data/game-profile.js 头注释）。 */
 const gameProfile = require('./data/game-profile');
+/* ★ v10.94 同款折叠：源站把「原版 / 支持网络联机版」收成两条独立帖子，
+ *   端游库按帖子入账 ⇒ 后台游戏库与名单页同款多行（实测 895 组 / 930 条）。
+ *   只在 `?group=1` 时启用（公开搜索与详情不受影响）。 */
+const gameDedupe = require('./data/game-dedupe');
 /* ★ v10.58：FR（FearlessRevolution）已摘除。理由：整站在 CF managed challenge 后面（只能有头浏览器
    + 页面上下文 fetch）、阶段② 须一次跑完 ≈3.5h，而 GTrainers 已覆盖同类需求且纯 HTTP 直连。
    ★ 摘除前实测：data/fr.json **从未产出** ⇒ fromFr() 贡献 0 条 ⇒ 零用户可见损失。
@@ -2317,6 +2324,46 @@ app.get('/api/downloads/tasks/:id/files/:fid', async (req, res) => {
   res.download(abs, f.name, (err) => {
     if (err && !res.headersSent) res.status(500).json({ ok: false, error: '读取失败' });
   });
+});
+
+/* ── ⑥ GET /api/downloads/tasks/:id/archive  （一键打包成 zip） ──
+ * 用户口径（v10.94）：「为什么现在点击下载后并没有拉起下载（自动打包下载到一个压缩包）」。
+ * 原来是「每个文件一个保存按钮」—— 一个 7 分卷的包要点 7 次、弹 7 个保存框，
+ * 用户的第一反应自然是「点了没反应」。
+ *
+ * 为什么做成**流式**而不是「先打包落盘再给链接」：
+ *   · 落盘要再占一份与任务等大的磁盘（30 GB 上限 ⇒ 再吃 30 GB）；
+ *   · 打包期间用户只能干等，没有进度；
+ *   · 流式是边读边发，点下去立刻开始传，磁盘增量为 0。
+ * 代价：**不支持 Range 续传**（流式不可随机访问）。要续传就用单文件端点，
+ *   这一点在前端明写，不让用户点完才发现。
+ */
+app.get('/api/downloads/tasks/:id/archive', async (req, res) => {
+  const t = dlTasks.get(String(req.params.id || ''));
+  if (!t) return res.status(404).json({ ok: false, error: '任务不存在' });
+  if (t.state !== 'ready') return res.status(409).json({ ok: false, error: '文件还没下载完' });
+  const base = path.resolve(dlTasks.dirOf(t.id));
+  const list = [];
+  for (const f of (t.files || [])) {
+    if (!f) continue;
+    const abs = path.resolve(base, f.rel || f.name);
+    /* 与单文件端点同一道越界检查（种子内文件名可构造） */
+    if (!abs.startsWith(base + path.sep)) continue;
+    if (!fs.existsSync(abs)) continue;
+    list.push({ abs, name: f.name });
+  }
+  if (!list.length) return res.status(404).json({ ok: false, error: '服务器上没有可打包的文件（可能已过期清理）' });
+
+  const zipName = (String(t.name || 'gamehub-download').replace(/[\\/:*?"<>|\r\n]+/g, '_').trim().slice(0, 80) || 'gamehub-download') + '.zip';
+  const asciiFallback = zipName.replace(/[^\x20-\x7e]/g, '_');
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition',
+    'attachment; filename="' + asciiFallback + '"; filename*=UTF-8\'\'' + encodeURIComponent(zipName));
+  res.setHeader('Cache-Control', 'no-store');
+  /* 不给 Content-Length（流式未知）⇒ 浏览器显示「未知大小」，但进度条照常走 */
+  console.log('[downloads] archive', t.id, list.length + ' files', 'zip=' + zipName);
+  const r = await zipStream.pipeZip(res, list);
+  console.log('[downloads] archive done', t.id, JSON.stringify(r));
 });
 
 /* ── ⑦ GET /api/downloads/debug  （仅管理员：引擎日志 + 原始 tellStatus） ──
@@ -3450,7 +3497,24 @@ app.get('/api/library/browse', (req, res) => {
   }
 
   if (scope === 'pc') {
-    const r = gamesDb.browse(g, limit, offset, sort, o);
+    /* ★ v10.94 `group=1`：把「同一款游戏的多个帖子」折成一行（后台游戏库 / 名单页用）。
+     *   真因是源站本身多条帖子（原版 + 「支持网络联机」整合版）被按帖子入账，
+     *   不是重复抓取。折叠只影响**展示**，不动 data/games.json，按 id 仍可查。
+     *   ⚠️ 折叠必须在**排序后、分页前**做：先分页再折叠会让某页少几行、
+     *      total 与实际翻页对不上（这类错不报错，只表现为「后面几页是空的」）。 */
+    const groupOn = String(req.query.group || '') === '1';
+    let r;
+    if (groupOn) {
+      const full = gamesDb.browse(g, 1e9, 0, sort, o);
+      const col = gameDedupe.collapse(full.items);
+      r = {
+        genre: full.genre, sort, total: col.items.length, offset, limit,
+        merged: col.merged,
+        items: col.items.slice(offset, offset + limit),
+      };
+    } else {
+      r = gamesDb.browse(g, limit, offset, sort, o);
+    }
     /* ★ v10.87：`admin=1` → 每行带隐藏态标注（hidden 最终态 / cold 规则命中）。
      *   管理页用 `cold=0&admin=1`：cold=0 关掉池前过滤（冷门行也要看见），
      *   admin=1 让每行自带「为什么被藏」的判定 —— 判定在**服务端现算**
