@@ -130,11 +130,13 @@ const findings = [];
 
 /* 显式例外：允许出现 >1 个一级标题的文件 + 理由。
  * ★ 与 check-card-rules.js 的例外表同思路，并**自检陈旧**：
- *   登记了但实际已不超标的，也报错 —— 避免例外表退化成「静默跳过」。 */
-const H1_EXCEPTIONS = [
-  { file: 'HANDOFF.md', reason: '已归档（停 v10.10）：按项目约定在原文之上**加了一个归档头** ⇒ 2 个 H1' },
-  { file: 'CODEX-HANDOFF.md', reason: '已归档（停 v10.1）：同上，归档头 + 原标题 = 2 个 H1' },
-];
+ *   登记了但实际已不超标的，也报错 —— 避免例外表退化成「静默跳过」。
+ *
+ * ★ v10.100：条目清空。原先登记的两份（`HANDOFF.md` / `CODEX-HANDOFF.md`，各带一个归档头，
+ *   所以是 2 个 H1）已迁到 `docs/archive/`，而本闸只扫根目录与 `docs/versions/` ⇒ 它们
+ *   不再进入扫描范围，例外自动失效。留空表而不是删掉机制：下次真有文档需要放宽时，
+ *   「陈旧自检」这条会立刻提醒登记与清理。 */
+const H1_EXCEPTIONS = [];
 const staleExceptions = [];
 
 for (const d of docs) {
@@ -332,19 +334,31 @@ ok(cidxPos.length === CidxSelfPos.length && cidxNeg.length === 0,
   'CODEX-INDEX 判据自检：正样本 ' + cidxPos.length + '/' + CidxSelfPos.length +
   ' 命中、负样本 ' + cidxNeg.length + ' 误报' + (cidxNeg.length ? '（' + cidxNeg[0].slice(0, 40) + '）' : ''));
 
-/* ③ README 不许再「往上长」：版本摘要块 ≤ 6，且必须排在项目说明 H1 **之后**。
- *    事故形态就是这次修的：2,854 行里前 1,978 行是 34 个版本块，
- *    `# GameHub 游讯聚合（机地 × XDGAME）` 被压到**第 2011 行** ——
- *    访客打开首页看不到「这个项目是什么」。块数上限给 6 是留一版余量（当前 5）。 */
+/* ③ README 不许再「往上长」。
+ *    历史事故：2,854 行里前 1,978 行是 34 个版本摘要块，
+ *    `# GameHub 游讯聚合（机地 × XDGAME）` 被压到**第 2011 行** —— 访客打开首页
+ *    看不到「这个项目是什么」。
+ *
+ *    ★★ v10.100 口径变更（用户：「readme 尽量精简」）：版本摘要在 README 里**一块都不留**，
+ *       全部收进 `docs/versions/`（那里才是版本真源）。所以判据从「块数 ≤ 6 且排在 H1 之后」
+ *       改成「块数 = 0 且 H1 在 L1」，并配两条正向锚点 —— 光写「没有版本块」会被
+ *       「整份 README 被删空」满足（同族：铁律 181/190）。
+ *    ⚠️ 别把这条改回 `rBlocks.length > 0`：那样只要有人往 README 塞一块历史摘要，
+ *       就等于宣布「版本摘要回到 README」的口径复活，而 docs/versions 会跟着漂。 */
 const readmeTxt = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
 const rHeads = headingsOf(readmeTxt.split(/\r?\n/));
 const rH1 = rHeads.filter((h) => h.lv === 1);
 const rBlocks = rHeads.filter((h) => /v\d+\.\d+\s*增量/.test(h.t));
-ok(rBlocks.length > 0 && rBlocks.length <= 6,
-  'README 版本摘要块 ≤ 6（实测 ' + rBlocks.length + '：' + rBlocks.map((h) => h.t.slice(0, 8)).join(', ') + '）');
-ok(rH1.length === 1 && rBlocks.length > 0 && rBlocks.every((h) => h.ln > rH1[0].ln),
-  'README 的项目说明排在版本摘要**之前**（H1 在 L' + (rH1[0] ? rH1[0].ln : '?') +
-  '，首个版本块在 L' + (rBlocks[0] ? rBlocks[0].ln : '?') + '）');
+ok(rBlocks.length === 0,
+  'README 不含版本摘要块（版本史只在 docs/versions；实测 ' + rBlocks.length + ' 块'
+  + (rBlocks.length ? '：' + rBlocks.map((h) => h.t.slice(0, 10)).join(', ') : '') + '）');
+ok(rH1.length === 1 && rH1[0].ln === 1,
+  'README 的一级标题在第 1 行（项目说明必须在最前，实测 L' + (rH1[0] ? rH1[0].ln : '?') + '）');
+/* 正向锚点：精简 ≠ 删空。README 必须还能回答「是什么 / 怎么跑 / 这版是什么」。 */
+ok(/## 当前版本/.test(readmeTxt) && /docs\/versions\/v10\.\d+\.md/.test(readmeTxt),
+  'README 有「当前版本」段并链到该版日志（否则「没有版本块」会被「整份删空」满足）');
+ok(/## 快速开始/.test(readmeTxt) && /npm start/.test(readmeTxt),
+  'README 保留「快速开始」（能直接跑起来的那几行）');
 
 /* ④ 索引表与版本日志文件不许漂移（一边加了、另一边忘了，两边都看不出来） */
 const idxTxt = (() => { try { return fs.readFileSync(path.join(logAbs, 'README.md'), 'utf8'); } catch (e) { return ''; } })();

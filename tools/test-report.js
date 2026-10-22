@@ -242,20 +242,32 @@ console.log('\n=== ⑤-b 滞后文档不许自称「最新」（2026-09-18 新�
 const doc = (f) => { try { return fs.readFileSync(path.join(ROOT, f), 'utf8'); } catch { return ''; } };
 /* 正则从 LIVE 现算，不在这里写死域名 —— 换域名时只需改 report.js 一处，这两份文档的断言自动跟上 */
 const liveHostRe = new RegExp(LIVE_HOST.replace(/\./g, '\\.'));
+/* ★ v10.100：这四份过期文档已从根目录迁到 `docs/archive/`（根目录只留 README / PITFALLS /
+   WORKFLOW / ROADMAP 四份长期文档）。断言仍是那几条 —— 迁走**不等于**可以冒充最新，
+   它们照样会被搜索引擎/新人翻到。所以路径跟着改，判据一条不删。 */
+const ARCH = 'docs/archive/';
 for (const f of ['HANDOFF.md', 'CODEX-HANDOFF.md']) {
-  const s = doc(f);
+  const s = doc(ARCH + f);
   ok(/已归档/.test(s), '★ ' + f + ' 顶部有「已归档」说明（不再冒充最新）');
   ok(!/最新\s*——\s*先看这段/.test(s), '★ ' + f + ' 已删掉「最新 —— 先看这段」的旧claim');
   ok(/docs\/versions\//.test(s), f + ' 指向 docs/versions/（v10.42 起唯一版本索引，取代已移除的 CODEX-INDEX.md）');
   ok(liveHostRe.test(s), f + ' 给出**当前**分享链接（' + LIVE_HOST + '）');
 }
-const handoff = doc('HANDOFF.md');
+const handoff = doc(ARCH + 'HANDOFF.md');
 ok(/已弃用/.test(handoff) && /gamehub-agg-v3/.test(handoff),
   '★ HANDOFF.md 明确把旧链接标成「已弃用」（它 200 但内容很旧，是最容易骗人的那种）');
-const design = doc('DESIGN.md');
+const design = doc(ARCH + 'DESIGN.md');
 ok(/第 4 节|筛选条/.test(design) && /已不是当前实现/.test(design),
   '★ DESIGN.md 明示第 4 节筛选条已不是当前实现（v10.5 拆三行 / v10.9 七行 .emu-bar-row）');
 ok(/v10\.19/.test(design), 'DESIGN.md 记录了 v10.19 的指南卡片化');
+/* ★ v10.100 正向锚点：归档必须**真的迁走**，否则上面那几条在根目录也能全绿 */
+{
+  const rootMd = fs.readdirSync(ROOT).filter((x) => /\.md$/i.test(x)).sort();
+  const allow = ['PITFALLS.md', 'README.md', 'ROADMAP.md', 'WORKFLOW.md'];
+  ok(JSON.stringify(rootMd) === JSON.stringify(allow),
+    '★ 根目录只剩四份长期文档（过期交接/设计稿不得回流）', rootMd.join(', '));
+}
+
 
 console.log('\n=== ⑤-c 流程总纲 WORKFLOW.md（2026-09-18 新增）===');
 /* 新加的流程文档同样是「会过期却看不出来」的高危物。
