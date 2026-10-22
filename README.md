@@ -859,6 +859,36 @@ python tools/clean-excel.py       # 读 E:/新建文件夹/基础测试数据.xl
 > 它们和 `docs/versions/v10.N.md` 是同一批内容的两次书写，并存只会各自漂移。
 > 需要旧摘要原本可走 `git show <sha>:README.md`，或本地归档 `_archived/README-v10.41-版本块全量.md`。
 
+### ★ v10.99 增量（2026-10-21）—— 卡底按钮 = **完整下载弹窗**（默认本模块页签）；详情页底栏恢复原样
+
+> **用户口径**（v10.98 上线后当场纠正，两句）：「点击卡片是弹出详情页，这个没问题，但是
+> 〔详情底栏那颗「查看本体资源」〕**这个我不需要，还是原来的样式**」/「**卡片下的按钮**，我要求是
+> 点击后弹出下载弹窗（**完整的下载弹窗**，但是默认页是根据点击页面进行默认设置，比如我在修改器点开的，
+> 我需要他**默认显示修改器的下载页**）」。<br>
+> **① 详情页只负责「看游戏」。** v10.98 把模块语境寄存在详情页（底栏再长一颗「查看 <模块> 资源」），
+> 方向错在**层级**：用户心里的那颗按钮就是**卡片下面**那颗。现在 `.ds-res` 与 `detailResTab` 整组删除，
+> 四区详情底栏回到**只有一颗**「⬇ 下载与资源」（实拍 `#dlStrip .ds` 数 = **1**）。<br>
+> **② 卡底按钮改开四页签 `#dlPop`。** 以前它开的是「只列本组全部条目」的 `#grpAllList`（自己一套渲染 +
+> 弹窗内搜索）。现在两组函数 `grpDownloadPop`（MOD/存档/修改器：只带 libId + 标题）与 `bdDownloadPop`
+> （本体卡：直接给话题 url）都走主站 `openUniDownload`，**四页签齐全、默认页签 = 本分区**：
+> mod→`mod` · saves→`save` · trainers→`modifier` · body→`body`，四区实拍逐条命中。<br>
+> **③ 按钮上不印条数。** 现测剑星「修改器」：卡面 `count` **2**（GCM 清单 2 条）、弹窗修改器页签 **5**
+> （机地修改器帖 4 + GCM 1）；存档那张两边都是 **15**。印「查看 2 条下载」点开是 5 条，用户只会认为
+> 有一处在骗人 ⇒ 文案统一成「⬇ 下载与资源 ▸」，条数留在卡面 `.meta` 的 pill 上。<br>
+> **④ `#grpAllList` 整组下线。** 弹窗外壳 `.grp-pop` / `.grp-pop-s` 九条样式一起删；
+> `test-resource-page` 里 23 条以 `.gl-i` / `.gl-lk a` / `#grpAllQ` 为锚的断言按两类处理：
+> 守行为的（每条有可点出口 / 通道真外链 / 原贴入口 → `/api/res/post` → 正文）**搬到** `.d-dl-it` / `.svf` 上，
+> 守旧形态的删掉并各配一条**反向断言**（旧容器不许回来）。<br>
+> **⑤ 一条新坑**：验「默认页签里有数据」时，`textContent.length > 20` 会把 `正在读取存档…` 判成有内容
+> ⇒ 判据必须排除占位词 + 轮询等数据回来。<br>
+> **⑥ 防线**：`test-resource-page` **156/156** · `test-emulator-structure` **290/290** ·
+> `test-v1098-card-detail` **37/37**（重写为四区「整卡→详情」+「卡底→完整弹窗」）·
+> `test-v1096-audit-fixes` **67/67** · `check-card-rules` 通过（删掉已陈旧的 `.grp-pop` 圆角例外）·
+> 全量 **5,112 / 失败 4**（4 条均为既有基线：游侠 stats 漂移 1 + v1018 联网补型号 3）。<br>
+> **未做**：`.emu-card.grp .gl*` 样式已无渲染器但仍被闸门白名单引用（清理要连闸门一起改）·
+> 卡面条数与页签角标的口径差未统一 · 本体卡卡底按钮仍需「抓过一次」才出现。<br>
+> 全文：[docs/versions/v10.99.md](docs/versions/v10.99.md)。
+
 ### ★ v10.98 增量（2026-10-21）—— 端游资源卡点击**层级纠正**：卡 → 详情 → 「查看 <模块> 资源」→ **同一个**下载弹窗（默认页签落在该模块）
 
 > **用户口径**（v10.97 上线后当场纠正）：「不是的，我的意思是端游模块的**卡片点击是弹详情页**，
@@ -1049,57 +1079,9 @@ python tools/clean-excel.py       # 读 E:/新建文件夹/基础测试数据.xl
 > **未做**：打包不压缩（体积≈原始）；打包不可续传；港台译名等同款漏并需按样本迭代。<br>
 > 全文：[docs/versions/v10.94.md](docs/versions/v10.94.md)。
 
-### ★ v10.93 增量（2026-10-21）—— **云下载引擎**：磁力 → 服务端下载 → 保存到电脑（「直链」这条否掉并给出证据）
+### ★ v10.93 块的摘要按「只留最近 6 版」规范移出（v10.99 加新版、去掉 v10.93）
 
-> **用户两个问题**：①「FitGirl Repack 中直链下载不是直接下载」②「磁力链能否把 Komo-Convert 的
-> 下载磁力链工具直接学习并入」。一个否掉、一个做成。<br>
-> **① 直链做不到（实测）**：`datanodes.to` 落地页表单 `op=download1` 后带页内 `rand` POST `download2`
-> **回 `<p>Wrong captcha</p>`**；`fuckingfast.co` **`403` + `Cf-Mitigated: challenge`**；
-> `filekeeper.net` `302 → /download` 同构 ⇒ 服务端拿不到文件直链，唯一路子是无头浏览器替人过验证码（**不做**）。
-> ⇒ 按钮**改名「⬇ 镜像分卷」**，弹窗里如实写「三站都要过验证码，本按钮不可能做成一键直下」。<br>
-> **② 磁力做成**：移植 Komo-Convert `Aria2Session.cs` / `DownloadProbe.cs` 的**语义**到
-> `data/download-engine.js`（启动参数逐条对齐 · 随机端口 + `randomBytes(32)` secret + **仅绑 127.0.0.1** ·
-> `bt-metadata-only`+`bt-save-metadata` · `select-file` · `--save-session` 恢复）。三处按部署形态改：
-> **无 aria2 则 `apt-get install`（幂等只试一次）** · **只放行磁力**（少一类 SSRF 面）·
-> **用 `infoHash` 对账恢复**（gid 会变、文件名会被 auto-rename）。<br>
-> **规模**：`download-guard.js` 171 行纯判据（30 GB 上限 / 40 GB 磁盘水位 / 每 IP 同时 1 个 +
-> 滚动 24h 3 个 / `sanitizeFiles` 剥绝对路径）· `download-tasks.js` 158 行（原子写 tmp+rename、
-> 坏文件改名留证不阻断启动、进度刷新 `persist:false` 不写盘）· `download-engine.js` 534 行 ·
-> `server.js` +365 行七条接口 `previews|batches|tasks|actions|files|quota|debug`。<br>
-> **为什么 preview 与 batches 分两步**：磁力**不含体积**，判 30 GB 要先拉元数据（实测 4.1–4.9s），
-> 合成一步会让用户等 8 秒才被告知超限、而配额已经吃掉。**previewId 由服务端发** ——
-> 前端能传 `torrentPath` 就能读服务器任意文件。<br>
-> **前端**：`☁ 云下载` 弹窗 `#fgCloud`（z=125，高于 `#fgDl` 的 120，**ESC 判断顺序 125→120**）·
-> 渲染拆 `fgcBodyHtml/fgcFootHtml` 纯函数 · 状态机 `loading→files→starting→downloading/paused→ready` ·
-> **「复制磁力」常驻**（服务器不可用时用户仍有出路）。<br>
-> **真链路实测**（aria2 1.37.0 + 真实 Astrobuilder 磁力）：preview **4,062 ms / 7 文件 / 2.70 GB**；
-> 只选 `setup.exe` → **162 s 下完 4,270,111 B** → 保存 **200 / SIZE MATCH /
-> `md5 e1444aa678148b2a49e470992551b64d`** → `Range` **206 + 1024 B 前缀一致**；
-> `pause`/`resume`/`cancel` 全通（`paused spd=0` → `active spd=180,838` → `cancelled` + 目录已删）。<br>
-> **线上实测**（`gamehub-agg-v4.app.workbuddy.host` · linux 容器 · 2026-10-21）：aria2 **50 秒内**装完
-> （`aria2 version 1.37.0`）· preview **3.0–5.8 s / 7 文件**（Astrobuilder 2.70 GB、Chained Together 4.95 GB）·
-> 建任务 → 下完 → 保存 **27 秒**全链路（`spd=358,412 B/s`）· 保存 **200 / SIZE MATCH /
-> `md5 a3a1d3f8…`**（两次独立任务结果一致）· `Range` **206（`bytes 0-63/69`）前缀一致** ·
-> 五页 md5 **5/5 MATCH** · 磁盘 **252.8 GB**。同容器两个种差 **10 倍**：`Astrobuilder` 只 1 个 seeder
-> ⇒ 传 2.8 MB 后 `spd=0` 卡死 90 s；`Chained Together` seeder 充足 ⇒ **20 秒**下完 4 MiB。
-> ⇒ 引擎没问题，**速度完全取决于种子生态**。<br>
-> **踩坑 13 条**（最贵的两条）：★★ **90 s 超时被误判成 DHT 不通，真因是那个种没 seeder**
-> （`conn=0 seeders=0`；同一引擎换 Astrobuilder **5.0 s** 成功）⇒ 诊断只看 `numSeeders`，
-> 不看「有没有报错」。★★ **进度分子分母必须同口径**：勾 1 个 **69 B** 的 `.bat`，aria2 传输量是
-> **4,079,169 B**（一整块），混用口径会显示「4,079,169 / 69」。其余：`--dht-listen-port=49152-65535`
-> 宽范围反而拿不到元数据（防火墙逐端口丢包）· debug 端点直接调 `rpc()` 没 `ready()` ⇒ `Failed to parse URL from ` ·
-> `tellStatus.files` 返回种子内全部条目（按 `selected` 过滤）· `(cmd &)` 起的实例在 Bash 调用结束被回收 ·
-> **`quota` 这种高频公开 GET 里顺手调安装逻辑，会把 `installTried` 提前置真 ⇒ 引擎永远装不上**（只读端点不许有副作用）·
-> 新容器 **apt 包索引为空**，`apt-get install` 前必须 `apt-get update -qq` ·
-> `spawnSync` 装包阻塞事件循环把平台 60 s 健康检查拖死（改异步 + 收 stderr）·
-> **反代后同客户端出口 IP 会变** ⇒ 拿 IP 当身份会「刚建的任务查不到」，改用 **80 bit 随机 id 即凭据** ·
-> **字段白名单漏一行 ⇒ 前端恒 `undefined`**（`selBytes` 存进了对象却没下发，UI 显示「所选 0B」）。<br>
-> **防线**：`test-v1093-downloads` **97/97**（新，登记 run-all，纯判据 + 源码护栏 + 前端渲染，
-> **不跑真下载**）· v1089 **42/42**（E2/E3 改判新文案）· v1086 **20/20** · v1090 **82/82** ·
-> pages-sync **58/58** · inline-syntax **4/4**。<br>
-> **未验**：**写盘是否跨容器重建存活**（要两次发布比对）· 重启恢复真实演练 ·
-> 全局任务中心 UI（目前只在同一篇 repack 的弹窗看进度）· 打包 EXE / 切本机执行端。<br>
-> 全文：[docs/versions/v10.93.md](docs/versions/v10.93.md)。
+> 完整内容见 [docs/versions/v10.93.md](docs/versions/v10.93.md)。
 
 ### ★ v10.92 块的摘要按「只留最近 6 版」规范移出（v10.98 加新版、去掉 v10.92）
 

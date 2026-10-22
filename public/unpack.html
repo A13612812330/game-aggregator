@@ -755,9 +755,12 @@
        · 封面 78 → **92px**：卡面信息少了，识别任务全落到封面上（手游中心也是 92）。
        ⚠️ 封面这条属于「图片槽定高」，必须在 tools/check-card-rules.js 的 IMG_EXCEPT
          里显式登记（含理由与期望值），否则前置闸会报「定高且无 aspect-ratio」。
-     ⚠️ `.emu-card.grp .gl` / `.gl-i` 那组样式**仍然保留且必须保留** ——
-        它们现在只服务「查看 N 条下载」弹窗（`.grp-pop .emu-card.grp` + `glRow`），
-        删掉弹窗里就变成一坨没有排版的文字。 */
+     ⚠️ `.emu-card.grp .gl` / `.gl-i` 那组样式**保留**：
+        v10.99 起已无渲染器（`glRow` + `#grpAllList` 整组下线，卡底按钮改开完整
+        下载弹窗），但它们同时是**通道配色词表**（`.gl-lk a.bd-*` 20 多条）与
+        `.po-btn` 的作用域锚点，且被 tools/check-card-rules.js 的卡内元素白名单
+        逐条引用 ⇒ 属于「清理要连闸门一起改」的独立动作，不夹在本轮行为改动里。
+        （待办：`#grpAllList` / `.grp-pop` 已删，`.gl-*` 待随闸门一并清理。） */
   .emu-grid.grp{grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:11px}
   .emu-card.grp{padding:11px 12px;gap:6px}
   .emu-card.grp .cov{height:92px;margin:-2px -2px 1px}
@@ -845,19 +848,11 @@
          让「列全部 ≠ 列 3 条」；用户看过后要求「每条显示一行」⇒ 该覆盖已删。
          ⚠️ 注释里**别写字面量**：写全了会被后面的 `grep`/断言当成真代码抓到（本轮就踩了一次）。
          ⇒ 现在区分「卡内 3 条」与「弹窗全量」，靠的是**总行数 + 行距 + 顶部搜索条**，不再靠折行。） */
-  .grp-pop .emu-card.grp{padding:0;background:none;border:0;border-radius:0;box-shadow:none;
-    cursor:auto;overflow:visible;gap:0;margin:0}
-  .grp-pop .emu-card.grp:hover{transform:none;box-shadow:none;border-color:transparent}
-  .grp-pop .emu-card.grp .gl{margin-top:0;border-top:0;padding-top:0}
-  .grp-pop .gl-i{padding:6px 0}
-  .grp-pop .gl-i + .gl-i{border-top:1px dashed var(--c-border)}
-  .grp-pop .gl-i .n{line-height:1.7}
-  .grp-pop-s{position:sticky;top:-12px;z-index:2;display:flex;align-items:center;gap:9px;
-    background:#fff;padding:3px 0 9px;border-bottom:1px solid var(--c-border);margin-bottom:9px}
-  .grp-pop-s input{flex:1;min-width:0;font-family:var(--font);font-size:12.5px;color:var(--c-t1);
-    background:#fff;border:1px solid var(--c-border2);border-radius:8px;padding:7px 10px;outline:none}
-  .grp-pop-s input:focus{border-color:var(--c-primary)}
-  .grp-pop-s .n{flex:none;font:700 11px/1.5 var(--font-num);color:var(--c-t3);white-space:nowrap}
+  /* ★ v10.99：`.grp-pop*` 这一组（弹窗外壳 + 顶部搜索条 + 行距覆盖）已整组删除。
+     它只服务 v10.96/v10.97 那个「只列本组全部条目」的 `#grpAllList` 弹窗；
+     用户口径「卡片下的按钮点开要是完整下载弹窗」⇒ 该弹窗下线，样式没有消费者了。
+     ⚠️ 弹窗内容现在由 `dlUniPane()` 按模块渲染，样式在 `.dl-*` / `.grp-pop` 之外，
+        所以删掉这组不会让下载弹窗「变成一坨没有排版的文字」。 */
   /* 三个分区的组卡主色（与各自 .bar / .emu-intro 同色系） */
   .emu-card.grp .tg.k-body{background:rgba(124,58,237,.1);color:#6D28D9}
   .emu-card.grp .tg.k-mod{background:rgba(46,107,255,.1);color:#2E6BFF}
@@ -1836,18 +1831,10 @@
      在视觉上收拢成一个动作 —— 单色绿会让人以为「这只管本体」。 */
   .ds-all{background:linear-gradient(120deg,#0F9D58,#0B7BFF 52%,#7C3AED);color:#fff;
     box-shadow:0 6px 16px rgba(11,123,255,.3)}
-  /* ★ v10.98：从端游资源页的卡片进详情时，底栏多一个「查看 <模块> 资源」。
-     它和右边那个「⬇ 下载与资源」开的是**同一个** #dlPop（同一套页签 / 同一套取数），
-     唯一差别是默认页签落在用户刚才所在的那个模块（mod / save / modifier / body）。
-     ⚠️ 用描边而不是第二块实心渐变：两个实心并排会互相抢，「下载与资源」才是全局动作，
-        这条是"针对我刚看的那个模块"的定向动作。
-     ⚠️ 选择器写成 `.dl-strip > .ds.ds-res`（三层）：`.dl-strip > .ds` 里有 `border:0`，
-        只写 `.ds-res` 会被它压掉，描边直接消失（这条与铁律 181 同源：样式"没生效"不报错）。 */
-  .dl-strip > .ds.ds-res{background:#F8F5FF;border:1.5px solid #C4B5FD;color:#6D28D9;box-shadow:none}
-  .dl-strip > .ds.ds-res.mod{background:#F8F5FF;border-color:#C4B5FD;color:#6D28D9}
-  .dl-strip > .ds.ds-res.save{background:#F1FBF6;border-color:#86EFAC;color:#047857}
-  .dl-strip > .ds.ds-res.modifier{background:#FFF6ED;border-color:#FDBA74;color:#C2410C}
-  .dl-strip > .ds.ds-res.body{background:#F1F7FF;border-color:#93C5FD;color:#1D4ED8}
+  /* ★ v10.99：v10.98 在这里加过一颗描边「查看 <模块> 资源」，与右边的「⬇ 下载与资源」
+     并排。用户口径：「这个我不需要，还是原来的样式」—— 底栏恢复**只有一个**下载入口。
+     模块语境改由**资源页卡片底部那颗按钮**承载（点它直接开完整下载弹窗、默认落在该模块），
+     不再借道详情页 —— 详情页在用户心里就是「看这款游戏」，不该出现第二颗下载按钮。 */
   /* ★ v10.25：详情页**竖向定位条**（用户口径：「详情页弹窗能有个定位条（竖着的）」，
      位置选了「右侧固定」）。默认只露序号圆点、悬停整条展开标签，避免长期遮住正文。
      ⚠️ 它必须是 `.drawer` 的**兄弟节点**而不是子节点：抽屉隐藏时是
@@ -4744,22 +4731,12 @@ $('#navHome').addEventListener('click', (e) => {
 
 /* ================= 详情抽屉 ================= */
 let drawerMode = 'game';   // 'game'=游戏详情 | 'bh'=BannerHub 社区配置面板 | 'pc'=实测配置面板
-/* ★ v10.98：用户从**端游资源页的哪张卡**进来的（null = 普通入口）。
-   卡片点击 = 打开详情；详情底栏因此多一个「查看 <模块> 资源」按钮，
-   点它开的是与「下载与资源」同一个 #dlPop，只是默认页签落在这个模块。
-   为什么挂在模块作用域而不是塞进 fb：
-     fb 是**库内记录**的镜像（字段名与 /api/library/item 一一对应），
-     混进「用户从哪个页面点进来的」这种会话信息后，下一个人读 fb.xxx 会以为它是库字段。
-   为什么在 openDetail() 里赋值为 `resTab || null`（而不是只在有值时覆盖）：
-     同一次会话里先点资源卡、再点搜索结果，若不清空，第二个详情页会带着上一个模块的按钮。 */
-let detailResTab = null;
 /* 关闭详情抽屉（✕ / 遮罩 / Esc 共用）—— 原先缺失导致关闭报错且滚动被锁 */
 function closeDetail() {
   const d = $('#drawer');
   if (!d.classList.contains('show')) return;
   d.classList.remove('show');
   $('#mask').classList.remove('show');
-  detailResTab = null;   /* ★ v10.98：模块语境随抽屉一起结束 */
   const rail = $('#dRail'); if (rail) rail.hidden = true;   // ★ v10.25 定位条随详情页收起
   $$('.on-drawer').forEach(x => x.classList.remove('on-drawer'));
   if (drawerMode !== 'game') { drawerMode = 'game'; unlockBody(); return; }  // 配置面板：关掉即回页面
@@ -4776,10 +4753,9 @@ function closeBtnHtml() {
    卡片只持有匹配到的本地库 id → 先按 id 取本地库条目，再走统一详情链路。
    fb 兜底数据一次性给全（title/cover/score/size/genres/dateLabel），
    这样源站抓取慢或失败时抽屉里也有完整信息，不会白屏。
-   ★ v10.98：第三个参数 resTab 透传给 openDetail（端游资源页的模块语境）；
-     返回 true/false —— 调用方（资源卡）需要知道「这一款到底有没有本地库记录」，
+   ★ v10.98：返回 true/false —— 调用方（资源卡）需要知道「这一款到底有没有本地库记录」，
      没有就得给另一条出口，不能只 toast 一句然后什么也不发生（铁律：点了没反应）。 */
-async function openDetailById(id, fallbackTitle, resTab) {
+async function openDetailById(id, fallbackTitle) {
   if (!id) return false;
   let it = null;
   try {
@@ -4797,14 +4773,13 @@ async function openDetailById(id, fallbackTitle, resTab) {
     dateLabel: it.dateLabel || '',
     jidiUrl: it.jidiUrl || '',    /* v10.22：手机专区卡片直达详情后，下载弹窗也能取双源 */
   };
-  openDetail(it.url, encodeURIComponent(JSON.stringify(fb)), false, resTab);
+  openDetail(it.url, encodeURIComponent(JSON.stringify(fb)), false);
   return true;
 }
 
-function openDetail(url, fbEnc, fromSearch, resTab) {
+function openDetail(url, fbEnc, fromSearch) {
   if (!url) return;
   drawerMode = 'game';
-  detailResTab = resTab || null;   /* ★ v10.98：普通入口传空 = 清掉上一次的模块语境 */
   detailFromSearch = !!fromSearch; // 记录来路：true=详情关闭后回到搜索弹窗
   lastDetailUrl = url;
   let fb = {};
@@ -4990,33 +4965,6 @@ function paintDetail(d, fb, merge) {
   const title = d.title || fb.title || '';
   const n = splitName(title);
   const s = SRC[d.source] || { nm: 'XDGAME', cls: 'xd' };
-  /* ★ v10.98：从端游资源页的卡片进来时，底栏多一个「查看 <模块> 资源」。
-     它与「⬇ 下载与资源」开**同一个** #dlPop（同一套页签、同一套取数），
-     唯一差别是 `data-dl-tab` 让默认页签直接落在用户刚才看的那个模块 ——
-     否则从「修改器」卡点进来，还要在弹窗里再手动点一次「修改器」页签。
-     ⚠️ `rt.id` 必须优先：资源分组的 libId 才是这一模块条目的归属记录
-        （赛博朋克2077 的 717 个 MOD 挂在 xd-191，而详情页的 fb.id 可能是机地那条
-         jidi-3277800 —— 拿后者去 /api/mods/match 会查空，只能靠名称模糊兜底）。
-     ⚠️ 本体卡传 resTab.id=''（话题没有库记录）：本体页签靠 ctx.url 取数，不靠 id。 */
-  const RES_UNI = {
-    body: { ic: '📦', btn: '查看本体资源' },
-    mod: { ic: '🧩', btn: '查看 MOD 资源' },
-    save: { ic: '💾', btn: '查看存档资源' },
-    modifier: { ic: '🛠', btn: '查看修改器资源' },
-  };
-  const rt = (detailResTab && RES_UNI[detailResTab.tab]) ? detailResTab : null;
-  /* ⚠️ 按钮上**不显示条数**（虽然 ctx 里有 count）：四个模块里「修改器」这一档
-     资源页与合并弹窗用的不是同一份数据（资源页是 GTrainers + GCM，弹窗的修改器页签是
-     机地修改器帖），实测赛博朋克2077 分别是 22 条与 2 条。按钮写死一个数、点开却是
-     另一个数，等于把一处既有口径差直接摆到用户眼前。条数交给弹窗页签上的徽标去说。 */
-  const resBtn = rt
-    ? '<button class="ds ds-res ' + rt.tab + '" type="button" data-dl-open data-dl-tab="' + rt.tab + '"'
-      + ' data-dl-title="' + esc(title) + '" data-dl-sub="' + esc(n.en || '') + '"'
-      + ' data-dl-url="' + esc(d.url || '') + '" data-dl-jidi="' + esc(fb.jidiUrl || '') + '"'
-      + ' data-dl-id="' + esc(rt.id || fb.id || d.id || '') + '">'
-      + RES_UNI[rt.tab].ic + ' <em>' + RES_UNI[rt.tab].btn + '</em>'
-      + '</button>'
-    : '';
   const kv = [];
   if (d.source === 'jidi') {
     if (d.releaseDate) kv.push(['发行日期', d.releaseDate]);
@@ -5161,7 +5109,6 @@ function paintDetail(d, fb, merge) {
                但盘口要登录；而它的 Mod 有 60 条）。入口的可见性不该由「本体能不能取到」
                决定。所以无条件渲染，四模块在弹窗里各自取数、各自给空态说明。
              ⚠️ 本段在模板串内部：注释里**不能出现反引号**（会把模板串提前闭合）。 -->
-        ${resBtn}
         <button class="ds ds-all" type="button" id="dlBtn" data-dl-open
           data-dl-title="${esc(title)}" data-dl-sub="${esc(n.en || '')}"
           data-dl-url="${esc(d.url || '')}" data-dl-jidi="${esc(fb.jidiUrl || '')}"
@@ -8737,8 +8684,10 @@ function dModLinks() {
       url: b.dataset.dlUrl || '',
       jidi: b.dataset.dlJidi || '',
       id: b.dataset.dlId || '',
-      /* ★ v10.98：详情页底栏那个「查看 <模块> 资源」带 data-dl-tab；
-         普通「下载与资源」没有这个属性 ⇒ undefined ⇒ openUniDownload 落回 body。 */
+      /* ★ v10.99：`data-dl-tab` 保留为**通用能力**（谁带就落哪页签）；详情页底栏
+         那个按钮不再带它 —— 模块语境改由资源页卡片底部按钮直接给（见
+         tools/resource-sections.js 的 grpDownloadPop / bdDownloadPop）。
+         没有这个属性 ⇒ '' ⇒ openUniDownload 落回 body，与改造前完全一致。 */
       tab: b.dataset.dlTab || '',
     });
   });

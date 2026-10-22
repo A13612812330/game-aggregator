@@ -100,10 +100,6 @@
     "count": 2
   },
   {
-    "name": "A_Plague_Tale__Innocence",
-    "count": 1
-  },
-  {
     "name": "A_Plague_Tale__Requiem",
     "count": 3
   },
@@ -649,7 +645,7 @@
   },
   {
     "name": "Batman___Arkham_VR",
-    "count": 4
+    "count": 3
   },
   {
     "name": "BattlEye_Launcher",
@@ -1333,7 +1329,7 @@
   },
   {
     "name": "Clair_Obscur__Expedition_33",
-    "count": 4
+    "count": 5
   },
   {
     "name": "ClearedHot",
@@ -1789,7 +1785,7 @@
   },
   {
     "name": "DRAGON_BALL__Sparking__ZERO",
-    "count": 126
+    "count": 127
   },
   {
     "name": "DRAGON_QUEST_BUILDERS",
@@ -1877,7 +1873,7 @@
   },
   {
     "name": "Darksiders_Genesis",
-    "count": 2
+    "count": 3
   },
   {
     "name": "Darksiders_III",
@@ -2597,7 +2593,7 @@
   },
   {
     "name": "Euro_Truck_Simulator_2",
-    "count": 275
+    "count": 276
   },
   {
     "name": "Euro_Truck_Simulator_2_Demo",
@@ -2645,7 +2641,7 @@
   },
   {
     "name": "F1_2010",
-    "count": 2
+    "count": 3
   },
   {
     "name": "F1_2011",
@@ -2961,7 +2957,7 @@
   },
   {
     "name": "Fallout_3",
-    "count": 14
+    "count": 15
   },
   {
     "name": "Fallout_3_-_Game_of_the_Year_Edition",
@@ -3273,7 +3269,7 @@
   },
   {
     "name": "Forza_Horizon_5",
-    "count": 12
+    "count": 13
   },
   {
     "name": "Forza_Horizon_6",
@@ -3489,7 +3485,7 @@
   },
   {
     "name": "GTA_V_Launcher",
-    "count": 16
+    "count": 17
   },
   {
     "name": "GTA_V_Launcher_Done",
@@ -3561,7 +3557,7 @@
   },
   {
     "name": "Gang_Beasts",
-    "count": 4
+    "count": 6
   },
   {
     "name": "Garfield_Kart",
@@ -3817,7 +3813,7 @@
   },
   {
     "name": "Grand_Theft_Auto_V_Legacy",
-    "count": 1660
+    "count": 1667
   },
   {
     "name": "Grand_Theft_Auto_V_Legacy22",
@@ -4357,7 +4353,7 @@
   },
   {
     "name": "INAZUMA_ELEVEN__Victory_Road",
-    "count": 3
+    "count": 4
   },
   {
     "name": "INSIDE",
@@ -4953,7 +4949,7 @@
   },
   {
     "name": "Little_Nightmares",
-    "count": 10
+    "count": 11
   },
   {
     "name": "Little_Nightmares_2",
@@ -5033,7 +5029,7 @@
   },
   {
     "name": "Lovedoll_Toy_Factory",
-    "count": 1
+    "count": 2
   },
   {
     "name": "Lucas_viado_13",
@@ -6149,7 +6145,7 @@
   },
   {
     "name": "Need_for_Speed_Most_Wanted",
-    "count": 5
+    "count": 6
   },
   {
     "name": "Need_for_Speed_Most_Wanted_",
@@ -6201,7 +6197,7 @@
   },
   {
     "name": "Need_for_Speed__Most_Wanted",
-    "count": 29
+    "count": 30
   },
   {
     "name": "Need_for_Speed__Most_Wanted_________________________________",
@@ -6661,7 +6657,7 @@
   },
   {
     "name": "PRO_EVOLUTION_SOCCER_2018",
-    "count": 36
+    "count": 37
   },
   {
     "name": "PRO_EVO_17",
@@ -7037,7 +7033,7 @@
   },
   {
     "name": "Pro_Evolution_Soccer_2013",
-    "count": 3102
+    "count": 3106
   },
   {
     "name": "Pro_Evolution_Soccer_20132",
@@ -7121,7 +7117,7 @@
   },
   {
     "name": "Pro_Evolution_Soccer_2017",
-    "count": 194
+    "count": 195
   },
   {
     "name": "Pro_Evolution_Soccer_2017seting",
@@ -7201,7 +7197,7 @@
   },
   {
     "name": "Prototype_",
-    "count": 35
+    "count": 36
   },
   {
     "name": "Prototype_2",
@@ -7461,7 +7457,7 @@
   },
   {
     "name": "Resident_Evil_2",
-    "count": 108
+    "count": 109
   },
   {
     "name": "Resident_Evil_2_2019_Deluxe_Edition_MULTi12_-_ElAmigos______",
@@ -7681,7 +7677,7 @@
   },
   {
     "name": "Roblox_Bootstrapper",
-    "count": 18
+    "count": 19
   },
   {
     "name": "RockNES_X",
@@ -8765,7 +8761,7 @@
   },
   {
     "name": "THE_KING_OF_FIGHTERS_XIII_GLOBAL_MATCH",
-    "count": 36
+    "count": 37
   },
   {
     "name": "THE_KING_OF_FIGHTERS_XV",
@@ -9337,7 +9333,7 @@
   },
   {
     "name": "Tomb_Raider",
-    "count": 153
+    "count": 154
   },
   {
     "name": "Tomb_Raider_-_Definitive_Edition",
@@ -9445,6 +9441,10 @@
   },
   {
     "name": "Tradu__o_PT-BR_Styx_Shards_of_Darkness",
+    "count": 1
+  },
+  {
+    "name": "Tradu__o_do_Call_of_Duty_2__________________________________",
     "count": 1
   },
   {
@@ -10373,7 +10373,7 @@
   },
   {
     "name": "____________________________________________________________",
-    "count": 1
+    "count": 2
   },
   {
     "name": "________________________________________________________________",
@@ -10385,6 +10385,10 @@
   },
   {
     "name": "________________________________________________________________sonic_boll",
+    "count": 2
+  },
+  {
+    "name": "_________v1_1",
     "count": 2
   },
   {

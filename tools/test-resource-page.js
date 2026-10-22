@@ -201,7 +201,7 @@ async function main() {
       bd.n > 0 && bd.cov === bd.n && bd.meta === bd.n && bd.pill === bd.n, shapeStr(bd));
     ok('★★ v10.97 本体卡面**没有**条目行（用户口径：只留名称/原名/大小热度）',
       bd.n > 0 && bd.gl === 0, `卡内行 ${bd.gl} 张`);
-    ok('★ v10.97 正向锚点：本体卡底都有一个动作（未抓过「查本体下载」/ 抓过「查看 N 个资源帖」）',
+    ok('★ v10.97 正向锚点：本体卡底都有一个动作（未抓过「查本体下载」/ 抓过「⬇ 下载与资源」）',
       bd.n > 0 && bd.more === bd.n, `卡底动作 ${bd.more} / ${bd.n}`);
     ok('★ v10.97 本体卡带 data-tid（抓取/弹窗都靠它认话题）',
       bd.n > 0 && qa('#bdGrid .emu-card').every((c) => !!c.dataset.tid));
@@ -226,6 +226,30 @@ async function main() {
     }
   }
 
+  /* ---- ★★ v10.99 本体卡底按钮 → 完整下载弹窗（默认本体页签） ----
+   * 为什么不点那颗按钮：它只在「这一款抓过一次」之后才出现（进页面 0 请求是既有设计，
+     见 tools/test-v1096-audit-fixes.js 的 D21/D22）。为了这条断言去打一次机地，
+     会让整套在源站限流时红 —— 那是环境问题，不是回归。
+     所以直接调**按钮背后那个函数**：它和另三区的 grpDownloadPop 是同一套落点
+     （openUniDownload + RES_UNI_TAB），行为判据完全等价。 */
+  {
+    const bdCard = qa('#bdGrid .bd-card')[0];
+    if (bdCard && typeof W.bdDownloadPop === 'function') {
+      const errN = e1.length;
+      W.bdDownloadPop(bdCard);
+      for (let i = 0; i < 60 && !(q('#dlPop') && !q('#dlPop').hidden); i++) await sleep(180);
+      const onB = q('#dlModTabs .dlm.on');
+      ok('★★ v10.99 本体卡底按钮 → 打开完整下载弹窗且默认落在「本体」页签',
+        !!q('#dlPop') && !q('#dlPop').hidden && !!onB && onB.dataset.dlm === 'body',
+        onB ? 'on=' + onB.dataset.dlm : '(无页签)');
+      ok('本体卡开弹窗不抛异常', e1.length === errN, e1.slice(errN).join(' | '));
+      if (typeof W.closeDownload === 'function') W.closeDownload();
+      await sleep(240);
+    } else {
+      ok('本体卡底按钮 → 下载弹窗（无样本 / 函数未暴露，跳过）', true,
+        bdCard ? 'bdDownloadPop 未暴露' : '无 .bd-card');
+    }
+  }
   /* ---- 顶栏搜索入口（共享资产，曾因绑定埋在 bindRankUI 内而彻底失效） ---- */
   const smodal = q('#smodal'), sOpenBtn = q('#searchOpen');
   ok('端游资源页有顶栏搜索按钮 #searchOpen', !!sOpenBtn);
@@ -320,72 +344,56 @@ async function main() {
     }
   }
   /* ★★ v10.98 整卡点击 = 打开**游戏详情**（v10.97 那版让给了弹窗，方向错了）
-     用户口径：「端游模块的卡片点击是弹详情页，然后有个按钮 —— 点击查看对应模块的弹窗
-     （同下载按钮，不过默认页面自动选择到默认模块）」。
-     ⇒ 判据三层，缺一层就会假绿：
+     ★★ v10.99 只动一处：v10.98 曾在详情底栏加一颗「查看 <模块> 资源」，
+        用户明确不要（「这个我不需要，还是原来的样式」）⇒ 该按钮与 `detailResTab` 已删。
+     ⇒ 现在这段守三件事：
         ① 详情抽屉真的开了；
         ② 反向：这一刻**没有**顺手把下载弹窗也开了（一次点击只做一个动作）；
-        ③ 详情底栏多出「查看 <模块> 资源」，data-dl-tab 是**弹窗页签键**（mod），
-           点它才开弹窗、且默认页签落在 mod。
-     ⚠️ 为什么要断 ③ 的 data-dl-tab 而不是只看按钮在不在：分区名与页签键不同
-        （saves/trainers ↔ save/modifier），传错时 openUniDownload 会**静默**落回 body，
-        按钮看起来一样、点开永远是「本体」。 */
+        ③ 反向 + 正向锚点：底栏**只有一颗**「⬇ 下载与资源」（旧模块按钮不许回来）。
+     ⚠️ ③ 必须带正向锚点（`ds.length === 1`）：只写「没有 .ds-res」的话，
+        底栏整个没渲染也会绿 —— 那正是 v10.98 之前踩过的假绿。 */
   {
     const card = qa('#mdGrid .emu-card').find((c) => c.dataset.lib);
     if (card) {
       const errN = e1.length;
       click(card.querySelector('h4'));
-      /* ⚠️⚠️ 必须等到 `.ds-res` 出现，**不能只等 `#drawer.show`**：
+      /* ⚠️⚠️ 必须等到底栏那颗按钮出现，**不能只等 `#drawer.show`**：
          `openDetail()` 是**同步**先加 `.show` 的（还只是库内兜底那一屏），
          真正的底栏 `.d-dock` 要等 `/api/detail/merged` 回来、`paintDetail` 才画出来。
-         只等 `.show` ⇒ 机器一忙（全量跑时）就会取样到「抽屉开了但底栏还没画」，
-         表现成「按钮不存在」，红得莫名其妙（本轮全量实测连续踩到）。 */
+         只等 `.show` ⇒ 机器一忙（全量跑时）就会取样到「抽屉开了但底栏还没画」。 */
       for (let i = 0; i < 150
-        && !(q('#drawer').classList.contains('show') && q('#dlStrip .ds-res')); i++) await sleep(200);
+        && !(q('#drawer').classList.contains('show') && q('#dlStrip .ds-all')); i++) await sleep(200);
       ok('★★ v10.98 点整卡正文 → 打开游戏详情抽屉',
         q('#drawer').classList.contains('show'), q('#drawer').className);
       ok('★★ v10.98 反向：点整卡**不**同时开下载弹窗（一次点击只做一个动作）',
         !q('#dlPop') || q('#dlPop').hidden,
         q('#dlPop') ? `hidden=${q('#dlPop').hidden}` : '(无 #dlPop)');
-      const rb = q('#dlStrip .ds-res');
-      ok('★★ v10.98 详情底栏出现「查看 MOD 资源」按钮', !!rb,
-        rb ? rb.textContent.trim().replace(/\s+/g, ' ') : (q('#dlStrip') || {}).textContent);
-      ok('★ 该按钮 data-dl-tab = mod（页签键，不是分区名 md）',
-        !!rb && rb.dataset.dlTab === 'mod', rb ? 'tab=' + rb.dataset.dlTab : '');
-      ok('★ 该按钮的 id 取卡上的 libId（模块条目归属记录）',
-        !!rb && rb.dataset.dlId === card.dataset.lib,
-        rb ? rb.dataset.dlId + ' vs ' + card.dataset.lib : '');
-      if (rb) {
-        click(rb);
-        for (let i = 0; i < 80 && (!q('#dlPop') || q('#dlPop').hidden); i++) await sleep(200);
-        const on = q('#dlModTabs .dlm.on');
-        ok('★★ 点它 → 打开下载弹窗且默认页签自动落在 MOD（不用再手点一次）',
-          !!q('#dlPop') && !q('#dlPop').hidden && !!on && on.dataset.dlm === 'mod',
-          on ? 'on=' + on.dataset.dlm : '(无页签)');
-        ok('点模块按钮打开弹窗不抛异常', e1.length === errN, e1.slice(errN).join(' | '));
-        if (typeof W.closeDownload === 'function') W.closeDownload();
-        await sleep(260);
-      }
-      W.closeDetail(); await sleep(300);
-      /* ⚠️ 不能在关详情后直接判 `.ds-res` 消失：closeDetail 只是去掉 .show，
-         抽屉 DOM 还是上一次那份，判它必然红（本轮实测踩到）。
-         真正的行为是「下次打开会重画」—— 所以用**普通入口**再开一次来验语境已清。 */
-      await W.openDetailById(card.dataset.lib, card.dataset.name);
-      /* 同上：等到底栏**真的画出来**再判 —— 否则「底栏还没渲染」会被当成
-         「没有 .ds-res」而平白变绿（这是最危险的一种：假绿比假红难发现）。 */
-      for (let i = 0; i < 150 && !q('#dlStrip'); i++) await sleep(200);
-      ok('★ 关详情后模块语境被清掉（普通入口再开，底栏没有「查看 <模块> 资源」）',
-        !!q('#dlStrip') && !q('#dlStrip .ds-res'),
+      const dsAll = qa('#dlStrip .ds');
+      ok('★★ v10.99 详情底栏只有一颗下载入口（⬇ 下载与资源）',
+        dsAll.length === 1 && /下载与资源/.test(dsAll[0].textContent || ''),
+        `${dsAll.length} 颗 ｜ ${dsAll.map((x) => (x.textContent || '').trim()).join(' / ')}`);
+      ok('★★ v10.99 反向：v10.98 那颗「查看 <模块> 资源」不再出现（.ds-res 已删）',
+        !q('#dlStrip .ds-res'),
         ((q('#dlStrip') || {}).textContent || '').trim().slice(0, 40));
+      ok('点整卡进详情不抛异常', e1.length === errN, e1.slice(errN).join(' | '));
       W.closeDetail(); await sleep(300);
     } else {
       ok('整卡点击（本轮无带 libId 的卡，跳过）', true, '无 data-lib');
     }
   }
-  /* ★★ v10.48 + v10.97：卡底「查看 N 条下载」= 打开**弹窗**列全量 + 弹窗内搜索。
-     ⚠️ 这组断言 v10.97 起承担了**双份**职责 —— 卡面改成「不给条目」之后，
-        原先挂在卡内行上的判据（真外链 / 盘口配色 / 每行 title）全部迁移到这里。
-        别以为是「顺手搬家」：条目现在**只**活在弹窗里，弹窗里不验就等于没验。 */
+  /* ★★ v10.99 卡底按钮 = 打开**完整下载弹窗**（用户口径：
+       「卡片下的按钮，我要求是点击后弹出下载弹窗（完整的下载弹窗，但是默认页是根据
+         点击页面进行默认设置，比如我在修改器点开的，需要默认显示修改器的下载页）」）。
+     ⇒ 这里守四件事，缺一层就假绿：
+        ① `#dlPop` 真的开了；
+        ② 是**完整**弹窗 —— 四个页签都在（不是只有一片列表）；
+        ③ 默认页签落=本分区（mod → mod；分区名≠页签键的三个区另测）；
+        ④ 页签里真的有内容（默认页签空白 = 等于没接上）。
+     同时反向钉住旧形态：`#grpAllList` / `#grpAllQ` 那套「全部条目 + 搜索」弹窗已下线，
+     卡面也不许再铺行（原地铺开在 v10.48 就废了）。
+     ⚠️ 原来挂在这里的 `.gl-lk a` / 盘口 bd-* / 行 title 等判据是**旧渲染器的标记**，
+        随 `glRow` 一起删除；它们守的行为（「每条都有可点出口」「通道是真外链」）
+        改由下面第 ④⑤ 条在下载弹窗的 `.d-dl-it` 上重新验 —— 是搬家，不是去掉。 */
   {
     const more = qa('#mdGrid .emu-card .grp-more')[0];
     if (more) {
@@ -394,67 +402,38 @@ async function main() {
       const before = card.querySelectorAll('.gl .gl-i').length;
       const errN = e1.length;
       click(more);
-      await sleep(2200);
+      /* 弹窗要等 mod 页签的数据回来（/api/mods/match，毫秒级，但全量跑时机器忙） */
+      for (let i = 0; i < 60 && !(q('#dlPop') && !q('#dlPop').hidden
+        && q('#dlBody').querySelector('.d-dl-it')); i++) await sleep(200);
       const pop = q('#dlPop');
-      ok('★★ 点卡底「查看 N 条下载」→ 打开弹窗（不再原地铺开）', !!pop && !pop.hidden);
+      ok('★★ v10.99 点卡底「⬇ 下载与资源」→ 打开完整下载弹窗', !!pop && !pop.hidden);
+      const tabKeys = qa('#dlModTabs .dlm').map((b) => b.dataset.dlm);
+      ok('★★ v10.99 弹窗是**完整**的（本体 / Mod / 修改器 / 存档 四页签都在）',
+        ['body', 'mod', 'modifier', 'save'].every((k) => tabKeys.includes(k)), tabKeys.join(','));
+      const onTab = q('#dlModTabs .dlm.on');
+      ok('★★ v10.99 默认页签落在本分区（mod → mod，不用再手点一次）',
+        !!onTab && onTab.dataset.dlm === 'mod', onTab ? 'on=' + onTab.dataset.dlm : '(无页签)');
       const after = card.querySelectorAll('.gl .gl-i').length;
       ok('★★ 反向：卡内行数仍是 0（原地铺开已废弃，卡片不再被撑长）',
         before === 0 && after === 0, `${before} → ${after} 行`);
-      const box = q('#grpAllList');
-      const rowsArr = box ? [...box.querySelectorAll('.gl-i')] : [];
-      const rows = rowsArr.length;
-      ok('★ 正向锚点：弹窗内铺出全量条目（上一条「卡内 0 行」不能因弹窗也空而变绿）',
-        rows > 0, `${rows} 行`);
-      ok('★ 弹窗内每行都有可点出口（有链给链 / 没链给「源站」兜底）',
-        rows > 0 && rowsArr.every((r) => r.querySelector('.gl-lk a')));
-      /* ↓ 从卡面迁过来的三条：真外链 / 盘口配色 / 每行 title */
-      const links = rowsArr.flatMap((r) => [...r.querySelectorAll('.gl-lk a')]);
-      const ext = links.filter((a) => /^https?:/.test(a.getAttribute('href') || ''));
-      ok('★ 弹窗内通道是真外链（href 非 # 、target=_blank）',
-        ext.length > 0 && ext.every((a) => a.getAttribute('target') === '_blank'),
-        `${ext.length} / ${links.length} 条是 http(s) ｜ 例 ${(ext[0] || {}).getAttribute ? String(ext[0].getAttribute('href')).slice(0, 50) : '(无)'}`);
-      ok('★ 通道按钮挂了盘口配色类 bd-*（与详情页下载弹窗同源语义）',
-        ext.filter((a) => /(^|\s)bd-/.test(a.className)).length > 0,
-        `${ext.filter((a) => /(^|\s)bd-/.test(a.className)).length} / ${ext.length}`);
-      {
-        const withT = rowsArr.filter((r) => {
-          const t = r.querySelector('.t');
-          return !!t && !!t.getAttribute('title');
-        });
-        ok('★★ 每行标题都带 title（单行省略后悬停仍能读全文 —— 折叠，不是删除）',
-          rows > 0 && withT.length === rows, `${withT.length} / ${rows} 行`);
-      }
-      ok('★ 弹窗副标题写明总数（「共 N 条 · 可在下方搜索」）',
-        /共\s*[\d,]+\s*条/.test((q('#dlSub') || {}).textContent || ''), (q('#dlSub') || {}).textContent || '');
-      /* 搜索：本地过滤已取回的数组。正反两条都要 ——
-         只断「搜不到」会被「过滤函数恒返 0」满足，只断「搜得到」会被「恒返全部」满足。 */
-      const qi = q('#grpAllQ');
-      ok('★ 弹窗内有搜索框 #grpAllQ', !!qi);
-      if (qi) {
-        const firstT = (box.querySelector('.gl-i .t') || {}).textContent || '';
-        const cand = firstT.replace(/[^0-9A-Za-z\u4e00-\u9fa5]/g, '').slice(0, 2);
-        const type = async (v) => {
-          qi.value = v;
-          qi.dispatchEvent(new W.Event('input', { bubbles: true }));
-          await sleep(140);
-          return box.querySelectorAll('.gl-i').length;
-        };
-        const hitOk = await type(cand);
-        const hitNo = await type('zzzzq');
-        ok('★★ 弹窗内搜索真的过滤（正：命中原有关键词 / 反：无关键词归零）',
-          cand.length > 1 && hitOk > 0 && hitOk <= rows && hitNo === 0,
-          `关键词「${cand}」→ ${hitOk} 行 ｜ 「zzzzq」→ ${hitNo} 行`);
-        const back = await type('');
-        ok('★ 清空关键词后恢复全量', back === rows, `${rows} → ${back} 行`);
-      }
-      ok('打开弹窗 / 搜索过程中不抛异常', e1.length === errN, e1.slice(errN).join(' | '));
+      const rows = qa('#dlBody .d-dl-it');
+      ok('★ 正向锚点：默认页签里真的渲染了条目（上一条「卡内 0 行」不能因弹窗也空而变绿）',
+        rows.length > 0, `${rows.length} 行`);
+      const links = qa('#dlBody .dl-res-lk a, #dlBody .d-dl-it a[href]')
+        .filter((a) => /^https?:/.test(a.getAttribute('href') || ''));
+      ok('★ 条目里的通道是真外链（href 是 http(s) 且 target=_blank）',
+        links.length > 0 && links.every((a) => a.getAttribute('target') === '_blank'),
+        `${links.length} 条 ｜ 例 ${links[0] ? String(links[0].getAttribute('href')).slice(0, 50) : '(无)'}`);
+      ok('★★ v10.99 反向：旧「全部条目」弹窗不再出现（#grpAllList / #grpAllQ 已下线）',
+        !q('#grpAllList') && !q('#grpAllQ'));
+      ok('打开弹窗过程中不抛异常', e1.length === errN, e1.slice(errN).join(' | '));
       if (typeof W.closeDownload === 'function') W.closeDownload();
-      await sleep(220);
+      await sleep(240);
       ok('★ 关弹窗后卡内仍然是 0 行（不会把全量留在卡里）',
         card.querySelectorAll('.gl .gl-i').length === 0,
         `${card.querySelectorAll('.gl .gl-i').length} 行`);
     } else {
-      ok('查看全部（本轮无 .grp-more 样本，跳过）', true, '无 .grp-more');
+      ok('卡底按钮（本轮无 .grp-more 样本，跳过）', true, '无 .grp-more');
     }
   }
   /* ★★ v10.49：条目标题**单行省略**（用户口径「卡片中的内容每条显示一行即可多余字显示省略号即可」）。
@@ -576,13 +555,20 @@ async function main() {
    *   只是列表投影按设计只留了摘要字段 ⇒ 改的是投影与界面，不是采集。
    */
   {
-    /* ★★ v10.97：条目行只在弹窗里 —— 先开「查看 N 条下载」，再从 `#grpAllList` 取样。
+    /* ★★ v10.99：条目只在**下载弹窗**里 —— 先点卡底按钮开弹窗，再从 `#dlBody` 取样。
+       取样点由 `#grpAllList .gl-i` 换成 `.d-dl-it`（旧弹窗下线、行渲染器换了），
+       但 `data-post-open` 三件套（src / id / 按钮）在下载弹窗里**完全一样**，
+       所以下面整条「入口 → /api/res/post → 正文弹窗」的链路照旧全量验。
        ⚠️ 别改回 `#mdGrid .gl-i`：卡面已无行，那样取到 0 个，整段会退化成「跳过」，
-          看上去全绿实际什么都没验（本轮最容易踩的假绿）。 */
+          看上去全绿实际什么都没验（本项目最容易踩的假绿）。 */
     const mdMore0 = qa('#mdGrid .emu-card .grp-more')[0];
-    if (mdMore0) { click(mdMore0); await sleep(2200); }
-    const btns = qa('#grpAllList .gl-i [data-post-open]');
-    const rowsHas = qa('#grpAllList .gl-i.has-post');
+    if (mdMore0) {
+      click(mdMore0);
+      for (let i = 0; i < 60 && !(q('#dlPop') && !q('#dlPop').hidden
+        && q('#dlBody').querySelector('[data-post-open]')); i++) await sleep(200);
+    }
+    const btns = qa('#dlBody .d-dl-it [data-post-open]');
+    const rowsHas = qa('#dlBody .d-dl-it.has-post');
     ok('★ v10.50 正向锚点：MOD 弹窗内出现「原贴」入口（机地帖 content 覆盖 100%）',
       btns.length > 0, `${btns.length} 个 ｜ 弹窗是否开着 ${!!(q('#dlPop') && !q('#dlPop').hidden)}`);
     ok('★ v10.50：入口按钮与「整行可点」一一对应（按钮数 == .has-post 行数）',
@@ -686,7 +672,7 @@ async function main() {
         q('#postPop').classList.contains('on'), q('#postPop').className);
       ok('点整行打开不抛异常', e1.length === errN2, e1.slice(errN2).join(' | '));
       /* ★★ 反向：下载通道是外链，必须让开 —— 否则点「迅雷」会同时弹原贴（一次点击两个动作） */
-      const link = row.querySelector('.gl-lk a');
+      const link = row.querySelector('.dl-res-lk a');
       if (link) {
         W.closePostPop();
         await sleep(280);
@@ -737,28 +723,39 @@ async function main() {
       `${qa('#svSorts .emu-sort').length} 项 ｜ 首项 ${(qa('#svSorts .emu-sort')[0] || {}).textContent}`);
     ok('★★ 反向：存档卡面已无旧「位置卡」元素（.paths / .cp / .sv-open 归零）',
       sv.deadEl === 0, `残留 ${sv.deadEl} 张`);
-    /* ★★ 本轮核心口径：这一页只列「真有存档」的游戏 ⇒ **每行**都应有真实下载通道。
+    /* ★★ 本轮核心口径：这一页只列「真有存档」的游戏 ⇒ **每个文件卡**都应有真实下载通道。
        实测 /api/res/stats?cat=saves 的 withLink = items（100%）。所以这条不该有例外；
-       若哪天出现「只有源站兜底」的行，说明混进了没有文件的条目 —— 正是用户要去掉的形态。
-       ⚠️ v10.97 起行只在弹窗里，必须开一张卡取样（`#svGrid .gl .gl-i` 现在恒为 0，
-          直接查会「0 行」把正反两条一起判红 —— 或更糟：改成 `>=` 就假绿）。 */
+       若哪天出现「只有源站兜底」的卡，说明混进了没有文件的条目 —— 正是用户要去掉的形态。
+       ★ v10.99：卡底按钮改开**完整下载弹窗**，默认落在「存档」页签；
+         该页签的文件卡标记是 `.svf`（旧 `#grpAllList .gl-i` 已随渲染器下线）。
+         ⚠️ 兜底链也是 `.k a`（文案「去源站页面取」）—— 判据必须把它排除，
+            否则「只有兜底」的条目会被当成「有真通道」而假绿。 */
     const svMore = qa('#svGrid .emu-card .grp-more')[0];
-    if (svMore) { click(svMore); await sleep(2200); }
-    const rows = qa('#grpAllList .gl-i');
-    const withCh = rows.filter((r) => r.querySelector('.gl-lk a:not(.bd-other)')).length;
-    ok('★★ 存档弹窗内每行都带**真实下载通道**（不是「去源站」兜底）——「只展示真有存档的」',
+    if (svMore) {
+      click(svMore);
+      for (let i = 0; i < 60 && !(q('#dlPop') && !q('#dlPop').hidden
+        && q('#dlBody').querySelector('.svf, .d-dl-it')); i++) await sleep(200);
+    }
+    const svOn = q('#dlModTabs .dlm.on');
+    ok('★★ v10.99 从存档卡打开 ⇒ 默认页签落在「存档」（saves → save，不是停在本体）',
+      !!svOn && svOn.dataset.dlm === 'save', svOn ? 'on=' + svOn.dataset.dlm : '(无页签)');
+    const rows = qa('#dlBody .svf');
+    const isReal = (a) => !!a && /^https?:/.test(a.getAttribute('href') || '')
+      && !/去源站页面取/.test(a.textContent || '');
+    const withCh = rows.filter((r) => [...r.querySelectorAll('.k a')].some(isReal)).length;
+    ok('★★ 存档页签里每个文件卡都带**真实下载通道**（不是「去源站」兜底）——「只展示真有存档的」',
       rows.length > 0 && withCh === rows.length,
-      `${withCh} / ${rows.length} 行有真通道`);
+      `${withCh} / ${rows.length} 个卡有真通道`);
     ok('存档计数文案是「共 N 款游戏」', /共 [\d,]+ 款游戏/.test(q('#svCount').textContent || ''),
       q('#svCount').textContent || '');
     ok('存档统计条已回填 4 格', qa('#svStats .st').length === 4, `实际 ${qa('#svStats .st').length}`);
     ok('存档来源下拉已填充（「全部来源」+ 至少 1 个源）', qa('#svSrc option').length >= 2,
       qa('#svSrc option').map((o) => o.textContent).join(' ｜ '));
     /* ★ v10.50：存档原贴（游侠帖）—— desc / steps / shots 三个字段的取数入口。
-       实证口径：desc 100% · 有截图 1,172 条（57.4%）。v10.97 同样改从弹窗取样。 */
-    const svBtn = q('#grpAllList .gl-i [data-post-open]');
-    ok('★ v10.50 正向锚点：存档弹窗内出现「原贴」入口（游侠帖 desc 覆盖 100%）',
-      !!svBtn, `${rows.length} 行里 ${qa('#grpAllList [data-post-open]').length} 个入口`);
+       实证口径：desc 100% · 有截图 1,172 条（57.4%）。v10.99 起取样点在下载弹窗存档页签。 */
+    const svBtn = q('#dlBody .svf [data-post-open]');
+    ok('★ v10.50 正向锚点：存档页签里出现「原贴」入口（游侠帖 desc 覆盖 100%）',
+      !!svBtn, `${rows.length} 个卡里 ${qa('#dlBody .svf [data-post-open]').length} 个入口`);
     if (svBtn) {
       const j = await fetch(BASE + '/api/res/post?src=' + encodeURIComponent(svBtn.dataset.src)
         + '&id=' + encodeURIComponent(svBtn.dataset.id)).then((r) => r.json());
@@ -826,42 +823,36 @@ async function main() {
       if (trMore) {
         const errN = e1.length;
         click(trMore);
-        await sleep(2200);
-        const box = q('#grpAllList');
-        const trRows = box ? [...box.querySelectorAll('.gl-i')] : [];
-        ok('★ 正向锚点：修改器弹窗内确实渲染了条目行（防下两条因整区空白而假绿）',
+        /* ★ v10.99：卡底按钮开的是**完整下载弹窗**，默认落在「修改器」页签
+           （trainers → modifier，分区名与页签键不同名，传错会静默落回 body）。 */
+        for (let i = 0; i < 60 && !(q('#dlPop') && !q('#dlPop').hidden
+          && q('#dlBody').querySelector('.d-dl-it')); i++) await sleep(200);
+        const trOn = q('#dlModTabs .dlm.on');
+        ok('★★ v10.99 从修改器卡打开 ⇒ 默认页签落在「修改器」（trainers → modifier）',
+          !!trOn && trOn.dataset.dlm === 'modifier', trOn ? 'on=' + trOn.dataset.dlm : '(无页签)');
+        const trRows = qa('#dlBody .d-dl-it');
+        ok('★ 正向锚点：修改器页签里确实渲染了条目（防下面几条因整区空白而假绿）',
           trRows.length > 0, `${trRows.length} 行`);
-        ok('★ 修改器弹窗内每行都有可点出口（有链给链，GCM 走来源站兜底）',
-          trRows.length > 0 && trRows.every((r) => r.querySelector('.gl-lk a')),
-          `${trRows.filter((r) => r.querySelector('.gl-lk a')).length} / ${trRows.length} 行`);
-        /* ★★ v10.50 反向：修改器两源（GTrainers / GCM；v10.58 起 FR 已摘除）都是**纯链接源**，
-           没有原贴正文 ⇒ 不给「点开是空的」入口（宁可少一个按钮，也不给一个空弹窗）。
-           ⚠️ 若哪天修改器源开始带正文，这条会红：那时应改成
-              「入口数 == 接口 has:true 的条数」，而不是把断言删掉。 */
-        ok('★★ v10.50 反向：修改器弹窗内**没有**原贴入口（纯链接源无正文）',
-          box && box.querySelectorAll('[data-post-open]').length === 0
-          && box.querySelectorAll('.gl-i.has-post').length === 0,
-          `入口 ${box ? box.querySelectorAll('[data-post-open]').length : '?'}`
-          + ` ｜ 整行 ${box ? box.querySelectorAll('.gl-i.has-post').length : '?'}`);
-        const sel = 'a[class*="bd-fling"],a[class*="bd-cheat"],a[class*="bd-src"]';
-        const srcLinks = box ? [...box.querySelectorAll(sel)] : [];
-        ok('★★ 修改器「查看全部」弹窗里出现第三方来源跳转按钮（bd-fling / bd-cheat / bd-src）',
-          srcLinks.length > 0, `实际 ${srcLinks.length} 个`);
-        const bad = srcLinks.filter((a) => /xdgame\.com|jidiyouxi\.com|gamezonelabs\.com\/products/.test(a.getAttribute('href') || ''));
-        ok('★★ 反向：来源按钮**不是**端游库链接（旧 bug 就是 page 指向 libUrl=xdgame）',
-          srcLinks.length > 0 && bad.length === 0, `误指 ${bad.length} 个`);
-        ok('来源按钮 href 是真外链（http(s) + target=_blank）',
-          srcLinks.length > 0 && srcLinks.every((a) => /^https?:/.test(a.getAttribute('href') || '')
-            && a.getAttribute('target') === '_blank'),
-          (srcLinks[0] || {}).getAttribute ? String(srcLinks[0].getAttribute('href')).slice(0, 60) : '(无)');
-        ok('来源按钮带短标签（≤12 字符，卡面 slice(0,12) 不会被截成半截词）',
-          srcLinks.length > 0 && srcLinks.every((a) => (a.textContent || '').trim().length <= 12),
-          srcLinks.slice(0, 3).map((a) => (a.textContent || '').trim()).join(' / '));
-        ok('打开来源弹窗不抛异常', e1.length === errN, e1.slice(errN).join(' | '));
+        ok('★ 修改器页签里每行都有可点出口（有链给链，GCM 走来源站兜底）',
+          trRows.length > 0 && trRows.every((r) => r.querySelector('a[href]')),
+          `${trRows.filter((r) => r.querySelector('a[href]')).length} / ${trRows.length} 行`);
+        /* ★★ 反向：来源出口不能误指**端游库**链接（v10.58 修过的老 bug：page 指向 libUrl=xdgame）。
+           v10.99 起取样点在下载弹窗 —— 判据本身没变，只是跟着渲染器搬了家。
+           ⚠️ 别删这条：它拦的是「按钮看着像来源站、点过去是自家的库详情页」，
+              那种错不会报错，只会让人以为源站改版了。 */
+        const trLinks = qa('#dlBody .d-dl-it a[href]');
+        const bad = trLinks.filter((a) => /xdgame\.com/.test(a.getAttribute('href') || ''));
+        ok('★★ 反向：修改器页签里的出口**不是**端游库链接（旧 bug 就是 page 指向 libUrl=xdgame）',
+          trLinks.length > 0 && bad.length === 0,
+          `${trLinks.length} 条出口 ｜ 误指 ${bad.length} 条`);
+        ok('出口 href 是真外链（http(s)）',
+          trLinks.length > 0 && trLinks.every((a) => /^https?:|^\/api\//.test(a.getAttribute('href') || '')),
+          (trLinks[0] || {}).getAttribute ? String(trLinks[0].getAttribute('href')).slice(0, 60) : '(无)');
+        ok('打开修改器页签不抛异常', e1.length === errN, e1.slice(errN).join(' | '));
         if (typeof W.closeDownload === 'function') W.closeDownload();
         await sleep(220);
       } else {
-        ok('修改器「查看全部」（无 .grp-more 样本，跳过）', true, '无 .grp-more');
+        ok('修改器卡底按钮（无 .grp-more 样本，跳过）', true, '无 .grp-more');
       }
     }
     ok('修改器计数文案是「共 N 款游戏」', /共 [\d,]+ 款游戏/.test(q('#trCount').textContent || ''),

@@ -155,12 +155,16 @@ ok(/function bdGroupByPost/.test(SECT_CODE), 'D18 按帖子聚合（一条 item 
   ok(cardSeg.length > 0 && !/bdPostRow\(/.test(cardSeg),
     'D19 卡面不铺帖子行（v10.97 卡形：只留名称/原名/大小/热度 + 卡底按钮）',
     cardSeg ? `${cardSeg.length} 字符片段` : '切片失败(选择器/detect 不对)');
-  ok(/function bdPostRow/.test(SECT_CODE) && /function bdAllPop/.test(SECT_CODE)
-    && /bdPostRow\(/.test(SECT_CODE.slice(SECT_CODE.indexOf('function bdAllPop'))),
-    'D19b 正向锚点：帖子行渲染仍在，且被弹窗用着（帖子是搬家不是删除）');
+  /* ★ v10.99：`bdPostRow` / `bdAllPop` 随 `#grpAllList` 一起下线了 —— 卡底按钮改成
+     开主站那套四页签下载弹窗。所以正向锚点改守**新去处**：本体卡必须能把 url 交给
+     `openUniDownload`，且默认页签是 body。否则「删了旧渲染器、新去处没接上」
+     会表现为「帖子凭空消失」，而纯反向断言（不含 bdPostRow）照样是绿的。 */
+  ok(/function bdDownloadPop/.test(SECT_CODE)
+    && /openUniDownload\(\{\s*title,\s*url,\s*tab:\s*'body'\s*\}\)/.test(SECT_CODE),
+    'D19b 正向锚点：本体卡帖子改由下载弹窗本体页签承载（openUniDownload + tab:body）');
 }
-ok(/data-bd-more/.test(SECT_CODE) && /function bdAllPop/.test(SECT_CODE),
-  'D20 超出部分进弹窗看全量');
+ok(/data-bd-more/.test(SECT_CODE) && /function bdDownloadPop/.test(SECT_CODE),
+  'D20 超出部分进弹窗看全量（卡底按钮 → 完整下载弹窗）');
 /* 反向：不许在 init 里**批量**抓。
    ⚠️ 判据不能是「initBd 里出现过 bdFetchOne」—— 它当然会出现，在点击回调里（那才是对的）。
       要守的是「有没有一个循环/并发把所有卡一起抓」：那样的后果是一次进页面打 24 次机地。

@@ -1,18 +1,24 @@
 #!/usr/bin/env node
-/* v10.98 端游资源卡点击 = 详情页 + 详情底栏「查看 <模块> 资源」
+/* v10.99 端游资源卡：整卡 = 详情页，卡底按钮 = **完整下载弹窗**（默认本模块页签）
  *
- * 用户口径：「端游模块的卡片点击是弹详情页，然后有个按钮 —— 点击查看对应模块的弹窗
- *           （同下载按钮，不过默认页面自动选择到默认模块）」。
+ * 用户在 v10.98 之后的两句纠正（原话）：
+ *   ① 「点击卡片是弹出详情页，这个没问题，但是〔详情底栏那颗「查看本体资源」〕这个我不需要，
+ *       还是原来的样式」
+ *      ⇒ v10.98 加的 `.ds-res` 模块按钮 + `detailResTab` 整组撤掉，底栏回到只有一颗。
+ *   ② 「卡片下的按钮，我要求是点击后弹出下载弹窗（完整的下载弹窗，但是默认页是根据点击页面
+ *       进行默认设置，比如我在修改器点开的，我需要他默认显示修改器的下载页）」
+ *      ⇒ 卡底按钮从「只列本模块条目的弹窗」改成 `openUniDownload` → 主站那套四页签 `#dlPop`。
  *
  * 四个分区逐个走一遍，验的是**行为链**（不验样式）：
- *   ① 点整卡 → #drawer.show（详情打开），且**没有**顺手开下载弹窗
- *   ② 详情底栏出现 .ds-res，文案写对模块，data-dl-tab = 弹窗页签键（不是分区名）
- *   ③ 点它 → #dlPop 打开，默认页签 = 该模块
- *   ④ 反向：普通入口（不带模块语境）进详情，底栏**没有** .ds-res
+ *   ① 点整卡 → #drawer.show，且**没有**顺手开下载弹窗（一次点击只做一个动作）
+ *   ② 详情底栏只有一颗「⬇ 下载与资源」（反向：`.ds-res` 不许回来）
+ *   ③ 点卡底按钮 → #dlPop 打开、四页签齐全、默认页签 = 该模块、该页签有内容
  *
  * 分区 → 页签键：mod→mod · saves→save · trainers→modifier · body→body
  *   （两套键名不一样：分区叫 saves/trainers，弹窗页签叫 save/modifier。
- *     传错不报错 —— openUniDownload 对非法 tab 静默落回 body。）
+ *     传错**不报错** —— openUniDownload 对非法 tab 静默落回 body，
+ *     表现成「从修改器卡点开停在本体」，这正是本套件最想拦的一类。
+ *     `RES_UNI_TAB` 就是那张翻译表，断言钉的是**结果**（页签键落对），不是表本身。）
  */
 const { JSDOM, VirtualConsole } = require('jsdom');
 
@@ -41,7 +47,7 @@ const ok = (name, cond, ev) => {
     virtualConsole: vc,
     beforeParse(w) {
       /* ⚠️ beforeParse 阶段 w.fetch 还没定义 —— 直接 `const raw = w.fetch` 拿到 undefined，
-         页面里每个 fetch 都会抛，表现为「整页空着」而 jsdom 不报错（本轮实测踩到）。 */
+         页面里每个 fetch 都会抛，表现为「整页空着」而 jsdom 不报错（v10.98 实测踩到）。 */
       const raw = w.fetch;
       w.fetch = function (u, o) {
         const real = raw || nativeFetch;
@@ -59,72 +65,76 @@ const ok = (name, cond, ev) => {
   await sleep(2800);
 
   const drawerOpen = () => q('#drawer').classList.contains('show');
+  const popOpen = () => !!q('#dlPop') && !q('#dlPop').hidden;
   const closeAll = async () => {
     if (typeof W.closeDownload === 'function') W.closeDownload();
     await sleep(260);
     if (typeof W.closeDetail === 'function') W.closeDetail();
     await sleep(260);
   };
+  const TABS = ['body', 'mod', 'modifier', 'save'];
 
-  /* 一轮完整链路：打开分区 → 点第一张有 libId 的卡 → 验详情/按钮/弹窗 → 关闭 */
-  async function runSection({ tabFn, grid, cardCls, expectTab, expectWord, label }) {
+  /* 一轮完整链路：切分区 → 点整卡（验详情 + 底栏）→ 点卡底按钮（验弹窗/页签/内容）→ 关闭 */
+  async function runSection({ tabFn, grid, cardCls, expectTab, label }) {
     console.log('\n── ' + label + ' ──');
     W.switchResTab(tabFn);
     for (let i = 0; i < 100; i++) { if (qa(grid + ' ' + cardCls).length) break; await sleep(150); }
     const cards = qa(grid + ' ' + cardCls);
     ok(label + '：网格有卡', cards.length > 0, cards.length + ' 张');
-    const card = cards.find((c) => c.dataset.lib);
-    if (!card) { ok(label + '：有带 libId 的卡可测', false, '全部无 data-lib'); return; }
-    ok(label + '：卡上带 data-lib（详情靠它打开）', !!card.dataset.lib,
-      card.dataset.name + ' → ' + card.dataset.lib);
+    const card = cards.find((c) => c.dataset.lib) || cards[0];
+    if (!card) { ok(label + '：有卡可测', false, '网格为空'); return; }
 
+    /* ① 整卡 → 详情（等到**底栏画出来**再取样，不能只等 #drawer.show） */
     card.querySelector('h4').click();
-    for (let i = 0; i < 120; i++) {
-      if (drawerOpen() && q('#dlStrip .ds-res')) break;
-      await sleep(200);
-    }
+    for (let i = 0; i < 120 && !(drawerOpen() && q('#dlStrip .ds-all')); i++) await sleep(200);
     ok(label + '：点整卡 → 打开详情抽屉', drawerOpen());
-    ok(label + '：这一刻没有顺手开下载弹窗', !q('#dlPop') || q('#dlPop').hidden);
-    const rb = q('#dlStrip .ds-res');
-    const rbTxt = rb ? rb.textContent.replace(/\s+/g, '') : '';
-    ok(label + '：底栏出现「查看' + expectWord + '资源」', !!rb && rbTxt.indexOf('查看' + expectWord + '资源') >= 0,
-      rb ? rb.textContent.trim().replace(/\s+/g, ' ') : '(无)');
-    ok(label + '：data-dl-tab = ' + expectTab, !!rb && rb.dataset.dlTab === expectTab,
-      rb ? 'tab=' + rb.dataset.dlTab : '');
-    ok(label + '：按钮 id 取的是卡上的 libId', !!rb && rb.dataset.dlId === card.dataset.lib,
-      rb ? rb.dataset.dlId : '');
-    if (rb) {
-      rb.click();
-      for (let i = 0; i < 60; i++) {
-        const on = q('#dlModTabs .dlm.on');
-        if (q('#dlPop') && !q('#dlPop').hidden && on) break;
+    ok(label + '：这一刻没有顺手开下载弹窗', !popOpen(), popOpen() ? '弹窗也开了' : '');
+    const dsAll = qa('#dlStrip .ds');
+    ok(label + '：底栏只有一颗下载入口（⬇ 下载与资源）',
+      dsAll.length === 1 && /下载与资源/.test(dsAll[0].textContent || ''),
+      `${dsAll.length} 颗 ｜ ${dsAll.map((x) => (x.textContent || '').trim()).join(' / ')}`);
+    ok(label + '：反向 —— v10.98 的「查看 <模块> 资源」(.ds-res) 不许回来',
+      !q('#dlStrip .ds-res'));
+
+    /* ② 卡底按钮 → 完整下载弹窗（详情关掉再点，避免两层叠着取样） */
+    if (drawerOpen()) { W.closeDetail(); await sleep(260); }
+    const more = card.querySelector('.grp-more');
+    ok(label + '：卡底有「⬇ 下载与资源」按钮', !!more,
+      more ? (more.textContent || '').trim() : '(无 .grp-more)');
+    if (more) {
+      more.click();
+      for (let i = 0; i < 80 && !(popOpen() && q('#dlModTabs .dlm.on')); i++) await sleep(200);
+      ok(label + '：点卡底按钮 → 打开下载弹窗', popOpen());
+      const tabKeys = qa('#dlModTabs .dlm').map((b) => b.dataset.dlm);
+      ok(label + '：弹窗是**完整**的（四页签齐全）',
+        TABS.every((k) => tabKeys.includes(k)), tabKeys.join(',') || '(无页签)');
+      const onTab = q('#dlModTabs .dlm.on');
+      ok(label + '：默认页签 = ' + expectTab + '（分区名 → 页签键翻译正确）',
+        !!onTab && onTab.dataset.dlm === expectTab,
+        onTab ? 'on=' + onTab.dataset.dlm : '(无)');
+      /* 内容：等页签数据回来（mod/save/modifier 都是本地索引，毫秒级；全量跑时机器忙）
+         ⚠️ 判据必须**排除加载占位**：`正在读取存档…` 也是 20+ 字的文本，
+            只看长度会把「还没回来」当成「有内容」而假绿（本套件实测踩到）。 */
+      for (let i = 0; i < 100; i++) {
+        const t = ((q('#dlBody') || {}).textContent || '').trim();
+        if (t.length > 20 && !/正在读取/.test(t)) break;
         await sleep(200);
       }
-      const onTab = q('#dlModTabs .dlm.on');
-      ok(label + '：点按钮 → 弹窗打开且默认页签 = ' + expectTab,
-        !!q('#dlPop') && !q('#dlPop').hidden && !!onTab && onTab.dataset.dlm === expectTab,
-        onTab ? 'on=' + onTab.dataset.dlm : '(无)');
-      await sleep(1200);
-      ok(label + '：该页签有内容（不是空态）', ((q('#dlBody') || {}).textContent || '').trim().length > 20,
-        ((q('#dlBody') || {}).textContent || '').trim().slice(0, 50));
+      const bodyTxt = ((q('#dlBody') || {}).textContent || '').trim();
+      ok(label + '：该页签有内容（不是空态/加载中 —— 页签落对了但没数据等于没接上）',
+        bodyTxt.length > 20 && !/正在读取/.test(bodyTxt), bodyTxt.slice(0, 50));
+      await closeAll();
     }
-    await closeAll();
   }
 
-  await runSection({
-    tabFn: 'md', grid: '#mdGrid', cardCls: '.emu-card',
-    expectTab: 'mod', expectWord: 'MOD', label: 'MOD 分区',
-  });
-  await runSection({
-    tabFn: 'sv', grid: '#svGrid', cardCls: '.emu-card',
-    expectTab: 'save', expectWord: '存档', label: '存档分区',
-  });
-  await runSection({
-    tabFn: 'tr', grid: '#trGrid', cardCls: '.emu-card',
-    expectTab: 'modifier', expectWord: '修改器', label: '修改器分区',
-  });
+  await runSection({ tabFn: 'md', grid: '#mdGrid', cardCls: '.emu-card', expectTab: 'mod', label: 'MOD 分区' });
+  await runSection({ tabFn: 'sv', grid: '#svGrid', cardCls: '.emu-card', expectTab: 'save', label: '存档分区' });
+  await runSection({ tabFn: 'tr', grid: '#trGrid', cardCls: '.emu-card', expectTab: 'modifier', label: '修改器分区' });
 
-  /* ── 本体分区：走的是**话题 URL**（不是库 id）── */
+  /* ── 本体分区：整卡走**话题 URL**（不是库 id），卡底按钮由 bdDownloadPop 负责 ──
+     ⚠️ 本体卡初始状态是「🔍 查本体下载」（进页面 0 请求，见 D21/D22），
+        所以这里直接调**按钮背后那个函数**，而不是为了造出 `.grp-more` 去打一次机地
+        （源站限流时会红成「回归」，其实是环境问题）。 */
   console.log('\n── 本体分区 ──');
   W.switchResTab('bd');
   for (let i = 0; i < 120; i++) { if (qa('#bdGrid .bd-card').length) break; await sleep(150); }
@@ -133,37 +143,24 @@ const ok = (name, cond, ev) => {
   if (bcards.length) {
     const c0 = bcards[0];
     c0.querySelector('h4').click();
-    for (let i = 0; i < 150; i++) {
-      if (drawerOpen() && q('#dlStrip .ds-res')) break;
-      await sleep(200);
-    }
+    for (let i = 0; i < 150 && !(drawerOpen() && q('#dlStrip .ds-all')); i++) await sleep(200);
     ok('本体分区：点整卡 → 打开详情（话题没有库记录，靠 URL 打开）', drawerOpen());
-    const rb = q('#dlStrip .ds-res');
-    ok('本体分区：底栏出现「查看本体资源」', !!rb,
-      rb ? rb.textContent.trim().replace(/\s+/g, '') : '(无)');
-    ok('本体分区：data-dl-tab = body', !!rb && rb.dataset.dlTab === 'body',
-      rb ? 'tab=' + rb.dataset.dlTab : '');
-    if (rb) {
-      rb.click();
-      for (let i = 0; i < 60; i++) { if (q('#dlPop') && !q('#dlPop').hidden) break; await sleep(200); }
+    ok('本体分区：底栏也只有一颗入口（反向：没有「查看本体资源」）',
+      qa('#dlStrip .ds').length === 1 && !q('#dlStrip .ds-res'));
+    await closeAll();
+    ok('本体分区：卡底按钮 → 完整下载弹窗（默认 body）',
+      typeof W.bdDownloadPop === 'function', typeof W.bdDownloadPop === 'function' ? '' : '函数未暴露');
+    if (typeof W.bdDownloadPop === 'function') {
+      W.bdDownloadPop(c0);
+      for (let i = 0; i < 80 && !(popOpen() && q('#dlModTabs .dlm.on')); i++) await sleep(200);
       const onTab = q('#dlModTabs .dlm.on');
       ok('本体分区：弹窗默认页签 = body', !!onTab && onTab.dataset.dlm === 'body',
         onTab ? 'on=' + onTab.dataset.dlm : '(无)');
+      const tabKeys = qa('#dlModTabs .dlm').map((b) => b.dataset.dlm);
+      ok('本体分区：同样是完整四页签', TABS.every((k) => tabKeys.includes(k)), tabKeys.join(','));
+      await closeAll();
     }
-    await closeAll();
   }
-
-  /* ── 反向：普通入口不带 .ds-res ── */
-  console.log('\n── 普通入口（反向）──');
-  W.switchResTab('md');
-  for (let i = 0; i < 100; i++) { if (qa('#mdGrid .emu-card').length) break; await sleep(150); }
-  const lib = qa('#mdGrid .emu-card').find((c) => c.dataset.lib);
-  const shown = await W.openDetailById(lib.dataset.lib, lib.dataset.name);
-  for (let i = 0; i < 120; i++) { if (drawerOpen() && q('#dlStrip .ds-all')) break; await sleep(200); }
-  ok('普通入口打开详情', shown === true && drawerOpen());
-  ok('反向：普通详情底栏**没有** .ds-res', !q('#dlStrip .ds-res'),
-    (q('#dlStrip') || {}).textContent.trim().replace(/\s+/g, ' ').slice(0, 40));
-  await closeAll();
 
   ok('全程无 JS 异常', errs.length === 0, errs.slice(0, 2).join(' | '));
 

@@ -333,9 +333,12 @@ t('★ 组卡卡面动作在（.grp-more 展开全部 + .cov-btn 进详情，正
       ③ 其余整卡 → openResDetail(card) → 详情抽屉
    反向锚点：`bindGrpGrid` 里**不能**再出现 `grpAllPop(card)` —— 那是 v10.97 的形态。
       （兜底那份 grpAllPop(card) 在 openResDetail 里，只服务「没有本地库记录」的组。） */
-t('★ 卡内动作先于整卡分流（[data-grp-more] stopPropagation 早退，其余整卡走 openResDetail）',
+/* ★★ v10.99：卡底按钮的落点从「只列本模块条目的弹窗」换成「完整下载弹窗」。
+   判据仍守三件事：① 仍在整卡分流**之前**早退（否则一次点击开详情又开弹窗）；
+   ② 落点是 grpDownloadPop（不再有 grpAllPop）；③ 其余整卡仍走 openResDetail。 */
+t('★ 卡内动作先于整卡分流（[data-grp-more] stopPropagation 早退 → grpDownloadPop，其余整卡走 openResDetail）',
   /closest\('\[data-grp-more\]'\)/.test(rsec)
-  && /e\.stopPropagation\(\); grpAllPop\(more\); return;/.test(rsec)
+  && /e\.stopPropagation\(\);[\s\S]{0,90}grpDownloadPop\(card\);/.test(rsec)
   && /openResDetail\(card\)/.test(rsec));
 t('★★ v10.98 反向：整卡分流不再直接开弹窗（grpAllPop(card) 已从 bindGrpGrid 移出）', (() => {
   const i = rsec.indexOf('function bindGrpGrid');
@@ -348,17 +351,22 @@ t('★★ v10.98 反向：整卡分流不再直接开弹窗（grpAllPop(card) �
    页面不报错、按钮看着也对 —— 正是本项目最怕的「不报错的错」。 */
 t('★ v10.98 分区 → 弹窗页签键映射齐全（saves→save / trainers→modifier）',
   /RES_UNI_TAB\s*=\s*\{[^}]*body:\s*'body'[^}]*mod:\s*'mod'[^}]*saves:\s*'save'[^}]*trainers:\s*'modifier'/.test(rsec));
-t('★ v10.98 详情带模块语境（openDetailById 第三参 = ctx，含 tab / cat / id）',
-  /openDetailById\(lib,[^)]*ctx\)/.test(rsec) && /tab:\s*RES_UNI_TAB\[cat\]/.test(rsec));
+/* ★★ v10.99 反向：详情链路**不再**带模块语境（v10.98 那颗「查看 <模块> 资源」被撤掉）。
+   正向锚点配一条：openDetailById 的调用形态必须是「id + 标题」两个实参。
+   ⚠️ 只写反向会「删干净就算过」—— 正向那条守着「详情入口还在、只是不再传模块」。 */
+t('★★ v10.99 正向锚点：详情入口只传 id + 标题（模块语境不经详情中转）',
+  /openDetailById\(lib, card\.dataset\.libt \|\| name\)/.test(rsec));
+t('★★ v10.99 反向：详情链路不再接收模块语境（openDetailById 第三参已删）',
+  !/openDetailById\(lib,[^)]*ctx\)/.test(rsec));
 /* ★★ v10.98：没有本地库记录的组不能「点了没反应」。
    资源组里确实有这类（机地话题没被合并过）—— 详情靠 /api/library/item，查不到就开不了。
    所以兜底必须给一条出口：toast 说明 + 打开该模块的条目弹窗。
    ⚠️ 断言写「有兜底」而不是「无 toast」：这里的 toast 是**必要的解释**，
       没有它用户会以为卡片坏了。 */
-t('★ v10.98：无端游库命中的组仍有出口（toast 说明 + 兜底打开该模块条目）',
+t('★ v10.98：无端游库命中的组仍有出口（toast 说明 + 兜底直接开该模块下载弹窗）',
   /if \(shown\) return;/.test(rsec)
   && /toast\('这款未关联本地端游库/.test(rsec)
-  && /grpAllPop\(card\);/.test(rsec));
+  && /grpDownloadPop\(card\);/.test(rsec));
 t('★★ 反向断言：卡面实现里已无 .paths 铺路径（v10.45 核心诉求）',
   !/class="paths"/.test(rsec) && !/closest\('\.paths'\)/.test(rsec));
 t('★★ 反向断言：copyText 已从派生页驱动里删除（复制搬进了弹窗的 #svLoc 位置弹窗）',
@@ -623,17 +631,23 @@ t('★ v10.48：三个新通道类在主源与派生页都有规则（卡内 .gl
   ['bd-fling', 'bd-cheat', 'bd-src'].every((c) => idx.includes('.gl-lk a.' + c) && res.includes('.gl-lk a.' + c))
   && ['bd-fling', 'bd-cheat', 'bd-src'].every((c) => idx.includes('.d-res-lk.' + c) && res.includes('.d-res-lk.' + c)));
 /* ★★ v10.48：「查看全部」改弹窗后新增的样式，以及被它取代的旧实现。 */
-t('★ v10.48：弹窗内全量列表 + 搜索条样式在（.grp-pop-s 与卡片语义重置）',
-  /\.grp-pop-s\{/.test(res) && /\.grp-pop \.emu-card\.grp\{[^}]*padding:0/.test(res));
+/* ★★ v10.99 反向：`.grp-pop*`（v10.48 那套「全部条目 + 搜索条」外壳）已删。
+   它随 `#grpAllList` 一起下线 —— 卡底按钮现在开的是主站下载弹窗（`.dl-*` 那套样式）。
+   ⚠️ 删样式不加反向断言 ⇒ 哪天有人把它「恢复」回来，没有任何东西会响。 */
+t('★★ v10.99 反向：旧「全部条目」弹窗外壳样式已删（.grp-pop-s 不再存在）',
+  !/\.grp-pop-s\{/.test(idx) && !/\.grp-pop-s\{/.test(res));
 t('★★ v10.48 反向：旧的「原地展开」实现（grpExpand）已从资源页脚本里消失',
   !/function grpExpand\s*\(/.test(res),
   /function grpExpand\s*\(/.test(res) ? '仍存在 ⇒ 行为没真正改' : '已删');
-/* ★★ v10.97：文案从「查看全部 N 条」改为「查看 N 条下载」——
-   卡内已不铺条目，「全部」失去了参照物（对比的是「卡内那 3 条」），写「N 条下载」才自洽。 */
-t('★ v10.97：卡底按钮文案是「查看 N 条下载 ▸」（卡内已无条目，「全部」失去参照物）',
-  /* ⚠️ 判据要跨行：文案在模板串里被拆成两行拼接（`'">查看 '` + Number(...) + `' 条下载 ▸`），
-     写成单行字面量会恒红。 */
-  /查看 '[\s\S]{0,80}?条下载 ▸/.test(res) && !/查看全部 ' \+ Number/.test(res));
+/* ★★ v10.99：卡底按钮改成「⬇ 下载与资源 ▸」—— 与详情页底栏同一个说法。
+   关键是**按钮上不再写条数**：卡面条数与本模块页签角标不是一个口径
+   （实测剑星「修改器」卡 2 条 vs 弹窗修改器页签 5 条），卡底写死一个数、
+   点开却是另一个数，等于把口径差直接摆到用户眼前。条数留在卡面 .meta 的 pill 上。 */
+t('★ v10.99：卡底按钮文案是「⬇ 下载与资源 ▸」且不写条数',
+  /* ⚠️ 判据别写成 `'>⬇ …`：本体卡那颗按钮前面还挂着一个 `"` 收尾的属性串，
+     实际是 `'">⬇ 下载与资源 ▸</button>`。从文案本身起判，不赌前面的引号。 */
+  /⬇ 下载与资源 ▸<\/button>'/.test(res)
+  && !/条下载 ▸/.test(res) && !/个资源帖（/.test(res));
 /* ★★ v10.49：卡内条目标题改**单行省略**（用户口径「卡片中的内容每条显示一行即可多余字显示省略号即可」）。
    ★ 必须**主源 + 派生页都查**：主源是唯一真源，但线上加载的是派生页 ——
      只查派生页 ⇒ 有人只改主源不重建照样绿；只查主源 ⇒ 改完不重建也绿。
@@ -722,9 +736,13 @@ const GN = require(path.join(root, 'data', 'game-name'));
   t('★★ v10.50：hasPost 来自数据层（mods.content / yx 的 desc|steps|shots），不是前端猜的',
     /hasPost: String\(x\.content/.test(rgSrc)
     && /hasPost: savesYx\.hasPost\(x\)/.test(rgSrc) && /function hasPost\(x\)/.test(yxSrc));
-  t('★★ v10.50：条目按 `canPost = !!it.hasPost` 决定入口（无正文的行不加 class、不加按钮）',
-    /const canPost = !!it\.hasPost/.test(rsec) && /data-post-open/.test(rsec)
-    && /' has-post' : ''/.test(rsec));
+  /* ★★ v10.99：`.gl-i` 条目行渲染器（`glRow`）随 `#grpAllList` 下线，资源页脚本里
+     这条判据已无消费者。守同一件事的**新落点**在主源下载弹窗：
+     `canPost = !!String(it.content||'').trim()`（Mod 行）—— 没有正文就不给「原贴」入口，
+     规则本身没变，只是跟着渲染器搬了家。 */
+  t('★★ v10.50/v10.99：条目按 canPost 决定原贴入口（判据搬到下载弹窗侧；无正文不给入口）',
+    /const canPost = !!String\(it\.content \|\| ''\)\.trim\(\)/.test(idx)
+    && /data-post-open/.test(idx) && /' has-post' : ''/.test(idx));
   /* ★★ v10.97：条目行只在弹窗里 ⇒ 卡面分流不再需要「放行原贴入口」，
      这条路整个交给 `bindPostDelegation`（主源共享资产）。判据因此改读 `idx`（主源），
      并要求三件事同时成立：入口按钮 / 整行 / `a[href]` 让行。

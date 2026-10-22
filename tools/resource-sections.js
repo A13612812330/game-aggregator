@@ -97,59 +97,13 @@ const grpSrcName = (k) => grpSrcLabel[k] || GRP_SRC_FALLBACK[k] || k;
  * 卡片渲染（三个分区共用）
  * ========================================================================== */
 
-/** 卡内一行条目：序号 + 标题 + 通道按钮（最多 2 个，超出显示 +N）
- *
- * ★ v10.50：条目带原贴正文时（`it.hasPost`）多给两个入口 ——
- *   ① 行内「原贴」小按钮（显式、好发现，与下载通道同一排）
- *   ② **整行可点**（`.has-post` + `cursor:pointer` + hover 底色）
- *   两个入口都走同一个全局委托（见 `bindPostDelegation`），行为只有一份。
- *   ⚠️ 没有 `hasPost` 的行**一点都不变** —— 不加 class、不加按钮、光标的默认样子保留，
- *      免得用户点了一条什么都没发生。 */
-function glRow(cat, it, n) {
-  const links = it.links || [];
-  const two = links.slice(0, 2)
-    .map((l) => '<a class="bd-' + esc(l.cls || 'other') + '" href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer"'
-      + ' title="' + esc(l.label + (l.size ? ' · ' + l.size : '')) + '">' + esc(String(l.label).slice(0, 12)) + '</a>')
-    .join('');
-  const more = links.length > 2 ? '<span class="more">+' + (links.length - 2) + '</span>' : '';
-  /* ★ 没有任何下载通道时**不静默留空**：给一个「源站」出口，并说明为什么没有按钮。
-   *   这条是铁律「存在 ≠ 可见」的正向落点：卡内每一行都必须有一个可点的去处。 */
-  const fallback = (!links.length && it.page)
-    ? '<a class="bd-other" href="' + esc(it.page) + '" target="_blank" rel="noopener noreferrer" title="'
-      + esc(it.note || '这条没有解析到下载链，去源站看') + '">源站</a>'
-    : '';
-  const canPost = !!it.hasPost;
-  /* ★ v10.51：类名从 `po` 换成通用 `.po-btn` —— 下载弹窗的 Mod/修改器/存档行也要用同一套样式，
-     原先那条 `.emu-card.grp .gl-lk button.po` 是卡内作用域写死的，换作用域就得抄第二份。
-     收成一条通用规则后，视觉规格只有一个来源（铁律 17）；`data-post-open` 三件套不变。 */
-  const postBtn = canPost
-    ? '<button class="po-btn" type="button" data-post-open data-src="' + esc(it.src || '')
-      + '" data-id="' + esc(it.id || '') + '" title="查看原贴内容（标题 / 正文 / 截图）">原贴</button>'
-    : '';
-  const lkHtml = '<span class="gl-lk">' + postBtn + two + more + fallback + '</span>';
-  const sizeTxt = it.size ? '<span class="sz">' + esc(String(it.size).slice(0, 12)) + '</span>' : '';
-  /* ★ v10.58：显示用 `dtitle`（机地帖的清洗短名），悬浮仍给**原始标题** ——
-     原始标题是用户去源站搜同一条帖的凭据（数据里也没动，见 data/name-normalize.js#cleanModTitle）。 */
-  const full = it.title || it.game || '?';
-  const title = it.dtitle || full;
-  const mute = links.length ? '' : ' mute';
-  return '<div class="gl-i' + (canPost ? ' has-post' : '') + '" data-src="' + esc(it.src || '') + '"'
-    + (canPost ? ' data-id="' + esc(it.id || '') + '" data-post-row="1"' : '')
-    + '>'
-    + '<span class="n">' + n + '</span>'
-    + '<span class="t' + mute + '" title="' + esc(full) + '">' + esc(title) + '</span>'
-    + sizeTxt
-    + lkHtml
-    + '</div>';
-}
-
 /** 一张游戏组卡
  *
  * ★★ v10.97 改形（本轮最大改动）：
  *   用户口径：「端游在页面显示参考手游，只需要游戏名称+游戏原名+大小热度等重要信息」。
  *   ⇒ 卡内**不再铺前 3 条条目行**（`.gl` / `.gl-i`），只留四样：
  *     封面 · 游戏名称 · 游戏原名 · 三个数字（条数 / 体积 / 热度）。
- *     下载入口收成卡底一个整宽按钮「查看 N 条下载 ▸」→ 走既有的 `#dlPop` 弹窗。
+ *     下载入口收成卡底一个整宽按钮「⬇ 下载与资源 ▸」→ 直接开**完整下载弹窗**。
  *
  *   为什么必须删掉卡内行（不是「少铺两条」）：
  *     · 卡内行是 **717 条里随便 3 条**（组内按下载量排），同一游戏的卡片在 MOD 区
@@ -158,8 +112,9 @@ function glRow(cat, it, n) {
  *     · 手游卡片（`.emu-card` 主形）本来就是「封面 + 名称 + 原名 + 徽标」，
  *       端游资源页复用同一张脸，两个页面才是一套设计语言。
  *
- *   ⚠️ 删的是**卡面入口**，不是功能：全部条目仍在弹窗里（可搜索、可看原贴）。
- *      `grpAllPop` / `glRow` 一行没动，弹窗内照旧铺全量。
+ *   ★ v10.99 卡底按钮的去向改了（用户口径见 grpDownloadPop 的注释）：
+ *     从「只列本模块条目的弹窗」改成「主站那套四页签下载弹窗」——
+ *     v10.96/v10.97 独占一页的「全部条目」弹窗（`#grpAllList`）随之整组下线。
  */
 function grpCard(cat, g) {
   const meta = GRP_META[cat];
@@ -199,10 +154,14 @@ function grpCard(cat, g) {
       + hotNum.toLocaleString() + '</span>'
     : '';
 
-  /* 卡底唯一动作：进弹窗看全部条目（卡内不再铺行，见函数头注释） */
+  /* 卡底唯一动作：进**完整下载弹窗**，默认落在本分区对应的页签（见 grpDownloadPop）。
+     ★ v10.99：按钮上**不再写条数**。原因（实测，2026-10-21）：
+       卡面条数与本分区页签角标**不是同一个口径** —— 剑星「修改器」卡 2 条（GCM 清单），
+       弹窗修改器页签 5 条（机地修改器帖 4 + GCM 1）。卡底写「查看 2 条下载」、点开
+       却是 5 条，用户只会认为其中一处是错的。条数留在卡面 `.meta` 的那颗 pill 上，
+       按钮只表达**动作**（下载与资源），与详情页底栏同一个说法。 */
   const moreBtn = '<button class="grp-more" type="button" data-grp-more data-cat="' + cat
-    + '" data-key="' + esc(g.key) + '" data-title="' + esc(game) + '">查看 '
-    + Number(g.count).toLocaleString() + ' 条下载 ▸</button>';
+    + '" data-key="' + esc(g.key) + '" data-title="' + esc(game) + '">⬇ 下载与资源 ▸</button>';
 
   return '<article class="emu-card grp' + (g.cover ? ' has-cov' : '') + '" data-cat="' + cat + '" data-key="' + esc(g.key) + '"'
     + ' data-lib="' + esc(g.libId || '') + '" data-libt="' + esc(libTitle || gameFull) + '" data-name="' + esc(game) + '">'
@@ -224,162 +183,77 @@ function grpCard(cat, g) {
 }
 
 /* ============================================================================
- * 「查看全部 N 条」→ 弹窗列全量 + 弹窗内搜索
+ * 卡底按钮 → 完整下载弹窗（默认落在本分区的页签）
  *
- * ★★ v10.48 改行为（本轮第二大改动）：
- *   用户口径：「优化，不要展开（在弹窗中 mod 模块显示，可在下载弹窗中搜索）」。
- *   原实现（`grpExpand`）是**原地铺开**，上限 300 条。两个问题：
- *     a) 单组最多 **717** 条（赛博朋克2077），原地铺会把卡撑到几千像素，
- *        而卡片是网格里的一员 ⇒ 整行都被拉长；铺完还**没法检索**，只能靠 Ctrl+F；
- *     b) 铺开是破坏性的（`gl.innerHTML` 整块换掉）—— 铺完关不掉、回不到「前 3 条」的形态。
- *   ⇒ 改为打开 `#dlPop` 弹窗（**复用**，三页共享资产，理由同 openFullPop 上方那段），
- *     弹窗里列出**该组全部条目**，顶部一个搜索框做**本地过滤**。
+ * ★★ v10.99 用户口径：
+ *   「卡片下的按钮，我要求是点击后弹出下载弹窗（完整的下载弹窗，但是默认页是根据
+ *     点击页面进行默认设置，比如我在修改器点开的，我需要他默认显示修改器的下载页）」
  *
- * ⚠️ 搜索是本地过滤「已经取回来的数组」，所以必须一次取全 ——
- *    服务端 `items()` 的上限已从 500 提到 **1000**（实测最大组 717），
- *    覆盖全部组；万一仍 `truncated`，副标题会**写明只取到了前 N 条**（不静默截断）。
+ * 也就是说卡底按钮**不是**「这个模块的条目清单」，而是主站那套**同一颗**下载入口
+ * （`openUniDownload` → `#dlPop`），四个页签全在；差别只有首屏落在哪个页签：
+ *   本体 → body ／ MOD → mod ／ 存档 → save ／ 修改器 → modifier
+ * ⚠️ 分区名与页签键**不同名**，必须过 `RES_UNI_TAB` 翻译（写错不报错：
+ *    openUniDownload 对非法 tab 静默落回 body，表现成「从修改器卡点开停在本体」）。
+ *
+ * ⚠️ v10.96/v10.97 那套「只列本组全部条目 + 弹窗内搜索」的弹窗（`#grpAllList`）
+ *   随之整组下线：它和下载弹窗抢同一个 `#dlPop` 外壳，两个入口开同一个壳却长得不同，
+ *   用户每次都得先确认「这次是哪种弹窗」。删掉的是**第二条入口**，不是条目内容 ——
+ *   条目仍在各模块页签里（含原贴入口），且页签角标比卡面条数覆盖更全。
+ *
+ * ctx 为什么只用 libId + 标题：
+ *   · libId（组卡的 `data-lib`）是这一模块条目的**归属记录**，比详情页拿到的 id 准；
+ *   · 组卡有一小部分没有 libId（机地话题从未合并进库，`N:` 键）⇒ 只带标题，
+ *     改 / 修改器 / 存档 三个页签靠 `/api/mods/match` 的名称匹配，本体页签靠
+ *     `dlUniFetchBody` 内部的 `dlUniResolveItem` 反查（拿不到就给明确空态，
+ *     不会把「没查」说成「没有」）。
  * ========================================================================== */
-
-/* 弹窗当前会话（cat + 全量数组 + 关键词）。关弹窗时被 closeDownload 之外的路径
- * 置空 —— 用 null 判空，避免「没有会话却还在过滤上一次的数组」。 */
-let grpAllState = null;
-
-/** 按当前关键词重绘列表（只重绘列表本身，不动搜索框 —— 否则输入会掉焦点） */
-function grpAllHit() {
-  const st = grpAllState;
-  if (!st) return;
-  const box = document.getElementById('grpAllList');
-  if (!box) return;
-  const kw = String(st.q || '').trim().toLowerCase();
-  const hit = !kw ? st.items : st.items.filter((x) => (String(x.title || '') + ' ' + String(x.game || '')
-    + ' ' + String(x.note || '') + ' ' + String(x.date || '') + ' ' + String(x.size || '')).toLowerCase().includes(kw));
-  box.innerHTML = hit.length
-    ? hit.map((it, i) => glRow(st.cat, it, i + 1)).join('')
-    : '<div class="emu-empty" style="padding:16px 0">没有匹配的条目</div>';
-  const n = document.getElementById('grpAllN');
-  if (n) n.textContent = kw ? ('命中 ' + hit.length + ' / ' + st.items.length) : ('共 ' + st.items.length.toLocaleString() + ' 条');
-}
-
-/** 打开弹窗并渲染（数据已在手上时直接画，避免闪一次 loading） */
-function grpAllPaint(cat, items, game, j) {
-  const meta = GRP_META[cat];
-  const bodyEl = document.getElementById('dlBody');
-  const total = (j && j.total) || items.length;
-  const cut = (j && j.truncated)
-    ? '（接口上限，只取到前 ' + items.length + ' 条）'
-    : '';
-  const sub = document.getElementById('dlSub');
-  if (sub) sub.textContent = '共 ' + total.toLocaleString() + ' 条' + cut + ' · 可在下方搜索';
-  bodyEl.innerHTML = '<div class="grp-pop">'
-    + '<div class="grp-pop-s">'
-    + '<input id="grpAllQ" type="search" autocomplete="off" placeholder="在这 '
-    + total.toLocaleString() + ' 条' + esc(meta.label) + '里搜（标题 / 日期 / 体积）">'
-    + '<span class="n" id="grpAllN"></span></div>'
-    + '<div class="emu-card grp" id="grpAllList"></div>'
-    + '</div>';
-  grpAllState = { cat, items, q: '' };
-  grpAllHit();
-  const q = document.getElementById('grpAllQ');
-  if (q) {
-    q.addEventListener('input', () => { if (grpAllState) grpAllState.q = q.value; grpAllHit(); });
-    q.focus();
-  }
-  const foot = document.getElementById('dlFoot');
-  if (foot) foot.innerHTML = '<b>' + esc(game || '') + '</b> · 点右上角 ✕ 或按 Esc 关闭';
-}
-
-/** 点「查看 N 条下载」的入口：拉全量 → 开弹窗
- *  ★ v10.97：整卡点击也会走到这里（卡内已无条目行），所以 `btn` 可能是**卡片**
- *    而不是按钮 —— 卡片上带的是 `data-name`，按钮上带的是 `data-title`。 */
-async function grpAllPop(btn) {
-  if (btn.dataset.busy === '1') return;
-  btn.dataset.busy = '1';
-  const cat = btn.dataset.cat;
-  const key = btn.dataset.key;
-  const meta = GRP_META[cat];
-  const game = btn.dataset.title || btn.dataset.name || '';
-  const pop = document.getElementById('dlPop');
-  const bodyEl = document.getElementById('dlBody');
-  if (!pop || !bodyEl) { btn.dataset.busy = ''; return; }
-
-  /* 打开外壳前先把**合并弹窗的会话状态作废**（dlUni / dFullCur）——
-     不清的话，关掉本弹窗后再点详情页的「⬇ 下载与资源」，会看到上一次的分区/排序；
-     模块页签条同样要藏（本弹窗没有模块语境）。 */
-  if (typeof closeSvLoc === 'function') closeSvLoc();
-  dlUni = null;
-  dFullCur = null;
-  const mt = document.getElementById('dlModTabs');
-  if (mt) { mt.hidden = true; mt.innerHTML = ''; }
-  const tEl = document.getElementById('dlTitle');
-  if (tEl) tEl.textContent = (game ? game + ' · ' : '') + '全部' + meta.label;
-  const sEl = document.getElementById('dlSub');
-  if (sEl) sEl.textContent = '读取中…';
-  const fEl = document.getElementById('dlFoot');
-  if (fEl) fEl.innerHTML = '';
-  bodyEl.innerHTML = '<div class="dlpop-load"><i></i><span>正在读取全部条目…</span></div>';
-  pop.hidden = false;
-  requestAnimationFrame(() => pop.classList.add('on'));
-
-  try {
-    const j = await fetch(api('/api/res/items?cat=' + encodeURIComponent(cat)
-      + '&key=' + encodeURIComponent(key) + '&limit=1000')).then((r) => r.json());
-    const items = j.items || [];
-    if (!items.length) throw new Error('该组没有条目');
-    grpAllPaint(cat, items, game, j);
-  } catch (e) {
-    grpAllState = null;
-    bodyEl.innerHTML = '<div class="dlpop-empty">读取失败：' + esc(e.message)
-      + '<br><span style="font-size:11.5px">关闭后重试</span></div>';
-    if (sEl) sEl.textContent = '';
-  } finally {
-    btn.dataset.busy = '';
-    btn.disabled = false;
-  }
+function grpDownloadPop(card) {
+  if (!card || typeof openUniDownload !== 'function') return;
+  const cat = card.dataset.cat || 'mod';
+  const tab = RES_UNI_TAB[cat] || 'body';
+  const title = card.dataset.libt || card.dataset.name || '';
+  const id = card.dataset.lib || '';
+  if (!title && !id) return;
+  /* ⚠️ 不传 url：组卡不知道源站链接（MOD/存档/修改器卡只按游戏聚合），
+     交给 dlUniFetchBody 反查 —— 硬拼一个搜索页 URL 会把空态说成「没有详情页」。 */
+  openUniDownload({ title, id, tab });
 }
 
 /** 端游资源卡 → 游戏详情抽屉
  *
- * ★ v10.98 用户口径：「端游模块的卡片点击是弹详情页，然后有个按钮 ——
- *   点击查看对应模块的弹窗（同下载按钮，不过默认页面自动选择到默认模块）」。
- *   ⇒ 卡面只保留**一个主行为**：整卡（含封面按钮）= 打开游戏详情；
- *     模块弹窗退到卡底那颗 `[data-grp-more]` 按钮，以及详情页底栏的
- *     「查看 <模块> 资源」（`detailResTab` 把模块语境带进详情）。
+ * ★ v10.98 用户口径：「卡片点击是弹详情页」—— 整卡（含封面按钮）= 打开游戏详情。
+ *   ★ v10.99 只动了一处：v10.98 曾把「模块语境」顺进详情页、让底栏多长出一颗
+ *     「查看 <模块> 资源」按钮；用户明确不要（「还是原来的样式」）⇒ 该按钮与
+ *     `detailResTab` 一并删除，模块语境只留在卡底那颗按钮上（grpDownloadPop）。
  *
- * 为什么把 libId 也传进去（`ctx.id`）：
+ * 为什么把 libId 传进去（`openDetailById` 的第一个参数）：
  *   详情页拿到的 fb.id 可能不是这一模块条目的归属记录（赛博朋克2077 的 717 个 MOD
- *   挂在 xd-191，而详情页 fb.id 可能是机地那条 jidi-3277800）。组卡的 libId
- *   就是该模块的归属记录，用它开模块弹窗才能跟卡面「N 条」对上。
+ *   挂在 xd-191，而详情页 fb.id 可能是机地那条 jidi-3277800）。
  *
  * `await openDetailById` 的布尔返回必须接住：有 libId 也可能查不到库记录
  * （机地话题没被合并过的那类）。那种情况**不能只 toast 一句就结束** ——
- * 用户点完页面一动不动，等于把卡片做成死链。退回「看这一模块的条目」。
+ * 用户点完页面一动不动，等于把卡片做成死链。退回「直接开这一模块的下载弹窗」。
  */
 async function openResDetail(card) {
-  const cat = card.dataset.cat || '';
   const lib = card.dataset.lib || '';
   const name = card.dataset.name || '';
-  const ctx = {
-    tab: RES_UNI_TAB[cat] || 'body',
-    cat,
-    id: lib,
-    name,
-  };
+  const cat = card.dataset.cat || '';
   if (lib && typeof openDetailById === 'function') {
-    const shown = await openDetailById(lib, card.dataset.libt || name, ctx);
+    const shown = await openDetailById(lib, card.dataset.libt || name);
     if (shown) return;
   }
   if (typeof toast === 'function') {
-    toast('这款未关联本地端游库，先看它在' + ((GRP_META[cat] && GRP_META[cat].label) || '该模块') + '的条目');
+    toast('这款未关联本地端游库，直接看它的' + ((GRP_META[cat] && GRP_META[cat].label) || '资源'));
   }
-  grpAllPop(card);
+  grpDownloadPop(card);
 }
 
-/** 网格点击分流（三个分区同一套）：卡底「查看 N 条」→ 弹窗；其余整卡 → 详情
+/** 网格点击分流（三个分区同一套）：卡底按钮 → 完整下载弹窗；其余整卡 → 详情
  *
- * ★ v10.98：整卡点击重新交给**详情页**（v10.97 那版让给了弹窗，方向错了）——
- *   用户要的层级是「卡 → 详情 → 对应模块弹窗」，
- *   而不是「卡 → 直接跳到某个模块的下载列表」（跳过了游戏本身的信息）。
- *   卡底那颗按钮仍是直达弹窗的快捷方式，两条路都在。
+ * ★ v10.98：整卡点击交给**详情页**（v10.97 那版让给了弹窗，方向错了）——
+ *   用户要的层级是「卡 → 详情 → 对应模块」，而不是「卡 → 跳过游戏信息直接看列表」。
+ * ★ v10.99：卡底那颗按钮改为**完整下载弹窗**（四页签、默认本模块）；
+ *   它仍是独立动作，必须 stopPropagation —— 否则一次点击会同时开详情再开弹窗。
  */
 function bindGrpGrid(cat) {
   const meta = GRP_META[cat];
@@ -387,9 +261,14 @@ function bindGrpGrid(cat) {
   if (!g || g.dataset.bound) return;
   g.dataset.bound = '1';
   g.addEventListener('click', (e) => {
-    /* ① 卡底「查看 N 条下载」—— 直达该模块弹窗，别冒泡成「开详情」 */
+    /* ① 卡底「⬇ 下载与资源」—— 开完整下载弹窗（默认落本分区页签），别冒泡成「开详情」 */
     const more = e.target.closest('[data-grp-more]');
-    if (more) { e.stopPropagation(); grpAllPop(more); return; }
+    if (more) {
+      e.stopPropagation();
+      const card = more.closest('.emu-card') || more;
+      grpDownloadPop(card);
+      return;
+    }
     /* ② 其余任意位置（封面 / 标题 / 空白）= 打开游戏详情 */
     const card = e.target.closest('.emu-card');
     if (!card) return;
@@ -604,24 +483,6 @@ function bdGroupByPost(items) {
   return [...map.values()].filter((p) => p.links.length);
 }
 
-/** 一条帖子行（与另三区的 glRow 同形，但盘口按钮来自实时抓取） */
-function bdPostRow(p, n) {
-  const two = p.links.slice(0, 2)
-    .map((l) => '<a class="bd-' + esc(l.cls) + '" href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer"'
-      + ' title="' + esc(l.label) + '">' + esc(String(l.label).replace(/网盘$/, '').slice(0, 6)) + '</a>')
-    .join('');
-  const more = p.links.length > 2 ? '<span class="more">+' + (p.links.length - 2) + '</span>' : '';
-  const post = p.postUrl
-    ? '<a class="po-btn" href="' + esc(p.postUrl) + '" target="_blank" rel="noopener noreferrer" title="去机地看原贴（含安装说明）">原贴</a>'
-    : '';
-  const title = p.postTitle || '（无标题帖）';
-  return '<div class="gl-i">'
-    + '<span class="n">' + n + '</span>'
-    + '<span class="t" title="' + esc(title) + '">' + esc(title.slice(0, 40)) + (title.length > 40 ? '…' : '') + '</span>'
-    + '<span class="gl-lk">' + two + more + post + '</span>'
-    + '</div>';
-}
-
 /** 一张本体卡。
  *
  * ★ v10.97 与另三区**统一卡形**（用户口径：「端游在页面显示参考手游，只需要游戏名称+
@@ -631,7 +492,7 @@ function bdPostRow(p, n) {
  *
  * 三种状态，卡底动作随之变化：
  *   ① 没查过        → 「🔍 查本体下载」（点它才发请求，进页面 0 请求的设计不变）
- *   ② 查过且有链接  → 「查看 N 个资源帖（M 个盘口）▸」→ 弹窗
+ *   ② 查过且有链接  → 「⬇ 下载与资源 ▸」（v10.99 起开**完整下载弹窗**、默认本体页签）
  *   ③ 查过但没有    → 如实写「机地话题下没有本体资源帖」+「↻ 重新查」（带 refresh=1）
  */
 function bdCard(g) {
@@ -655,8 +516,11 @@ function bdCard(g) {
     action = '<button class="bd-get" type="button" data-bd-tid="' + esc(tid) + '" data-bd-url="' + esc(url)
       + '">🔍 查本体下载</button>';
   } else if (c.posts && c.posts.length && total) {
-    action = '<button class="grp-more" type="button" data-bd-more="' + esc(tid) + '">查看 '
-      + c.posts.length + ' 个资源帖（' + total + ' 个盘口）▸</button>';
+    /* ★ v10.99：与另三区同一个动作文案 —— 点它开**完整下载弹窗**（四页签、默认本体）。
+       抓到的帖数/盘口数放进 title，只作悬停参考，不再写进按钮（与另三区同一条理由：
+       卡面数与本分区页签角标不是一个口径，写死一个数就会出现「点开对不上」）。 */
+    action = '<button class="grp-more" type="button" data-bd-more="' + esc(tid) + '" title="'
+      + c.posts.length + ' 个资源帖 · ' + total + ' 个网盘盘口">⬇ 下载与资源 ▸</button>';
   } else {
     action = '<div class="bd-empty-s">机地话题下<b>没有本体资源帖</b>（可能只在别处发布）</div>'
       + '<button class="bd-get" type="button" data-bd-tid="' + esc(tid) + '" data-bd-url="' + esc(url)
@@ -726,35 +590,27 @@ function bdOpenDetail(card) {
     dateLabel: g.releaseDate || '',
     jidiUrl: url,
   };
-  /* 已抓过也不往按钮上写条数：详情页那颗「查看本体资源」同样只给模块名 */
-  openDetail(url, encodeURIComponent(JSON.stringify(fb)), false, {
-    tab: 'body', cat: 'body', id: '', name: title,
-  });
+  /* ⚠️ 只传三个参数：详情页底栏**只有**一个「⬇ 下载与资源」（v10.99 撤掉了
+     v10.98 的模块按钮）。模块语境由卡底那颗按钮自己带，不经详情页中转。 */
+  openDetail(url, encodeURIComponent(JSON.stringify(fb)), false);
 }
 
-/** 一卡全部资源帖 → 弹窗（复用主站 #dlPop 外壳，列表独立渲染） */
-function bdAllPop(tid) {
-  const c = bdLinks[tid];
-  const g = bdState.items.find((x) => String(x.tid) === String(tid)) || {};
-  const pop = document.getElementById('dlPop');
-  const bodyEl = document.getElementById('dlBody');
-  if (!c || !pop || !bodyEl) return;
-  dlUni = null;
-  dFullCur = null;
-  const mt = document.getElementById('dlModTabs');
-  if (mt) { mt.hidden = true; mt.innerHTML = ''; }
-  const tEl = document.getElementById('dlTitle');
-  if (tEl) tEl.textContent = (g.title || '') + ' · 全部本体资源帖';
-  const total = c.posts.reduce((n, p) => n + p.links.length, 0);
-  const sEl = document.getElementById('dlSub');
-  if (sEl) sEl.textContent = c.posts.length + ' 个资源帖 · ' + total + ' 个网盘盘口 · 点盘口直接开';
-  bodyEl.innerHTML = '<div class="grp-pop"><div class="emu-card grp">'
-    + c.posts.map((p, i) => bdPostRow(p, i + 1)).join('')
-    + '</div></div>';
-  const fEl = document.getElementById('dlFoot');
-  if (fEl) fEl.innerHTML = '<b>' + esc(g.title || '') + '</b> · 点右上角 ✕ 或按 Esc 关闭';
-  pop.hidden = false;
-  requestAnimationFrame(() => pop.classList.add('on'));
+/** 本体卡卡底按钮 → 完整下载弹窗（默认本体页签）
+ *
+ * ★ v10.99 与另三区共用同一套壳：`openUniDownload` → `#dlPop`，四个页签全在。
+ *   本体这一档**能直接给 url**（话题页地址就在卡上），所以本体页签不用反查，
+ *   `dlUniFetchBody` 会拿它去 /api/download 解析（服务端 30 分钟缓存，秒开）。
+ * ⚠️ 原来的 `bdAllPop` 只铺「本体」一块（自己渲染帖子行），与另三区长得不一样；
+ *   它已随 `#grpAllList` 一起下线 —— 帖子 / 网盘盘口在下载弹窗的本体页签里同样能点到。
+ */
+function bdDownloadPop(card) {
+  if (!card || typeof openUniDownload !== 'function') return;
+  const tid = String(card.dataset.tid || '');
+  const g = bdState.items.find((x) => String(x.tid) === tid) || {};
+  const title = g.title || card.dataset.name || '';
+  const url = g.url || ('https://jidiyouxi.com/topic/detail/' + tid);
+  if (!title && !tid) return;
+  openUniDownload({ title, url, tab: 'body' });
 }
 
 /** 拉一页列表 */
@@ -820,9 +676,14 @@ async function initBd() {
         return;
       }
       const more = e.target.closest('[data-bd-more]');
-      if (more) { e.preventDefault(); e.stopPropagation(); bdAllPop(more.dataset.bdMore); return; }
+      if (more) {
+        e.preventDefault(); e.stopPropagation();
+        const card = more.closest('.bd-card');
+        if (card) bdDownloadPop(card);
+        return;
+      }
       /* ★ v10.98：整卡点击 = 打开游戏详情（与另三区同一条口径）。
-         卡底的「查看 N 个资源帖」/「查本体下载」各自是**明确的按钮动作**，
+         卡底的「⬇ 下载与资源」/「查本体下载」各自是**明确的按钮动作**，
          仍然直达弹窗 / 现抓 —— 整卡不再是「跳过游戏信息直接看下载列表」。 */
       const card = e.target.closest('.bd-card');
       if (!card) return;
