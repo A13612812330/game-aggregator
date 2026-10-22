@@ -119,6 +119,31 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
 .pager .sp{flex:1}
 .empty{padding:44px 10px;text-align:center;color:var(--sub);font-size:13.5px}
 
+/* ═══ v10.103 磁力下载（Komo-Magnet 管理端）═══
+ * 这里的花样只有三样：进度条、任务名两行、状态点。
+ * ★ 不复用首页 .km-dock —— 那是给访客看的浮层（深色、固定右下），
+ *   管理台是白底表格，硬套会把「下载中」渲染成一块看不清的深色块。 */
+.dlbar{height:7px;background:#eef2f7;border-radius:5px;overflow:hidden;min-width:92px}
+.dlbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#60a5fa,#2563eb);border-radius:5px;transition:width .3s}
+.dlbar.done i{background:linear-gradient(90deg,#4ade80,#16a34a)}
+.dlbar.err i{background:linear-gradient(90deg,#fca5a5,#dc2626)}
+.dlnm{max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.dlnm small{display:block;font-weight:400;color:var(--sub);font-size:10.5px;font-family:Consolas,monospace;margin-top:1px}
+.dlops{display:flex;gap:5px;flex-wrap:wrap}
+.dlcfg{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:13px}
+.dlcfg .fld{margin:0}
+.dlcfg input[type=text],.dlcfg input[type=number]{width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;outline:none;font-family:inherit;background:#fff;color:var(--txt)}
+.dlcfg input:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.dlcfg .hint{font-size:11.5px;color:#94a3b8;margin-top:4px}
+/* 未接入 / 已连接提示条：颜色就是结论，不靠文字又说一遍 */
+.dlnote{display:flex;gap:11px;align-items:flex-start;padding:13px 15px;border-radius:11px;
+  background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:12.5px;line-height:1.8}
+.dlnote.ok{background:var(--ok-bg);border-color:#bbf7d0;color:#166534}
+.dlnote b{color:inherit;font-weight:700}
+.dlnote .sp{flex:1}
+.sd{display:inline-block;width:8px;height:8px;border-radius:50%;background:#cbd5e1;flex:0 0 auto;margin-right:6px;vertical-align:1px}
+.sd.on{background:var(--ok)} .sd.off{background:var(--dan)}
+
 /* ═══ 弹窗 ═══ */
 .mask{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:flex-start;justify-content:center;padding:44px 16px;z-index:60;overflow:auto}
 .mask.on{display:flex}
@@ -303,6 +328,10 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
       <div class="sec">运维</div>
       <a data-v="res"><i>◇</i>资源覆盖</a>
       <a data-v="log"><i>≡</i>操作日志</a>
+      <!-- ★ v10.103：磁力下载（Komo-Magnet）管理入口。
+           角标是「活动 + 等待」任务数，连不上工具时显示「—」而不是 0 ——
+           0 会被读成「工具在跑、只是没任务」，与「根本没装」是两件事。 -->
+      <a data-v="dl"><i>⇩</i>磁力下载<b class="n" id="nDl">—</b></a>
       <a data-v="set"><i>⚙</i>设置</a>
     </nav>
     <div class="side-foot">
@@ -502,6 +531,86 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
       </div>
     </section>
 
+    <!-- ═══ 磁力下载（v10.103 · Komo-Magnet 管理端）═══
+         三层分工固定下来：**本页 = 看与管理**，**服务端 = 存配置**，**Komo-Magnet = 真正下载**。
+         为什么工具必须是本机程序：浏览器插件拿不到磁盘写权限、关标签页就断，几十 GB 的
+         repack 下不完；插件只能做唤起与探测，下载器必须在本机。
+         ★★ 探活与任务控制由**浏览器**直连 http://127.0.0.1:68xx/jsonrpc ——
+            不经服务端代理：线上打开管理页时，服务端的 127.0.0.1 是容器，不是用户那台机器。
+         ★ 工具端还没交付时本页照样能打开：状态显示「未接入」+ 契约说明，
+           不会因为连不上而抛错或留一张空表。 -->
+    <section class="view" id="view-dl">
+      <div class="grid g6" id="dlStats"></div>
+      <div class="dlnote" id="dlNote" style="margin-top:13px"></div>
+
+      <div class="panel">
+        <div class="ph"><h3>加入下载</h3><span class="sp"></span><span class="mut" id="dlAddHint">—</span></div>
+        <div class="pb">
+          <div class="tools" style="margin:0">
+            <input type="text" id="dlUri" placeholder="粘贴 magnet:?xt=urn:btih:… 或 http(s) 直链（回车加入）"
+                   onkeydown="if(event.key==='Enter')dlAdd()">
+            <button class="btn pri" id="dlAddBtn" onclick="dlAdd()">加入下载</button>
+            <button class="btn sm" onclick="dlPaste()" title="从剪贴板读一条链接">粘贴</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tools" style="margin-top:13px">
+        <div class="chips" id="dlTabs"></div>
+        <span class="sp" style="flex:1"></span>
+        <span class="mut" id="dlInfo">—</span>
+        <button class="btn sm" onclick="dlRefresh(true)">刷新</button>
+      </div>
+      <div class="tblwrap">
+        <table>
+          <thead><tr>
+            <th>任务</th>
+            <th style="width:188px">进度</th>
+            <th style="width:96px">大小</th>
+            <th style="width:98px">速度</th>
+            <th style="width:92px">剩余</th>
+            <th style="width:84px">状态</th>
+            <th style="width:158px">操作</th>
+          </tr></thead>
+          <tbody id="dlRows"></tbody>
+        </table>
+        <div class="empty" id="dlEmpty" style="display:none"></div>
+      </div>
+
+      <div class="panel">
+        <div class="ph"><h3>下载器设置</h3><span class="sp"></span>
+          <span class="mut">写入 data/magnet-config.json · 换机器要重设</span></div>
+        <div class="pb">
+          <div class="dlcfg">
+            <div class="fld"><label>下载目录</label>
+              <input type="text" id="dcDir" placeholder="留空 = %USERPROFILE%\Downloads\KomoMagnet">
+              <div class="hint">只影响工具端落盘位置，网页不碰文件系统</div></div>
+            <div class="fld"><label>最大并发（1–16）</label><input type="number" id="dcConc" min="1" max="16"></div>
+            <div class="fld"><label>限速</label>
+              <input type="text" id="dcSpeed" placeholder="8M / 512K，留空 = 不限">
+              <div class="hint">格式为「数字 + K/M/G」</div></div>
+            <div class="fld"><label>做种时长（分钟）</label>
+              <input type="number" id="dcSeed" min="0" max="1440">
+              <div class="hint">0 = 下完不做种（默认，省上行带宽）</div></div>
+            <div class="fld"><label>探活起始端口</label>
+              <input type="number" id="dcPort" min="1024" max="65535">
+              <div class="hint">被占用时按 6801–6805 顺延</div></div>
+            <div class="fld"><label>探不到工具时用协议唤起</label>
+              <select id="dcAuto" style="width:100%;padding:8px 9px">
+                <option value="1">允许（komomagnet://）</option>
+                <option value="0">不允许</option>
+              </select></div>
+          </div>
+          <div class="tools" style="margin:14px 0 0">
+            <button class="btn pri" onclick="dlSaveCfg()">保存设置</button>
+            <button class="btn sm" onclick="dlLoadCfg()">还原</button>
+            <span class="sp" style="flex:1"></span>
+            <span class="mut" id="dcInfo">—</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ═══ 日志 ═══ -->
     <section class="view" id="view-log">
       <div class="tools">
@@ -527,12 +636,31 @@ tr.row:hover{background:#f8fbff;cursor:pointer}
           </div>
         </div>
       </div>
+      <!-- ★ v10.103：接口契约**写在管理页里**，而不是只留在 docs/ ——
+           工具端改了端口 / secret / 方法名时，第一个该来看的就是这张表。 -->
+      <div class="panel">
+        <div class="ph"><h3>磁力下载接口（v10.103 预留）</h3><span class="sp"></span>
+          <span class="mut" id="setDlState">—</span></div>
+        <div class="pb kv" style="line-height:2">
+          <div><i>工具</i><b>Komo-Magnet</b> —— 本机常驻，只做「磁力 → 下载任务」这一件事</div>
+          <div><i>传输</i>浏览器 ↔ <span class="code">http://127.0.0.1:6800/jsonrpc</span>（JSON-RPC 2.0 · 直接沿用 aria2 契约）</div>
+          <div><i>鉴权</i><span class="code">params[0] = token:komomagnet-local</span>（与工具端 <span class="code">--rpc-secret</span> 一致）</div>
+          <div><i>方法</i><span class="code">aria2.getVersion</span> 探活 · <span class="code">addUri</span> 加任务 ·
+            <span class="code">tellStatus</span>/<span class="code">tellActive</span>/<span class="code">tellWaiting</span>/<span class="code">tellStopped</span> 取任务 ·
+            <span class="code">pause</span>/<span class="code">unpause</span>/<span class="code">remove</span> 控制</div>
+          <div><i>服务端</i><span class="code">GET /api/admin/download/meta</span>（契约元信息）·
+            <span class="code">GET|POST /api/admin/download/config</span>（配置落盘）</div>
+          <div><i>降级</i>RPC 不通 → 协议 <span class="code">komomagnet://add?uri=</span> 唤起 → 仍不通则云下载兜底</div>
+          <div><i>全文</i>仓库 <span class="code">docs/KOMO-MAGNET-API.md</span>（请求/响应示例与错误码）</div>
+        </div>
+      </div>
       <div class="panel">
         <div class="ph"><h3>数据边界（重要）</h3></div>
         <div class="pb mut" style="line-height:1.95">
           · 线上容器的 <span class="code">data/</span> 会在<b>每次发布</b>时被本地载荷覆盖 ⇒ 线上做的豁免、备注、资料覆盖<b>不跨发布保留</b>。<br>
           · 需要长期保留的管理动作，请在本地实例（8123/8124）做，再发布。<br>
           · 备注存 <span class="code">data/game-notes.json</span>；豁免存 <span class="code">data/hide-overrides.json</span>（已 gitignore）。<br>
+          · 下载器配置存 <span class="code">data/magnet-config.json</span>（已 gitignore：含本机绝对路径）；<b>下载的文件不在服务端</b>，落在你本机的工具目录。<br>
           · <b>资料覆盖存 <span class="code">data/game-profile.json</span></b>（不入库）：页面管理改的标题/封面/热度/链接、游戏库改的简介/类型/厂商/发售日/别名都在这里，<b>不回写爬虫产物</b>。<br>
           · 资料覆盖<b>只改展示，不参与匹配</b> —— 改标题不会影响已匹配的 MOD / 修改器 / 存档归属。<br>
           · 所有管理写操作都会追加到 <span class="code">data/admin-log.jsonl</span>（谁/何时/对哪条/账号还是令牌）。
@@ -754,6 +882,8 @@ const VIEWS = {
   'm-save': ['存档', '模块 / 存档位置 · 云存档'],
   res: ['资源覆盖', '运维 / 按模块分类'],
   log: ['操作日志', '运维 / 留痕'],
+  /* ★ v10.103：磁力下载（本机工具 Komo-Magnet 的管理端） */
+  dl: ['磁力下载', '运维 / 本机工具 · 任务与设置'],
   set: ['设置', '运维 / 配置与边界'],
 };
 
@@ -986,12 +1116,16 @@ function go(v) {
   const secId = 'view-' + (v.indexOf('m-') === 0 ? 'resm' : v);
   document.querySelectorAll('.view').forEach((s) => s.classList.toggle('on', s.id === secId));
   if (location.hash.slice(1) !== v) history.replaceState(null, '', '#' + v);
+  /* ★ v10.103：离开下载页就停轮询 —— 否则切到游戏库之后，
+     每 2 秒仍有一条本机 RPC 在后台跑，用户看不到任何收益。 */
+  if (v !== 'dl') dlLeave();
   if (v === 'dash') loadStats();
   if (v === 'pages') pagesReload(true);
   if (v === 'games') reload(true);
   if (v === 'res') loadRes();
   if (v === 'log') { loadLog(); loadSetLog(); }
-  if (v === 'set') { loadSetLog(); }
+  if (v === 'set') { loadSetLog(); dlPaintSetState(); }
+  if (v === 'dl') dlEnter();
   if (v.indexOf('m-') === 0) {
     rmMod = v.slice(2); rmSrc = ''; rmOff = 0;
     /* 直接以 #m-xxx 进站时仪表盘没跑过 ⇒ 左栏角标还是「—」，补一次 overview（不阻塞表格） */
@@ -1980,6 +2114,359 @@ async function loadSetLog() {
   $('setLog').innerHTML = j.ok && (j.items || []).length
     ? j.items.map((x) => '<div class="log-row"><div class="t">' + new Date(x.ts).toLocaleString('zh-CN', { hour12: false }) + '</div><div>' + esc(x.title || x.id) + '</div><div><span class="code">' + esc(x.op) + '</span></div><div class="mut">' + esc(x.via || '') + '</div></div>').join('')
     : '<div class="mut">无记录' + (j.needAuth ? '（需令牌）' : '') + '</div>';
+}
+
+/* ═══════════ 磁力下载（v10.103 · Komo-Magnet 管理端）═══════════
+ * 契约唯一真源：/api/admin/download/meta（端口表 / secret / 工具名 / 安装包）。
+ * ★★ 数据面**不经过服务端**：线上打开管理页时，服务端 127.0.0.1 是容器自己；
+ *    aria2 只跑在用户机器上 ⇒ 探活与任务控制必须由浏览器直连本机。
+ *    （v10.102 已在真实 Chromium 实测：HTTPS 页面 fetch 到 127.0.0.1 返回 200 / 6ms，
+ *      事件流里会伴随一次 ERR_BLOCKED_BY_PRIVATE_NETWORK_ACCESS_CHECKS 但最终放行。）
+ * ★ 工具端未交付时本页**不报错**：探不到就画「未接入」空态 + 接口说明，
+ *   等服务端 meta 里的 tool.setup 填上后，安装入口自动出现。 */
+const DL_PORTS_DEF = [6800, 6801, 6802, 6803, 6804, 6805];
+const DL_SECRET_DEF = 'komomagnet-local';
+const DL_PROBE_MS = 350, DL_CALL_MS = 4000, DL_MISS_TTL = 20000;
+const DL_KEYS = ['gid', 'status', 'totalLength', 'completedLength', 'downloadSpeed',
+  'connections', 'errorMessage', 'files', 'bittorrent'];
+const DL = {
+  ports: DL_PORTS_DEF.slice(), secret: DL_SECRET_DEF,
+  port: 0, version: '', missAt: 0, meta: null, cfg: null,
+  act: [], wait: [], stop: [], tab: 'active',
+  timer: 0, busy: false,
+};
+
+/* JSON-RPC 单发：超时/断连一律 resolve(null)，绝不 reject ——
+ * 调用方要判的是「有没有连上」，不是拿异常做流程控制。 */
+function dlRpc(port, method, params, ms) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; clearTimeout(timer); resolve(v); } };
+    const ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+    const timer = setTimeout(() => {
+      if (ctrl) { try { ctrl.abort(); } catch (e) { /* 已结束 */ } }
+      finish(null);
+    }, ms || DL_CALL_MS);
+    fetch('http://127.0.0.1:' + port + '/jsonrpc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: 'ghadm', method,
+        params: ['token:' + DL.secret].concat(params || []),
+      }),
+      signal: ctrl ? ctrl.signal : undefined,
+    }).then((r) => r.json())
+      .then((j) => finish(j && j.result !== undefined ? j.result : null))
+      .catch(() => finish(null));
+  });
+}
+
+/* 并发探整个端口表，命中即缓存（含版本号，用于状态卡）。 */
+async function dlProbe(force) {
+  if (DL.port && !force) return DL.port;
+  if (!force && Date.now() - DL.missAt < DL_MISS_TTL) return 0;
+  const hits = await Promise.all(DL.ports.map((p) => dlRpc(p, 'aria2.getVersion', [], DL_PROBE_MS)
+    .then((r) => (r && r.version) ? { p, v: String(r.version) } : null)));
+  const hit = hits.filter(Boolean)[0] || null;
+  DL.port = hit ? hit.p : 0;
+  DL.version = hit ? hit.v : '';
+  if (!DL.port) DL.missAt = Date.now();
+  return DL.port;
+}
+
+function dlBytes(n) {
+  const v = Number(n) || 0;
+  if (v >= 1073741824) return (v / 1073741824).toFixed(2) + ' GB';
+  if (v >= 1048576) return (v / 1048576).toFixed(1) + ' MB';
+  if (v >= 1024) return Math.round(v / 1024) + ' KB';
+  return Math.round(v) + ' B';
+}
+function dlEta(t) {
+  const total = Number(t.totalLength) || 0;
+  const done = Number(t.completedLength) || 0;
+  const sp = Number(t.downloadSpeed) || 0;
+  if (!total || !sp || done >= total) return '—';
+  const s = Math.round((total - done) / sp);
+  if (s < 60) return s + ' 秒';
+  if (s < 3600) return Math.round(s / 60) + ' 分钟';
+  return (s / 3600).toFixed(1) + ' 小时';
+}
+/* 任务名：BT 优先取种子名，普通直链取文件名，都没有退 gid。
+ * ★ 不把完整落盘路径打到界面上（那是本机绝对路径，截图外发就泄露用户名）。 */
+function dlName(t) {
+  const bt = t && t.bittorrent && t.bittorrent.info && t.bittorrent.info.name;
+  if (bt) return String(bt);
+  const f = (t && t.files && t.files[0]) || null;
+  if (f && f.path) return String(f.path).split(/[\\/]/).pop();
+  return (t && t.gid) || '—';
+}
+function dlStateText(st) {
+  return ({ active: '下载中', waiting: '排队', paused: '已暂停', complete: '已完成',
+    error: '失败', removed: '已移除' })[String(st)] || (st || '—');
+}
+function dlBadgeCls(st) {
+  if (st === 'active') return 'b-vis';
+  if (st === 'complete') return 'b-vis';
+  if (st === 'error') return 'b-hide';
+  if (st === 'paused') return 'b-note';
+  return 'b-cold';
+}
+
+async function dlBootstrap(force) {
+  if (!DL.meta || force) {
+    const j = await api('/api/admin/download/meta');
+    if (j && j.ok) {
+      DL.meta = j;
+      if (Array.isArray(j.ports) && j.ports.length) DL.ports = j.ports.slice();
+      if (j.config && j.config.secret) DL.secret = j.config.secret;
+      DL.cfg = j.config || null;
+    }
+  }
+  if (!DL.cfg) {
+    const c = await api('/api/admin/download/config');
+    if (c && c.ok) DL.cfg = c.config;
+  }
+  dlFillCfg();
+}
+
+function dlEnter() {
+  dlPaintTabs();
+  dlBootstrap().then(() => dlRefresh(true));
+  /* 轮询只在下载页活着时跑（go() 切走会 dlLeave）。2 秒是「看着像实时」与
+   * 「每秒六次本机 RPC」之间的折中 —— 不是越快越好。 */
+  if (DL.timer) clearInterval(DL.timer);
+  DL.timer = setInterval(() => { if (DL.port) dlRefresh(false); }, 2000);
+}
+function dlLeave() {
+  if (DL.timer) { clearInterval(DL.timer); DL.timer = 0; }
+}
+
+async function dlRefresh(force) {
+  if (DL.busy && !force) return;
+  DL.busy = true;
+  try {
+    const p = await dlProbe(!!force);
+    if (!p) { DL.act = []; DL.wait = []; DL.stop = []; dlPaintAll(null); return; }
+    const r = await Promise.all([
+      dlRpc(p, 'aria2.tellActive', [DL_KEYS]),
+      dlRpc(p, 'aria2.tellWaiting', [0, 60, DL_KEYS]),
+      dlRpc(p, 'aria2.tellStopped', [0, 60, DL_KEYS]),
+      dlRpc(p, 'aria2.getGlobalStat', []),
+    ]);
+    DL.act = Array.isArray(r[0]) ? r[0] : [];
+    DL.wait = Array.isArray(r[1]) ? r[1] : [];
+    DL.stop = Array.isArray(r[2]) ? r[2] : [];
+    dlPaintAll(r[3] || null);
+  } finally {
+    DL.busy = false;
+  }
+}
+
+function dlPaintAll(gs) {
+  const online = !!DL.port;
+  const sp = gs ? (Number(gs.downloadSpeed) || 0) : 0;
+  const done = DL.stop.filter((x) => x.status === 'complete').length;
+  const cards = [
+    ['下载器', online ? '已连接' : '未接入', online ? 'ok' : 'dan',
+      online ? ('端口 ' + DL.port + (DL.version ? ' · v' + DL.version : '')) : '本机 6800–6805 无响应'],
+    ['当前速度', online ? (sp ? dlBytes(sp) + '/s' : '0') : '—', '', '限速 ' + ((DL.cfg && DL.cfg.maxSpeed) || '不限')],
+    ['活动', online ? nf(DL.act.length) : '—', online && DL.act.length ? 'pri' : '', '正在下载'],
+    ['等待', online ? nf(DL.wait.length) : '—', '', '排队 / 已暂停'],
+    ['已完成', online ? nf(done) : '—', '', '本次打开页面后可见'],
+  ];
+  $('dlStats').innerHTML = cards.map(([k, v, cls, em]) =>
+    '<div class="card stat ' + cls + '"><span>' + esc(k) + '</span><b>' + esc(String(v)) + '</b><em>' + esc(em) + '</em></div>').join('');
+
+  /* 导航角标：连不上显示「—」而不是 0 —— 0 会被读成「工具在跑、只是没任务」 */
+  if ($('nDl')) $('nDl').textContent = online ? nf(DL.act.length + DL.wait.length) : '—';
+
+  dlPaintNote(online);
+  dlPaintTabs();
+  dlPaintRows(online);
+
+  $('dlInfo').textContent = online
+    ? ('共 ' + nf(DL.act.length + DL.wait.length + DL.stop.length) + ' 条 · 每 2 秒刷新')
+    : '下载器未接入';
+  $('dlAddBtn').disabled = !online;
+  $('dlAddHint').textContent = online ? ('将加入端口 ' + DL.port) : '未接入：先在任务栏装好并启动 Komo-Magnet';
+}
+
+function dlPaintNote(online) {
+  const el = $('dlNote');
+  const tool = (DL.meta && DL.meta.tool) || {};
+  if (online) {
+    const dir = (DL.cfg && DL.cfg.dir) || '工具默认目录';
+    el.className = 'dlnote ok';
+    el.innerHTML = '<span class="sd on"></span><div><b>' + esc(tool.name || 'Komo-Magnet')
+      + ' 已连接</b> · 端口 ' + DL.port + (DL.version ? ' · v' + esc(DL.version) : '')
+      + '<br>下载落在 <b>' + esc(dir) + '</b>（改动目录在下方「下载器设置」）</div>'
+      + '<span class="sp"></span><button class="btn sm" onclick="dlRefresh(true)">重新探活</button>';
+    return;
+  }
+  el.className = 'dlnote';
+  const setup = tool.setup
+    ? '<a class="btn sm" href="' + esc(tool.setup) + '" download>下载安装包</a>'
+    : '';
+  /* ★ 布局：说明全放左列（flex:1），按钮靠右。
+     v10.103 初版把 setupNote 甩到右侧和「重新探活」并排，实测挤成一行读不通 ——
+     状态说明是「读的」，按钮是「点的」，不该在同一视觉流里。 */
+  el.innerHTML = '<span class="sd off"></span><div style="flex:1;min-width:0">'
+    + '<b>未接入本机下载器</b>：本机 6800–6805 上没探到 '
+    + esc(tool.name || 'Komo-Magnet') + ' 的 RPC。装好并启动后点右边「重新探活」即可，不用刷新页面。'
+    + '<br><span style="opacity:.85">本页不经过服务端：探活是浏览器直连 127.0.0.1，所以线上管理页同样能用。</span>'
+    + (tool.setupNote ? '<br>' + esc(tool.setupNote) : '')
+    + '</div>' + setup
+    + '<button class="btn sm" onclick="dlRefresh(true)">重新探活</button>';
+}
+
+function dlPaintTabs() {
+  const online = !!DL.port;
+  const defs = [['active', '进行中', DL.act.length], ['wait', '等待 / 暂停', DL.wait.length],
+    ['stop', '已完成', DL.stop.length]];
+  $('dlTabs').innerHTML = defs.map(([k, l, n]) =>
+    '<span class="chip' + (DL.tab === k ? ' on' : '') + '" onclick="dlTab(\'' + k + '\')">'
+    + esc(l) + (online ? ' ' + nf(n) : '') + '</span>').join('');
+}
+function dlTab(k) { DL.tab = k; dlPaintTabs(); dlPaintRows(!!DL.port); }
+
+function dlPaintRows(online) {
+  const rows = $('dlRows'), empty = $('dlEmpty');
+  const list = DL.tab === 'active' ? DL.act : (DL.tab === 'wait' ? DL.wait : DL.stop);
+  if (!online) {
+    rows.innerHTML = '';
+    empty.style.display = '';
+    empty.innerHTML = '未接入本机下载器 —— 这里不显示假数据。<br><span class="mut">装好 Komo-Magnet 并启动后任务会自动出现。</span>';
+    return;
+  }
+  if (!list.length) {
+    rows.innerHTML = '';
+    empty.style.display = '';
+    empty.textContent = DL.tab === 'active' ? '当前没有进行中的任务'
+      : (DL.tab === 'wait' ? '队列为空' : '还没有已完成的任务');
+    return;
+  }
+  empty.style.display = 'none';
+  rows.innerHTML = list.map((t) => {
+    const total = Number(t.totalLength) || 0;
+    const done = Number(t.completedLength) || 0;
+    const pct = total ? Math.min(100, done / total * 100) : 0;
+    const barCls = t.status === 'complete' ? ' done' : (t.status === 'error' ? ' err' : '');
+    const ops = [];
+    if (t.status === 'active') ops.push(['暂停', 'pause']);
+    if (t.status === 'paused') ops.push(['继续', 'unpause']);
+    if (t.status !== 'complete') ops.push(['删除', 'remove']);
+    const opHtml = ops.length ? ops.map(([l, o]) =>
+      '<button class="btn sm' + (o === 'remove' ? ' dan' : '') + '" onclick="dlOp(\''
+      + esc(t.gid) + '\',\'' + o + '\')">' + l + '</button>').join('') : '<span class="mut">—</span>';
+    return '<tr class="row">'
+      + '<td><div class="dlnm">' + esc(dlName(t)) + '<small>' + esc(t.gid || '') + '</small></div></td>'
+      + '<td><div class="dlbar' + barCls + '"><i style="width:' + pct.toFixed(1) + '%"></i></div>'
+      + '<div class="mut" style="margin-top:3px">' + pct.toFixed(1) + '%</div></td>'
+      + '<td class="mut">' + dlBytes(total) + '</td>'
+      + '<td class="mut">' + (t.status === 'active' ? dlBytes(t.downloadSpeed) + '/s' : '—') + '</td>'
+      + '<td class="mut">' + dlEta(t) + '</td>'
+      + '<td><span class="bdg ' + dlBadgeCls(t.status) + '">' + esc(dlStateText(t.status)) + '</span></td>'
+      + '<td><div class="dlops">' + opHtml + '</div></td>'
+      + '</tr>';
+  }).join('');
+}
+
+async function dlAdd() {
+  const el = $('dlUri');
+  const uri = String(el.value || '').trim();
+  if (!uri) { toast('先粘贴一条磁力或直链'); el.focus(); return; }
+  if (!/^(magnet:\?|https?:\/\/)/i.test(uri)) { toast('只接受 magnet: 或 http(s) 链接'); return; }
+  const p = await dlProbe(false);
+  if (!p) { toast('未检测到本机下载器，先装并启动 Komo-Magnet'); return; }
+  let gid = await dlRpc(p, 'aria2.addUri', [[uri]]);
+  if (typeof gid !== 'string' || !gid) {
+    /* 端口可能刚被工具重启换掉 ⇒ 强制重探一次再试，而不是直接报失败 */
+    const p2 = await dlProbe(true);
+    if (p2) gid = await dlRpc(p2, 'aria2.addUri', [[uri]]);
+  }
+  if (typeof gid === 'string' && gid) {
+    el.value = '';
+    DL.tab = 'active';
+    toast('已加入下载队列');
+    dlRefresh(true);
+  } else {
+    toast('加入失败：检查下载器是否在运行');
+  }
+}
+
+async function dlPaste() {
+  if (!navigator.clipboard || !navigator.clipboard.readText) { toast('这个浏览器不允许读剪贴板，请手动粘贴'); return; }
+  try {
+    const t = await navigator.clipboard.readText();
+    if (!t) { toast('剪贴板是空的'); return; }
+    $('dlUri').value = String(t).trim();
+    $('dlUri').focus();
+  } catch (e) { toast('读剪贴板被拒绝，请手动粘贴'); }
+}
+
+async function dlOp(gid, op) {
+  if (!DL.port) { toast('下载器未连接'); return; }
+  const m = { pause: 'aria2.pause', unpause: 'aria2.unpause', remove: 'aria2.remove' }[op];
+  if (!m) return;
+  const r = await dlRpc(DL.port, m, [gid]);
+  toast(r ? ('已' + ({ pause: '暂停', unpause: '继续', remove: '删除' }[op])) : '操作失败（任务可能已结束）');
+  dlRefresh(true);
+}
+
+function dlFillCfg() {
+  const c = DL.cfg || {};
+  if ($('dcDir')) $('dcDir').value = c.dir || '';
+  if ($('dcConc')) $('dcConc').value = c.maxConcurrent == null ? 5 : c.maxConcurrent;
+  if ($('dcSpeed')) $('dcSpeed').value = c.maxSpeed || '';
+  if ($('dcSeed')) $('dcSeed').value = c.seedTime == null ? 0 : c.seedTime;
+  if ($('dcPort')) $('dcPort').value = c.port == null ? 6800 : c.port;
+  if ($('dcAuto')) $('dcAuto').value = c.autoLaunch === false ? '0' : '1';
+  if ($('dcInfo')) $('dcInfo').textContent = '口令 ' + (DL.secret || DL_SECRET_DEF) + ' · 已从服务端读取';
+}
+
+async function dlLoadCfg() {
+  const j = await api('/api/admin/download/config');
+  if (!j.ok) { toast('读取配置失败：' + (j.error || '')); return; }
+  DL.cfg = j.config;
+  dlFillCfg();
+  toast('已还原为当前保存值');
+}
+
+async function dlSaveCfg() {
+  const patch = {
+    dir: String($('dcDir').value || '').trim(),
+    maxConcurrent: parseInt($('dcConc').value, 10) || 5,
+    maxSpeed: String($('dcSpeed').value || '').trim(),
+    seedTime: parseInt($('dcSeed').value, 10) || 0,
+    port: parseInt($('dcPort').value, 10) || 6800,
+    autoLaunch: $('dcAuto').value === '1',
+  };
+  const j = await api('/api/admin/download/config', { method: 'POST', body: JSON.stringify(patch) });
+  if (!j.ok) { toast('保存失败：' + (j.error || (j.needAuth ? '需要登录' : '未知'))); return; }
+  DL.cfg = j.config;
+  dlFillCfg();
+  /* ★ 配置存服务端只是「记住」；真正生效要下发到本机工具。
+   *   没连接就不下发 —— 不要假装成功。 */
+  if (!DL.port) { toast('设置已保存（下载器未连接，连上后生效）'); return; }
+  const opt = {
+    'max-concurrent-downloads': String(j.config.maxConcurrent),
+    'max-overall-download-limit': j.config.maxSpeed || '0',
+    'seed-time': String(j.config.seedTime),
+  };
+  if (j.config.dir) opt.dir = j.config.dir;
+  const r = await dlRpc(DL.port, 'aria2.changeGlobalOption', [opt]);
+  toast(r ? '设置已保存并下发到下载器' : '设置已保存，但下发失败（下载器可能已退出）');
+}
+
+/* 设置页的接口状态：只在需要时探一次（走缓存，不强制重探） */
+async function dlPaintSetState() {
+  const el = $('setDlState');
+  if (!el) return;
+  if (!DL.meta) await dlBootstrap();
+  if (!DL.port) await dlProbe(false);
+  el.innerHTML = DL.port
+    ? '<span class="sd on"></span>已连接 · 端口 ' + DL.port
+    : '<span class="sd off"></span>未接入（本机 6800–6805 无响应）';
 }
 
 /* ═══════════ 启动 ═══════════

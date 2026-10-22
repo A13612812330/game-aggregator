@@ -240,9 +240,20 @@ eq(dl.serverOf('https://store.steampowered.com/app/1/'), '其他链接',
   ok(/id="dlModTabs"/.test(idx) && /class="dlmod" id="dlModTabs"/.test(idx),
     '★ 弹窗外壳里有常驻的模块页签容器 #dlModTabs');
   /* ⚠️ 页签条必须挂在 `.dlpop-h` 与 `.dlpop-b` 之间（弹窗的直接子节点）——
-     放进 .dlpop-b 会随内容滚走，滚到第 30 条就点不到「换模块」。 */
-  ok(/id="dlBody"><\/div>/.test(idx) && /id="dlModTabs" hidden><\/div>[\s\S]{0,80}?<div class="dlpop-b" id="dlBody">/.test(idx),
-    '★★ 页签条在 .dlpop-b **之外**（放进去会跟着内容滚走，用户滚到一半就换不了模块）');
+     放进 .dlpop-b 会随内容滚走，滚到第 30 条就点不到「换模块」。
+     ★ v10.103：中间多了一条 #kmBar（本机下载器状态条），所以不能再写「页签后面 80 字内就是正文」。
+       改成**判顺序**：页签出现在正文容器之前，且正文容器全文只有一个。
+       判据强度不变 —— 页签在正文里的话，正文容器必然在它前面。 */
+  const iTabs = idx.indexOf('<div class="dlmod" id="dlModTabs"');
+  const iBody = idx.indexOf('<div class="dlpop-b" id="dlBody">');
+  ok(iTabs > 0 && iBody > iTabs,
+    '★★ 页签条在 .dlpop-b **之外**（放进去会跟着内容滚走，用户滚到一半就换不了模块）',
+    'tabs@' + iTabs + ' body@' + iBody);
+  ok(idx.indexOf('<div class="dlpop-b"') === iBody,
+    '反向：弹窗正文容器只有一个 .dlpop-b（两个就是嵌套了）');
+  ok(/id="dlBody"><\/div>/.test(idx), '正文容器初始为空（内容由 openUniDownload 填）');
+  ok(idx.indexOf('id="kmBar"') > 0 && idx.indexOf('id="kmBar"') < iBody,
+    '★ v10.103 下载器状态条同样在正文之外（和页签一样常驻，不随内容滚走）');
   ok(/\.dlmod\{[^}]*border-bottom/.test(idx), '模块页签条有下边框（与内容区分开）');
   ok(/\.dlm\.on\{/.test(idx), '有当前模块的高亮态 .dlm.on');
   ok(/const DL_UNI = \[[\s\S]{0,160}?'body'[\s\S]{0,160}?'mod'[\s\S]{0,160}?'modifier'[\s\S]{0,160}?'save'/.test(idx),

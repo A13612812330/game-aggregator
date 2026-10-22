@@ -2216,6 +2216,20 @@
   .dlm i{font-style:normal;font-family:var(--font-num);font-size:10.5px;font-weight:800;
     color:var(--c-t3);background:#fff;border-radius:999px;padding:1px 6px;border:1px solid var(--c-border)}
   .dlm.on i{color:var(--c-primary);border-color:rgba(46,107,255,.3)}
+  /* ★ v10.103 本机下载器状态条：常驻在模块页签下面一条，
+     打开「下载与资源」就告诉你「装了没有」，而不是等你点了磁力才发现。
+     ★ 为什么不用 toast：toast 2 秒就消失，用户回头想确认时没有第二处可看。 */
+  .kmbar{display:flex;align-items:center;gap:8px;padding:7px 15px;flex:none;
+    border-bottom:1px solid var(--c-border);background:#F6F8FC;color:var(--c-t2);
+    font-size:11.8px;line-height:1.6}
+  .kmbar[hidden]{display:none}
+  .kmbar .kb-dot{width:7px;height:7px;border-radius:50%;background:#CBD5E1;flex:none}
+  .kmbar .kb-tx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .kmbar .kb-act{flex:none;color:inherit;font-weight:700;text-decoration:underline}
+  .kmbar.on{background:#F0FDF4;color:#166534}
+  .kmbar.on .kb-dot{background:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.15)}
+  .kmbar.off{background:#FFFBEB;color:#92400E}
+  .kmbar.off .kb-dot{background:#D97706}
   /* 第三方（GCM 元数据）段：与社区帖段视觉上分开 —— 前者没有下载地址，不能长得像能点
      ★ v10.53：同一条分界线复用到 `.dl-agg`（聚合层的 GTrainers 段）——
      两段都是「机地之外的来源」，排版意图一致；类名分开是因为语义不同
@@ -2810,6 +2824,10 @@
            放进滚动区会随内容滚走。`hidden` 由 openUniDownload 摘掉，
            其它复用 #dlPop 外壳的弹窗（查看全部 / 三专区全部）保持隐藏。 -->
     <div class="dlmod" id="dlModTabs" hidden></div>
+    <!-- ★ v10.103：本机下载器状态条。kmBarSync() 在每次打开弹窗时探一次
+         （命中即缓存，未命中 30 秒内不重复探）。工具端没交付时这里显示
+         「未检测到」，但下载路径本身不受影响 —— 磁力照旧能走云下载。 -->
+    <div class="kmbar" id="kmBar" hidden></div>
     <div class="dlpop-b" id="dlBody"></div>
     <div class="dlpop-f" id="dlFoot"></div>
   </div>
@@ -6203,6 +6221,7 @@ function openUniDownload(ctx) {
   $('#dlSub').textContent = dlUni.ctx.sub || '本体 / Mod / 修改器 / 存档';
   pop.hidden = false;
   requestAnimationFrame(() => pop.classList.add('on'));
+  kmBarSync();      /* ★ v10.103 先探一次本机下载器（异步，不阻塞弹窗渲染） */
   dlUniTabs();
   dlUniPane();
   /* 便宜的三个先并行发出（本地索引，毫秒级）—— 页签上的数字尽早填上。
@@ -6354,6 +6373,13 @@ const KC_WAIT_MS = 2200;
 const KC_DESKTOP = (function () {
   try { return matchMedia('(hover: hover) and (pointer: fine)').matches; } catch (e) { return false; }
 })();
+
+/* ★ v10.103：新工具（Komo-Magnet）的名字与安装包。
+ *   KM_SETUP 为空串 = **安装包还没发布** ⇒ 页面不渲染安装链接。
+ *   ★ 为什么留空而不是指一个 404 路径：死链比「暂无」更糟 —— 用户会反复点、
+ *     以为是自己网络问题。工具端交付后只改这一行，其余文案自动跟着变。 */
+const KM_NAME = 'Komo-Magnet';
+const KM_SETUP = '';
 
 /* 唤起并等一次失焦。返回 true = 大概率已被外部程序接管。 */
 function kcLaunch(magnet) {
@@ -6527,6 +6553,38 @@ function kmTrack(port, gid, title) {
     KM_DOCK.timer = setTimeout(tick, 1000);
   };
   KM_DOCK.timer = setTimeout(tick, 700);
+}
+
+/* ── v10.103 下载弹窗里的「本机下载器」状态条 ──
+ * ★ 为什么放在**弹窗**而不是详情页：用户是在「准备下载」的这一刻才关心
+ *   「我这台机器能不能直接下」，详情页常驻一条会变成噪音。
+ * ★ 移动端直接隐藏：手机上永远没有这个工具，探一次只是白等 350ms。
+ * ★ 探测复用 kmProbe 的缓存（未命中 30 秒 TTL），连续开关弹窗不会反复打端口。 */
+async function kmBarSync() {
+  const el = document.getElementById('kmBar');
+  if (!el) return;
+  if (!KC_DESKTOP) { el.hidden = true; return; }
+  el.hidden = false;
+  el.className = 'kmbar';
+  el.innerHTML = '<span class="kb-dot"></span><span class="kb-tx">正在检测本机下载器…</span>';
+  const p = await kmProbe(false);
+  if (!p) {
+    el.className = 'kmbar off';
+    el.innerHTML = '<span class="kb-dot"></span><span class="kb-tx">未检测到 <b>' + KM_NAME
+      + '</b> · 磁力仍可直接云下载，不装也能用</span>'
+      + (KM_SETUP ? '<a class="kb-act" href="' + KM_SETUP + '" download>获取下载器</a>' : '');
+    return;
+  }
+  const gs = await kmRpc(p, 'aria2.getGlobalStat', [], 1500);
+  const sp = Number((gs && gs.downloadSpeed) || 0);
+  const nAct = Number((gs && gs.numActive) || 0);
+  const nWait = Number((gs && gs.numWaiting) || 0);
+  el.className = 'kmbar on';
+  el.innerHTML = '<span class="kb-dot"></span><span class="kb-tx"><b>' + KM_NAME + '</b> 已就绪'
+    + ' · 端口 ' + p
+    + (nAct || nWait ? ' · 活动 ' + nAct + ' / 等待 ' + nWait : '')
+    + (sp ? ' · ' + kmBytes(sp) + '/s' : '')
+    + '</span>';
 }
 
 /* 取磁力（服务端 24h 缓存）→ 本地工具 → 协议 → 云下载。

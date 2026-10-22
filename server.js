@@ -837,6 +837,122 @@ app.get('/api/admin/verify', (req, res) => {
   });
 });
 
+/* ── ★ v10.103 磁力下载（Komo-Magnet）预留接口 ──
+ * 三层分工：网页看/管 · 服务端存配置 · 本机工具真正下载。
+ *
+ * ★★ 为什么服务端**不代理** aria2 JSON-RPC：
+ *    管理页在线上打开时，服务端的 127.0.0.1 是容器自己，不是用户那台机器；
+ *    aria2 只跑在用户本机。⇒ 探活 / 加任务 / 看进度一律由**浏览器**直连
+ *    http://127.0.0.1:68xx/jsonrpc（v10.102 已实测 HTTPS 页面 fetch 到本机 → 200 / 6ms）。
+ *    把 RPC 搬到服务端只会得到「线上永远连不上」，且等于给公网开一个打本机端口的跳板。
+ *
+ * ★ 所以这两个端点只做服务端该做的事：**存配置** + **给契约元信息**。
+ *    工具端还没交付时它们照样 200（setup=null），管理页据此显示「未接入」而不是报错。
+ */
+const MAGNET_CFG_PATH = path.join(__dirname, 'data', 'magnet-config.json');
+const MAGNET_CFG_DEF = {
+  port: 6800,                 /* 首个端口；被占用时工具按 6801..6805 顺延（写进 port.txt） */
+  secret: 'komomagnet-local', /* 与工具端共用的 RPC token，页面上只读 */
+  dir: '',                    /* 空 = 用工具默认目录 %USERPROFILE%\Downloads\KomoMagnet */
+  maxConcurrent: 5,
+  maxSpeed: '',               /* 形如 '8M'；空串 = 不限速 */
+  seedTime: 0,                /* 分钟；0 = 下完不做种 */
+  autoLaunch: true,           /* 探不到工具时，网页是否允许用协议唤起它 */
+};
+const MAGNET_PORTS = [6800, 6801, 6802, 6803, 6804, 6805];
+
+function magnetConfig() {
+  let saved = {};
+  try {
+    const j = JSON.parse(fs.readFileSync(MAGNET_CFG_PATH, 'utf8'));
+    if (j && typeof j === 'object') saved = j;
+  } catch (e) { /* 文件不存在 / 坏 JSON ⇒ 全默认，不是错误 */ }
+  const out = {};
+  for (const k of Object.keys(MAGNET_CFG_DEF)) {
+    out[k] = Object.prototype.hasOwnProperty.call(saved, k) ? saved[k] : MAGNET_CFG_DEF[k];
+  }
+  return out;
+}
+
+/* 元信息 = 前端与工具端的**唯一契约来源**。
+ * ★ 工具端交付后只需要改这一处的 setup / version，管理页不用动。 */
+app.get('/api/admin/download/meta', (req, res) => {
+  if (!adminGuard(req, res)) return;
+  res.json({
+    ok: true,
+    tool: {
+      name: 'Komo-Magnet',
+      vendor: 'GameHub',
+      /* 交付后把 version 填上、setup 指向真实安装包即可点亮安装入口。
+         ★ 现在留 null 而不是指一个 404 路径：死链比「暂无」更糟（用户会反复点）。 */
+      version: null,
+      setup: null,
+      setupNote: '工具端开发中（Komo-Magnet）。装好并常驻后，本页会自动从「未接入」变成「已连接」。',
+    },
+    scheme: 'komomagnet://add?uri=',
+    legacyScheme: 'komoconvert://add?uri=',
+    ports: MAGNET_PORTS,
+    rpc: { path: '/jsonrpc', secretHint: 'token:<secret>', timeoutMs: 4000 },
+    config: magnetConfig(),
+    at: Date.now(),
+  });
+});
+
+app.get('/api/admin/download/config', (req, res) => {
+  if (!adminGuard(req, res)) return;
+  res.json({ ok: true, config: magnetConfig(), defaults: MAGNET_CFG_DEF });
+});
+
+/* 只白名单接受 5 个字段 + 逐项范围校验。
+ * ★ 不做「整体覆盖」：body 里没出现的字段保持原值，避免前端少传一个字段就把配置清空。 */
+app.post('/api/admin/download/config', (req, res) => {
+  if (!adminGuard(req, res)) return;
+  const b = (req.body && typeof req.body === 'object') ? req.body : {};
+  const cur = magnetConfig();
+  const next = Object.assign({}, cur);
+  const bad = (m) => res.status(400).json({ ok: false, error: m });
+
+  if (Object.prototype.hasOwnProperty.call(b, 'port')) {
+    const p = parseInt(b.port, 10);
+    if (!(p >= 1024 && p <= 65535)) return bad('port 需在 1024–65535 之间');
+    next.port = p;
+  }
+  if (Object.prototype.hasOwnProperty.call(b, 'maxConcurrent')) {
+    const n = parseInt(b.maxConcurrent, 10);
+    if (!(n >= 1 && n <= 16)) return bad('maxConcurrent 需在 1–16 之间');
+    next.maxConcurrent = n;
+  }
+  if (Object.prototype.hasOwnProperty.call(b, 'seedTime')) {
+    const n = parseInt(b.seedTime, 10);
+    if (!(n >= 0 && n <= 1440)) return bad('seedTime 需在 0–1440 分钟之间');
+    next.seedTime = n;
+  }
+  if (Object.prototype.hasOwnProperty.call(b, 'maxSpeed')) {
+    const s = String(b.maxSpeed == null ? '' : b.maxSpeed).trim();
+    if (s && !/^\d{1,6}[KMG]$/i.test(s)) return bad("maxSpeed 形如 8M / 512K，留空表示不限速");
+    next.maxSpeed = s.toUpperCase();
+  }
+  if (Object.prototype.hasOwnProperty.call(b, 'dir')) {
+    const s = String(b.dir == null ? '' : b.dir).trim();
+    if (s.length > 260 || /[\u0000-\u001f]/.test(s)) return bad('dir 不合法（≤260 字符，不含控制字符）');
+    next.dir = s;
+  }
+  if (Object.prototype.hasOwnProperty.call(b, 'autoLaunch')) next.autoLaunch = !!b.autoLaunch;
+
+  try {
+    fs.writeFileSync(MAGNET_CFG_PATH, JSON.stringify(next, null, 2) + '\n');
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: '写配置失败: ' + e.message });
+  }
+  /* 留痕：配置是**行为开关**（限速/并发/自动唤起），和豁免同档 */
+  appendAdminLog({
+    ts: Date.now(), id: '-', title: '磁力下载配置', op: 'magnet-config',
+    via: req._adminVia || 'unknown', user: req._adminUser || '',
+    patch: Object.keys(b).filter((k) => Object.prototype.hasOwnProperty.call(MAGNET_CFG_DEF, k)),
+  });
+  res.json({ ok: true, config: next, defaults: MAGNET_CFG_DEF });
+});
+
 /* ── ★ v10.92 GET /api/admin/env ──
  * 线上运行时**只读自检**：「这台机器能不能跑云下载引擎」不能靠猜。
  *

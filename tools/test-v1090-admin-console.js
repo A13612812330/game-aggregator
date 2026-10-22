@@ -121,8 +121,10 @@ ok(gamesDb.all().length > 19000, 'A28 端游库全量可用（覆盖分母）', 
 console.log('\n-- B. 前台三块 --');
 const NAV = ADMIN.slice(ADMIN.indexOf('<nav class="nav"'), ADMIN.indexOf('</nav>'));
 const navOrder = [...NAV.matchAll(/data-v="([^"]+)"/g)].map((m) => m[1]);
-ok(JSON.stringify(navOrder) === JSON.stringify(['dash', 'pages', 'games', 'm-base', 'm-mod', 'm-trainer', 'm-save', 'res', 'log', 'set']),
-  'B1 侧栏顺序：仪表盘 / 页面管理 / 游戏库 / 四模块 / 运维', navOrder.join(','));
+/* ★ v10.103：'dl'（磁力下载）插在 log 与 set 之间 —— 它是运维侧的本机工具，
+ *   排在「看数据」的 log 之后、「系统配置」的 set 之前。 */
+ok(JSON.stringify(navOrder) === JSON.stringify(['dash', 'pages', 'games', 'm-base', 'm-mod', 'm-trainer', 'm-save', 'res', 'log', 'dl', 'set']),
+  'B1 侧栏顺序：仪表盘 / 页面管理 / 游戏库 / 四模块 / 运维（含磁力下载）', navOrder.join(','));
 
 ok(/id="view-pages"/.test(ADMIN), 'B2 页面管理有独立 section');
 const pageThead = ADMIN.slice(ADMIN.indexOf('id="view-pages"'), ADMIN.indexOf('</thead>', ADMIN.indexOf('id="view-pages"')));

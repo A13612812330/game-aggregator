@@ -101,8 +101,11 @@ const VIEWS_BODY = ADMIN.slice(VIEWS_IDX, ADMIN.indexOf('};', VIEWS_IDX));
 ok(/id="view-resm"/.test(ADMIN), 'B5 四个模块共用一个 section（#view-resm）');
 /* 意图：不许为每个模块各复制一份 section。判据直接数「有没有 view-m-* 这种按模块复制的 section」 */
 ok(!/id="view-m-/.test(ADMIN), 'B6 没有按模块复制 section（view-m-* 应为 0 个）');
-ok((ADMIN.match(/class="view[^"]*"[^>]*id="view-/g) || []).length === 7,
-  'B6b section 恰好 7 个（dash/pages/games/resm/res/log/set）',
+/* ★ v10.103：8 个（新增 dl = 磁力下载）。
+ *   判据仍然守的是「section 数 = 视图数、没有按模块复制」，不是「7 这个数字」——
+ *   所以新增视图时要**同时**改这里和 test-v1090 的侧栏顺序，两处一致才算过。 */
+ok((ADMIN.match(/class="view[^"]*"[^>]*id="view-/g) || []).length === 8,
+  'B6b section 恰好 8 个（dash/pages/games/resm/res/log/dl/set）',
   String((ADMIN.match(/class="view[^"]*"[^>]*id="view-/g) || []).length));
 ok(/v\.indexOf\('m-'\) === 0 \? 'resm' : v/.test(ADMIN),
   'B7 路由把 m-* 映射到 view-resm（否则切过去是空白页）');

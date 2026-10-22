@@ -93,25 +93,28 @@ docs/versions/            每版一份变更日志 + 索引
 ## 测试
 
 ```bash
-node tools/run-all.js             # 静态防线（96 套）
-node tools/run-all.js --browser   # 追加浏览器实拍（一次只跑一个）
+node tools/run-all.js             # 静态防线（77 套）
+node tools/run-all.js --browser   # 追加浏览器实拍（14 套，一次只跑一个）
 node tools/report.js              # 收尾汇报：版本、md5、GitHub 同步状态
 ```
 
 判「线上是不是最新」一律比 md5，不看 HTTP 200。
-当前基线：**5,115 通过 / 4 已知失败**（游侠 stats 漂移 1 + 联网补型号 3）。
+当前基线：**5,230 通过 / 6 已知失败**（v1017 型号漂移 2 + v1018 联网 3 + 游侠 stats 1）。
+整跑偶发 `test-emulator-page` 2 条（依赖 8123 实例，单跑 100/100）。
 
 ## 文档
 
 | 文件 | 内容 |
 |---|---|
 | `docs/versions/` | 每版变更日志（唯一版本真源）+ 索引表 |
-| `PITFALLS.md` | 192 条踩坑铁律（静默失效、断言假绿、口径陷阱） |
+| `PITFALLS.md` | 198 条踩坑铁律（静默失效、断言假绿、口径陷阱） |
 | `ROADMAP.md` | 功能规划与取舍 |
 | `WORKFLOW.md` | 开发与发布流程、排他约定 |
 | `docs/archive/` | 过期交接文档（HANDOFF / CODEX-* / DESIGN），仅作历史留存 |
 
 ## 当前版本
+
+**v10.103**（2026-10-22）：管理台新增「磁力下载」模块（任务表 / 加任务 / 暂停继续删除 / 六项设置），服务端只补 `meta` 与 `config` 三条端点，**不代理 aria2** —— 数据面由浏览器直连本机 `127.0.0.1`。下载弹窗加了本机下载器状态条。工具端未交付时显示「未接入」，不给假数据也不给死链。契约见 [`docs/KOMO-MAGNET-API.md`](docs/KOMO-MAGNET-API.md)。
 
 **v10.102**（2026-10-22）：磁力点击先探本机 Komo-Magnet 的 aria2 RPC（并发探 6 个回环端口），探到即入队并显示进度，探不到才走协议唤起、再落云下载——不再靠「2.2 秒失焦」猜装没装。工具端由独立项目提供。
 
