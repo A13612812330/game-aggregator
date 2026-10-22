@@ -1876,6 +1876,18 @@
   .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(16px);z-index:150;background:#111827;color:#fff;font-size:13px;padding:10px 18px;border-radius:12px;box-shadow:0 12px 34px rgba(0,0,0,.3);opacity:0;transition:.25s;pointer-events:none}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .toast.warn{border:1px solid rgba(251,191,36,.5)}
+  /* ★ v10.102 Komo-Magnet 下载进度浮层（右下角，压 145 —— 低于 toast 150、
+     高于抽屉 110/搜索 130；它只是旁证信息，不能被 toast 盖住后还挡住点击）。 */
+  .km-dock{position:fixed;right:18px;bottom:18px;z-index:145;width:268px;background:#111827;color:#fff;
+    border-radius:12px;padding:12px 14px 11px;box-shadow:0 12px 34px rgba(0,0,0,.3);font-size:12px;
+    opacity:0;transform:translateY(10px);transition:.25s;pointer-events:none}
+  .km-dock.show{opacity:1;transform:translateY(0)}
+  .km-dock-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .km-dock-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+  .km-dock-p{flex:none;color:#9ca3af;font-variant-numeric:tabular-nums}
+  .km-dock-bar{height:4px;border-radius:2px;background:rgba(255,255,255,.16);overflow:hidden}
+  .km-dock-bar i{display:block;height:100%;width:0;background:#34d399;transition:width .4s}
+  .km-dock-s{margin-top:6px;color:#9ca3af;font-variant-numeric:tabular-nums}
 
   /* ============ 同名跨源互链（另一源也有收录） ============ */
   .x-src{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
@@ -6533,11 +6545,261 @@ function dlUniPaintFg(fg) {
 /* ★ v10.93：「磁力链」按钮从「只复制到剪贴板」改成「打开云下载弹窗」。
  *   用户口径是「只操作线上网页、不装本地工具」—— 复制磁力等于把最后一步又推回给用户
  *   （还得自己找客户端）。复制能力保留，但降级成弹窗里的一个次按钮。
- *   事件仍写在 document 上（委托）：段是动态追加的，段内绑定换游戏重绘会重复绑。 */
-document.addEventListener('click', (e) => {
+ *   事件仍写在 document 上（委托）：段是动态追加的，段内绑定换游戏重绘会重复绑。
+ *
+ * ★★ v10.101 口径更新（用户改主意，v10.93 那段「不装本地工具」的前提作废）：
+ *   「点击后磁力下载判断是否有安装我的那个磁力下载工具；没有则拉起下载，有则用我的工具下」。
+ *   ⇒ 点磁力先试 Komo Convert（本机工具），成功就不再开云下载弹窗；失败原路落回。
+ *
+ * 【为什么网页「判断不了」，只能「试」】浏览器没有任何 API 能读「某协议注册了没有」，
+ *   也读不到注册表/已安装程序列表。所以只能：先尝试唤起 → 用「页面失焦」反推成功。
+ *   页面失焦 = 有外部程序抢了前台，这是唯一的间接信号，**会误判**（用户手动切窗口也算）。
+ *   这不是本项目偷懒：Steam / Discord 那一整套 xxx:// 深链都是这么干的。
+ *   误判方向是安全的 —— 判成「成功」时磁力还在剪贴板里，用户不会卡死。
+ *
+ * 【为什么失败要落回云下载弹窗，而不是弹一张「没装」卡片】云下载是**已经能用**的功能，
+ *   不该因为多了一条新路径就把它降级成提示页。装了工具的人省一步，没装的人拿到的
+ *   还是原来那个能用的东西 —— 两条路都通，不是二选一。
+ *
+ * 【为什么 2.2 秒】工具是 .NET 单文件，首次启动要解压，实测出窗口 1–3 秒。
+ *   1.8 秒会把真装了的人误判成没装。代价是桌面用户每次多等 2.2 秒，
+ *   所以用 KC_DESKTOP 把移动端整个跳过（手机上永远没有这个 exe，白等）。
+ */
+const KC_SCHEME = 'komoconvert://add?uri=';
+/* ★ 安装包放本站而不是 GitHub Release：Komo-Convert 仓库是**私有**的，
+   私有仓库的 Release 资产对未登录访客一律 404 —— 那样这个入口对别人就是死链。
+   放同域静态目录，链接对所有人有效，也不用把源码公开。 */
+const KC_SETUP = '/dl/KomoConvert-Setup-lite-0.12.zip';
+const KC_WAIT_MS = 2200;
+const KC_DESKTOP = (function () {
+  try { return matchMedia('(hover: hover) and (pointer: fine)').matches; } catch (e) { return false; }
+})();
+
+/* 唤起并等一次失焦。返回 true = 大概率已被外部程序接管。 */
+function kcLaunch(magnet) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (ok) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      window.removeEventListener('blur', onBlur);
+      document.removeEventListener('visibilitychange', onVis);
+      resolve(ok);
+    };
+    const onBlur = () => finish(true);
+    const onVis = () => { if (document.hidden) finish(true); };
+    window.addEventListener('blur', onBlur);
+    document.addEventListener('visibilitychange', onVis);
+    const timer = setTimeout(() => finish(false), KC_WAIT_MS);
+    /* ⚠️ 用 iframe 而不是 location.href：协议没注册时 href 会在浏览器里留下一条
+       「无法打开」的跳转失败，而 iframe 只是静默加载失败，页面一动不动。 */
+    const fr = document.createElement('iframe');
+    fr.style.display = 'none';
+    fr.setAttribute('aria-hidden', 'true');
+    fr.src = KC_SCHEME + encodeURIComponent(magnet);
+    document.body.appendChild(fr);
+    setTimeout(() => { try { fr.remove(); } catch (e) {} }, 2000);
+  });
+}
+
+/* ★★ v10.102 Komo-Magnet 本地下载器（GameHub 专用磁力工具）
+ *
+ * 【为什么改掉 v10.101 那套「唤起 + 2.2 秒失焦猜」】浏览器没有任何 API 能读
+ *   「某个协议注册了没有」，所以 v10.101 只能试一次然后用「页面失焦」反推，
+ *   用户恰好切了窗口就会误判成「已唤起」，然后既不下载也不弹云下载 —— 点了个寂寞。
+ *
+ * Komo-Magnet 常驻一个**只监听回环**的 aria2 JSON-RPC，网页探一次就知道装没装：
+ *   探得到 = 装了（6ms 量级），探不到 = 没装（350ms 封顶），不存在猜测。
+ *   顺带能拿进度：tellStatus 轮询，右下角浮层显示百分比与速度。
+ *
+ * 【探测为什么要并发】串行 6 个端口 × 350ms = 2.1 秒，比旧方案还慢；
+ *   Promise.all 并行后总耗时就是单次超时。全不通才走协议兜底。
+ * 【为什么失败结果要缓存 30 秒】没装工具的人每次点磁力都要付一次探测成本，
+ *   缓存一下让连续点击不再重复 350ms。
+ * 【安全】只打 127.0.0.1，不碰局域网；secret 固定是因为工具只监听回环，
+ *   同等风险面下再随机化只会让网页拿不到它。
+ */
+const KM_SECRET = 'komomagnet-local';
+const KM_PORTS = [6800, 6801, 6802, 6803, 6804, 6805];
+const KM_PROBE_MS = 350;
+const KM_CALL_MS = 4000;
+const KM_MISS_TTL = 30000;
+let kmPort = 0;
+let kmMissAt = 0;
+let kmBusy = false;
+
+function kmRpc(port, method, params, ms) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; clearTimeout(timer); resolve(v); } };
+    const ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+    const timer = setTimeout(() => {
+      if (ctrl) { try { ctrl.abort(); } catch (e) {} }
+      finish(null);
+    }, ms || KM_CALL_MS);
+    fetch('http://127.0.0.1:' + port + '/jsonrpc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: 'km', method,
+        params: ['token:' + KM_SECRET].concat(params || []),
+      }),
+      signal: ctrl ? ctrl.signal : undefined,
+    }).then((r) => r.json())
+      .then((j) => finish(j && j.result !== undefined ? j.result : null))
+      .catch(() => finish(null));
+  });
+}
+
+/* 并发探 6 个端口；命中即缓存。force=true 用于「协议刚唤起过，工具可能刚起来」。 */
+async function kmProbe(force) {
+  if (kmPort && !force) return kmPort;
+  if (!force && Date.now() - kmMissAt < KM_MISS_TTL) return 0;
+  const hits = await Promise.all(KM_PORTS.map((p) =>
+    kmRpc(p, 'aria2.getVersion', [], KM_PROBE_MS).then((r) => (r && r.version ? p : 0))));
+  kmPort = hits.filter(Boolean)[0] || 0;
+  if (!kmPort) kmMissAt = Date.now();
+  return kmPort;
+}
+
+/* 入队。返回 {port,gid} 或 null。端口被工具重启换掉时强制重探一次再试。 */
+async function kmAdd(magnet) {
+  let p = await kmProbe(false);
+  if (!p) return null;
+  let gid = await kmRpc(p, 'aria2.addUri', [[magnet]]);
+  if (typeof gid === 'string' && gid) return { port: p, gid };
+  p = await kmProbe(true);
+  if (!p) return null;
+  gid = await kmRpc(p, 'aria2.addUri', [[magnet]]);
+  return (typeof gid === 'string' && gid) ? { port: p, gid } : null;
+}
+
+const KM_DOCK = { el: null, timer: 0 };
+
+function kmBytes(n) {
+  const v = Number(n) || 0;
+  if (v >= 1073741824) return (v / 1073741824).toFixed(2) + ' GB';
+  if (v >= 1048576) return (v / 1048576).toFixed(1) + ' MB';
+  if (v >= 1024) return Math.round(v / 1024) + ' KB';
+  return Math.round(v) + ' B';
+}
+
+function kmDockEl() {
+  if (KM_DOCK.el && KM_DOCK.el.isConnected) return KM_DOCK.el;
+  const d = document.createElement('div');
+  d.id = 'kmDock';
+  d.className = 'km-dock';
+  d.innerHTML = '<div class="km-dock-h"><span class="km-dock-t"></span><span class="km-dock-p"></span></div>'
+    + '<div class="km-dock-bar"><i></i></div><div class="km-dock-s"></div>';
+  document.body.appendChild(d);
+  KM_DOCK.el = d;
+  return d;
+}
+
+function kmDockShow(title, text) {
+  const d = kmDockEl();
+  if (title) d.querySelector('.km-dock-t').textContent = title;
+  if (text !== undefined) d.querySelector('.km-dock-s').textContent = text;
+  d.classList.add('show');
+  return d;
+}
+
+function kmDockPaint(s) {
+  const d = kmDockEl();
+  const total = Number(s.totalLength) || 0;
+  const done = Number(s.completedLength) || 0;
+  const pct = total ? Math.min(100, (done / total) * 100) : 0;
+  d.querySelector('.km-dock-bar i').style.width = pct.toFixed(1) + '%';
+  d.querySelector('.km-dock-p').textContent = pct.toFixed(1) + '%';
+  const sp = Number(s.downloadSpeed) || 0;
+  d.querySelector('.km-dock-s').textContent =
+    (s.status === 'active' ? '下载中 · ' + kmBytes(sp) + '/s · ' : '') + kmBytes(done) + ' / ' + kmBytes(total);
+  d.classList.add('show');
+  return pct;
+}
+
+function kmDockHideLater(ms) {
+  setTimeout(() => { if (KM_DOCK.el) KM_DOCK.el.classList.remove('show'); }, ms || 6000);
+}
+
+/* 轮询进度：完成/失败/被移除就停；每 1 秒一次，不常驻空转。 */
+function kmTrack(port, gid, title) {
+  clearTimeout(KM_DOCK.timer);
+  kmDockShow(title || '磁力任务', '已入队，等待开始…');
+  const tick = async () => {
+    const s = await kmRpc(port, 'aria2.tellStatus',
+      [gid, ['status', 'totalLength', 'completedLength', 'downloadSpeed', 'errorMessage']], 2500);
+    if (!s) { kmDockShow(title, '与工具的连接已断开'); kmDockHideLater(5000); return; }
+    const st = s.status || '';
+    if (st === 'complete') {
+      kmDockPaint(s);
+      kmDockShow(title, '下载完成 · ' + kmBytes(s.totalLength));
+      kmDockHideLater(6000);
+      return;
+    }
+    if (st === 'error' || st === 'removed') {
+      kmDockShow(title, st === 'error' ? ('失败：' + (s.errorMessage || '未知错误')) : '任务已移除');
+      kmDockHideLater(6000);
+      return;
+    }
+    kmDockPaint(s);
+    KM_DOCK.timer = setTimeout(tick, 1000);
+  };
+  KM_DOCK.timer = setTimeout(tick, 700);
+}
+
+/* 取磁力（服务端 24h 缓存）→ 本地工具 → 协议 → 云下载。
+ * 返回 true = 已交给本机工具，不弹云下载；false = 让调用方继续走云下载。 */
+async function kcTryHandoff(slug, title) {
+  if (!KC_DESKTOP || !slug) return false;
+  if (kmBusy) return true;
+  kmBusy = true;
+  try {
+    let magnet = '';
+    toast('正在获取磁力…');
+    try {
+      const mj = await fetch(api('/api/fitgirl/magnet?slug=' + encodeURIComponent(slug))).then((r) => r.json());
+      magnet = (mj && mj.ok && (mj.magnets || [])[0]) || '';
+    } catch (e) {
+      return false;
+    }
+    if (!magnet) return false;
+
+    /* ① 直连 RPC：探到端口就入队（快、有进度） */
+    const added = await kmAdd(magnet);
+    if (added) {
+      toast('已加入 Komo-Magnet 下载队列');
+      kmTrack(added.port, added.gid, title || '');
+      return true;
+    }
+
+    /* ② 协议唤起：工具在但没常驻，或老版本只认协议 */
+    toast('正在唤起 Komo-Magnet…');
+    const fired = kcLaunch(magnet);
+    const p = await kmProbe(true);
+    if (p) {
+      const again = await kmAdd(magnet);
+      if (again) {
+        toast('已加入 Komo-Magnet 下载队列');
+        kmTrack(again.port, again.gid, title || '');
+        return true;
+      }
+    }
+    const ok = await fired;
+    if (ok) toast('已交给 Komo-Magnet，请在工具里确认后下载');
+    return ok;
+  } finally {
+    kmBusy = false;
+  }
+}
+
+document.addEventListener('click', async (e) => {
   const a = e.target.closest && e.target.closest('[data-fg-magnet]');
   if (!a) return;
   e.preventDefault();
+  /* ★ v10.101 起：先试本机工具，成功就到此为止 —— 两条路不能同时走（会开完工具又弹云下载） */
+  if (await kcTryHandoff(a.dataset.fgMagnet, a.dataset.fgTitle || '')) return;
   fgcOpen(a.dataset.fgMagnet, a.dataset.fgTitle || '');
 });
 
@@ -6732,7 +6994,15 @@ function fgcBodyHtml(s) {
   if (s.state === 'loading' || s.state === 'starting') {
     return H('<span class="fgc-spin"></span> ' +
       (s.state === 'loading' ? '正在解析种子元数据…' : '正在提交下载任务…') +
-      '<br>' + (s.state === 'loading' ? '只拉种子文件、不下载正文，通常 4–10 秒' : '服务器正在建立 BT 连接'));
+      '<br>' + (s.state === 'loading' ? '只拉种子文件、不下载正文，通常 4–10 秒' : '服务器正在建立 BT 连接'))
+      /* ★ v10.101：本机工具没被唤起时落到了这里 —— 顺手给出安装入口。
+         放在加载态而不是常驻：这 4–10 秒本来就是等待，不额外占版面；
+         加载完就消失，不会长期挤压结果区。 */
+      + (s.state === 'loading' && KC_DESKTOP
+        ? '<div class="fgc-hint" style="margin-top:8px">装了 <a href="' + KC_SETUP +
+          '" download style="color:var(--c-primary)">Komo Convert</a>'
+          + ' 的话，点磁力会直接交给它，不用等服务器代下。</div>'
+        : '');
   }
 
   if (s.state === 'error' || s.state === 'too-large') {

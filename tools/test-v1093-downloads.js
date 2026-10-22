@@ -197,14 +197,20 @@ try {
   const escSrc = (HTML.match(/const esc = \(s\) => [^\n]+/) || [''])[0];
   const labelSrc = (HTML.match(/const FGC_LABEL = \{[\s\S]*?\};/) || [''])[0];
   const apiSrc = "const api = (u) => u;";
+  /* ★ v10.101：fgcBodyHtml 的 loading 分支会引用这两个常量（本机工具安装入口）。
+     纯函数注入的代价就是**每个新依赖都得显式列出** —— 漏一个就是 ReferenceError，
+     而 ReferenceError 会让整个 D13–D20 段落静默不执行（假绿风险比红更麻烦）。 */
+  const kcSrc = "const KC_DESKTOP = true;"
+    + " const KC_SETUP = '/dl/KomoConvert-Setup-lite-0.12.zip';";
   // eslint-disable-next-line no-new-func
-  V = new Function(escSrc + '\n' + labelSrc + '\n' + apiSrc + '\n' + fgcFmt + '\n' + fgcBody + '\n' + fgcFoot +
+  V = new Function(escSrc + '\n' + labelSrc + '\n' + apiSrc + '\n' + kcSrc + '\n' + fgcFmt + '\n' + fgcBody + '\n' + fgcFoot +
     '\nreturn { body: fgcBodyHtml, foot: fgcFootHtml };')();
 } catch (e) { V = null; }
 ok(!!V, 'D12 纯函数可注入执行');
 if (V) {
   const loading = V.body({ state: 'loading' });
   ok(/解析种子元数据/.test(loading) && /fgc-spin/.test(loading), 'D13 loading 文案 + 转圈');
+  ok(/KomoConvert-Setup/.test(loading), 'D13b ★ v10.101 加载态给出本机工具安装包入口');
 
   const tooBig = V.body({ state: 'too-large', err: '任务体积 86.1 GB，超过本站单任务上限 30.0 GB' });
   ok(/86\.1 GB/.test(tooBig) && /复制磁力/.test(tooBig), 'D14 超限要说清体积并给出替代方案');
