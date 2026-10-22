@@ -69,7 +69,13 @@ ok(/retry = 1 \}/.test(SIGNED) && /for \(let attempt = 0; attempt <= retry; atte
   'C1 signedPost 失败重试一次（且只一次）');
 ok(/if \(force\) envCache\.delete\(envP\)/.test(SIGNED),
   'C2 ★ 重试前必须扔掉带病的 env —— 405 的根因就是 env 坏了，不换 env 重试等于重放同一个错');
-ok(/await sleep\(250\)/.test(SIGNED), 'C3 重试之间有退避（不是立刻打第二次）');
+/* ★ v10.104：退避从 250ms 提到 600ms（实测 250ms 仍落在同一个 SSR 降级窗口里）。
+   断言不再写死数字 —— 写死毫秒数会在下次调参时误红，而它真正要守的是
+   「**有一个够长的退避**」，所以按「≥400ms」判。 */
+const retryGap = (SIGNED.match(/if \(attempt < retry\) await sleep\((\d+)\)/) || [])[1];
+ok(retryGap && Number(retryGap) >= 400,
+  'C3 重试之间有退避且 ≥400ms（不是立刻打第二次，也不是短到还在同一个降级窗口里）',
+  retryGap ? retryGap + 'ms' : '没找到 sleep');
 ok(/const env = await getEnv\(envP, \{ host, force \}\)/.test(SIGNED),
   'C4 getEnv 也走 try（取 env 那一步才是最常见的失败点）');
 ok(/retried\.push\(i\)/.test(POSTS) && /setTimeout\(r, 400\)/.test(POSTS),

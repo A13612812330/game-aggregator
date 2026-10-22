@@ -79,6 +79,7 @@
     --ch-pikpak:#3D5AFE;
     --ch-ed2k:#5E6B7F;      /* eD2K 电驴链（游侠存档的备用通道） */
     --ch-file:#0F766E;      /* 直链附件（FR 的 .CT / 压缩包） */
+    --ch-magnet:#7C3AED;    /* ★ v10.104 磁力链（机地「搬运」系帖只发这个） */
     --ch-other:#9AA3B5;
     /* ★ v10.48：修改器「第三方来源」的跳转通道（不是下载链 —— 点过去是来源站）。
        实测这些来源站共 3,451 条，主机有十几个（thecheatscript / flingtrainer /
@@ -2517,6 +2518,12 @@
   .dl-it .bd-steam,.dl-it .lk.bd-steam{background:var(--ch-steam)}
   .dl-it .bd-pikpak,.dl-it .lk.bd-pikpak{background:var(--ch-pikpak)}
   .dl-it .bd-other,.dl-it .lk.bd-other{background:var(--ch-other)}
+  /* ★ v10.104：磁力按钮是 <button>（不是导航链接）—— 点它要先探本机下载器，
+     探不到就复制磁力，全程不该让浏览器去「打开外部程序」。所以必须把按钮的
+     默认外观（边框 / 背景 / 字体 / 内边距）全部重置成与 .lk 一致。 */
+  .dl-it .lk.bd-magnet{background:var(--ch-magnet);border:0;font-family:inherit;
+    line-height:inherit;cursor:pointer;display:inline-block}
+  .dl-it .lk.bd-magnet.busy{opacity:.6;pointer-events:none}
   .dl-it .tx{flex:1;min-width:0}
   /* ★ 标题最多 2 行、不再一刀切断；完整文本仍在 title 属性里（悬停可读全文） */
   .dl-it .tx b{display:-webkit-box;font-size:12.5px;font-weight:750;line-height:1.45;color:var(--c-t1);
@@ -7762,8 +7769,10 @@ async function kmBarSync() {
   const p = await kmProbe(false);
   if (!p) {
     el.className = 'kmbar off';
+    /* ★ v10.104：文案改了 —— 以前写「磁力仍可直接云下载」，但**云下载是 FitGirl 那条线**，
+       机地帖的磁力没有云下载兜底，点了只会复制。写错会让人点完以为坏了。 */
     el.innerHTML = '<span class="kb-dot"></span><span class="kb-tx">未检测到 <b>' + KM_NAME
-      + '</b> · 磁力仍可直接云下载，不装也能用</span>'
+      + '</b> · 点「磁力」会复制链接，用迅雷 / 比特彗星打开</span>'
       + (KM_SETUP ? '<a class="kb-act" href="' + KM_SETUP + '" download>获取下载器</a>' : '');
     return;
   }
@@ -7779,23 +7788,16 @@ async function kmBarSync() {
     + '</span>';
 }
 
-/* 取磁力（服务端 24h 缓存）→ 本地工具 → 协议 → 云下载。
- * 返回 true = 已交给本机工具，不弹云下载；false = 让调用方继续走云下载。 */
-async function kcTryHandoff(slug, title) {
-  if (!KC_DESKTOP || !slug) return false;
+/* ★★ v10.104：**拿到磁力串之后**的交接动作 —— FitGirl 与机地帖共用这一条。
+ *   拆出来的原因很实际：机地帖的磁力是直接从正文解析出来的（链接本身就是 magnet:），
+ *   没有 slug 可查；而 FitGirl 那边要先拿 slug 去 `/api/fitgirl/magnet` 换磁力。
+ *   两者在「磁力到手之后」要做的事完全一样（探活 → 入队 → 失败唤起 → 再探）。
+ *   同一条链路写两份，迟早会出现「一边修好了另一边还是旧的」。 */
+async function kmHandoff(magnet, title) {
+  if (!KC_DESKTOP || !magnet) return false;
   if (kmBusy) return true;
   kmBusy = true;
   try {
-    let magnet = '';
-    toast('正在获取磁力…');
-    try {
-      const mj = await fetch(api('/api/fitgirl/magnet?slug=' + encodeURIComponent(slug))).then((r) => r.json());
-      magnet = (mj && mj.ok && (mj.magnets || [])[0]) || '';
-    } catch (e) {
-      return false;
-    }
-    if (!magnet) return false;
-
     /* ① 直连 RPC：探到端口就入队（快、有进度） */
     const added = await kmAdd(magnet);
     if (added) {
@@ -7823,6 +7825,44 @@ async function kcTryHandoff(slug, title) {
     kmBusy = false;
   }
 }
+
+/* 取磁力（服务端 24h 缓存）→ 本地工具 → 协议 → 云下载。
+ * 返回 true = 已交给本机工具，不弹云下载；false = 让调用方继续走云下载。 */
+async function kcTryHandoff(slug, title) {
+  if (!KC_DESKTOP || !slug) return false;
+  let magnet = '';
+  toast('正在获取磁力…');
+  try {
+    const mj = await fetch(api('/api/fitgirl/magnet?slug=' + encodeURIComponent(slug))).then((r) => r.json());
+    magnet = (mj && mj.ok && (mj.magnets || [])[0]) || '';
+  } catch (e) {
+    return false;
+  }
+  if (!magnet) return false;
+  return kmHandoff(magnet, title);
+}
+
+/* ★ v10.104 机地帖里的「磁力」按钮 —— 点它不该是导航，而是一次交接尝试：
+ *   装了工具 ⇒ 入队并显示进度；没装 / 移动端 / 唤起被浏览器拦 ⇒ **复制到剪贴板**。
+ *   为什么兜底选复制而不是「直接 location.href=magnet:」：后者会跳出当前页，
+ *   且浏览器要弹一次「要打开 xx 吗」，用户点取消就什么也没发生 —— 那是 v10.101
+ *   踩过的「点了个寂寞」。复制是唯一确定能成功的动作，用户拿去迅雷/比特彗星都能用。 */
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest && e.target.closest('[data-km-magnet]');
+  if (!b) return;
+  e.preventDefault();
+  const magnet = b.getAttribute('data-km-magnet') || '';
+  if (!magnet) return;
+  b.classList.add('busy');
+  try {
+    if (await kmHandoff(magnet, b.dataset.kmTitle || '')) return;
+    const ok = await copyText(magnet);
+    if (!ok) { toast('复制失败，请手动选中磁力链接'); return; }
+    toast(KC_DESKTOP ? '磁力已复制 · 可用迅雷 / 比特彗星打开' : '磁力已复制 · 请在电脑上打开下载');
+  } finally {
+    b.classList.remove('busy');
+  }
+});
 
 document.addEventListener('click', async (e) => {
   const a = e.target.closest && e.target.closest('[data-fg-magnet]');
@@ -8976,6 +9016,9 @@ async function init() {
  *   用 allSettled 语义（.catch 成 {ok:false}），一个挂掉另一个照常显示。
  */
 const DL_BRAND = [
+  /* ★ v10.104：磁力必须排最前 —— 源站 XD 的盘口名就叫「磁力下载」，
+     若排在 /迅雷/ 之后，某些串（如「迅雷磁力」）会被先判成迅雷 */
+  [/磁力|magnet/i, 'magnet', '磁'],
   [/百度/, 'baidu', '度'], [/天翼|189/, '189', '翼'], [/迅雷/, 'xunlei', '雷'],
   [/夸克|quark/i, 'quark', '夸'], [/移动|139/, '139', '移'], [/阿里|ali/i, 'ali', '阿'],
   [/123/, '123', '12'], [/蓝奏|lanzou/i, 'lanzou', '蓝'], [/pikpak/i, 'pikpak', 'P'],
@@ -8989,7 +9032,8 @@ function dlBrand(s) {
 /** 盘口筛选用的中文名（键与 dlBrand 的 cls 一一对应，别各写一套） */
 const DL_BRAND_NAME = {
   baidu: '百度', xunlei: '迅雷', quark: '夸克', '189': '天翼', '139': '移动', ali: '阿里',
-  '123': '123', lanzou: '蓝奏', pikpak: 'PikPak', steam: 'Steam', other: '其他',
+  '123': '123', lanzou: '蓝奏', pikpak: 'PikPak', steam: 'Steam',
+  magnet: '磁力', other: '其他',
 };
 /* ★ v10.59 曾想在这里加一张「盘口全名」表给 XD 行标题用，**实测后删掉了**：
    `items[].server` 本身就是全名（xdgame 实测 10 条：百度网盘 / 天翼网盘 / 迅雷网盘 /
@@ -9114,13 +9158,22 @@ function dlRow(g) {
 
   const links = g.links.map((l) => {
     const b = dlBrand(l.server);
+    const name = DL_BRAND_NAME[b.cls] || l.server || '网盘';
     const code = l.pwd ? String(l.pwd).replace(/^访问码[：:]\s*/, '') : '';
+    /* ★★ v10.104 磁力：**不导航、不开新标签** —— 浏览器拿到 magnet: 只会问「要不要打开
+       xx」，多数人点「取消」就什么也没发生。所以交给 kmHandoff（本机 Komo-Magnet），
+       装了就入队并显示进度，没装就复制到剪贴板。用 <button> 是因为它确实不是「一个页面」。 */
+    if (l.real && /^magnet:/i.test(String(l.real))) {
+      return '<button type="button" class="lk bd-magnet" data-km-magnet="' + esc(l.real) + '"'
+        + ' data-km-title="' + esc(g.title || '') + '"'
+        + ' title="磁力链接 · 点击交给 Komo-Magnet 下载（未安装则复制）">' + esc(name) + '</button>';
+    }
     const tip = (l.server || '网盘') + (code ? ' · 提取码 ' + code : '') + ' · 打开';
     return l.real
       ? '<a class="lk bd-' + b.cls + '" href="' + esc(l.real) + '" target="_blank" rel="noopener" title="' + esc(tip) + '">' +
-        esc(DL_BRAND_NAME[b.cls] || l.server || '网盘') + '</a>'
+        esc(name) + '</a>'
       : '<span class="lk bd-other" title="' + esc((l.server || '网盘') + ' · 这条没解析出地址') + '">' +
-        esc(DL_BRAND_NAME[b.cls] || l.server || '网盘') + '</span>';
+        esc(name) + '</span>';
   }).join('');
   const first = g.links.find((l) => l.real);
   const copy = first
@@ -9314,7 +9367,13 @@ function paintDownload() {
 
   const panel = dlBlock({
     key: cur.key, name: cur.name, items, rows, all: !!st.all,
-    countLabel: (cur.count || cur.items.length) + ' 帖',
+    /* ★ v10.104：本体里「只有磁力的帖」以前根本不出现在清单上；现在它们进来了，
+       但排在热门顺序的后面、常常落在「前 12 帖」之外 —— 不写出来用户会以为还是没有。
+       数的是**帖**（一行就是一帖），与 countLabel 的口径一致。 */
+    countLabel: (cur.count || cur.items.length) + ' 帖'
+      + (cur.items.some((x) => /^magnet:/i.test(String(x.real || '')))
+        ? ' · 含 ' + cur.items.filter((x) => /^magnet:/i.test(String(x.real || ''))).length + ' 条磁力'
+        : ''),
     metaLabel: cur.items.length + ' 个地址' + (cur.merged ? '（含最近发布）' : ''),
     /* XD 条目不是机地话题，没有「源站专区」可跳 —— 给一个会 404 的出口不如不给 */
     url: cur.key === 'xd' ? '' : v.topicUrl,
@@ -9341,11 +9400,15 @@ function paintDownload() {
     : '';
   const srcTxt = '来自 <b>' + nJi + '</b> 个机地资源帖'
     + (nXd ? ' + <b>' + nXd + '</b> 个 XDGAME 官方盘口' : '');
-  const note = '<div class="dl-note">共 <b>' + v.items.length + '</b> 个可直接打开的网盘地址（' + srcTxt + '）' +
+  /* ★ v10.104：口径从「网盘地址」改成「下载地址」—— 现在磁力也算一条可用地址，
+     继续写「网盘」会让「84 个网盘地址」与实际可见的盘口数对不上。 */
+  const magAll = v.items.filter((x) => /^magnet:/i.test(String(x.real || ''))).length;
+  const note = '<div class="dl-note">共 <b>' + v.items.length + '</b> 个可直接打开的下载地址'
+    + (magAll ? '（含 <b>' + magAll + '</b> 条磁力）' : '') + '（' + srcTxt + '）' +
     (v.filt ? '，筛选 <b>' + esc(DL_BRAND_NAME[v.filt] || v.filt) + '</b> 后本分区剩 <b>' + usable + '</b> 帖' : '') +
     ' · 链接均为源站实时解析</div>';
   body.innerHTML = dlBarHtml() + note + jiWarn +
-    (usable ? panel : '<div class="dlpop-empty">本分区在当前筛选下没有可用的网盘地址<br>' +
+    (usable ? panel : '<div class="dlpop-empty">本分区在当前筛选下没有可用的下载地址<br>' +
       '<span style="font-size:11.5px">点上面的「全部」看所有盘口，或换个分区</span></div>');
   body.scrollTop = keep;
 }
@@ -9399,26 +9462,36 @@ function dlRetryHtml() {
     '<button type="button" class="dl-retry-b" data-dl-retry="body">↻ 重新抓取机地链接</button>' +
     '<span>机地偶尔会拒一次请求（源站限流），重试通常立刻就好</span></div>';
 }
-function dlCopy(el) {
-  const txt = el.dataset.dlCopy || '';
-  const back = el.textContent;
-  const done = () => {
-    el.textContent = '已复制 ✓';
-    el.classList.add('done');
-    setTimeout(() => { el.textContent = back; el.classList.remove('done'); }, 1400);
-  };
+/* ★ v10.104：剪贴板只留这一份实现（原先内联在 dlCopy 里，磁力按钮也要用）。
+ *   `navigator.clipboard` 在非 HTTPS / 无用户手势时会 reject，所以必须留 execCommand 兜底。 */
+function copyText(txt) {
+  const t = String(txt == null ? '' : txt);
+  if (!t) return Promise.resolve(false);
   const fallback = () => {
     try {
       const ta = document.createElement('textarea');
-      ta.value = txt;
+      ta.value = t;
       ta.style.cssText = 'position:fixed;left:-9999px;top:0';
       document.body.appendChild(ta); ta.select();
       document.execCommand('copy');
-      document.body.removeChild(ta); done();
-    } catch (e) { toast('复制失败，请手动选中链接'); }
+      document.body.removeChild(ta);
+      return true;
+    } catch (e) { return false; }
   };
-  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, fallback);
-  else fallback();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(t).then(() => true, () => fallback());
+  }
+  return Promise.resolve(fallback());
+}
+function dlCopy(el) {
+  const txt = el.dataset.dlCopy || '';
+  const back = el.textContent;
+  copyText(txt).then((ok) => {
+    if (!ok) { toast('复制失败，请手动选中链接'); return; }
+    el.textContent = '已复制 ✓';
+    el.classList.add('done');
+    setTimeout(() => { el.textContent = back; el.classList.remove('done'); }, 1400);
+  });
 }
 function closeDownload() {
   const pop = $('#dlPop');

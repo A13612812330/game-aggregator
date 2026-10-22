@@ -132,9 +132,17 @@ function fin() {
     mSetup ? JSON.stringify(mSetup[1]) : '缺常量');
   ok('C7 安装链接由 KM_SETUP 条件渲染（空 ⇒ 不渲染，避免死链）',
     /\(KM_SETUP \? '<a class="kb-act" href="' \+ KM_SETUP/.test(INDEX));
-  /* ★ 换行容错：源码是跨行拼接的，写死一行里的空格数会在下一次排版调整后误红 */
-  ok('C8 未检测到时明确告知「不装也能用」',
-    /未检测到 <b>'[\s\S]{0,24}KM_NAME[\s\S]{0,24}磁力仍可直接云下载/.test(INDEX));
+  /* ★ 换行容错：源码是跨行拼接的，写死一行里的空格数会在下一次排版调整后误红。
+     ★ v10.104 改口径：原句「磁力仍可直接云下载，不装也能用」是**错的** ——
+       云下载只服务 FitGirl 那条线，机地帖的磁力没有云下载兜底（点了只会复制）。
+       断言跟着改成「点磁力会复制」，并要求**反向**不再出现「云下载」字样。 */
+  ok('C8 未检测到时明确告知「点磁力会复制」，不再谎称磁力可云下载',
+    /未检测到 <b>'[\s\S]{0,24}KM_NAME[\s\S]{0,40}点「磁力」会复制链接/.test(INDEX));
+  /* ★ 负向断言必须**剥注释再判**（铁律：「注释会咬负向断言」）。
+     源码里留着那句「以前写 XXX…」的说明性注释，裸扫会把注释当代码判红。 */
+  const codeOnly = (s) => String(s).replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  ok('C8b ★反 未检测到的提示里不许再出现「磁力仍可直接云下载」（注释不算）',
+    !/磁力仍可直接云下载/.test(codeOnly(INDEX)));
 
   const pages = ['emulator.html', 'unpack.html', 'resources.html', 'extract.html'];
   const missBar = pages.filter((p) => read('public/' + p).indexOf('id="kmBar"') < 0);

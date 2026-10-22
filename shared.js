@@ -138,6 +138,17 @@ const JUNK_HOST_RE = /(^|\.)(52leiqu\.com|leiqu\.[a-z]+)$/i;
 
 /**
  * 从一段自由文本里抽网盘链接。
+ *
+ * ★★ v10.104：**把 `magnet:` 也当成一条可用链接**（此前整类被丢掉）。
+ *   现场（渔力全开 tid=2117239899，用户报「本体很多下载源但抓不到」）：
+ *   本体 35 条帖里有 **4 条是纯磁力帖**（正文只有一行
+ *   `magnet:?xt=urn:btih:13c35e31...&dn=How.to.Fish.rar`），而旧正则只认 `https?://`
+ *   ⇒ 这 4 条的 links 全是空数组，前端判成「没资源的帖」。
+ *   影响不止这一个游戏：机地「搬运」系帖普遍只发磁力。
+ *   ⚠️ 磁力**不做** INTERNAL/JUNK 主机过滤 —— 它根本没有 host（判 host 会直接 continue 掉）。
+ *   ⚠️ 磁力串里 `.` 是合法字符（`How.to.Fish.rar`），所以尾标点只剥明显的句读，
+ *      不能沿用 http 那条「连 `.` 一起剥」的规则，否则会把文件名啃掉一截。
+ *
  * @param {string} text
  * @param {object} [o]
  * @param {number} [o.max=20]      最多返回几条（防正文爆炸）
@@ -147,20 +158,26 @@ const JUNK_HOST_RE = /(^|\.)(52leiqu\.com|leiqu\.[a-z]+)$/i;
 function extractLinks(text, { max = 20, dropInternal = true } = {}) {
   const out = [];
   const seen = new Set();
-  const re = /https?:\/\/[^\s"'<>）)】\]，,。；;]+/g;
+  const re = /(?:https?:\/\/|magnet:\?)[^\s"'<>）)】\]，,。；;]+/g;
   let m;
   while ((m = re.exec(String(text == null ? '' : text)))) {
-    const u = m[0].replace(/[.,;。，、]+$/, '');
-    if (seen.has(u)) continue;
-    seen.add(u);
-    if (dropInternal) {
+    const isMag = /^magnet:/i.test(m[0]);
+    const u = isMag
+      ? m[0].replace(/[。；;，,】\]）)>]+$/, '')
+      : m[0].replace(/[.,;。，、]+$/, '');
+    if (!u) continue;
+    /* 磁力按 info-hash 去重：同一个种子换了 tracker 列表就是另一串，但它们是同一个下载 */
+    const key = isMag ? ('btih:' + ((u.match(/btih:([a-z0-9]+)/i) || [u])[1] || u).toLowerCase()) : u;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (!isMag && dropInternal) {
       let host = '';
       try { host = new URL(u).hostname; } catch { continue; }
       /* 站内链接与广告 / 帮助站链接都不是下载 —— 两条规则分开判，各自有各自的理由 */
       if (INTERNAL_HOST_RE.test(host) || JUNK_HOST_RE.test(host)) continue;
     }
-    const hit = NETDISK.find(([re2]) => re2.test(u));
-    out.push({ url: u, kind: hit ? hit[1] : '其他链接' });
+    const hit = isMag ? null : NETDISK.find(([re2]) => re2.test(u));
+    out.push({ url: u, kind: isMag ? '磁力链接' : (hit ? hit[1] : '其他链接') });
     if (out.length >= max) break;
   }
   return out;

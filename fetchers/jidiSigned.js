@@ -58,17 +58,79 @@ function extractEnv(html) {
   }
 }
 
-/* env 缓存：**按路径分别缓存**（h_did 可能不同），同一轮抓取复用 */
-const envCache = new Map(); // path -> { env, at }
+/* ============================================================
+ * ★★ v10.104：env 页面的**空壳识别** —— 这是「本体 0 条」的真正根因
+ *
+ * 现场（2026-10-22，渔力全开 tid=2117239899，用户报「本体很多下载源但抓不到」）：
+ *   弹窗显示「本体 0」+「机地页签名未取 env（可能改版）：/topic/list」。
+ *   实测同一时刻直连接口：`resource_type=1 → count=35 / 35 条全取回 / 78 条网盘链接`。
+ *   ⇒ 接口是好的，**坏在取 env 那一次请求**。
+ *
+ * 空壳页长什么样（实测抓到的正文，HTTP **200**）：
+ *     <div id="app"></div>
+ *     <script>window.APP_INITIAL_STATE={}</script>
+ *     <script src="//static2.52jidi.com/game-community-web-outland_test/app.<hash>.js"></script>
+ *   长度 **1188 字节**、没有 `<script id="appState">`。是源站的 **SPA 骨架兜底页**
+ *   —— 服务端 SSR 这一次没渲染出来（排队超时就直出骨架），**不是改版**。
+ *
+ * 稳定复现顺序（决定性证据）：
+ *     GET /topic/list（23KB，正常） → POST /api/misc/post_list → 立刻 GET /modify/list → **空壳**
+ *   而单纯连打 12 次列表页（间隔 500ms，带不带 cookie 都一样）→ **12/12 正常**。
+ *   ⇒ 触发条件是「页面 + 紧接着的接口请求」这个组合下的 SSR 降级，与频率、cookie 都无关。
+ *     所以「加 cookie / 放慢」都不是解，**只有「认出来并换一次」是解**。
+ *
+ * 三条实测结论（决定了下面的实现）：
+ *   ① 空壳重试**基本立刻就好**（实测第 2 次即拿到 718KB 完整页）；
+ *   ② **env 跨页面通用**：用 `/modify/list` 的 env 打 `post_list`（tid 同上，rt=1）
+ *      → `ret:1, count:35`，与 `/topic/list` 的 env 结果**完全一致**。
+ *      所以主路径空了可以换别的页面取，不必死磕同一个 URL；
+ *   ③ `/modify/list` 是实测最稳的 env 来源（718KB 完整 SSR，12/12 成功）。
+ *      `/` 首页**不能**当兜底：实测它要么 1188 空壳、要么 appState 里只有 7 个键且**没有 host**。
+ *
+ * ⚠️ 别再把它报成「可能改版」：那句错误文案把三拨人带偏过。真改版的形态是
+ *    12 次全失败且**连 business 接口也一起挂**；只在「页面→接口」交替时偶发 = 降级。
+ * ============================================================ */
+
+/** 页面分类：ok（有 appState）/ shell（SPA 骨架空壳）/ no-appstate（结构变了） */
+function classifyPage(html) {
+  const s = String(html || '');
+  if (!s) return { kind: 'empty', len: 0 };
+  if (/<script id="appState"/.test(s)) return { kind: 'ok', len: s.length };
+  if (/APP_INITIAL_STATE/.test(s)) return { kind: 'shell', len: s.length };
+  return { kind: 'no-appstate', len: s.length };
+}
 
 /**
- * 取某个页面的 env。
- * @param {string} path 取 env 的页面路径，如 '/modify/list'、'/topic/list'
+ * env 相关失败 —— 带 `kind` 让上层能区分「值得重试」与「结构真变了」。
+ * `fatal=true` ⇒ 重试只会多打源站请求（把它放大成真限流），调用方应立即放弃。
  */
-async function getEnv(path = '/modify/list', { force = false, host = 'https://jidiyouxi.com' } = {}) {
-  const hit = envCache.get(path);
-  if (!force && hit && Date.now() - hit.at < ENV_TTL) return hit.env;
+class EnvError extends Error {
+  constructor(msg, { kind = 'unknown', path = '', len = 0, fatal = false } = {}) {
+    super(msg);
+    this.name = 'EnvError';
+    this.kind = kind;
+    this.path = path;
+    this.len = len;
+    this.fatal = fatal;
+  }
+}
 
+/* env 缓存：**按路径分别缓存**（h_did 可能不同），同一轮抓取复用 */
+const envCache = new Map(); // path -> { env, at, from, got }
+/* ★ v10.104 单飞：同路径并发只发一个请求。
+ *   三专区是并行的，若各自去取 env，同一时刻就打同一个页面 3 次 ——
+ *   而这正是上面实测的降级触发组合，等于自己把自己推向空壳。 */
+const envInflight = new Map(); // host|path -> Promise<env>
+
+/** 兜底取 env 的页面顺序（主路径不在其中时排在最前，见 loadEnv） */
+const ENV_FALLBACK = ['/modify/list', '/topic/list'];
+/** 单次 getEnv 最多请求几个页面（含同路径重试）——机地按请求数限流，别试探 */
+const ENV_MAX_TRIES = 3;
+/** 空壳重试前的退避（避开同一个降级窗口） */
+const ENV_RETRY_DELAY = 400;
+
+/** 取一次页面并解析 env；失败抛 EnvError（带分类） */
+async function fetchEnvOnce(path, host) {
   const r = await fetch(host + path, {
     headers: {
       'User-Agent': UA,
@@ -78,11 +140,74 @@ async function getEnv(path = '/modify/list', { force = false, host = 'https://ji
     redirect: 'follow',
     signal: AbortSignal.timeout(REQ_TIMEOUT),
   });
-  if (!r.ok) throw new Error('取 env 失败 HTTP ' + r.status + ' @ ' + path);
-  const env = extractEnv(await r.text());
-  if (!env || !env.host) throw new Error('机地页面未内嵌 env（可能改版）: ' + path);
-  envCache.set(path, { env, at: Date.now() });
+  if (!r.ok) {
+    throw new EnvError('取 env 页面 HTTP ' + r.status + ' @ ' + path, { kind: 'http', path, fatal: false });
+  }
+  const html = await r.text();
+  const c = classifyPage(html);
+  if (c.kind === 'shell') {
+    throw new EnvError('机地返回 SPA 骨架空壳页（' + c.len + 'B）@ ' + path, { kind: 'shell', path, len: c.len });
+  }
+  if (c.kind !== 'ok') {
+    throw new EnvError('页面里没有 appState（' + c.kind + ' / ' + c.len + 'B）@ ' + path, { kind: c.kind, path, len: c.len, fatal: true });
+  }
+  const env = extractEnv(html);
+  if (!env || !env.host) {
+    throw new EnvError('appState 里没有 env.host @ ' + path + ' (' + c.len + 'B)', { kind: 'no-host', path, len: c.len, fatal: true });
+  }
   return env;
+}
+
+/**
+ * 真正的取 env：主路径 → 同路径重试 → 换页面兜底。
+ * 成功后**按调用方的主路径**写缓存（调用方语义不变），另记 `from` 便于排查这次借了谁的 env。
+ */
+async function loadEnv(path, host) {
+  const chain = [path, path];
+  for (const p of ENV_FALLBACK) if (p !== path) chain.push(p);
+
+  const tried = [];
+  let last = null;
+  const tries = Math.min(chain.length, ENV_MAX_TRIES);
+
+  for (let i = 0; i < tries; i++) {
+    if (i) await sleep(ENV_RETRY_DELAY);
+    const p = chain[i];
+    try {
+      const env = await fetchEnvOnce(p, host);
+      envCache.set(path, { env, at: Date.now(), from: p, got: env.host });
+      return env;
+    } catch (e) {
+      last = e;
+      tried.push(p + '=' + (e.kind || 'err'));
+    }
+  }
+
+  /* ★ 文案要能直接指导下一步：说清「试了哪几次、每次什么形态」，而不是一句「可能改版」 */
+  const detail = tried.join(' → ');
+  const allFatal = last && last.fatal;
+  throw new EnvError(
+    '机地 env 页面取不到（已试 ' + tries + ' 次：' + detail + '）'
+      + '。这是源站 SSR 偶发降级，不是改版 —— 稍后重试即可。',
+    { kind: (last && last.kind) || 'unknown', path, len: (last && last.len) || 0, fatal: !!allFatal }
+  );
+}
+
+/**
+ * 取某个页面的 env（带缓存 + 单飞 + 空壳兜底）。
+ * @param {string} path 取 env 的页面路径，如 '/modify/list'、'/topic/list'
+ */
+function getEnv(path = '/modify/list', { force = false, host = 'https://jidiyouxi.com' } = {}) {
+  const hit = envCache.get(path);
+  if (!force && hit && Date.now() - hit.at < ENV_TTL) return Promise.resolve(hit.env);
+
+  const key = host + '|' + path;
+  const flying = envInflight.get(key);
+  if (flying) return flying;
+
+  const p = loadEnv(path, host).finally(() => envInflight.delete(key));
+  envInflight.set(key, p);
+  return p;
 }
 
 /**
@@ -103,15 +228,23 @@ async function getEnv(path = '/modify/list', { force = false, host = 'https://ji
  *   而 `post_list`（话题资源列表）需要的是**列表页那份带 host 的 env**，
  *   Referer 用详情页更贴切。两者本可以不同，所以分开传。
  *   （实测：env 取 `/topic/list` + Referer 用 `/topic/detail/<tid>` → ret:1 正常返回。）
+ *   ⚠️ v10.104 补正：env 的**来源页面**其实可以互换（`/modify/list` 的 env 打 `post_list`
+ *   实测 `ret:1/count:35`，与 `/topic/list` 完全一致），所以「必须取某个页面」只对**详情页**成立
+ *   （详情页确实没有 host）。列表页之间可以互相兜底，见 getEnv 的 ENV_FALLBACK。
  *
  * ★ v10.95：**失败必须重试一次，且重试前强制换 env**。
  *   实测（2026-10-21，tid=640827939 星砂岛）：同一个进程里
  *     · 第一次 topicPosts → 本体专区 `HTTP 405`、0 帖；
  *     · 2 秒后同一话题再抓 → 本体 3 帖 / 5 条网盘链接。
- *   说明 405 不是「这块没资源」，而是**取 env 那一步偶发拿到挑战页/空页**
+ *   说明 405 不是「这块没资源」，而是**取 env 那一步拿到了空壳页**
  *   （envCache 里存的 env 一旦带病，10 分钟内每次签名都 405）。
  *   ⇒ 只要失败就 `envCache.delete(path)` + 强制重取一次，仍是失败才向上抛。
  *   ⚠️ 只重试 **1 次**：机地的限流是按请求数算的，多重重试会把偶发失败放大成真限流。
+ *
+ * ★★ v10.104：**env 层自己已经重试过了，这里不能再叠一层**。
+ *   getEnv 现在会「同路径重试 → 换页面兜底」最多 3 次，若三次都失败说明这一轮就是不行；
+ *   此时 `EnvError.fatal` 或次数用尽 ⇒ **立即抛**，不要再 force 重取（3×2=6 次页面请求，
+ *   在机地身上足以把偶发故障放大成真限流）。只有「env 拿到了、POST 却失败」才值得重试。
  */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -150,10 +283,15 @@ async function signedPost(o) {
       return j.data || {};
     } catch (e) {
       lastErr = e;
-      if (attempt < retry) await sleep(250);
+      /* env 结构性问题（页面里根本没有 appState / 没有 host）= 重试只会多打请求 */
+      if (e && e.fatal) break;
+      if (attempt < retry) await sleep(600);    // 600ms：实测 250ms 仍落在同一个降级窗口里
     }
   }
   throw lastErr || new Error(api + ' 未知失败');
 }
 
-module.exports = { BODY_SALT, REQ_TIMEOUT, ENV_TTL, md5, websign, extractEnv, getEnv, signedPost };
+module.exports = {
+  BODY_SALT, REQ_TIMEOUT, ENV_TTL, ENV_FALLBACK, ENV_MAX_TRIES,
+  md5, websign, extractEnv, classifyPage, EnvError, getEnv, signedPost,
+};

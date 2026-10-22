@@ -58,7 +58,7 @@
  *   r.sections.forEach(s => console.log(s.name, s.count, s.items.length));
  */
 const { HOST_JIDI, extractLinks } = require('../shared');
-const { signedPost } = require('./jidiSigned');
+const { signedPost, getEnv } = require('./jidiSigned');
 
 /* ============================================================
  *  ① 专区定义
@@ -367,6 +367,12 @@ async function topicPosts({ tid, sort = 'hot', perSection = 50, sections = SECTI
     max: perSection > 0 ? perSection : 0,
     mergeNew,
   });
+
+  /* ★★ v10.104：**先把 env 取一次，再并行三个专区**。
+   *   原因不是省一次请求，而是避免「三个并行请求同时去取同一个页面」——
+   *   实测那正是机地 SSR 降级（1188B SPA 空壳）的触发组合，会同时坑掉三个专区。
+   *   这里单飞取一次，三个专区复用缓存；取不到就让各专区自己去撞并留痕（不在这里吞错）。 */
+  try { await getEnv('/topic/list'); } catch (e) { /* 让下面各专区各自报错，错误更贴近现场 */ }
 
   const settled = await Promise.allSettled(list.map(runOne));
 
