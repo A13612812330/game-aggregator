@@ -328,7 +328,21 @@ tr.row:hover{background:rgba(231,147,121,.06);cursor:pointer}
  * 用户口径「固定每一行的高度」：行高钉在 56px，图片 42px，标题单行省略。
  * 为什么不用 min-height：内容长短不一时 min-height 会被撑开（长标题换行 ⇒ 行高跳动），
  * 表格看起来像被随机拉伸；height + overflow:hidden 才是真的等高。 */
-.fxrow td{height:56px;padding:4px 10px;overflow:hidden}
+/* v10.106：弹窗内的形态页签 —— 与列表上方的 .chip 不是一套东西：
+   这里切换的是**同一份数据的不同视角**，不是筛选条件，所以做成下划线页签。 */
+  /* v10.106：行尾只有一个「编辑」，它不能被列宽挤成两行（两字竖排看着像坏了） */
+  .fxrow td .btn{white-space:nowrap}
+  /* v10.106：「20 小时前」在 94px 里会被折成两行；相对时间是**一个值**，不该断 */
+  .fxrow td.mut{white-space:nowrap}
+  .cold-ic{margin-left:5px;font-size:11px;vertical-align:1px}
+  /* v10.106：弹窗里的按钮（预览 / 保存）也不能被挤成两字竖排 */
+  .modal .btn{white-space:nowrap}
+  .pftabs{display:flex;gap:14px;margin-top:6px}
+  .pftab{font-size:12px;font-weight:650;color:var(--sub);cursor:pointer;
+    padding:2px 0 4px;border-bottom:2px solid transparent}
+  .pftab:hover{color:var(--txt)}
+  .pftab.on{color:var(--acc);border-bottom-color:var(--acc)}
+  .fxrow td{height:56px;padding:4px 10px;overflow:hidden}
 .fxrow .cv{width:64px;height:42px;border-radius:var(--r)}
 .fxrow .tt{max-width:430px}
 .idcol{font-family:Consolas,monospace;font-size:11.5px;color:var(--sub);white-space:nowrap}
@@ -414,9 +428,13 @@ tr.row:hover{background:rgba(231,147,121,.06);cursor:pointer}
     <nav class="nav" id="nav">
       <div class="sec">总览</div>
       <a data-v="dash" class="on"><i>▦</i>仪表盘</a>
-      <div class="sec">爬虫</div>
-      <a data-v="pages"><i>⛁</i>页面管理<b class="n" id="nPages">—</b></a>
-      <div class="sec">数据</div>
+      <!-- ★ v10.106：「页面管理」与「游戏库」合并成**一个游戏库**。
+           两者查的是同一个端点（/api/library/browse），差别只有两处：
+           同款折不折叠、列表里露不露「资料完整度」—— 同一张表看两遍。
+           用户口径：「页面管理跟游戏库应该是一样的，合并成游戏库」。
+           ⇒ 折叠改成页内开关（⧉ 同款合并，默认开），爬取字段的入口
+             保留在每行的「条目」按钮上。 -->
+      <div class="sec">内容</div>
       <a data-v="games"><i>▤</i>游戏库<b class="n" id="nGame">—</b></a>
       <!-- ★ v10.90：模块只剩四类（本体 / MOD / 修改器 / 存档）。
            原来 FitGirl 与 Thunderstore 各占一个侧栏条目 ⇒ 侧栏七条资源 + 两个运维，
@@ -473,46 +491,6 @@ tr.row:hover{background:rgba(231,147,121,.06);cursor:pointer}
       <button class="btn sm" onclick="openLogin()">登录</button>
     </div>
 
-    <!-- ═══ 页面管理（爬取条目清单）═══
-         与「游戏库」的分工：这里管**爬回来的原始内容**（标题/封面/热度/平台链接），
-         游戏库管**整理后的资料**（简介/类型/厂商/发售日/别名）。
-         两者写同一份 data/game-profile.json 的不同字段（见 data/game-profile.js）。 -->
-    <section class="view" id="view-pages">
-      <div class="tools">
-        <input type="text" id="pq" placeholder="搜索游戏名 / 游戏ID（回车搜索）">
-        <button class="btn pri" onclick="pagesSearch()">搜索</button>
-        <select id="pSrc" onchange="pagesReload(true)">
-          <option value="">全部平台</option>
-          <option value="xd">XDGAME</option>
-          <option value="jidi">机地</option>
-        </select>
-        <select id="pSort" onchange="pagesReload(true)">
-          <option value="updated">按更新时间</option>
-          <option value="hot">按热度</option>
-          <option value="title">按游戏名</option>
-        </select>
-        <span class="sp" style="flex:1"></span>
-        <span class="mut" id="pInfo">—</span>
-        <button class="btn sm" onclick="pagesReload()">刷新</button>
-      </div>
-      <div class="tblwrap">
-        <table>
-          <thead><tr>
-            <th style="width:58px">封面</th>
-            <th>游戏名</th>
-            <th style="width:150px">游戏ID</th>
-            <th style="width:92px">平台</th>
-            <th style="width:82px">热度</th>
-            <th style="width:92px">更新</th>
-            <th style="width:84px">操作</th>
-          </tr></thead>
-          <tbody id="pRows"></tbody>
-        </table>
-        <div class="empty" id="pEmpty" style="display:none">没有符合条件的内容</div>
-      </div>
-      <div class="pager pgbar" id="pPgBar"></div>
-    </section>
-
     <!-- ═══ 仪表盘（爬虫可视化 · 分模块）═══
          用户口径「仪表盘主要用于管理爬虫可视化，且分模块查看」⇒ 顶部一排模块 chip，
          选「总览」时四张模块卡全出，选具体模块只留那一张（其余数据不再请求）。 -->
@@ -539,11 +517,13 @@ tr.row:hover{background:rgba(231,147,121,.06);cursor:pointer}
       </div>
     </section>
 
-    <!-- ═══ 游戏库（管理游戏资料）═══
-         与「页面管理」的区别：这里看的是**资料完整度**，不是抓取量。
-         列 = 封面 / 游戏名 / ID / 平台 / 资料(7 项里填了几项) / 状态 / 操作。
-         点「资料」开资料弹窗（简介/类型/厂商/发行/发售日/别名/封面），
-         与页面管理的爬虫字段弹窗写同一份覆盖文件，互不覆盖。 -->
+    <!-- ═══ 游戏库（原「页面管理 + 游戏库」）═══
+         ★ v10.106 合并：一个菜单、一张表、两种看数据的方式。
+           · ⧉ 同款合并（默认开）—— 打开时同款多帖折成一行（原「游戏库」）；
+             关掉就是逐条帖子（原「页面管理」）。两者只差 `group=1` 这一个参数。
+           · 资料列 = 简介/类型/厂商/发行/发售日/别名/封面 7 项里填了几项。
+           · 每行两个入口：**资料**（人工覆盖字段）/ **条目**（爬回来的原始字段），
+             写同一份覆盖文件的不同字段，互不覆盖。 -->
     <section class="view" id="view-games">
       <div class="tools">
         <input type="text" id="q" placeholder="搜索标题 / 别名 / id（回车搜索）">
@@ -565,6 +545,8 @@ tr.row:hover{background:rgba(231,147,121,.06);cursor:pointer}
           <option value="title">按标题</option>
         </select>
         <div class="chips">
+          <span class="chip on" id="cGroup" onclick="toggleGroup()"
+                title="关掉就逐条列帖子（原「页面管理」的视角）">⧉ 同款合并</span>
           <span class="chip" id="cNote" onclick="toggleNote()">⭐ 只看有备注</span>
           <span class="chip" id="cCold" onclick="toggleCold()">🌙 显示冷门</span>
         </div>
@@ -577,12 +559,14 @@ tr.row:hover{background:rgba(231,147,121,.06);cursor:pointer}
           <thead><tr>
             <th style="width:58px">封面</th>
             <th>游戏名</th>
-            <th style="width:148px">游戏ID</th>
-            <th style="width:88px">平台</th>
-            <th style="width:92px">资料</th>
-            <th style="width:88px">状态</th>
-            <th style="width:128px">备注</th>
-            <th style="width:84px">操作</th>
+            <th style="width:132px">游戏ID</th>
+            <th style="width:84px">平台</th>
+            <th style="width:60px">评分</th>
+            <th style="width:94px">更新</th>
+            <th style="width:62px">资料</th>
+            <th style="width:96px">状态</th>
+            <th style="width:96px">备注</th>
+            <th style="width:76px">操作</th>
           </tr></thead>
           <tbody id="rows"></tbody>
         </table>
@@ -903,6 +887,12 @@ tr.row:hover{background:rgba(231,147,121,.06);cursor:pointer}
       <div style="min-width:0">
         <h3 id="pfTitle">—</h3>
         <div class="meta" id="pfMeta"></div>
+        <!-- ★ v10.106：合并后两种形态在**同一个弹窗**里切 —— 不必为了看一眼爬取值
+             退出重进。两套字段写同一份覆盖文件的不同字段，所以能放在一起。 -->
+        <div class="pftabs" id="pfTabs">
+          <span class="pftab on" data-m="games" onclick="pfSetMode('games')">游戏资料</span>
+          <span class="pftab" data-m="pages" onclick="pfSetMode('pages')">爬取字段</span>
+        </div>
       </div>
       <span class="sp"></span>
       <button class="mclose" onclick="closeProf()">✕</button>
@@ -979,10 +969,12 @@ const $ = (id) => document.getElementById(id);
 const LIMIT = 50;
 let offset = 0, total = 0, cur = null, curItem = null, segOp = 'clear';
 let showCold = false, onlyNote = false;
+/* ★ v10.106：原「游戏库 / 页面管理」两个菜单的唯一实质差别就是这个开关。
+   开 = 同款多帖折成一行；关 = 逐条帖子。默认开（多数人看的是游戏，不是帖子）。 */
+let groupSame = true;
 const VIEWS = {
   dash: ['仪表盘', '总览 / 爬虫与数据健康'],
-  pages: ['页面管理', '爬虫 / 抓取条目 · 可编辑'],
-  games: ['游戏库', '数据 / 游戏资料'],
+  games: ['游戏库', '内容 / 收录条目与游戏资料'],
   /* ★ v10.90：模块只剩四类，骨架共用 `#view-resm` 一份，子源在页内切换（见 RM 注释）。 */
   'm-base': ['本体', '模块 / FitGirl Repack · 以游戏为主键'],
   'm-mod': ['MOD', '模块 / 机地 MOD 帖 · Thunderstore'],
@@ -1165,7 +1157,7 @@ async function saveToken() {
 }
 
 function refreshAll() {
-  reload(); pagesReload(); loadLog(); loadSetLog();
+  reload(); loadLog(); loadSetLog();
   if ($('stats')) loadStats();
 }
 
@@ -1231,7 +1223,6 @@ function go(v) {
      每 2 秒仍有一条本机 RPC 在后台跑，用户看不到任何收益。 */
   if (v !== 'dl') dlLeave();
   if (v === 'dash') loadStats();
-  if (v === 'pages') pagesReload(true);
   if (v === 'games') reload(true);
   if (v === 'res') loadRes();
   if (v === 'log') { loadLog(); loadSetLog(); }
@@ -1292,7 +1283,6 @@ async function loadStats() {
    *   修改器 = CE/风灵月影 + 机地修改器帖；存档 = 存档位置 + 云存档。 */
   const dm = j.domains || {};
   $('nGame').textContent = nf((l || {}).total);
-  $('nPages').textContent = nf((l || {}).total);
   $('nBase').textContent = nf(dm.fitgirl);
   $('nMod').textContent = nf((dm.mod || 0) + (dm.ts || 0));
   $('nTrainer').textContent = nf((dm.modifier || 0) + (dm.modifierExtra || 0));
@@ -1423,9 +1413,9 @@ function qs() {
   const h = $('fHide').value; if (h) p.set('hidden', h);
   const s = $('fSrc').value; if (s) p.set('asrc', s);
   if (onlyNote) p.set('note', '1');
-  /* ★ v10.94：游戏库按「游戏」折叠，同款多个帖子（原版 + 支持网络联机版）合成一行。
-     页面管理（#pages）**不折叠** —— 那一页的职责就是看爬回来的每一条帖子。 */
-  p.set('group', '1');
+  /* ★ v10.106：折叠从「两个菜单」改成一个开关（groupSame）。
+     开 ⇒ 按游戏折叠；关 ⇒ 逐条帖子（原「页面管理」的视角）。 */
+  if (groupSame) p.set('group', '1');
   return '/api/library/browse?' + p.toString();
 }
 
@@ -1467,52 +1457,6 @@ function bindPager(el, total, limit, fn) {
 }
 const srcBdgOf = (s) => /xd/i.test(String(s || '')) ? '<span class="bdg b-xd">XDGAME</span>' : '<span class="bdg b-jd">机地</span>';
 
-/* ═══════════ 页面管理（爬取条目） ═══════════
- * 只展示**爬回来的东西**：封面 / 游戏名 / 游戏ID / 平台 / 热度 / 更新。
- * 行高钉死 56px（.fxrow），「查看」开的是资料弹窗的「爬虫字段」形态。 */
-let pOff = 0, pTotal = 0;
-function pqs() {
-  const p = new URLSearchParams();
-  p.set('scope', 'pc'); p.set('limit', LIMIT); p.set('offset', pOff);
-  p.set('admin', '1'); p.set('cold', '0');
-  p.set('sort', $('pSort').value || 'updated');
-  const q = $('pq').value.trim(); if (q) p.set('q', q);
-  const s = $('pSrc').value; if (s) p.set('asrc', s);
-  return '/api/library/browse?' + p.toString();
-}
-async function pagesReload(resetPage) {
-  if (resetPage) pOff = 0;
-  const j = await api(pqs());
-  if (!j.ok) {
-    $('pRows').innerHTML = '';
-    $('pEmpty').style.display = 'block';
-    $('pEmpty').textContent = '需要登录或加载失败（' + (j.error || 'HTTP ' + (j.needAuth ? '403' : '?')) + '）';
-    $('pPgBar').innerHTML = '';
-    return;
-  }
-  pTotal = j.total || 0;
-  const items = j.items || [];
-  $('pEmpty').style.display = items.length ? 'none' : 'block';
-  $('pEmpty').textContent = '没有符合条件的内容';
-  $('pRows').innerHTML = items.map((g, i) =>
-    '<tr class="row fxrow" data-i="' + i + '">'
-    + '<td>' + (g.cover ? '<img class="cv" loading="lazy" src="' + esc(g.cover) + '" alt="" onerror="this.style.visibility=\'hidden\'">' : '<div class="cv"></div>') + '</td>'
-    + '<td><div class="tt" title="' + esc(g.title) + '">' + esc(g.title || '—')
-    + ((g.prof || []).length ? '<span class="ovr" title="已人工覆盖：' + esc((g.prof || []).join(' / ')) + '">人改</span>' : '') + '</div></td>'
-    + '<td class="idcol">' + esc(g.id) + '</td>'
-    + '<td>' + srcBdgOf(g.source) + '</td>'
-    + '<td class="mut">' + nf(g.hot) + '</td>'
-    + '<td class="mut">' + ago(g.updatedTs) + '</td>'
-    + '<td><button class="btn sm" onclick="openProf(' + i + ',\'pages\',event)">查看</button></td>'
-    + '</tr>').join('');
-  $('pInfo').textContent = '共 ' + nf(pTotal) + ' 条';
-  $('pPgBar').innerHTML = pagerHtml(pTotal, LIMIT, pOff);
-  bindPager($('pPgBar'), pTotal, LIMIT, (p) => { pOff = (p - 1) * LIMIT; pagesReload(); });
-  window.__pItems = items;
-}
-function pagesSearch() { pOff = 0; pagesReload(); }
-$('pq').addEventListener('keydown', (e) => { if (e.key === 'Enter') pagesSearch(); });
-
 /* ═══════════ 游戏库列表（管游戏资料） ═══════════ */
 async function reload(resetPage) {
   if (resetPage) offset = 0;
@@ -1533,7 +1477,14 @@ async function reload(resetPage) {
     const compBdg = '<span class="bdg ' + (comp >= 5 ? 'b-vis' : comp >= 3 ? 'b-cold' : 'b-hide') + '" title="资料 7 项里填了几项">'
       + comp + '/7</span>';
     const stBdg = g.hidden ? '<span class="bdg b-hide">隐藏</span>' : '<span class="bdg b-vis">可见</span>';
-    const coldBdg = g.cold ? ' <span class="bdg b-cold">冷门</span>' : '';
+    /* ★ v10.106：冷门不再占状态列的一个角标。状态列要同时装「隐藏 + 冷门」两个角标
+       时必然折行（96px 放不下），而冷门只是分类、不是状态 ⇒ 收成标题后的一个月亮点。 */
+    const coldBdg = g.cold ? '<span class="cold-ic" title="冷门：hot=0 且非近 90 天新游">\u{1F319}</span>' : '';
+    /* ★ v10.106：合并后补两列，都是原「页面管理」独有的信息 ——
+       评分取库内值（0/空一律画「—」，不画 0.0，0 分和没评分是两件事）；
+       更新时间用 ago()，与仪表盘的「上次同步」同一套相对时间口径。 */
+    const sc = Number(g.score);
+    const scTxt = sc > 0 ? sc.toFixed(1) : '<span class="mut">—</span>';
     return '<tr class="row fxrow" data-i="' + i + '">'
       + '<td>' + (g.cover ? '<img class="cv" loading="lazy" src="' + esc(g.cover) + '" alt="" onerror="this.style.visibility=\'hidden\'">' : '<div class="cv"></div>') + '</td>'
       + '<td><div class="tt" title="' + esc(g.title) + '">' + esc(g.title || '—')
@@ -1544,13 +1495,19 @@ async function reload(resetPage) {
           + esc((g.alts || []).map((a) => a.title + '（' + (a.size || '—') + '）').join(' / ')) + '">+'
           + (g.dupCount - 1) + ' 版本</span>'
         : '')
+      + coldBdg
       + '</div></td>'
       + '<td class="idcol">' + esc(g.id) + '</td>'
       + '<td>' + srcBdgOf(g.source) + '</td>'
+      + '<td class="mut">' + scTxt + '</td>'
+      + '<td class="mut">' + ago(g.updatedTs) + '</td>'
       + '<td>' + compBdg + '</td>'
-      + '<td>' + stBdg + coldBdg + '</td>'
-      + '<td>' + (g.note ? '<span class="bdg b-note" title="' + esc(g.note) + '">' + esc(g.note.slice(0, 8)) + (g.note.length > 8 ? '…' : '') + '</span>' : '<span class="mut">—</span>') + '</td>'
-      + '<td><button class="btn sm" onclick="openProf(' + i + ',\'games\',event)">资料</button></td>'
+      + '<td>' + stBdg + '</td>'
+      + '<td>' + (g.note ? '<span class="bdg b-note" title="' + esc(g.note) + '">' + esc(g.note.slice(0, 6)) + (g.note.length > 6 ? '…' : '') + '</span>' : '<span class="mut">—</span>') + '</td>'
+      /* ★ v10.106：两个入口不再并排放在行尾（1440 宽下会竖着堆成两层，行高被撑开）。
+         收成一个「编辑」，进弹窗再用页签切「游戏资料 / 爬取字段」——
+         两套字段写的是同一份覆盖文件的不同字段，互不覆盖（见 pfShowGroups）。 */
+      + '<td><button class="btn sm" onclick="openProf(' + i + ',\'games\',event)" title="编辑：游戏资料 / 爬取字段">编辑</button></td>'
       + '</tr>';
   }).join('');
 
@@ -1981,6 +1938,7 @@ document.addEventListener('click', (e) => {
   if (!s) return;
   openGameById(s.dataset.gid, s.dataset.gt);
 });
+function toggleGroup() { groupSame = !groupSame; $('cGroup').classList.toggle('on', groupSame); offset = 0; reload(); }
 function toggleNote() { onlyNote = !onlyNote; $('cNote').classList.toggle('on', onlyNote); offset = 0; reload(); }
 function toggleCold() { showCold = !showCold; $('cCold').classList.toggle('on', showCold); toast(showCold ? '冷门行已显示（筛选中标注）' : '冷门行仍全部列出，仅切换高亮'); }
 
@@ -2002,19 +1960,31 @@ function pfShowGroups(mode) {
   show(['pfData1', 'pfData2', 'pfData3', 'pfData4'], mode === 'games');
 }
 
+/** ★ v10.106：弹窗内切形态。
+ *  只改「显示哪些字段」+「页签高亮」+ 元信息那两个字，**不动数据** ——
+ *  两种形态读的是同一份 pfData，切回来不会重新请求（也不会把没保存的输入清掉）。 */
+function pfSetMode(mode) {
+  if (mode !== 'games' && mode !== 'pages') return;
+  pfMode = mode;
+  pfShowGroups(mode);
+  document.querySelectorAll('#pfTabs .pftab').forEach((t) => t.classList.toggle('on', t.dataset.m === mode));
+}
+
 async function openProf(i, mode, ev) {
   if (ev) ev.stopPropagation();
-  const list = mode === 'pages' ? (window.__pItems || []) : (window.__items || []);
+  /* ★ v10.106：合并后只有一份列表（__items），两种形态共用。 */
+  const list = window.__items || [];
   const g = list[i];
   if (!g) return;
   pfMode = mode; pfItem = g; pfData = null; pfOp = 'clear';
   pfShowGroups(mode);
+  document.querySelectorAll('#pfTabs .pftab').forEach((t) => t.classList.toggle('on', t.dataset.m === mode));
   $('pmask').classList.add('on');
   $('pfCover').src = g.cover || '';
   $('pfCover').style.visibility = g.cover ? 'visible' : 'hidden';
   $('pfTitle').textContent = g.title || '—';
-  $('pfMeta').innerHTML = '<span class="code">' + esc(g.id) + '</span>' + srcBdgOf(g.source)
-    + '<span class="mut">' + (mode === 'pages' ? '爬取字段' : '游戏资料') + '</span>';
+  /* ★ v10.106：形态那两个字交给页签（.pftabs）去说，meta 里再说一遍是重复信息 */
+  $('pfMeta').innerHTML = '<span class="code">' + esc(g.id) + '</span>' + srcBdgOf(g.source);
   $('pfStat').textContent = '读取中…';
   /* 先用列表值占位（避免打开瞬间一片空），真值到了再覆盖 */
   for (const f of Object.keys(PF_IDS)) { const el = $(PF_IDS[f]); if (el) el.value = ''; }
@@ -2091,7 +2061,7 @@ async function saveProf() {
   }
   toast('已保存' + (r1.touched ? '（改 ' + r1.touched + ' 项）' : '（无变化）'));
   closeProf();
-  if (pfMode === 'pages') pagesReload(); else reload();
+  reload();   /* v10.106：两种形态共用一张表，刷新也就一条路 */
   loadStats();
 }
 

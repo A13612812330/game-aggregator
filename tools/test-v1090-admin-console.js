@@ -121,17 +121,19 @@ ok(gamesDb.all().length > 19000, 'A28 端游库全量可用（覆盖分母）', 
 console.log('\n-- B. 前台三块 --');
 const NAV = ADMIN.slice(ADMIN.indexOf('<nav class="nav"'), ADMIN.indexOf('</nav>'));
 const navOrder = [...NAV.matchAll(/data-v="([^"]+)"/g)].map((m) => m[1]);
-/* ★ v10.103：'dl'（磁力下载）插在 log 与 set 之间 —— 它是运维侧的本机工具，
- *   排在「看数据」的 log 之后、「系统配置」的 set 之前。 */
-ok(JSON.stringify(navOrder) === JSON.stringify(['dash', 'pages', 'games', 'm-base', 'm-mod', 'm-trainer', 'm-save', 'res', 'log', 'dl', 'set']),
-  'B1 侧栏顺序：仪表盘 / 页面管理 / 游戏库 / 四模块 / 运维（含磁力下载）', navOrder.join(','));
+/* ★ v10.106：'pages' 并入 'games' —— 侧栏从 11 项收到 10 项。
+ *   为什么合并：两个视图查同一个端点（/api/library/browse），只差一个 group 参数
+ *   和资料完整度列；用户口径「页面管理跟游戏库应该是一样的，合并成游戏库」。 */
+ok(JSON.stringify(navOrder) === JSON.stringify(['dash', 'games', 'm-base', 'm-mod', 'm-trainer', 'm-save', 'res', 'log', 'dl', 'set']),
+  'B1 侧栏顺序：仪表盘 / 游戏库 / 四模块 / 运维（含磁力下载）', navOrder.join(','));
 
-ok(/id="view-pages"/.test(ADMIN), 'B2 页面管理有独立 section');
-const pageThead = ADMIN.slice(ADMIN.indexOf('id="view-pages"'), ADMIN.indexOf('</thead>', ADMIN.indexOf('id="view-pages"')));
+/* ★ v10.106：页面管理不再是独立 section —— 这里改成**反向断言**：
+ *   旧视图必须彻底消失（否则「合并」只做了一半，侧栏少一项但 DOM 里还留着死页面）。 */
+ok(!/id="view-pages"/.test(ADMIN), 'B2 页面管理已并入游戏库（旧 section 必须不在了）');
+const pageThead = ADMIN.slice(ADMIN.indexOf('id="view-games"'), ADMIN.indexOf('</thead>', ADMIN.indexOf('id="view-games"')));
 const pageCols = [...pageThead.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((m) => m[1].trim());
-ok(pageCols[0] === '封面' && pageCols[1] === '游戏名' && pageCols[2] === '游戏ID'
-  && pageCols[3] === '平台' && pageCols[4] === '热度',
-  'B3 页面管理列 = 封面 / 游戏名 / 游戏ID / 平台 / 热度 / …', pageCols.join('|'));
+ok(pageCols.join('|') === '封面|游戏名|游戏ID|平台|评分|更新|资料|状态|备注|操作',
+  'B3 游戏库列 = 封面 / 游戏名 / ID / 平台 / 评分 / 更新 / 资料 / 状态 / 备注 / 操作', pageCols.join('|'));
 ok(/\.fxrow td\{height:56px/.test(ADMIN), 'B4 固定行高 56px（height 才会真的等高，min-height 会被长标题撑开）');
 /* ★ v10.94：42×42 方框装 460×215 的 Steam 横图，配 `object-fit:cover` 会把左右裁掉，
  *   用户实测「游戏图片显示不全」⇒ 改成 64×42 + contain。这条断言随实现一起改，
@@ -139,22 +141,37 @@ ok(/\.fxrow td\{height:56px/.test(ADMIN), 'B4 固定行高 56px（height 才会�
  *   ⚠️ 断言对象必须是 `.fxrow .cv`（更具体、真正生效的那条），`.cv` 单独写 64 会被它覆盖。 */
 ok(/\.fxrow \.cv\{width:64px;height:42px/.test(ADMIN), 'B5 行内封面 64×42（v10.94 横图 contain）');
 ok(/<img class="cv" loading="lazy" src="' \+ esc\(g\.cover\)/.test(ADMIN), 'B6 页面管理真的渲染封面图（不是占位方块）');
-ok(/onclick="openProf\(' \+ i \+ ',\\'pages\\',event\)">查看</.test(ADMIN),
-  'B7 「查看」= 编辑（打开资料弹窗的爬虫字段形态）');
+/* ★ v10.106：行尾只留一个「编辑」（两个按钮在 1440 宽下会竖排堆叠）；
+ *   爬取字段形态改成**弹窗内页签** —— 判据变成「页签存在且 pfSetMode 能切」。 */
+ok(/openProf\(' \+ i \+ ',\\'games\\',event\)" title="编辑：游戏资料 \/ 爬取字段">编辑</.test(ADMIN),
+  'B7 行尾「编辑」打开资料弹窗（游戏资料形态）');
+ok(/id="pfTabs"/.test(ADMIN) && /data-m="pages"/.test(ADMIN) && /function pfSetMode\(mode\)/.test(ADMIN),
+  'B7b 弹窗内可切「游戏资料 / 爬取字段」（合并后两种形态在同一弹窗）');
 
 ok(/function pagerHtml\(total, limit, off\)/.test(ADMIN), 'B8 分页条只有一个实现');
 ok(/data-pgjump/.test(ADMIN) && /data-pgok/.test(ADMIN), 'B9 分页条支持「填页码跳转」');
 ok(/for \(let d = -2; d <= 2; d\+\+\)/.test(ADMIN), 'B10 分页条有附近页（±2）');
 ok(/if \(e\.key === 'Enter'\) jump\(\)/.test(ADMIN), 'B11 跳页输入框回车即跳');
-ok(/bindPager\(\$\('pPgBar'\)/.test(ADMIN) && /bindPager\(\$\('gPgBar'\)/.test(ADMIN) && /bindPager\(\$\('rmPgBar'\)/.test(ADMIN),
-  'B12 三张表都接了分页条（页面管理 / 游戏库 / 模块）');
+/* ★ v10.106：合并后只剩两张表（游戏库 / 四模块），pPgBar 应当彻底消失。 */
+ok(/bindPager\(\$\('gPgBar'\)/.test(ADMIN) && /bindPager\(\$\('rmPgBar'\)/.test(ADMIN) && !/pPgBar/.test(ADMIN),
+  'B12 两张表都接了分页条（游戏库 / 模块），旧 pPgBar 不再存在');
 
-ok(/p\.set\('admin', '1'\); p\.set\('cold', '0'\);/.test(ADMIN), 'B13 页面管理走 admin=1&cold=0（冷门也要看得见）');
-ok(/function pqs\(\)/.test(ADMIN) && /function qs\(\)/.test(ADMIN), 'B14 两个页面各有自己的查询串（筛选条件不同）');
+/* ★ v10.106：查询串只剩 qs() 一份 —— 但 v10.90 那两条**行为**必须还在：
+ *   ① 管理端要带 admin=1（否则拿到的是前台过滤后的数据）；
+ *   ② 冷门要看得见（cold=0 把「隐藏冷门」关掉）。
+ *   判据从「pqs 里有没有这串」换成「qs 里有没有这串」，不是删断言。 */
+const qsBody = ADMIN.slice(ADMIN.indexOf('function qs()'), ADMIN.indexOf('function qs()') + 900);
+ok(/p\.set\('admin', '1'\)/.test(qsBody) && /p\.set\('cold', '0'\)/.test(qsBody),
+  'B13 游戏库走 admin=1&cold=0（冷门也要看得见）');
+ok(/function qs\(\)/.test(ADMIN) && !/function pqs\(\)/.test(ADMIN),
+  'B14 只剩一份查询串（合并后不再各写一套，条件不会再漂）');
+ok(/if \(groupSame\) p\.set\('group', '1'\)/.test(ADMIN) && /let groupSame = true/.test(ADMIN),
+  'B14b 「同款合并」是开关（默认开），不是两个菜单');
 
 ok(/id="view-games"/.test(ADMIN) && /资料<\/th>/.test(ADMIN), 'B15 游戏库有「资料」列（完整度）');
 ok(/comp \+ '\/7/.test(ADMIN), 'B16 资料完整度按 7 项计');
-ok(/openProf\(' \+ i \+ ',\\'games\\',event\)">资料</.test(ADMIN), 'B17 游戏库「资料」按钮开资料弹窗');
+ok(/onclick="openProf\(' \+ i \+ '[^>]*>编辑</.test(ADMIN),
+  'B17 游戏库行尾「编辑」按钮确实在渲染（连到 openProf）');
 
 ok(/const PF_IDS = \{ title:[\s\S]{0,400}aliases: 'pfAliasIn' \};/.test(ADMIN), 'B18 资料弹窗 10 个字段齐全');
 ok(/function pfShowGroups\(mode\)/.test(ADMIN) && /show\(\['pfCrawl'\], mode === 'pages'\)/.test(ADMIN),

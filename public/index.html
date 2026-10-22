@@ -2526,6 +2526,11 @@
   .dl-it .lk.bd-magnet{background:var(--ch-magnet);border:0;font-family:inherit;
     line-height:inherit;cursor:pointer;display:inline-block}
   .dl-it .lk.bd-magnet.busy{opacity:.6;pointer-events:none}
+  /* ★ v10.106：XD 盘口「要登录」的标记 —— 它仍然可点（跳盘口页），但必须先说清楚，
+     否则用户点开发现还要登录会以为按钮坏了。用虚线圈而不是变灰：变灰 = 不可点。 */
+  .dl-it .lk.need{box-shadow:inset 0 0 0 1px rgba(255,255,255,.55)}
+  .dl-it .lk .lk-need{font-style:normal;font-size:9px;font-weight:800;margin-left:3px;
+    padding:0 3px;border-radius:3px;background:rgba(255,255,255,.28)}
   .dl-it .tx{flex:1;min-width:0}
   /* ★ 标题最多 2 行、不再一刀切断；完整文本仍在 title 属性里（悬停可读全文） */
   .dl-it .tx b{display:-webkit-box;font-size:12.5px;font-weight:750;line-height:1.45;color:var(--c-t1);
@@ -6005,6 +6010,24 @@ async function dlUniFetchBody(ctx, force) {
     const it = await dlUniResolveItem(ctx);
     if (it) { ctx.url = it.url || ''; ctx.jidi = it.jidiUrl || ctx.jidi; }
   }
+  /* ★ v10.106：库里带 `jidiUrl` 的只是**同步时合并过的那部分**；没合上的同款
+     仍然能靠 `/api/library/twin` 现查出来（精确键 + 名称兜底闸门都在后端）。
+     实测样本：渔力全开 `xd-15568` 的 `jidiUrl` 是 null，而 twin 按名命中
+     `jidi-2117239899`（35 帖 / 84 地址）—— 不补这一路，打开 XD 那条就只能
+     看到 XD 自己的盘口，用户看到的正是「本体只有 FitGirl / 只有 XD」。
+     ⚠️ 只在缺机地那一路时补，且**失败就当没有**（不让补齐拖垮 XD 自己那路）。 */
+  if (!ctx.jidi && /xdgame\.com/i.test(String(ctx.url || ''))) {
+    const qs = new URLSearchParams();
+    if (ctx.id) qs.set('id', ctx.id);
+    else if (ctx.title) qs.set('t', ctx.title);
+    if ([...qs.keys()].length) {
+      try {
+        const tw = await fetch(api('/api/library/twin?' + qs.toString())).then((r) => r.json());
+        const t = tw && tw.ok && tw.twin;
+        if (t && t.source === 'jidi' && t.url) ctx.jidi = t.url;
+      } catch (e) { /* 静默：XD 那一路照常 */ }
+    }
+  }
   const isJidi = (u) => /jidiyouxi\.com/.test(String(u || ''));
   const jobs = [];
   if (ctx.url) jobs.push({ tag: isJidi(ctx.url) ? 'jidi' : 'xd', u: ctx.url });
@@ -6023,7 +6046,11 @@ async function dlUniFetchBody(ctx, force) {
   const good = res.filter((x) => x.d && x.d.ok);
   const xd = good.find((x) => x.tag === 'xd');
   const ji = good.find((x) => x.tag === 'jidi');
-  const xdItems = xd ? (xd.d.items || []).filter((i) => i.real) : [];
+  /* ★ v10.106：以前只留 `real`（最终直链）—— XD 要求登录时 6 个盘口的 `real`
+     全是 null，于是被整类丢掉，界面显示「0 / 6 条可用」，用户看到的是「XD 没有」。
+     但 `serverUrl`（盘口页地址）本身就是可点的出口：登录源站后即可取件。
+     ⇒ 两个有其一就算一条。 */
+  const xdItems = xd ? (xd.d.items || []).filter((i) => i.real || i.serverUrl) : [];
   const jiAll = ji ? (ji.d.items || []).filter((i) => i.real) : [];
   /* 服务端给 sections 就是权威分区；没有 sections（老服务）时把条目当「本体」一块，
      行为与改造前一致 —— 不能让新增的模块划分把「本来能显示的链接」变成空白。 */
@@ -7892,7 +7919,11 @@ function dlNum(n) {
 function dlGroupByPost(items) {
   const m = new Map();
   for (const it of items) {
-    const k = it.postId || it.postUrl || ('u:' + it.real);
+    /* ★ v10.106：XD 条目既无 postId 也无 postUrl，旧键退到 `'u:' + real`；
+       而需要登录时 real 是 null ⇒ 6 个盘口的键**全变成 `u:null`**，
+       6 行被合成 1 行（还只留得下最后一个盘口的链接）。
+       ⇒ 退到 serverUrl（XD 每条都有，且互不相同）。 */
+    const k = it.postId || it.postUrl || ('u:' + (it.serverUrl || it.real));
     let g = m.get(k);
     if (!g) {
       g = {
@@ -7910,7 +7941,11 @@ function dlGroupByPost(items) {
       };
       m.set(k, g);
     }
-    g.links.push({ server: it.server, real: it.real, pwd: it.pwd });
+    g.links.push({
+      server: it.server, real: it.real, pwd: it.pwd,
+      /* v10.106：盘口页地址与「为什么要登录」一路带下去，渲染层才画得出可点出口 */
+      serverUrl: it.serverUrl || null, needAuth: !!it.needAuth, err: it.error || null,
+    });
     /* 同帖多条地址时取信息最全的那份做主（有的行没带作者或时间） */
     if (!g.title && it.postTitle) g.title = it.postTitle;
     if (!g.author && it.author) g.author = it.author;
@@ -7977,11 +8012,20 @@ function dlRow(g) {
         + ' title="磁力链接 · 点击交给 Komo-Magnet 下载（未安装则复制）">' + esc(name) + '</button>';
     }
     const tip = (l.server || '网盘') + (code ? ' · 提取码 ' + code : '') + ' · 打开';
-    return l.real
-      ? '<a class="lk bd-' + b.cls + '" href="' + esc(l.real) + '" target="_blank" rel="noopener" title="' + esc(tip) + '">' +
-        esc(name) + '</a>'
-      : '<span class="lk bd-other" title="' + esc((l.server || '网盘') + ' · 这条没解析出地址') + '">' +
-        esc(name) + '</span>';
+    if (l.real) {
+      return '<a class="lk bd-' + b.cls + '" href="' + esc(l.real) + '" target="_blank" rel="noopener" title="' + esc(tip) + '">' +
+        esc(name) + '</a>';
+    }
+    /* ★ v10.106：没解析出直链但有**盘口页地址** ⇒ 仍然是出口（XD 要求登录时才这样）。
+       以前这里画的是不可点的灰字，相当于把「源站有、要登录」说成「没有」。 */
+    if (l.serverUrl) {
+      const why = l.needAuth ? '需登录源站后取件' : '去源站盘口页取件';
+      return '<a class="lk bd-' + b.cls + ' need" href="' + esc(l.serverUrl) + '" target="_blank" rel="noopener"' +
+        ' title="' + esc((l.server || '网盘') + ' · ' + why) + '">' + esc(name) +
+        '<i class="lk-need">登录</i></a>';
+    }
+    return '<span class="lk bd-other" title="' + esc((l.server || '网盘') + ' · 这条没解析出地址') + '">' +
+      esc(name) + '</span>';
   }).join('');
   const first = g.links.find((l) => l.real);
   const copy = first
@@ -8211,10 +8255,15 @@ function paintDownload() {
   /* ★ v10.104：口径从「网盘地址」改成「下载地址」—— 现在磁力也算一条可用地址，
      继续写「网盘」会让「84 个网盘地址」与实际可见的盘口数对不上。 */
   const magAll = v.items.filter((x) => /^magnet:/i.test(String(x.real || ''))).length;
-  const note = '<div class="dl-note">共 <b>' + v.items.length + '</b> 个可直接打开的下载地址'
+  /* ★ v10.106：XD 盘口在「要登录」时只给到盘口页（不是直链）—— 统计里必须分开说，
+     否则「N 个可直接打开的下载地址 · 链接均为源站实时解析」就是一句假话。 */
+  const nNeed = v.items.filter((x) => !x.real && x.serverUrl).length;
+  const note = '<div class="dl-note">共 <b>' + v.items.length + '</b> 个可打开的下载入口'
     + (magAll ? '（含 <b>' + magAll + '</b> 条磁力）' : '') + '（' + srcTxt + '）' +
     (v.filt ? '，筛选 <b>' + esc(DL_BRAND_NAME[v.filt] || v.filt) + '</b> 后本分区剩 <b>' + usable + '</b> 帖' : '') +
-    ' · 链接均为源站实时解析</div>';
+    (nNeed
+      ? ' · 其中 <b>' + nNeed + '</b> 条是源站盘口页（标「登录」的需登录 XDGAME 后取件）'
+      : ' · 链接均为源站实时解析') + '</div>';
   body.innerHTML = dlBarHtml() + note + jiWarn +
     (usable ? panel : '<div class="dlpop-empty">本分区在当前筛选下没有可用的下载地址<br>' +
       '<span style="font-size:11.5px">点上面的「全部」看所有盘口，或换个分区</span></div>');
