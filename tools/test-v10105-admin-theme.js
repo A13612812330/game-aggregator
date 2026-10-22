@@ -98,4 +98,23 @@ ok('F1 有本版说明 docs/versions/v10.105.md', DOC.length > 400, DOC.length +
 ok('F2 说明里写清了 token 来源（不是凭印象调色）', /data-theme=cream/.test(DOC));
 ok('F3 版本索引登记了 v10.105', /v10\.105/.test(read('docs/versions/README.md')));
 
+console.log('\n-- G. 部署体检时捞出来的两件事 --');
+const SERVER = read('server.js');
+/* G1：判版不能再依赖「本机拉线上文件」——发布机上 DNS/代理都不通（实测 CONNECT 502、
+ * 直连Could not resolve），所以让线上自报 md5 的端点必须存在。 */
+ok('G1 有 /api/build 版本自证端点（线上自报 md5，不靠本机出网）',
+  /app\.get\('\/api\/build'/.test(SERVER) && /md5:\s*crypto\.createHash\('md5'\)/.test(SERVER));
+ok('G2 ★ 该端点只回文件名/md5/字节数，不回绝对路径（公开端点不许泄露部署目录）',
+  /app\.get\('\/api\/build'[\s\S]{0,320}?files:\s*BUILD_STAMP/.test(SERVER) && !/BUILD_STAMP[\s\S]{0,200}__dirname *\+/.test(SERVER));
+/* G3：线上容器残留文件必须被显式拒绝 —— 仓库里零引用的页面还对外 200，就是「幽灵页」。 */
+ok('G3 幽灵页 overview.html 进 DEAD_PAGES 名单且被 410',
+  /const DEAD_PAGES = new Set\(\['overview\.html'\]\)/.test(SERVER)
+  && /DEAD_PAGES\.forEach[\s\S]{0,240}?status\(410\)/.test(SERVER));
+ok('G4 名单定义在 express.static 之前（否则静态中间件先把它 200 出去）',
+  SERVER.indexOf('const DEAD_PAGES') < SERVER.indexOf('app.use(express.static('));
+/* G5：自证端点要跳过幽灵页。两处各写一份名单的话，线上清单会永远比本地多一页 —— 
+ * 那不是"发现了新问题"，而是自己去制造了一个永远修不掉的差异。 */
+ok('G5 /api/build 扫描时跳过 DEAD_PAGES（否则线上清单永远多一页）',
+  /if \(DEAD_PAGES\.has\(f\)\) continue;/.test(SERVER));
+
 fin();

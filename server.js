@@ -182,6 +182,24 @@ app.use((req, res, next) => {
  */
 app.get('/favicon.ico', (_req, res) => res.status(204).end());
 
+/* ★ v10.105：线上容器里躺着一个**本仓库从未有过**的文件 `public/overview.html`。
+ * 怎么发现的：新加的 `/api/build` 自报线上 7 个 html，其中 `overview.html`（16,319B）
+ *   在本地源码、载荷目录、`git log --all` 里**三处都不存在**，但线上 HTTP 200 且内容完整
+ *   （一个「规模速览 / 功能 / 数据源」的旧总览页，数字还是 19,397 / 8,943 那套旧口径）。
+ * 根因：发布是「保留 + 覆盖」——文件一旦进了容器，就再没有代码路径去删它；
+ *   而仓库里对它的引用是 **0**（grep 全站 + 全历史均无）⇒ 没人会发现它还在。
+ * 处理：显式 410，让**对外表现与仓库一致**。容器里的物理文件删不掉，但不该再被访问到。
+ * ★ 名单只有这一份：410 路由与 `/api/build` 的扫描共用它 ——
+ *   两处各写一份的话，自证端点会永远报「线上比本地多一页」，然后下一个人又去查一遍。
+ * ⚠️ 若将来真要恢复这个页面，先把它作为源文件提交进 `public/`，再从名单里删掉。 */
+const DEAD_PAGES = new Set(['overview.html']);
+DEAD_PAGES.forEach((f) => {
+  app.get('/' + f, (_req, res) => {
+    res.status(410).type('text/plain; charset=utf-8')
+      .send(f + ' 已下线：该页从未存在于本仓库，是线上容器的残留文件。');
+  });
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 // 旧版多页路由收敛：home/search/library 已并入单页主站,老链接 301 至首页
 app.get(['/home.html', '/search.html', '/library.html'], (_req, res) => res.redirect(301, '/'));
@@ -206,6 +224,35 @@ app.get('/api/health', (_req, res) => {
     host: HOST,
     port: PORT,
   });
+});
+
+/* ★ v10.105：版本自证端点。
+ * 为什么需要：判「线上是不是最新版」按铁律必须比 md5，而不是看 HTTP 200。
+ * 但本机 shell 常常出不了网（DNS 直连不通、代理对发布域名 502），
+ * 于是「拉线上文件算 md5」这条路在发布机上是断的 —— 每次只能改用人眼比页面特征，等于没验。
+ * 改成让**线上自己报**：启动时把 public/*.html 的 md5 与字节数算好缓存在内存里，
+ * 任何人（含 WebFetch 这类只走 Agent 网络的通道）都能拉到精确值，与本地文件对一遍即可判版。
+ * ⚠️ 只回文件名 / md5 / 字节数，不含任何路径与内容，公开无风险。 */
+const BUILD_STAMP = (() => {
+  const dir = path.join(__dirname, 'public');
+  const out = {};
+  try {
+    for (const f of fs.readdirSync(dir)) {
+      if (!f.endsWith('.html')) continue;
+      /* 已下线的幽灵页不计入：它们只存在于容器磁盘上，出现在自证清单里会让
+       * 「线上 vs 本地」永远差一页，把真正的版本差异埋掉。 */
+      if (DEAD_PAGES.has(f)) continue;
+      const buf = fs.readFileSync(path.join(dir, f));
+      out[f] = { md5: crypto.createHash('md5').update(buf).digest('hex').slice(0, 10), bytes: buf.length };
+    }
+  } catch (e) {
+    out._error = String(e && e.message || e);
+  }
+  return out;
+})();
+app.get('/api/build', (_req, res) => {
+  res.set('cache-control', 'no-store');
+  res.json({ ok: true, bootAt: BOOT_AT, files: BUILD_STAMP });
 });
 
 app.get('/api/feed', async (req, res) => {
