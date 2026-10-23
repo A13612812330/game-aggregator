@@ -54,6 +54,11 @@ const mkey = (s) => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9\u
 const ckey = (s) => String(s == null ? '' : s).toLowerCase().replace(/\s+/g, ' ').trim();
 
 /* ---------- 缓存 ---------- */
+/* ★ v10.109：传输层失败计数。用来区分两种「搜不到」：
+ *   ① 上游确实没有这台（值得缓存 3 天，省请求）；
+ *   ② 这次没连上 / 返回体不是 JSON / 结构不认识（**绝不能缓存** —— 等于用一次网络抖动
+ *      换三天功能全灭，正是 `fetch-failure-cache-poisoning` 那条）。 */
+const _stat = { netError: 0 };
 let _cache = null;
 function cache() {
   if (_cache) return _cache;
@@ -85,11 +90,20 @@ function curlText(url) {
 function searchMarket(q, limit = 8) {
   const url = `${HOST}/ajax/search/?q=${encodeURIComponent(q)}&_=${Date.now()}`;
   const txt = curlText(url);
-  if (!txt || !txt.trim().startsWith('{')) return [];
+  if (!txt || !txt.trim().startsWith('{')) { _stat.netError++; return []; }
   let j;
-  try { j = JSON.parse(txt); } catch (e) { return []; }
-  if (!j || j.result !== true || !Array.isArray(j.response)) return [];
-  return j.response.slice(0, limit).map((x) => ({ name: x.name || '', slug: x.slug || '', img: x.img || '' }));
+  try { j = JSON.parse(txt); } catch (e) { _stat.netError++; return []; }
+  /* ★★ v10.109 修：kalvo 的搜索接口**悄悄换过返回结构**（2026-10-23 实测）
+   *   旧：`{ result:true, response:[{name,slug,img}] }`
+   *   新：`{ items:[{name,slug,img,brand}], total, searchUrl }`
+   *   只认旧结构 ⇒ 每次搜索都返回 `[]` ⇒ **整条「联网补全」对外表现为「未收录」**，
+   *   而失败结果又会按 `TTL_MISS = 3 天` 落进缓存 ⇒ 上游改一次版，功能静默死三天，
+   *   前端只看到一片灰虚线徽标，没有任何报错。这就是「上游 200 ≠ ok」的典型形态。
+   *   ⇒ 两种结构都认（上游再改回去也不用回滚）。 */
+  const rows = (j && j.result === true && Array.isArray(j.response)) ? j.response
+    : (j && Array.isArray(j.items) ? j.items : []);
+  if (!rows.length) return [];
+  return rows.slice(0, limit).map((x) => ({ name: x.name || '', slug: x.slug || '', img: x.img || '' }));
 }
 
 /* ---------- 解析（纯函数，测试直接 require） ---------- */
@@ -102,6 +116,14 @@ function parseSpecs(html) {
   // 主规格区：div.specs（页面里还有 ads / 推荐位，必须先圈定容器）
   const scope = $('div.specs').length ? $('div.specs') : $.root();
   const groups = [];
+  /* 值的清洗规则两套结构共用：`<br>` 是「多行值」的分隔符，直接 .text() 会把两行粘成一个词。 */
+  const cellText = (node) => {
+    const cell = node.clone();
+    cell.find('br').replaceWith(' / ');
+    return cell.text().replace(/\s+/g, ' ').replace(/\s*\/\s*/g, ' / ').trim();
+  };
+
+  /* ── 结构 A（旧）：div.cont > h3 + table > tbody > tr > td(键) + td(值) ── */
   scope.find('div.cont').each((_, el) => {
     const h3 = $(el).find('h3').first().text().trim();
     if (!h3) return;
@@ -110,16 +132,34 @@ function parseSpecs(html) {
       const tds = $(tr).find('td');
       if (tds.length < 2) return;
       const k = $(tds[0]).text().trim();
-      /* ★ 值里常有多行（`<br>` 分隔）：微架构 / 版本配置 都是。
-         直接 .text() 会把两行粘成一个词（`Cortex-A756x` 其实是 `Cortex-A75` + `6x …`），
-         所以先把 <br> 换成可见分隔符再取文本。 */
-      const cell = $(tds[1]).clone();
-      cell.find('br').replaceWith(' / ');
-      const v = cell.text().replace(/\s+/g, ' ').replace(/\s*\/\s*/g, ' / ').trim();
+      const v = cellText($(tds[1]));
       if (k && v) items.push({ k, v });
     });
     if (items.length) groups.push({ name: h3, items });
   });
+
+  /* ── 结构 B（2026-10-23 实测的新版）：
+   *    section.datasheet-group > h3.datasheet-title + dl.datasheet-rows > div.datasheet-row > dt + dd
+   *
+   * ★★ 为什么必须写两条：kalvo 换版后**旧选择器一条都抓不到**，`parseSpecs` 返回空 groups，
+   *    `hardware()` 记 `reason:'parse-empty'` ⇒ 前端只看到「未收录」灰徽标，**全程无报错**。
+   *    那一次改版同时改了搜索接口的返回结构（见 searchMarket），两处叠加 ⇒
+   *    「联网补全」整条链路对外表现为「这台机型查不到」，而且失败还会被缓存 3 天。
+   *    ⇒ 两种结构都解析（谁有内容用谁），上游再改回去也不用回滚。 */
+  $('section.datasheet-group').each((_, el) => {
+    const h3 = $(el).find('h3.datasheet-title').first().text().trim()
+      || $(el).find('h3').first().text().trim();
+    const items = [];
+    $(el).find('div.datasheet-row').each((__, row) => {
+      const dt = $(row).find('dt').first();
+      const dd = $(row).find('dd').first();
+      const k = dt.text().trim();
+      const v = cellText(dd);
+      if (k && v) items.push({ k, v });
+    });
+    if (items.length) groups.push({ name: h3 || '规格', items });
+  });
+
   return { title, groups };
 }
 
@@ -196,6 +236,7 @@ function hardware(name, opt = {}) {
   }
   if (opt.offline) return hit ? { ...hit, cached: true } : { ok: false, name, reason: 'offline-miss' };
 
+  const nErr0 = _stat.netError;
   let results = searchMarket(name);
   if (!results.length) {
     const alt = relaxQuery(name);
@@ -203,6 +244,9 @@ function hardware(name, opt = {}) {
   }
   const best = pickBest(results, name);
   if (!best || !best.slug) {
+    /* ★ v10.109：这一次的「搜不到」如果伴随传输层失败，就**只返回、不落缓存** ——
+       否则一次抖动会把「未收录」钉死 3 天（该机型在界面上一直显示灰虚线徽标）。 */
+    if (_stat.netError > nErr0) return { ts: Date.now(), ok: false, name, reason: 'net-error' };
     const rec = { ts: Date.now(), ok: false, name, reason: 'not-found' };
     cachePut(key, rec);
     return rec;

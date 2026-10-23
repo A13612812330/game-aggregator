@@ -107,9 +107,12 @@ ok('D4 .stat 仍是白底卡片（统计卡要能一眼成组）', /\.card\{back
 
 console.log('\n-- E. 侧栏：矢量图标 + 分组标题不重复 --');
 const navItems = (ADMIN.match(/<a data-v="[a-z]+"/g) || []).length;
-ok('E1 侧栏 7 个导航项都在', navItems === 7, navItems + ' 项');
+/* ★ v10.109：侧栏 7 → 8（加了「新游检测」）。这条断言的作用是「别把入口弄丢」，
+   不是「永远 7 个」—— 所以数字跟着改，但**同时**要求新入口在（见 E1b）。 */
+ok('E1 侧栏 8 个导航项都在', navItems === 8, navItems + ' 项');
+ok('E1b 新增的「新游检测」入口在场（data-v="new"）', /<a data-v="new"/.test(ADMIN));
 const svgInNav = (ADMIN.match(/<a data-v="[a-z]+"[^>]*><i><svg viewBox="0 0 24 24"/g) || []).length;
-ok('E2 7 项各带一个 24 格矢量图标', svgInNav === 7, svgInNav + ' 个');
+ok('E2 8 项各带一个 24 格矢量图标', svgInNav === 8, svgInNav + ' 个');
 /* ★ 作用域收到侧栏：全文件里还有别处用几何字符（仪表盘模块卡头部的 ◆ ◈ ⚔ ▣）
    和一句解释性注释（已剥），它们不是本轮改的对象 —— 拿全文件判会把正当用法判成残留。 */
 const NAV_BLOCK = ADMIN.slice(ADMIN.indexOf('<nav class="nav"'), ADMIN.indexOf('</nav>'));

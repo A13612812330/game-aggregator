@@ -42,9 +42,11 @@ const NAV = ADMIN.slice(ADMIN.indexOf('<nav class="nav"'), ADMIN.indexOf('</nav>
 const navOrder = [...NAV.matchAll(/data-v="([^"]+)"/g)].map((m) => m[1]);
 
 console.log('\n-- A. 侧栏：七个入口，模块不再各占一条 --');
-ok('A1 侧栏恰好 7 项', navOrder.length === 7, navOrder.join(','));
-ok('A2 顺序 = 仪表盘 / 游戏库 / 资源管理 / 覆盖与缺口 / 日志 / 磁力 / 设置',
-  JSON.stringify(navOrder) === JSON.stringify(['dash', 'games', 'rm', 'res', 'log', 'dl', 'set']),
+/* ★ v10.109：7 → 8（「新游检测」插在游戏库之后）。顺序断言保留 —— 它守的是
+   「四个模块不许再各自占一条」这件事，与总条数无关。 */
+ok('A1 侧栏恰好 8 项', navOrder.length === 8, navOrder.join(','));
+ok('A2 顺序 = 仪表盘 / 游戏库 / 新游检测 / 资源管理 / 覆盖与缺口 / 日志 / 磁力 / 设置',
+  JSON.stringify(navOrder) === JSON.stringify(['dash', 'games', 'new', 'rm', 'res', 'log', 'dl', 'set']),
   navOrder.join(','));
 ok('A3 有「资源管理」入口（data-v="rm"）', navOrder.includes('rm'));
 ok('A4 反向：侧栏没有任何按模块拆的条目（m-* / rm-* 均应为 0）',

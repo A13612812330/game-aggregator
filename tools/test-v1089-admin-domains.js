@@ -113,7 +113,7 @@ ok(!/id="view-m-/.test(ADMIN), 'B6 没有按模块复制 section（view-m-* 应�
 /* ★ v10.106：7 个 —— 「pages」并入「games」，少一个 section。
  *   判据仍然守的是「section 数 = 视图数、没有按模块复制」，不是某个数字本身；
  *   新增/合并视图时**同时**改这里与 test-v1090 的侧栏顺序，两处一致才算过。 */
-ok((ADMIN.match(/class="view[^"]*"[^>]*id="view-/g) || []).length === 7,
+ok((ADMIN.match(/class="view[^"]*"[^>]*id="view-/g) || []).length === 8,
   'B6b section 恰好 7 个（dash/games/resm/res/log/dl/set · v10.106 并页面管理、v10.107 并四模块）',
   String((ADMIN.match(/class="view[^"]*"[^>]*id="view-/g) || []).length));
 /* ★ v10.107：路由的「模块 → section」映射没变（还是共用一个 view-resm），

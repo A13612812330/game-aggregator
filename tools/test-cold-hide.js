@@ -27,6 +27,19 @@ function ok(name, cond, detail) {
 const gamesDb = require(path.join(ROOT, 'data/gamesDb.js'));
 gamesDb.load();
 const coldHide = require(path.join(ROOT, 'data/cold-hide.js'));
+/* ★★ v10.109：v10.109 起冷门判定加了第二道「有 MOD/修改器/存档 就不算无人问津」，
+ *   而那个判据是**注入式**的（避免 res-groups ↔ cold-hide 循环依赖，见 data/cold-hide.js 头注释）。
+ *   ⇒ 测试进程必须自己注入，否则测的是**降级口径**（hasResource 恒 false = v10.84 旧规则），
+ *     断言会「平时绿、线上红」或者反过来 —— 这类「测试跑在降级分支上」的假绿最难查。
+ *   ★ 注入内容必须与 server.js 一致（同一份组装逻辑），否则测的又是另一套口径。 */
+const resGroups = require(path.join(ROOT, 'data/res-groups.js'));
+coldHide.setResourceProvider(() => {
+  const out = new Set();
+  for (const cat of ['mod', 'trainers', 'saves']) {
+    for (const id of resGroups.libIdsFor(cat)) out.add(id);
+  }
+  return out;
+});
 const all = gamesDb.all();
 const SRV = read('server.js');
 const GDB = read('data/gamesDb.js');
@@ -35,17 +48,28 @@ console.log('== ① 口径与现测自证 ==');
 const st = coldHide.stats(all);
 /* 独立重算（不借 cold-hide 的函数），两边必须一致 —— 否则就是规则实现漂移 */
 const RECENT = 90 * 864e5;
-let cold2 = 0, recentHot0 = 0;
+let cold2 = 0, recentHot0 = 0, rescued2 = 0;
 for (const g of all) {
   const hot0 = !(typeof g.hot === 'number' && g.hot > 0);
   const recent = !!(g.publishTs && Date.now() - g.publishTs < RECENT);
+  const hasRes = coldHide.hasResource(g.id);   /* ★ v10.109 第二道判据 */
   if (hot0 && recent) recentHot0++;
-  if (hot0 && !recent) cold2++;
+  if (hot0 && !recent && hasRes) rescued2++;
+  if (hot0 && !recent && !hasRes) cold2++;
 }
 ok('冷门口径独立重算 = coldHide.stats().cold', cold2 === st.cold, cold2 + ' vs ' + st.cold);
 ok('热启动期保护数（hot=0 但 90 天内上架）不许为 0', st.recentHot0 > 0, String(st.recentHot0));
-ok('隐藏数 = 冷门数（无豁免文件时）', st.hidden === st.cold && st.overrideShow === 0 && st.overrideHide === 0,
-  'hidden=' + st.hidden + ' visible=' + st.visible);
+/* ★ v10.109：v10.109 起有豁免文件（后台入库会写 show 名单）⇒ 不能再用「隐藏数恒等于冷门数」，
+   ⇒ 改成「差值必须能被豁免解释」：每条豁免最多让 hidden 偏离 cold 1。 */
+const ovrN = (st.overrideShow || 0) + (st.overrideHide || 0);
+ok('隐藏数与冷门数的差值可由豁免解释（|Δ| ≤ 豁免条数）', Math.abs(st.hidden - st.cold) <= ovrN,
+  'hidden=' + st.hidden + ' cold=' + st.cold + ' 豁免=' + ovrN + ' visible=' + st.visible);
+/* ★ v10.109 新增：两条新判据必须**真的生效**，而不是「注入了但没人用」 */
+ok('资源探针已注入（resourceProbe=true）—— 否则跑的是 v10.84 降级口径', st.resourceProbe === true, String(st.resourceProbe));
+ok('「有资源」救回数 > 0 且与独立重算一致', st.rescuedByRes > 0 && st.rescuedByRes === rescued2,
+  st.rescuedByRes + ' vs ' + rescued2);
+ok('救回后的隐藏数 < 纯热度口径的冷门数（规则确实变宽了）', st.cold < cold2 + st.rescuedByRes,
+  'cold=' + st.cold + ' 纯热度口径=' + (cold2 + st.rescuedByRes));
 ok('可见数 = 总数 - 隐藏数', st.visible === all.length - st.hidden, all.length + ' - ' + st.hidden);
 // 抽查语义：热启动期新游不许 hidden；hot>0 不许 hidden
 const newHot0 = all.find((g) => g.publishTs && Date.now() - g.publishTs < RECENT && !(typeof g.hot === 'number' && g.hot > 0));

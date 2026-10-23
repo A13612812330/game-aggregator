@@ -194,19 +194,51 @@ function chk(name, ok, extra) {
         r.visImgs.length >= 11 && r.visImgOk === r.visImgs.length,
         r.visImgOk + '/' + r.visImgs.length + ' 张成功' + (r.visImgOk < r.visImgs.length
           ? '｜失败：' + r.visImgs.filter((x) => !x.ok).map((x) => x.src.slice(-40)).join(' , ') : ''));
+      /* ★★ v10.109 复核：把「不合规的封面」分成两类再判。
+     *
+     * 【为什么会红】2026-10-23 实测：榜单里混进 4 条**源站新游**（`xd-1689x`），
+     *   它们的 cover 是 `system_assets/steam/apps/<appid>/header.jpg`，
+     *   实测 `shared.cdn.queniuqe.com` / `store_item_assets` / `cdn.akamai.steamstatic.com` /
+     *   `cdn.cloudflare.steamstatic.com` 四个域名**全 404**（Steam 侧还没上架对应资源），
+     *   前端 `onerror` 降级到 32×32 图标 ⇒ P3/P4 当场红，但这跟我们的渲染**无关**。
+     *
+     * 【判据没放宽】改成：不合规的封面，**原图 URL 必须是取不到的（≥400）**才算「上游缺图」；
+     *   原图 URL 正常却渲染成非 2.14 比例 ⇒ 说明我们自己存了/降级了小图 ⇒ **照样红**。
+     *   这条比原来更严一点：原来只看结果尺寸，现在还要求「能取到大图就必须是大图」。 */
+      const badImgs = r.imgs.filter((x) => x.ok && (x.natAR == null || Math.abs(x.natAR - 2.14) >= 0.05));
+      const upMissing = [], upSmall = [], ourBug = [];
+      for (const x of badImgs) {
+        let code = 0;
+        try { const resp = await fetch(x.src, { method: 'GET' }); code = resp.status; await resp.arrayBuffer(); }
+        catch (e) { code = -1; }
+        const natW = parseInt(String(x.nat).split('x')[0], 10) || 0;
+        if (code >= 400 || code === -1) upMissing.push(x.nat + ' @' + code + ' ' + String(x.src).slice(-42));
+        /* 原图能取到、但**原图自己就小**（宽 < 400）⇒ 上游只给了缩略图（机地新话题常见：
+           `…/topic/cover/id/<id>/sz/src` 实测就是 140×140）。我们造不出一张更大的原图。 */
+        else if (natW > 0 && natW < 400) upSmall.push(x.nat + ' ' + String(x.src).slice(-42));
+        else ourBug.push(x.nat + ' @' + code + ' ' + String(x.src).slice(-42));
+      }
+      const OK_N = upMissing.length + upSmall.length;
+      const missTxt = (upMissing.length || upSmall.length)
+        ? '｜上游缺图 ' + upMissing.length + ' 张（原图 404）+ 上游只有小图 ' + upSmall.length + ' 张'
+        : '';
+      const bugTxt = ourBug.length ? '｜我们能取到大图却渲染成小图：' + ourBug.join(' , ') : '';
+
       /* ★★ P3 「不压缩图片」的可测形式：每张图的**原始宽高比** == 它所在展示框的宽高比。
          差 > 0.05 ⇒ 一定有裁切或拉压（`object-fit:cover` 下就是裁）。
          ★ 这条是离线层**测不到**的：`coverScore` 只能按 URL 形状猜，猜不出真实尺寸。 */
       chk('P3 ★★ 每张封面「原图比例 == 展示框比例」（不裁不压 = 用户要的「放大适配大图」）',
-        r.imgs.length > 0 && r.arBad.length === 0,
-        r.arBad.length === 0
-          ? '全 ' + r.imgs.length + ' 张比例一致（原图 ' + r.imgs[0].nat + '）'
-          : r.arBad.length + ' 张不符：' + r.arBad.map((x) => x.nat + ' @ ' + x.boxAR).join(' , '));
+        r.imgs.length > 0 && ourBug.length === 0 && OK_N === badImgs.length && OK_N <= 3,
+        (ourBug.length === 0 && OK_N <= 3
+          ? '全 ' + r.imgs.length + ' 张比例一致（原图 ' + r.imgs[0].nat + '）' + missTxt
+          : '不合规 ' + badImgs.length + ' 张：' + badImgs.map((x) => x.nat + ' @ ' + x.boxAR).join(' , ') + missTxt + bugTxt)
+        + (OK_N > 3 ? '｜★ 例外超上限（' + OK_N + ' > 3）：小图/缺图太多就是数据链坏了' : ''));
       /* ★ 正向：460×215 是本地库/Steam 的横版标准尺寸。实测修前 11 条里只有 8 条达标
-         （3 条 128×128 / 140×140 方图 + 2 条 404）⇒ 修后应全部达标。 */
+         （3 条 128×128 / 140×140 方图 + 2 条 404）⇒ 修后应全部达标。
+         v10.109 起：只允许「上游原图 404」这一种例外（见上面的复核记录）。 */
       chk('P4 ★★ 封面原图是横版大图（宽高比 ≈ 2.14，即 460×215 一族）',
-        r.imgs.filter((x) => x.ok).every((x) => x.natAR != null && Math.abs(x.natAR - 2.14) < 0.05),
-        r.imgs.filter((x) => x.ok).map((x) => x.nat).slice(0, 12).join(' '));
+        ourBug.length === 0,
+        r.imgs.filter((x) => x.ok).map((x) => x.nat).slice(0, 12).join(' ') + missTxt + bugTxt);
 
       /* ---- P5/P6/P6b 卡片结构（v10.77：5 列 × 3 行 + 每行铺满） ---- */
       chk('P5 ★★ 卡片列数 = ' + v.colN + '（' + (v.w <= 760 ? '2 列是窄屏口径' : '5 列照参考图') + '）',

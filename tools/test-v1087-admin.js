@@ -97,9 +97,15 @@ ok(gi.includes('data/admin-token.json') && gi.includes('data/admin-log.jsonl'),
 console.log('\n-- D. 操作日志链 --');
 ok(/appendAdminLog\(\{/.test(srv) && /admin-log\.jsonl/.test(srv),
   'D1 写端点留痕 appendAdminLog（jsonl 追加）');
-const logCallIdx = srv.indexOf('appendAdminLog({');
-const setOvIdx = srv.indexOf('coldHide.setOverride(');
-ok(logCallIdx > setOvIdx, 'D2 日志写在 setOverride 成功之后（失败不记成功账）');
+/* ★ v10.109：作用域收窄到 hide-overrides 端点**内部**。
+ *   原来拿全文件第一次出现的 indexOf 比较 —— v10.109 新增了 new-games 的几条留痕端点
+ *   （在文件更前面），第一条 `appendAdminLog({` 于是跑到了 `coldHide.setOverride(` 之前，
+ *   断言变红，但 hide-overrides 端点**本身完全没有变**。
+ *   这类「作用域比语义宽」的断言会在每次新增端点时误报，改一次修一次不如一次收窄。 */
+const ovStart = srv.indexOf("app.post('/api/admin/hide-overrides'");
+const ovSeg = ovStart > 0 ? srv.slice(ovStart, ovStart + 1500) : '';
+ok(ovStart > 0 && ovSeg.indexOf('appendAdminLog({') > ovSeg.indexOf('coldHide.setOverride('),
+  'D2 日志写在 setOverride 成功之后（失败不记成功账）');
 ok(/function readAdminLog/.test(srv) && srv.indexOf("app.get('/api/admin/log'") > srv.indexOf('function readAdminLog'),
   'D3 readAdminLog 尾读 + 端点在位');
 

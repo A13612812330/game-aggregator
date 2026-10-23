@@ -395,8 +395,12 @@ ok('J15.4 ★ v10.85 服务端管理接口有回环护栏（写文件的接口�
 ok('J15.5 ★ v10.85 cold-hide 支持运行时豁免（overridesSnapshot/setOverride/reload/hiddenById 四件套）',
   (() => {
     const c = fs.readFileSync(path.join(ROOT, 'data', 'cold-hide.js'), 'utf8');
+    /* ★ v10.109：原来这里还钉了 module.exports 的**整行字面量** ⇒ 多导出一个探针
+     *   （setResourceProvider）就假红。改成「四个名字必须都在导出块里」，允许后续追加
+     *   （铁律 54：钉行为不变量，不钉某一行）。 */
+    const exp = (c.match(/module\.exports\s*=\s*\{[\s\S]*?\}/) || [''])[0];
     return ['overridesSnapshot', 'setOverride', 'reload', 'hiddenById']
-      .every((k) => c.includes('function ' + k)) && c.includes('module.exports = { isCold, isHidden, stats, RECENT_MS, overridesSnapshot, setOverride, reload, hiddenById }');
+      .every((k) => c.includes('function ' + k) && exp.includes(k));
   })());
 ok('J15.6 ★ v10.85 冷门隐藏豁免文件在 .gitignore（个人状态不入库）',
   (() => {

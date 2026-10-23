@@ -127,18 +127,27 @@ ok(/devicesSummaryCnt/.test(srv) && /devicesAdded/.test(srv), '返回里带上�
      *   ⇒ 真实新增就是 samsung SM-A057M + ITEL itel S666LN 这 2 台。
      * 【判据本身没放宽】「合并后必须比摘要多」与「新增项必须逐条报出来」两条都还在，
      *   改的只是样本数字，并附上复核依据（下一个人看到数字变了能直接顺着这里查）。 */
-    ok(h.devicesCnt === 8, '★ 合并后 8 台（2026-10-09 复核：上游 moto g20 已移除；详见上方复核记录）', h.devicesCnt + ' 台');
+    /* ★★ 2026-10-23 二次复核（本轮红的是**数据**，不是代码）：
+     *   `data/bhparams.json` 当日每日同步刷新后，该游戏的配置里 **moto g(20) 又回来了**
+     *   （上一条 2026-10-09 的复核记录里它是「已被上游移除」）⇒ 合并 8 → **9**，新增 2 → **3**。
+     *   怎么证的：`data/bhparams.json` / `data/mobilehub.json` / `data/deviceset.js` 在本轮
+     *   v10.109 改动里**一个都没被碰过**（v10.109 只动 cold-hide / new-games / admin.html / server.js），
+     *   而这条断言依赖的正是那三份数据 ⇒ 变的是上游，不是我们的口径。
+     *   ★ 判据本身**没放宽**：「合并后必须比摘要多」「新增项必须逐条报出来」两条都还在，
+     *     改的只是样本数字。数据再变一次还会红 —— 那正是它该做的事。 */
+    ok(h.devicesCnt === 9, '★ 合并后 9 台（2026-10-23 复核：上游把 moto g(20) 加回来了；详见上方复核记录）', h.devicesCnt + ' 台');
     ok(h.devices.every((x) => !/^MTN NX3$|^BRP NX3$/.test(x)), '★ 残缺写法已被规范写法取代', h.devices.slice(0, 3).join(' | '));
     ok(h.devices.filter((x) => /HONOR/i.test(x)).length === 2, 'HONOR 两台在位（MTN-NX3 / BRP-NX3）');
-    ok(h.devicesAdded.length === 2, '如实报告新增了 2 台（samsung SM-A057M / ITEL itel S666LN）', h.devicesAdded.join(' | '));
+    ok(h.devicesAdded.length === 3, '如实报告新增了 3 台（samsung SM-A057M / ITEL itel S666LN / motorola moto g(20)）', h.devicesAdded.join(' | '));
     /* 每台都能给出「要显示什么」——不能出现空 display */
     const bad = h.devices.filter((m) => !dmk.resolve(m).display);
     ok(bad.length === 0, '★ 每台机型都能得到非空显示名', bad.join(' | ') || '全部 OK');
-    /* 译出比例：这个样本里有 3 台**本来就是营销名**（motorola moto g24 /
-       INFINIX Infinix X6887 / ITEL itel S666LN），没有代号可译 → 5/8 是正确值，不是退坡。
-       （2026-10-09 复核时随上面两条一起校准：原记账里的 moto g20 已不在上游 ⇒ 8 台里 3 台无代号可译。） */
+    /* 译出比例：这个样本里有 4 台**本来就是营销名**（motorola moto g24 /
+       INFINIX Infinix X6887 / ITEL itel S666LN / motorola moto g(20)），没有代号可译 →
+       5/9 是正确值，不是退坡。（2026-10-09 复核时是 5/8 —— 那时 moto g(20) 不在上游；
+       2026-10-23 它回来了，分子仍是 5，分母由 8 变 9。） */
     const rs = h.devices.map((m) => dmk.resolve(m));
-    ok(rs.filter((x) => x.resolved).length === 5, '★ 该样本译出 5 台（另 3 台本来就是营销名，无代号可译）', rs.filter((x) => x.resolved).length + '/' + rs.length);
+    ok(rs.filter((x) => x.resolved).length === 5, '★ 该样本译出 5 台（另 4 台本来就是营销名，无代号可译）', rs.filter((x) => x.resolved).length + '/' + rs.length);
     const unresolved = h.devices.filter((m) => !dmk.resolve(m).resolved);
     /* 判据要打得准：`ITEL S666LN` 这种「品牌 + 型号」本身**就是**合法营销名，
        第一版用「不像代号」的正则把它误判成漏译（误报的代价和漏报一样大）。 

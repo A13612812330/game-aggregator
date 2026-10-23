@@ -127,9 +127,9 @@ const navOrder = [...NAV.matchAll(/data-v="([^"]+)"/g)].map((m) => m[1]);
  * ★ v10.107：四个模块收成一个 'rm' 入口 —— 侧栏 10 → **7** 项。
  *   用户口径：「参考站的资源是一个资源管理入口，要不要也收成一个」→「可以」。
  *   判据守的是「侧栏项 = 视图数、没有重复入口」，不是这 7 个字面量本身。 */
-ok(JSON.stringify(navOrder) === JSON.stringify(['dash', 'games', 'rm', 'res', 'log', 'dl', 'set']),
-  'B1 侧栏顺序：仪表盘 / 游戏库 / 资源管理 / 覆盖与缺口 / 日志 / 磁力 / 设置', navOrder.join(','));
-ok(navOrder.length === 7, 'B1b 侧栏恰好 7 项（v10.106 的 10 项再合并四模块）', navOrder.length + ' 项');
+ok(JSON.stringify(navOrder) === JSON.stringify(['dash', 'games', 'new', 'rm', 'res', 'log', 'dl', 'set']),
+  'B1 侧栏顺序：仪表盘 / 游戏库 / 新游检测 / 资源管理 / 覆盖与缺口 / 日志 / 磁力 / 设置', navOrder.join(','));
+ok(navOrder.length === 8, 'B1b 侧栏恰好 8 项（v10.106 的 10 项再合并四模块、v10.109 加新游检测）', navOrder.length + ' 项');
 
 /* ★ v10.106：页面管理不再是独立 section —— 这里改成**反向断言**：
  *   旧视图必须彻底消失（否则「合并」只做了一半，侧栏少一项但 DOM 里还留着死页面）。 */
@@ -274,9 +274,17 @@ ok(ADMIN.includes('const bad = m == null || t == null || !t;') && /bad \? '—' 
   ok(['clear', 'show', 'hide'].includes(after.j.state.override), 'C13 state.override 是三种合法态之一',
     after.j.state.override);
 
-  /* 列表层也要看到覆盖（覆盖层只影响输出，这里是输出点） */
-  const q = await get('/api/library/browse?scope=pc&admin=1&cold=0&limit=1&q=' + encodeURIComponent('玩偶冒名者'));
-  ok(q.j.total > 0 && q.j.items[0].hot === 42, 'C14 列表行用的是覆盖后的值', 'hot=' + (q.j.items[0] || {}).hot);
+  /* 列表层也要看到覆盖（覆盖层只影响输出，这里是输出点）
+   * ★ v10.109：原来写死搜「玩偶冒名者」—— 那条**已经不在库里了**（daily-sync 换过一批），
+   *   于是这条断言失败在「搜不到」，而不是它该守的「覆盖没生效」。
+   *   ⇒ 搜索词从被测条目自己的标题里现取，再用 id 精确定位那一行。
+   *   （同一条规矩：断言里不许写死数据名，写死就会在某天因为数据漂移而假红。） */
+  const titleOf = String(((before.j || {}).raw || {}).title || '').split('/')[0].trim();
+  const tq = titleOf.slice(0, 6) || TID;
+  const q = await get('/api/library/browse?scope=pc&admin=1&cold=0&limit=50&q=' + encodeURIComponent(tq));
+  const row = ((q.j && q.j.items) || []).find((x) => x.id === TID) || ((q.j && q.j.items) || [])[0] || {};
+  ok(q.j.total > 0 && row.hot === 42, 'C14 列表行用的是覆盖后的值',
+    'q="' + tq + '" total=' + q.j.total + ' hot=' + row.hot);
 
   /* 清理：空值 = 删掉覆盖 */
   await post('/api/admin/profile', { id: TID, patch: { intro: '', developer: '', hot: '' } });

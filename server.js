@@ -6,6 +6,11 @@
  */
 const path = require('path');
 const fs = require('fs');
+/* ★ v10.109：临时目录归一 —— 必须在其它 require **之前**执行，
+ *   否则先加载的库可能已经缓存了旧的 os.tmpdir()。
+ *   用户口径：「后续的 Temp 不要在 C 盘，在项目下的文件夹即可」。
+ *   完整背景见 data/runtime-tmp.js 的注释（2026-10-23 C 盘 0 字节导致部署 ENOSPC）。 */
+require('./data/runtime-tmp');
 const zlib = require('zlib');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
@@ -508,6 +513,102 @@ app.get('/api/search', async (req, res) => {
 // GET /api/cold/stats — 冷门隐藏口径自证（v10.84）：现测规则命中数/豁免数，数字不写死
 app.get('/api/cold/stats', (_req, res) => {
   res.json({ ok: true, ...coldHide.stats(gamesDb.all()) });
+});
+
+/* ═══ v10.109 新游检测（用户需求 ④）══════════════════════════════════
+ * 用户口径：「我还想增加一个入口，就是新游检测（遇到新游戏则在这里，我来决定是入库）」
+ *   · 判定「新」= 源站出现了、库里没有的（按 id 差集，不看日期字段）
+ *   · 「入库」  = 写进库 + 强制可见 + 尝试补详情资料
+ *
+ * ★ 全部走 adminGuard：候选池里是**未发布的源站条目**，公开出去等于把别人的新游
+ *   列表直接搬过来当自己的（而且这些条目还没经过任何人工核对）。
+ * ★ scan 是唯一会发外部网络请求的端点 ⇒ 有并发锁（模块内 scanning 标志），
+ *   否则连点两下会同时抓 3 页、把源站当压测目标。 */
+app.get('/api/admin/new-games', (req, res) => {
+  if (!adminGuard(req, res)) return;
+  try {
+    res.json({
+      ok: true,
+      ...newGames.list({
+        status: String(req.query.status || 'pending'),
+        q: String(req.query.q || ''),
+        limit: req.query.limit,
+        offset: req.query.offset,
+      }),
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: '读候选池失败: ' + e.message });
+  }
+});
+
+app.post('/api/admin/new-games/scan', async (req, res) => {
+  if (!adminGuard(req, res)) return;
+  try {
+    const r = await newGames.scan({ pages: (req.body || {}).pages });
+    appendAdminLog({ ts: Date.now(), id: '-', title: '新游扫描', op: 'ng-scan', via: req._adminVia || 'unknown' });
+    res.json(r);
+  } catch (e) {
+    /* 并发扫描 / 网络失败都走这里。409 让前端能区分「稍后再试」与「真坏了」。 */
+    const busy = /进行中/.test(String(e && e.message));
+    res.status(busy ? 409 : 500).json({ ok: false, error: String((e && e.message) || e) });
+  }
+});
+
+app.post('/api/admin/new-games/admit', async (req, res) => {
+  if (!adminGuard(req, res)) return;
+  const ids = [].concat((req.body || {}).ids || (req.body || {}).id || [])
+    .map(String).filter((x) => /^(xd|jidi)-[A-Za-z0-9_-]+$/.test(x));
+  if (!ids.length) return res.status(400).json({ ok: false, error: 'id 不合法（仅支持 xd-*/jidi-*）' });
+  try {
+    const r = await newGames.admit(ids);
+    for (const id of r.admitted) {
+      const g = gamesDb.byIdGet(id);
+      appendAdminLog({ ts: Date.now(), id, title: g ? g.title : '', op: 'ng-admit', via: req._adminVia || 'unknown' });
+    }
+    /* 新条目的资源情况还没算过 —— 让冷门判定的资源表作废，下一次请求重新算 */
+    coldHide.reload();
+    res.json(r);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: '入库失败: ' + e.message });
+  }
+});
+
+app.post('/api/admin/new-games/ignore', (req, res) => {
+  if (!adminGuard(req, res)) return;
+  const ids = [].concat((req.body || {}).ids || (req.body || {}).id || []).map(String);
+  if (!ids.length) return res.status(400).json({ ok: false, error: '缺 id' });
+  try {
+    const r = newGames.ignore(ids, (req.body || {}).note);
+    for (const id of r.ignored) {
+      appendAdminLog({ ts: Date.now(), id, title: '', op: 'ng-ignore', via: req._adminVia || 'unknown' });
+    }
+    res.json(r);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: '忽略失败: ' + e.message });
+  }
+});
+
+/* 候选池的轻量统计（后台侧栏角标用，不带条目） */
+app.get('/api/admin/new-games/stats', (req, res) => {
+  if (!adminGuard(req, res)) return;
+  res.json({ ok: true, ...newGames.stats() });
+});
+
+/* 恢复：已忽略 / 已入库 → 待处理（用户改主意）。
+ * ★ 只改候选池状态，**不回滚已写进库的数据** —— 见 data/new-games.js 的 restore 注释。 */
+app.post('/api/admin/new-games/restore', (req, res) => {
+  if (!adminGuard(req, res)) return;
+  const ids = [].concat((req.body || {}).ids || (req.body || {}).id || []).map(String);
+  if (!ids.length) return res.status(400).json({ ok: false, error: '缺 id' });
+  try {
+    const r = newGames.restore(ids);
+    for (const id of r.restored) {
+      appendAdminLog({ ts: Date.now(), id, title: '', op: 'ng-restore', via: req._adminVia || 'unknown' });
+    }
+    res.json(r);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: '恢复失败: ' + e.message });
+  }
 });
 
 /* ── v10.85 管理页豁免接口（roster 行内「隐藏/显示」按钮的数据面）──
@@ -1603,6 +1704,29 @@ const gameDedupe = require('./data/game-dedupe');
    ★ 摘除前实测：data/fr.json **从未产出** ⇒ fromFr() 贡献 0 条 ⇒ 零用户可见损失。
    完整 SOP（含参数标定与复活手册）：docs/sop/FR-fearlessrevolution-抓取SOP.md */
 const resGroups = require('./data/res-groups');
+/* ★★ v10.109 冷门判定的第二道判据（用户口径：「无人问津的游戏自动隐藏」→
+ *   追问后拍板「无热度**且无任何下载入口**才藏」）。
+ *
+ *   为什么在**这里**注入而不是让 cold-hide 自己去 require('./res-groups')：
+ *   res-groups → gamesDb → cold-hide 已经是一条真实依赖链，反向再 require 就是
+ *   **循环依赖**（Node 会把半初始化的 exports 交出去，症状是「平时好、启动早期炸」）。
+ *   ⇒ 由 server 把「有资源的 id 集合」以函数形式注入；cold-hide 不新增任何 require。
+ *
+ *   ⚠️ 三个 Set 合并成**一个**再返回：`isCold` 要对全库逐条问，若在 isCold 里
+ *      做三次 `.has()` 也可以，但合并后冷门 stats 与列表过滤用的**必然是同一份集合**
+ *      （三处各拼一次早晚漂移 —— 本项目踩过「同一件事两份实现」的坑）。
+ *   ⚠️ 首次调用会触发 resGroups.build()（实测 1.6s），之后 30 分钟 TTL 内走缓存。 */
+coldHide.setResourceProvider(() => {
+  const out = new Set();
+  for (const cat of ['mod', 'trainers', 'saves']) {
+    for (const id of resGroups.libIdsFor(cat)) out.add(id);
+  }
+  return out;
+});
+/* ★ v10.109 新游检测（用户需求 ④：「遇到新游戏则在这里，我来决定是入库」）。
+ *   模块只做「比对 + 记账」，扫描阶段**不写 games.json** —— 写入只发生在用户点「入库」时。
+ *   完整口径（为什么按 id 差集、为什么不复用增量索引）见 data/new-games.js 文件头。 */
+const newGames = require('./data/new-games');
 const searchRank = require('./data/search-rank');
 const pcreq = require('./data/pcreq');
 const bhparams = require('./data/bhparams');

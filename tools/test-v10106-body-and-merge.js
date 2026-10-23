@@ -99,8 +99,12 @@ ok('B7 行尾只留一个「编辑」（两个按钮在 1440 宽下竖排，行�
 /* 负向断言：不许留下指向已删除函数的调用（这类残留只会在点下去那一刻才炸） */
 ok('B8 没有指向已删函数的残留调用（pagesReload / pqs）',
   !/pagesReload\(/.test(ADMIN) && !/\bpqs\(/.test(ADMIN));
+/* ★ v10.109：改成**词边界**匹配。v10.109 新加的扫描页数下拉叫 `#nScanPages`，
+ *   它是新 DOM、与 v10.106 删掉的 `#nPages` 毫无关系 —— 但裸子串 `nPages` 会命中
+ *   `nScanPages` 的尾部（n-Scan-**nPages**），把正当的新控件判成残留。
+ *   `\bnPages\b` 要求两侧非字母：`$('nPages')` 命中，`#nScanPages` 不命中。 */
 ok('B9 没有指向已删 DOM 的残留（pRows / pPgBar / nPages）',
-  !/pRows|pPgBar|nPages/.test(ADMIN));
+  !/pRows|pPgBar|\bnPages\b/.test(ADMIN));
 /* ★ v10.108 口径更新：底色改白后，原来那档 #bf6a50 在白底上只有 3.89:1（不够 AA），
    --acc 压到 #a9553c = 5.19:1。这条守的是「主按钮实底必须比 --pri 深一档」这件事本身，
    不是某个具体色号 —— 所以只换色号，判据（用 --acc 而不是 --pri）不变。 */
