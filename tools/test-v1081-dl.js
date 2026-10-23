@@ -87,11 +87,15 @@ ok('角标计数加 ts.length（新来源必须计数）',
   /st\.cnt\[k\] = community\.count \+ gcm\.length \+ gtr\.length \+ ts\.length;/.test(IDX));
 ok('dlUniFetchTs：失败返回 [] 不拖垮整页（与 dlUniFetchGt 同策略）',
   /async function dlUniFetchTs\(ctx\)/.test(IDX) && /catch \(e\) \{ return \[\]; \}/.test(IDX));
+/* ★ v10.110：TS 段的渲染条件从 `kind==='mod' && (d.ts||[]).length` 改成 `tsKeep.length`
+   （筛后的那一批）—— 未筛选时两者等价，文案与位置不变。断言认两种写法。 */
+const TS_GATE = IDX.includes("if (kind === 'mod' && (d.ts || []).length)")
+  ? "if (kind === 'mod' && (d.ts || []).length)" : 'if (tsKeep.length)';
 ok('MOD 页签渲染 TS 段（TS 徽标 + 直链 zip 按钮）',
-  IDX.includes("if (kind === 'mod' && (d.ts || []).length)") && IDX.includes('<span class="k gt">TS</span>'));
+  IDX.includes(TS_GATE) && IDX.includes('<span class="k gt">TS</span>'));
 ok('TS 段源码位置在机地帖渲染之前（能直下的排前面）',
-  IDX.indexOf("if (kind === 'mod' && (d.ts || []).length)")
-    < IDX.indexOf('out.push(dlModRowsHtml(c.items, kind))'));
+  IDX.indexOf(TS_GATE) > 0
+    && IDX.indexOf(TS_GATE) < IDX.indexOf('out.push(dlModRowsHtml('));
 ok('GCM 段分治文案：有 FLiNG 直链时不再说「一律不含下载地址」',
   IDX.includes("风灵月影（FLiNG）官方文件可直下") && IDX.includes('const nFling = gcm.filter((it) => (it.dl || []).some((l) => !l.ext)).length;'));
 ok('★ P1b TCS 外链：ext 分开数、分开说（不许冒充 CDN 直链）',

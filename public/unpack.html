@@ -2571,6 +2571,19 @@
   .dl-tab.on,.dl-chip.on{background:var(--c-primary);border-color:transparent;color:#fff}
   .dl-tab.on i,.dl-chip.on i{color:rgba(255,255,255,.82)}
   .dl-chip i{font-style:normal;font-family:var(--font-num);font-weight:800;margin-left:3px;color:var(--c-t3)}
+  /* ★ v10.110：四页签共用的筛选条。复用 .dl-bar 的行 / chip 样式，只把 sticky 去掉 ——
+     `.dl-bar` 是「本体」页签的吸顶工具条（top:-12px, z-index:3），而 Mod / 修改器 / 存档
+     三个页签的筛选条要跟着内容滚：粘住的话它会遮住下面列表的第一行，
+     且这些页签里有 `.dl-agg` 段落分节，吸顶条会横跨两段看着像属于后一段。 */
+  .dl-bar.dl-flt{position:static;margin:0 0 9px;padding:0;background:none;
+    border:0;-webkit-backdrop-filter:none;backdrop-filter:none}
+  .dl-bar.dl-flt .rw+.rw{margin-top:5px}
+  .dl-flt-clear{font-size:10.5px;font-weight:750;color:var(--c-primary);background:none;
+    border:0;padding:4px 2px;margin-left:auto;text-decoration:underline}
+  .dl-flt-none{padding:14px 4px;text-align:center;font-size:12px;line-height:1.8;color:var(--c-t3)}
+  /* 存档页头的「筛后 N」角标 —— 全量数字照旧留着，筛后数另起一枚，两个数并列出现 */
+  .dl-sv-head .dl-sv-flt{font-style:normal;font-size:10.5px;font-weight:750;margin-left:6px;
+    padding:2px 6px;border-radius:6px;color:var(--c-primary);background:var(--c-primary-soft)}
   .dl-note{font-size:11px;line-height:1.7;color:var(--c-t3);margin:-2px 0 11px}
   .dl-note b{color:var(--c-t2)}
   /* ============ ★ v10.28：详情页里的「三专区预览」+ 弹窗分页 ============
@@ -6054,6 +6067,109 @@ function dlUniTabs() {
   }).join('');
 }
 
+/* ================= ★ v10.110：下载弹窗四页签的筛选 =================
+ * 用户口径：「下载入口均只展示前三条，若有多个下载源或下载内容则在下载弹窗中
+ *           需要提供筛功能（类似目前已有网盘的筛选）」。
+ *
+ * 【为什么只有本体有筛选是不够的】本体页签从 v10.29 起就有「盘口」chip（`dlBarHtml`），
+ *   而 Mod / 修改器 / 存档三个页签**一条筛都没有** —— 它们的行数恰恰最多：
+ *   `D_MOD_CAP=60` 条机地帖 + Thunderstore 段 + FLiNG / CheatScript 段 + GTrainers 段，
+ *   `SVF_CAP=20` 条游侠存档 + GTrainers 段。用户只能一路往下滚。
+ *   本版把筛选提升成**四页签共用的能力**，本体原有的盘口 chip 保留不删。
+ *
+ * 【两个维度，不是一张大杂烩】用户要挑的是两件不同的事：
+ *   · 来源 `src` = 这条数据从哪个站来（机地 / Thunderstore / 风灵月影 / GTrainers / 游侠 / XD）
+ *   · 通道 `ch`  = 这条真正拿东西的路（直链 / 百度 / 迅雷 / 夸克 / eD2K …）
+ *   合成一个「筛选」下拉，会把「我想找能直下的」和「我想找去百度取的」混成同一种诉求。
+ *
+ * 【选项一律从数据现算】不写死名单 —— 源站哪天加个新网盘，它会自动出现在 chip 里。
+ *   写死名单的后果本项目已经踩过：新通道静默消失，用户以为「这款游戏没有夸克」。
+ *
+ * 【数字口径】每个 chip 上的数字 = **在另一维度的筛选下**命中该值的条数。
+ *   不这么做的话，选了「机地」之后通道那行还显示全量数字，点进去必然是 0 条。
+ *
+ * 【状态挂在哪】`dlUni.flt[kind]` —— 与 `svfAll` 同一条理由：挂在会话对象上，
+ *   换游戏 / 关弹窗自动归零，不会出现「上一款筛过百度、这一款点开还是空」。
+ */
+function dlFltOf(k) {
+  if (!dlUni) return { src: '', ch: '' };
+  if (!dlUni.flt) dlUni.flt = {};
+  if (!dlUni.flt[k]) dlUni.flt[k] = { src: '', ch: '' };
+  return dlUni.flt[k];
+}
+
+/** 取行的某个维度值（统一成数组，来源是单值、通道是多值） */
+function dlFltVals(r, dim) {
+  return dim === 'src' ? [r._src].filter(Boolean) : (r._ch || []);
+}
+
+/** 单行是否通过筛选（`src` 单值 / `ch` 多值：有一路对得上就算通过） */
+function dlFltOk(r, f) {
+  if (!r) return false;
+  if (f.src && r._src !== f.src) return false;
+  if (f.ch && !(r._ch || []).includes(f.ch)) return false;
+  return true;
+}
+
+/** 把两个维度的条件套到一批已打标的行上 */
+function dlFltApply(rows, f) {
+  return (rows || []).filter((r) => dlFltOk(r, f));
+}
+
+/** 某个维度下各值的条数（**另一维度**的筛选照常生效，本维度的不生效） */
+function dlFltOpts(rows, dim, f) {
+  const other = dim === 'src' ? 'ch' : 'src';
+  const base = (rows || []).filter((r) => !f[other] ||
+    (other === 'src' ? r._src === f[other] : (r._ch || []).includes(f[other])));
+  const m = new Map();
+  for (const r of base) {
+    for (const v of new Set(dlFltVals(r, dim))) if (v) m.set(v, (m.get(v) || 0) + 1);
+  }
+  return m;
+}
+
+/** 一行 chip。`opts` = Map(值 → 条数)；`names` = 值 → 显示名（缺省用原值）。
+ *  ★ 只有一个取值时**不摆这一行** —— 一个「全部 5 / 机地 5」的筛选项不切换任何信息，
+ *    与 `dlBarHtml` 里「只有一个分区就不摆签」是同一条判断。 */
+function dlFltRow(label, key, opts, cur, names, total) {
+  if (opts.size < 1) return '';
+  if (opts.size === 1 && !cur) {
+    /* 只有一个取值且没在筛 —— 摆出来也是无效控件 */
+    return '';
+  }
+  const arr = [...opts.entries()].sort((a, b) => b[1] - a[1]);
+  return '<div class="rw"><span class="dl-lb">' + esc(label) + '</span>' +
+    '<button type="button" class="dl-chip' + (cur ? '' : ' on') + '" data-dl-flt="' +
+    esc(key) + ':">全部<i>' + total + '</i></button>' +
+    arr.map(([k, n]) => '<button type="button" class="dl-chip' + (cur === k ? ' on' : '') +
+      '" data-dl-flt="' + esc(key) + ':' + esc(k) + '">' +
+      esc((names && names[k]) || k) + '<i>' + n + '</i></button>').join('') +
+    '</div>';
+}
+
+/** 整个筛选条（两个维度都空 / 都只有一项时返回空串，调用方据此不渲染） */
+function dlFltBarHtml(kind, rows, names) {
+  const f = dlFltOf(kind);
+  const srcO = dlFltOpts(rows, 'src', f);
+  const chO = dlFltOpts(rows, 'ch', f);
+  const r1 = dlFltRow('来源', 'src', srcO, f.src, (names && names.src) || null, rows.length);
+  const r2 = dlFltRow('通道', 'ch', chO, f.ch, (names && names.ch) || null, rows.length);
+  if (!r1 && !r2) return '';
+  /* 有筛选生效时给「清空」出口 —— 否则用户只能逐个点回「全部」 */
+  const clear = (f.src || f.ch)
+    ? '<button type="button" class="dl-flt-clear" data-dl-flt-clear="' + esc(kind) + '">清空筛选</button>'
+    : '';
+  return '<div class="dl-bar dl-flt">' + r1 + r2 +
+    (clear ? '<div class="rw">' + clear + '</div>' : '') + '</div>';
+}
+
+/** 筛完一条不剩时的空态（**必须给清空出口**，不许静默空白） */
+function dlFltNoneHtml(kind) {
+  return '<div class="dl-flt-none">当前筛选下这个页签没有条目<br>' +
+    '<button type="button" class="dl-flt-clear" style="margin-top:6px" data-dl-flt-clear="' +
+    esc(kind) + '">清空筛选，看全部</button></div>';
+}
+
 /** 切模块：只改状态再重绘（数据已缓存在 dlUni.data 里，不重复取数） */
 function dlGoModule(k) {
   if (!dlUni || !DL_UNI_KEYS.includes(k) || dlUni.tab === k) return;
@@ -6425,6 +6541,9 @@ function openUniDownload(ctx) {
        挂在会话对象上 ⇒ 换游戏 / 关弹窗自动重置，不会「上一款展开过、这一款也全铺」。
        注意各模块自带的展开态位置不同：本体在 `dlView.all`（那是 paintDownload 的状态）。 */
     svfAll: false,
+    /* ★ v10.110：四页签筛选状态 `{ [kind]: {src, ch} }`。
+       与 svfAll 同理挂在会话对象上 —— 换游戏 / 关弹窗自动重置。 */
+    flt: {},
   };
   const nm = splitName(dlUni.ctx.title);
   $('#dlTitle').textContent = nm.zh || dlUni.ctx.title || '下载与资源';
@@ -7486,16 +7605,64 @@ function dlUniPaintMod(d, kind) {
   }
   const c = d.community || { items: [], count: 0 };
   const gtr = d.gtr || [];
+  /* ===== ★ v10.110：先给每一行打「来源 / 通道」标，再筛，再渲染 =====
+   * 【为什么按索引筛而不是先筛数组】四个段的顺序固定（机地 → TS → GCM → GT），
+   *   打标时按这个顺序拼成一条 `barRows`，筛选结果也按同一条索引取 ——
+   *   各段各自的 `keep` 与 chip 上的数字因此**同源**。
+   *   分别对每个段调一次 filter 也能写，但那条路一旦某段的打标规则与筛法漂移，
+   *   就会出现「chip 写机地 3、列表只有 1 条」这种本项目已踩过多次的数字对不上。
+   * 【通道名归一】**保留源站全名，不剥「网盘 / 云盘」后缀** —— 一开始按
+   *   `dlModLinkBtns` 的口径剥了，实拍发现同一行 chip 里会同时出现
+   *   「迅雷」（网盘通道）与「迅雷链接」（thunder:// 协议），两个**不同的东西**读起来像重复；
+   *   而 `.dl-chip` 本身 `white-space:nowrap`，取名全不会折行，只是整行变宽后换行。
+   *   ⇒ 存档页签改成「迅雷云盘 / 迅雷链接」并列，互不混淆。 */
+  const chNorm = (s) => String(s || '').trim();
+  const tsAll = (kind === 'mod') ? (d.ts || []) : [];
+  const gcmAll = (kind === 'modifier') ? (d.gcm || []) : [];
+  const jidiRows = c.items.map((it) => ({
+    _src: 'jidi',
+    _ch: [...new Set((it.links || []).map((l) => chNorm(l.kind)).filter(Boolean))],
+  }));
+  const tsRows = tsAll.map(() => ({ _src: 'ts', _ch: ['直链'] }));
+  /* FLiNG 与 CheatScript 的区分口径与上面 GCM 段的 `nFling / nExt` 完全一致：
+     有**非 ext**（流代理直链）就是 FLiNG；否则是 CheatScript 外链。 */
+  const gcmRows = gcmAll.map((it) => {
+    const dl = it.dl || [];
+    return { _src: dl.some((l) => !l.ext) ? 'fling' : 'tcs', _ch: dl.length ? ['直链'] : [] };
+  });
+  const gtRows = gtr.map(() => ({ _src: 'gt', _ch: ['直链'] }));
+  const barRows = jidiRows.concat(tsRows, gcmRows, gtRows);
+  const f = dlFltOf(kind);
+  const pass = barRows.map((r) => dlFltOk(r, f));
+  const oTs = jidiRows.length;
+  const oGcm = oTs + tsRows.length;
+  const oGt = oGcm + gcmRows.length;
+  const jidiKeep = c.items.filter((_, i) => pass[i]);
+  const tsKeep = tsAll.filter((_, i) => pass[oTs + i]);
+  const gcmKeep = gcmAll.filter((_, i) => pass[oGcm + i]);
+  const gtKeep = gtr.filter((_, i) => pass[oGt + i]);
+  const filtered = !!(f.src || f.ch);
   const out = [];
   /* 模块说明先摆出来：「修改器」与「Mod」的风险差异是用户决策要用到的信息 */
   if (M.hint) out.push('<div class="dl-note" style="margin:0 0 8px">' + esc(M.hint) + '</div>');
+  /* 筛选条：数据一行都没回来时不摆（那时只有「全部 0」一个无效控件） */
+  if (barRows.length) {
+    out.push(dlFltBarHtml(kind, barRows, {
+      src: { jidi: '机地', ts: 'Thunderstore', fling: '风灵月影', tcs: 'CheatScript', gt: 'GTrainers' },
+    }));
+  }
+  /* 全部筛空 → 只给空态 + 清空出口，不再往下摆四段空壳 */
+  if (filtered && !jidiKeep.length && !tsKeep.length && !gcmKeep.length && !gtKeep.length) {
+    body.innerHTML = out.join('') + dlFltNoneHtml(kind);
+    return;
+  }
   /* ★ v10.81：Thunderstore 直链段（MOD 页签专属）—— 排在机地帖**之前**：
      能直接下载的排在要跳网盘的前面（「内容排在出口之前」同一逻辑的镜像应用）。 */
-  if (kind === 'mod' && (d.ts || []).length) {
-    out.push('<div class="dl-agg"><div class="dl-note">另有 <b>' + d.ts.length +
+  if (tsKeep.length) {
+    out.push('<div class="dl-agg"><div class="dl-note">另有 <b>' + tsKeep.length +
       '</b> 个来自 <b>Thunderstore</b> 的 MOD（<b>官方 CDN 直链 zip</b>，免注册、免网盘客户端）' +
       ' · <a href="https://thunderstore.io/" target="_blank" rel="noopener">thunderstore.io ↗</a></div>' +
-      d.ts.map((x) => {
+      tsKeep.map((x) => {
         const links = (x.links || []).filter((l) => l.url);
         const ks = links.map((l, i) => '<a' + (i === 0 ? ' class="pri"' : '') +
           ' href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer">' +
@@ -7517,10 +7684,15 @@ function dlUniPaintMod(d, kind) {
     out.push('<div class="dlpop-empty">这款游戏在<span style="white-space:nowrap">机地社区</span>没有收录 ' + M.nm +
       (hasOther ? '，但<b>下方有可直下的来源</b>' : '<br><span style="font-size:11.5px">可以点下面的按钮到机地 MOD / 修改器区自己搜</span>') +
       '</div>');
-  } else {
+  } else if (jidiKeep.length) {
+    /* ★ v10.110：`c.items.length` → `jidiKeep.length`。
+       ⚠️ 但空态判据保留 `!c.items.length`（原始数据层）—— 换成筛后数组的话，
+          用户筛「Thunderstore」时会看到「机地没有收录 Mod」这句假话（机地其实有 60 条）。 */
     out.push('<div class="dl-note">机地社区共 <b>' + c.count + '</b> 条 ' + M.nm +
-      ' 帖（本页铺 ' + c.items.length + ' 条）· 点任意一条去源站帖子取件</div>');
-    out.push(dlModRowsHtml(c.items, kind));
+      ' 帖（本页铺 ' + jidiKeep.length + ' 条' +
+      (jidiKeep.length !== c.items.length ? '，已按筛选过滤' : '') +
+      '）· 点任意一条去源站帖子取件</div>');
+    out.push(dlModRowsHtml(jidiKeep, kind));
     if (c.count > c.items.length) {
       out.push('<div class="dl-note" style="margin:10px 0 0">另有 ' + (c.count - c.items.length) +
         ' 条未展示，去机地搜「' + esc(nm) + '」看全部</div>');
@@ -7530,8 +7702,8 @@ function dlUniPaintMod(d, kind) {
      绕 Referer 防盗链），能下的与「只确认版本」的必须分开说，不许再说「一律不含下载地址」。
      ★ P1b：the_cheat_script 条目带**外链**（MEGA/Yandex，ext:true，新标签直开）——
      不是 CDN 直链也**不许冒充**，文案按 ext 分开数、分开说。 */
-  if (kind === 'modifier' && (d.gcm || []).length) {
-    const gcm = d.gcm;
+  if (gcmKeep.length) {
+    const gcm = gcmKeep;
     const nFling = gcm.filter((it) => (it.dl || []).some((l) => !l.ext)).length;
     const nExt = gcm.filter((it) => (it.dl || []).some((l) => l.ext)).length;
     const nDl = nFling + nExt;
@@ -7561,7 +7733,10 @@ function dlUniPaintMod(d, kind) {
   }
   /* ★ v10.53：聚合层的 GTrainers 段（排在 GCM 段之后、模块出口链接**之前**）——
      出口是「去别处找」，内容是「已经找到了」；把内容排在出口之后会被读成「这一屏到此为止」。 */
-  if (kind === 'modifier' && gtr.length) out.push(dlResSection(gtr, '修改器'));
+  /* ⚠️ v10.110 改这里时**必须保住 `kind === 'modifier'`**：GT 聚合段只对修改器页签挂，
+     `mod` 页签的聚合层本来就只有机地一个来源，挂上去是个空段。
+     第一版只写成 `gtKeep.length`，`test-emulator-structure` 当场把这条抓出来了。 */
+  if (kind === 'modifier' && gtKeep.length) out.push(dlResSection(gtKeep, '修改器'));
   out.push('<div class="d-dl-links">' + dModLinks() + '</div>');
   body.innerHTML = out.join('');
 }
@@ -7638,12 +7813,49 @@ function dlUniPaintSave(d) {
   const loc = (d && d.loc) || null;
   const items = files.items || [];
   const locN = loc ? ((loc.paths || []).length + (loc.regs || []).length) : 0;
+  /* ===== ★ v10.110：存档页签的「来源 / 通道」筛选 =====
+   * 【通道口径必须与按钮同一套】一个存档文件可能同时有直链 + 3 个网盘 + 迅雷 + eD2K；
+   *   筛「百度」时要能筛出「有百度这条路」的文件，而不是「只给百度」的 ——
+   *   所以 `_ch` 是**多值**（有几路记几路），不是主通道。
+   * 【来源只有两种，但未来会多】游侠文件与 GTrainers 聚合段。写死 `['yx','gt']` 也能跑，
+   *   但下一版若接第三源就得改两处 —— 这里按数据现拼，接新源只需往 `rows` 里 push。 */
+  const svfChOf = (x) => {
+    const f2 = x.files || {};
+    const a = [];
+    if (f2.direct) a.push('直链');
+    (f2.netdisk || []).forEach((n) => {
+      const nm = String(SVF_ND[n.kind] || (n.kind ? n.kind + ' 网盘' : '网盘')).trim();
+      if (nm) a.push(nm);
+    });
+    if (f2.thunder) a.push('迅雷链接');
+    if (f2.ed2k) a.push('eD2K');
+    return [...new Set(a)];
+  };
+  const yxRows = items.map((x) => ({ _src: 'yx', _ch: svfChOf(x) }));
+  const gtRows = gts.map(() => ({ _src: 'gt', _ch: ['直链'] }));
+  const barRows = yxRows.concat(gtRows);
+  const f = dlFltOf('save');
+  const pass = barRows.map((r) => dlFltOk(r, f));
+  const keep = items.filter((_, i) => pass[i]);
+  const gtsKeep = gts.filter((_, i) => pass[items.length + i]);
   const out = [];
   /* ★ v10.53：页头数字 = **游侠文件 + GTrainers 文件**，与卡面 `💾 N 存档`
      （`dlUniLoad` 的 `st.cnt.save`）逐字同源 —— 改前卡上写 5、点进来只有 0 条就是这个缺口。 */
-  out.push('<div class="dl-sv-head"><span class="t">💾 存档文件 <b>' + (items.length + gts.length) + '</b> 个</span>' +
+  const filtered = !!(f.src || f.ch);
+  out.push('<div class="dl-sv-head"><span class="t">💾 存档文件 <b>' + (items.length + gts.length) + '</b> 个' +
+    (filtered ? '<i class="dl-sv-flt">筛后 ' + (keep.length + gtsKeep.length) + '</i>' : '') + '</span>' +
     '<button class="dl-sv-loc" type="button" data-dl-svloc="1">📍 存档位置' +
     (locN ? '（' + locN + '）' : '') + '</button></div>');
+  /* ★ v10.110：筛选条 + 全筛空态。空态给「清空筛选」出口 ——
+     没有出口的话用户只能逐个点回「全部」，而且分不清是「真的没有」还是「被筛掉了」。 */
+  if (barRows.length) {
+    out.push(dlFltBarHtml('save', barRows, { src: { yx: '游侠', gt: 'GTrainers' } }));
+  }
+  if (filtered && !keep.length && !gtsKeep.length) {
+    $('#dlFoot').innerHTML = '';
+    body.innerHTML = out.join('') + dlFltNoneHtml('save');
+    return;
+  }
   /* ★ v10.53：空态判据从「游侠没文件」放宽成「两路都没有」——
      实测 842/1377（61.1%）的「💾 有存档」游戏**只有 GTrainers**，
      若仍按老判据早退，这些游戏点进来正是「卡上有数、页里空白」。 */
@@ -7653,18 +7865,20 @@ function dlUniPaintSave(d) {
         : '游侠补丁网的存档区里没有这款游戏的可下载存档') +
       (gts.length ? '' : '<br><span style="font-size:11.5px">存档区按游戏名匹配，冷门 / 新发售的游戏可能还没人上传；' +
         '也可以点右上角看<b>本机存档位置</b>，或去存档库按名搜</span>') + '</div>');
-  } else {
+  } else if (keep.length) {
+    /* ★ v10.110：列表与「展开全部」的基数从 `items` 换成**筛后的** `keep` ——
+       否则筛「百度」后仍会说「展开全部 215 条」，点开还是那 215 条原样。 */
     out.push('<div class="dl-note">来源 <b>游侠补丁网 · 存档区</b>。' +
       '「直接下载」是源站文件直链，<b>免登录、免网盘客户端</b>；网盘 / 迅雷 / eD2K 是同一份文件的备用通道，' +
       '哪个通用哪个。<b>覆盖前先退出游戏并备份原存档</b>。</div>');
     const all = !!(dlUni && dlUni.svfAll);
-    const shown = all ? items : items.slice(0, SVF_CAP);
+    const shown = all ? keep : keep.slice(0, SVF_CAP);
     out.push('<div class="dl-svf-list">' + shown.map((x) => svfCard(x)).join('') + '</div>');
     /* 展开 / 收起（与「本体」模块的 `data-dl-all` 同款交互：数据已在手上，不再发请求） */
-    if (items.length > SVF_CAP) {
+    if (keep.length > SVF_CAP) {
       out.push('<div class="d-dl-links">' + (all
         ? '<button type="button" class="dl-more" data-dl-svf="less">收起，只看前 ' + SVF_CAP + ' 条</button>'
-        : '<button type="button" class="dl-more" data-dl-svf="all">展开全部 ' + items.length +
+        : '<button type="button" class="dl-more" data-dl-svf="all">展开全部 ' + keep.length +
           ' 条（已显示前 ' + SVF_CAP + ' 条）</button>') + '</div>');
     }
   }
@@ -7672,7 +7886,7 @@ function dlUniPaintSave(d) {
      排在出口链接**之前**：出口是「去别处找」，内容是「已经找到了」。
      ⚠️ 与游侠文件**不合并去重**：两边的「同一份存档」没有可靠判据（文件名不同、打包格式不同），
         硬去重会把两条不同的通道砍掉一条。两边各自的来源说明已经写清，让用户自己选。 */
-  if (gts.length) out.push(dlResSection(gts, '存档'));
+  if (gtsKeep.length) out.push(dlResSection(gtsKeep, '存档'));
   /* 出口链接：**游侠没有文件时**照旧给（改前行为不变）—— GT 段插在它前面 */
   if (!items.length) {
     out.push('<div class="d-dl-links">' +
@@ -7680,8 +7894,10 @@ function dlUniPaintSave(d) {
       '<a href="/resources.html#sv">存档库</a></div>');
   }
   /* 页脚只在这一屏有额外信息时才写 —— 空话不写（`.dlpop-f` 是共享节点，
-     不主动清空会把上一次「本体」模块的页脚留在存档页上） */
-  const noFile = items.filter((x) => !(x.files && (x.files.direct || (x.files.netdisk || []).length ||
+     不主动清空会把上一次「本体」模块的页脚留在存档页上）
+     ★ v10.110：统计基数改 `keep`（当前筛选下真正铺出来的那批）——
+       按 `items` 全量数会让「筛后只剩 2 条」的屏幕上写着「其中 37 条没能解析」，对不上。 */
+  const noFile = keep.filter((x) => !(x.files && (x.files.direct || (x.files.netdisk || []).length ||
     x.files.ed2k || x.files.thunder))).length;
   $('#dlFoot').innerHTML = noFile
     ? '其中 <b>' + noFile + '</b> 条没能解析出下载通道（源站改版或着陆页异常），已给出「去源站页面取」出口，未丢弃。'
@@ -9075,6 +9291,28 @@ function dModLinks() {
         if (s) { s.all = !s.all; paintDownload(); }
         return;
       }
+    }
+    /* ★ v10.110：四页签共用的筛选（`data-dl-flt="src:jidi"`）。
+       ⚠️ 与上面本体页签的 `data-dl-filt`（盘口）**不是同一个键**：那个是 `dlView.filt`，
+          只作用于本体的机地帖列表；这个是 `dlUni.flt[当前页签]`，四页签各自独立。
+          两条委托必须分开判 —— 混在一起会让本体点一下触发两次重绘。 */
+    const flt = e.target.closest('[data-dl-flt]');
+    if (flt && dlUni) {
+      const raw = String(flt.dataset.dlFlt || '');
+      const i = raw.indexOf(':');
+      const key = i < 0 ? raw : raw.slice(0, i);
+      const val = i < 0 ? '' : raw.slice(i + 1);
+      const f = dlFltOf(dlUni.tab);
+      if (key === 'src' || key === 'ch') f[key] = val;
+      dlUniPane();
+      return;
+    }
+    const fltClear = e.target.closest('[data-dl-flt-clear]');
+    if (fltClear && dlUni) {
+      const f = dlFltOf(fltClear.dataset.dlFltClear || dlUni.tab);
+      f.src = ''; f.ch = '';
+      dlUniPane();
+      return;
     }
     /* ★ v10.25：「查看全部」按钮 —— 与下面两个下载按钮共用同一个 #dlPop 外壳，
        所以绑在同一处委托里（分散绑三处，改一次外壳要改三处）。 */

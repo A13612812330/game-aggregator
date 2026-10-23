@@ -364,9 +364,13 @@ eq(dl.serverOf('https://store.steampowered.com/app/1/'), '其他链接',
     + '只 await 一次会把「还在读」误画成「Ludusavi 里没有这款游戏」（假空态比转圈更糟）');
   ok(/function closeSvLoc\(/.test(idx) && /function openSvLoc\(/.test(idx),
     '★ 位置弹窗有独立的开 / 关函数（复用 #dlPop 外壳的那批弹窗不能顺手把它一起带走）');
-  ok(/const SVF_CAP = 20;/.test(idx) && /items\.slice\(0, SVF_CAP\)/.test(idx),
+  /* ★ v10.110：基数变量从 `items` 换成 `keep`（筛后的那一批）。
+     断言同步放宽成 `items|keep` —— 守的是「有上限 + 有出口」这个行为，
+     不是绑定哪个变量名。⚠️ 「展开基数必须是筛后集合」这条更强的约束
+     由 test-v10110-dl-filter.js 单独守，别在这里补第二份。 */
+  ok(/const SVF_CAP = 20;/.test(idx) && /\b(?:items|keep)\.slice\(0, SVF_CAP\)/.test(idx),
     '★ 存档文件列表有上限 SVF_CAP（实测单款最多 215 条 —— 鬼谷八荒，全是真命中，全铺 DOM 太重）');
-  ok(/data-dl-svf="all">展开全部 ' \+ items\.length/.test(idx) && /data-dl-svf="less"/.test(idx),
+  ok(/data-dl-svf="all">展开全部 ' \+ (?:items|keep)\.length/.test(idx) && /data-dl-svf="less"/.test(idx),
     '★★ 截断必须**明说条数 + 给展开/收起出口** —— 静默丢条是本项目明令禁止的');
   ok(/dlUni\.svfAll = sfv\.dataset\.dlSvf === 'all'/.test(idx) && /svfAll: false,/.test(idx),
     '★ 展开态挂在会话对象上（换游戏 / 关弹窗自动重置，不会「上一款展开过这一款也全铺」）');

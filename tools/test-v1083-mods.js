@@ -52,8 +52,11 @@ ok('mod 页签仍是四路（community/gcm/gtr/ts，没有第五路）',
 ok('st.data 形态不变', /st\.data\[k\] = \{ community, gcm, gtr, ts \};/.test(IDX));
 ok('角标计数 = 四路之和（无 mx 项）',
   /st\.cnt\[k\] = community\.count \+ gcm\.length \+ gtr\.length \+ ts\.length;/.test(IDX) && !/ts\.length \+ mx\.length/.test(IDX));
+/* ★ v10.110：TS 段的数据变量从 `d.ts` 换成了**筛后的** `tsKeep`（下载弹窗四页签筛选）。
+   断言同步认两种名字 —— 守的是「TS 段真的渲染出来了」，不是绑定某个变量名。
+   ⚠️ 真正要钉住的是后半句「MX 角标不在」（v10.83 撤掉 Modrinth 的回归闸），那部分原样保留。 */
 ok('TS 段渲染在（MX 角标不在）',
-  /d\.ts\.map\(\(x\) =>/.test(IDX) && !/d\.mx\.map\(\(x\) =>/.test(IDX));
+  /(?:tsKeep|d\.ts)\.map\(\(x\) =>/.test(IDX) && !/d\.mx\.map\(\(x\) =>/.test(IDX));
 ok('空态守卫保持 v10.81 三路（gtr/ts/gcm，无 mx）',
   /\(d\.ts \|\| \[\]\)\.length \|\| \(kind === 'modifier' && \(d\.gcm \|\| \[\]\)\.some/.test(IDX) && !/\(d\.mx \|\| \[\]\)\.length/.test(IDX));
 

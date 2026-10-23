@@ -1186,19 +1186,23 @@ const GN = require(path.join(root, 'data', 'game-name'));
   t('★★ v10.53：修改器页签的 GT 段排在 `.d-dl-links`（模块出口）**之前**',
     (() => {
       const seg = idx.split('function dlUniPaintMod(')[1] || '';
-      const iGt = seg.indexOf("out.push(dlResSection(gtr, '修改器'))");
+      /* ★ v10.110：数据变量从 gtr 换成筛后的 gtKeep —— 位置判据认两种名字 */
+      const iGt = (() => { const a = seg.indexOf("out.push(dlResSection(gtr, '修改器'))"); const b = seg.indexOf("out.push(dlResSection(gtKeep, '修改器'))"); return a >= 0 ? a : b; })();
       const iOut = seg.indexOf(`out.push('<div class="d-dl-links">' + dModLinks()`);
       return iGt > 0 && iOut > 0 && iGt < iOut;
     })());
   t('★★ v10.53：存档页签的 GT 段排在「游侠存档区 / 存档库」出口**之前**',
     (() => {
       const seg = idx.split('function dlUniPaintSave(')[1] || '';
-      const iGt = seg.indexOf("out.push(dlResSection(gts, '存档'))");
+      /* ★ v10.110：同上，存档页签换成筛后的 gtsKeep */
+      const iGt = (() => { const a = seg.indexOf("out.push(dlResSection(gts, '存档'))"); const b = seg.indexOf("out.push(dlResSection(gtsKeep, '存档'))"); return a >= 0 ? a : b; })();
       const iOut = seg.indexOf('游侠存档区 ↗');
       return iGt > 0 && iOut > 0 && iGt < iOut;
     })());
   t('★ v10.53：修改器页签**只对 `modifier`** 挂 GT 段（`mod` 分区聚合层本来就只有机地一个来源，挂上去是空段）',
-    /if \(kind === 'modifier' && gtr\.length\) out\.push\(dlResSection\(gtr, '修改器'\)\);/.test(idx));
+    /* ★ v10.110：数据变量从 `gtr` 换成筛后的 `gtKeep`，但 `kind === 'modifier'` **必须还在** ——
+       第一版改漏了它，mod 页签会凭空多出一段空气聚合层，就是被这条抓出来的。 */
+    /if \(kind === 'modifier' && (?:gtr\.length|gtKeep\.length)\) out\.push\(dlResSection\((?:gtr|gtKeep), '修改器'\)\);/.test(idx));
 
   /* ⑤ 空态：这是本轮真正的那个 bug —— 老判据「游侠没文件就早退」会把 GT-only 的 842 款判成空白 */
   t('★★ v10.53：存档空态判据放宽成「两路都没有」，`!items.length` 分支**不再提前 return**',
@@ -1221,10 +1225,10 @@ const GN = require(path.join(root, 'data', 'game-name'));
   t('[派生页] 四页都同步了 `dlUniFetchGt` + GT 段渲染',
     P4.every(([, h]) => /async function dlUniFetchGt\(ctx, cat\)/.test(h)
       && /function dlResSection\(items, cat\)/.test(h)), miss(/async function dlUniFetchGt\(ctx, cat\)/));
-  t("[派生页] 四页的存档页签都接了 GT 段（`out.push(dlResSection(gts, '存档'))`）与放宽后的空态",
-    P4.every(([, h]) => /out\.push\(dlResSection\(gts, '存档'\)\)/.test(h)
+  t("[派生页] 四页的存档页签都接了 GT 段（`out.push(dlResSection(gts|gtsKeep, '存档'))`）与放宽后的空态",
+    P4.every(([, h]) => /out\.push\(dlResSection\((?:gts|gtsKeep), '存档'\)\)/.test(h)
       && /\(gts\.length \? '' : '<br><span style="font-size:11\.5px">存档区按游戏名匹配/.test(h)),
-    miss(/out\.push\(dlResSection\(gts, '存档'\)\)/));
+    miss(/out\.push\(dlResSection\((?:gts|gtsKeep), '存档'\)\)/));
 }
 /* 专属 CSS 泄漏闸：追加的 CSS 必须整段待在 <style> 内 */
 t('端游资源页 <style> 唯一', count(res, /<style>/g) === 1, `实际 ${count(res, /<style>/g)}`);
