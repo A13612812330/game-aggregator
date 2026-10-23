@@ -101,8 +101,11 @@ ok('B8 没有指向已删函数的残留调用（pagesReload / pqs）',
   !/pagesReload\(/.test(ADMIN) && !/\bpqs\(/.test(ADMIN));
 ok('B9 没有指向已删 DOM 的残留（pRows / pPgBar / nPages）',
   !/pRows|pPgBar|nPages/.test(ADMIN));
-ok('B10 主按钮与页码的实底仍然是深一档陶土色（#e79379 配白字只有 2.6:1）',
-  /--acc:#bf6a50|--acc: #bf6a50/.test(ADMIN_CSS));
+/* ★ v10.108 口径更新：底色改白后，原来那档 #bf6a50 在白底上只有 3.89:1（不够 AA），
+   --acc 压到 #a9553c = 5.19:1。这条守的是「主按钮实底必须比 --pri 深一档」这件事本身，
+   不是某个具体色号 —— 所以只换色号，判据（用 --acc 而不是 --pri）不变。 */
+ok('B10 主按钮与页码的实底仍是深一档陶土色（v10.108：白底 5.19:1，原 #bf6a50 只有 3.89:1）',
+  /--acc:#a9553c|--acc: #a9553c/.test(ADMIN_CSS));
 
 console.log('\n== C. 文档与登记 ==');
 const D106 = read('docs/versions/v10.106.md');

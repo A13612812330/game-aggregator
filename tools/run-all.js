@@ -120,6 +120,10 @@ const SUITES = [
   'test-v10105-admin-theme.js',
   'test-v10106-body-and-merge.js',
   'test-v10107-rm-merge.js',
+  /* ★ v10.108：管理台改白。底色一改，所有颜色的可读性判据全部作废 ——
+   * 这套除了验「四个面都白、cream 清干净」，还用 WCAG 公式**现算**对比度（不抄结论），
+   * 并守住「面板不许长回卡片框」「资料完整度不许退回整列涂红」这两条视觉决策。 */
+  'test-v10108-admin-white.js',
   'test-saves-match.js',
   /* ★ v10.46 新增：「游侠存档 × 端游库」**名称匹配**层（前缀通道 + 代际护栏口径）。
    * 起因：这条链路此前零覆盖（test-saves-match.js 测的是 Ludusavi 路径匹配，另一条路），

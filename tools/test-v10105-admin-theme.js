@@ -46,12 +46,17 @@ function fin() {
   process.exit(bad.length ? 1 : 0);
 }
 
-console.log('-- A. 设计 token：取自参考站 [data-theme=cream] --');
-ok('A1 画布色 = #e8e2d6（参考 --layout-canvas）', /--canvas:\s*#e8e2d6/i.test(CSS));
-ok('A2 主色 = #e79379（参考 --primary）', /--pri:\s*#e79379/i.test(CSS));
-ok('A3 侧栏底 = #ebe5d9（参考 --sidebar-background）', /--side:\s*#ebe5d9/i.test(CSS));
-ok('A4 卡片底 = #f7f2e8（参考 --card）', /--card:\s*#f7f2e8/i.test(CSS));
-ok('A5 边框 = #d6d0c2（参考 --border）', /--line:\s*#d6d0c2/i.test(CSS));
+console.log('-- A. 设计 token：★ v10.108 已从 cream 改白，这里跟的是**当前**口径 --');
+/* ★ 口径变更留痕（v10.108，2026-10-23）：用户口径「页面我需要白色的」。
+   v10.105 的 A1/A3/A4/A5 原本钉的是参考站 cream 三个值（#e8e2d6 / #ebe5d9 / #f7f2e8 / #d6d0c2）。
+   底色改白之后那四条必然红，所以**改的是断言的期望值，不是放宽判据**：
+   仍然是「画布 / 侧栏 / 卡片 / 边框」四个面 + 一个主色，一一对应，一个不少。
+   A2 主色 #e79379 没变 —— 换的只是底色与灰阶，不是品牌色。 */
+ok('A1 画布色 = #ffffff（v10.108 改白；cream 的 #e8e2d6 已废止）', /--canvas:\s*#ffffff/i.test(CSS));
+ok('A2 主色 = #e79379（参考 --primary，v10.108 未动）', /--pri:\s*#e79379/i.test(CSS));
+ok('A3 侧栏底 = #ffffff（v10.108 改白；cream 的 #ebe5d9 已废止）', /--side:\s*#ffffff/i.test(CSS));
+ok('A4 卡片底 = #ffffff（白底靠 1px 边框分层，不靠底色差）', /--card:\s*#ffffff/i.test(CSS));
+ok('A5 边框 = #e6e8ec（v10.108 新灰阶；cream 的 #d6d0c2 已废止）', /--line:\s*#e6e8ec/i.test(CSS));
 
 console.log('\n-- B. 骨架：浮动侧栏 + 圆角主区 --');
 ok('B1 .side 不再是 position:fixed（改浮动卡片）',
