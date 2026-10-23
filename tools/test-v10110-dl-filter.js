@@ -42,6 +42,12 @@ const txt = (s) => String(s || '').replace(/\s+/g, ' ').trim();
     /s\.posts\.slice\(0, DL_PREV_CAP\)/.test(src));
   ok('A3 超出上限时给「全部 N 帖 →」出口（不静默丢条）',
     /data-df-open=/.test(src) && /全部 \$\{s\.posts\.length\} 帖/.test(src) && /more \?/.test(src));
+  /* ★ 这条是**实拍撞出来的真 bug**（不是预防性写法）：
+     第一版筛选条借用了 `.dl-bar` 类，而 `test-v1025-dlstrip` 的 ⑧c 靠「`.dl-bar` 已不在」
+     判断「用户真的从本体切走了」⇒ Mod 页签被认成「还停在本体」，那条红。
+     `.dl-bar` 是**语义标识**（本体工具条），不是可以随便复用的样式壳。 */
+  ok('A4 ★ 筛选条用独立类 `.dl-flt-bar`，不占用 `.dl-bar`（后者是「本体工具条」的语义标识）',
+    /'<div class="dl-flt-bar">'/.test(src) && !/dl-bar dl-flt/.test(src));
 
   /* ================= B. 纯函数层 ================= */
   console.log('\n=== B · 筛选判定与计数（纯函数） ===');
@@ -134,7 +140,7 @@ const txt = (s) => String(s || '').replace(/\s+/g, ' ').trim();
   ok('C1 Mod 页签真渲染出条目（不是空页签 —— 空页签上的筛选测不出任何东西）',
     modRowsN > 0, modRowsN + ' 行');
 
-  const cBar = D.querySelector('#dlBody .dl-bar.dl-flt');
+  const cBar = D.querySelector('#dlBody .dl-flt-bar');
   ok('C2 Mod 页签有筛选条', !!cBar);
   const srcChips = cBar ? [...cBar.querySelectorAll('[data-dl-flt^="src:"]')] : [];
   const chChips = cBar ? [...cBar.querySelectorAll('[data-dl-flt^="ch:"]')] : [];
@@ -208,7 +214,7 @@ const txt = (s) => String(s || '').replace(/\s+/g, ' ').trim();
     await sleep(200);
   }
   const svBody = txt(D.querySelector('#dlBody').textContent);
-  const svBar = D.querySelector('#dlBody .dl-bar.dl-flt');
+  const svBar = D.querySelector('#dlBody .dl-flt-bar');
   const svHasRows = D.querySelectorAll('#dlBody .svf').length;
   ok('D1 存档页签有内容或有明确空态（不是白屏）',
     svHasRows > 0 || /没有这款游戏的可下载存档|没有收录|读取失败/.test(svBody),
@@ -262,7 +268,7 @@ const txt = (s) => String(s || '').replace(/\s+/g, ' ').trim();
   const moGcm = D.querySelectorAll('#dlBody .df-row').length;
   ok('F1 修改器页签真渲染出条目（机地帖 / GCM 行至少有一类）',
     moJidi + moGcm > 0, '机地 ' + moJidi + ' / GCM ' + moGcm);
-  const moBar = D.querySelector('#dlBody .dl-bar.dl-flt');
+  const moBar = D.querySelector('#dlBody .dl-flt-bar');
   ok('F2 修改器页签有筛选条', !!moBar);
   const moSrc = moBar ? [...moBar.querySelectorAll('[data-dl-flt^="src:"]')] : [];
   ok('F3 来源维度 ≥2 chip（该样本实测机地 + 风灵月影两路都在场）', moSrc.length >= 2,

@@ -2569,13 +2569,14 @@
   .dl-tab.on,.dl-chip.on{background:var(--c-primary);border-color:transparent;color:#fff}
   .dl-tab.on i,.dl-chip.on i{color:rgba(255,255,255,.82)}
   .dl-chip i{font-style:normal;font-family:var(--font-num);font-weight:800;margin-left:3px;color:var(--c-t3)}
-  /* ★ v10.110：四页签共用的筛选条。复用 .dl-bar 的行 / chip 样式，只把 sticky 去掉 ——
-     `.dl-bar` 是「本体」页签的吸顶工具条（top:-12px, z-index:3），而 Mod / 修改器 / 存档
-     三个页签的筛选条要跟着内容滚：粘住的话它会遮住下面列表的第一行，
-     且这些页签里有 `.dl-agg` 段落分节，吸顶条会横跨两段看着像属于后一段。 */
-  .dl-bar.dl-flt{position:static;margin:0 0 9px;padding:0;background:none;
-    border:0;-webkit-backdrop-filter:none;backdrop-filter:none}
-  .dl-bar.dl-flt .rw+.rw{margin-top:5px}
+  /* ★ v10.110：四页签共用的筛选条。**刻意不复用 `.dl-bar`** ——
+     那个类是「本体页签工具条」的语义标识：`test-v1025-dlstrip` 靠「`.dl-bar` 已不在」
+     来判断「用户真的切走了、不是同一个画布换了高亮」。拿它给 Mod/修改器/存档三页签用，
+     那个判据会当场误判（本轮实测：Mod 页签被认成「还停在本体」，⑧c 变红）。
+     ⇒ 独立类名 + 只继承 `.dl-lb` / `.dl-chip` 这两个纯视觉零件（它们本来是全局选择器）。 */
+  .dl-flt-bar{display:flex;flex-direction:column;margin:0 0 9px}
+  .dl-flt-bar .rw{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .dl-flt-bar .rw+.rw{margin-top:5px}
   .dl-flt-clear{font-size:10.5px;font-weight:750;color:var(--c-primary);background:none;
     border:0;padding:4px 2px;margin-left:auto;text-decoration:underline}
   .dl-flt-none{padding:14px 4px;text-align:center;font-size:12px;line-height:1.8;color:var(--c-t3)}
@@ -7175,7 +7176,7 @@ function dlFltBarHtml(kind, rows, names) {
   const clear = (f.src || f.ch)
     ? '<button type="button" class="dl-flt-clear" data-dl-flt-clear="' + esc(kind) + '">清空筛选</button>'
     : '';
-  return '<div class="dl-bar dl-flt">' + r1 + r2 +
+  return '<div class="dl-flt-bar">' + r1 + r2 +
     (clear ? '<div class="rw">' + clear + '</div>' : '') + '</div>';
 }
 
