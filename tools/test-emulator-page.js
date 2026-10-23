@@ -338,24 +338,42 @@ async function main() {
   ok('品牌下拉已填充', qa('#dmBrand option').length > 3, `实际 ${qa('#dmBrand option').length} 项`);
   ok('Turnip 驱动看板已渲染', qa('#dmTurnip .dm-var').length >= 2, `实际 ${qa('#dmTurnip .dm-var').length} 个变体`);
 
-  // 触发一次匹配查询
+  /* 触发一次匹配查询。
+   * ★ v10.110 修正（铁律 221）：这里原来是固定 `await sleep(2200)`。
+   *   单跑 100/100，进 `run-all --browser` 就红 2 条（「结果已渲染 实际 0 张」）——
+   *   接口实测 12ms（`/api/device/match?model=SM-S928B&limit=300` ×3），
+   *   所以不是接口慢，是**固定等待 + 全量串行时的 CPU 争抢**让回调排到 2.2s 之后。
+   *   ⇒ 改「有界轮询」：出现卡片就立即往下走，最多等 12s；超时仍判红。
+   *     轮询不是把失败等成绿 —— 上界到了还是 0 张就照旧报红。 */
+  const waitCards = async (ms) => {
+    const t0 = Date.now();
+    while (Date.now() - t0 < ms) {
+      if (qa('#dmGrid .emu-card').length > 0) return Date.now() - t0;
+      await sleep(120);
+    }
+    return -1;
+  };
   const dmInp = q('#dmInput');
+  let dmWait = -1;
   if (dmInp) {
     dmInp.value = 'SM S928B';
     click(q('#dmGo'));
-    await sleep(2200);
+    dmWait = await waitCards(12000);
   }
   const dmGrid = q('#dmGrid');
-  ok('机型匹配结果已渲染', dmGrid && qa('#dmGrid .emu-card').length > 0, `实际 ${dmGrid ? qa('#dmGrid .emu-card').length : 0} 张`);
+  ok('机型匹配结果已渲染', dmGrid && qa('#dmGrid .emu-card').length > 0,
+    `实际 ${dmGrid ? qa('#dmGrid .emu-card').length : 0} 张（等待 ${dmWait < 0 ? '超时 12000' : dmWait}ms）`);
   ok('结果头显示 GPU 与性能档', !!q('#dmInfo') && /Adreno|Mali|PowerVR|Xclipse/i.test(q('#dmInfo').textContent),
     q('#dmInfo') ? q('#dmInfo').textContent.replace(/\s+/g, ' ').slice(0, 60) : '空');
   ok('档位筛选按钮已就绪', qa('.dm-f').length === 4, `实际 ${qa('.dm-f').length}`);
 
   // 档位筛选：点「流畅」后卡片数应减少或持平
+  /* ★ 加 `beforeN > 0`：改前这条是 `0 → 0` 也算通过 —— 上面那条红着的时候它会跟着变绿，
+     等于「列表根本没渲染」时这条断言在替失败背书。 */
   const beforeN = qa('#dmGrid .emu-card').length;
   const fSmooth = q('.dm-f[data-dmv="smooth"]');
   if (fSmooth) { click(fSmooth); await sleep(400); }
-  ok('点「流畅」筛选后结果刷新', qa('#dmGrid .emu-card').length <= beforeN,
+  ok('点「流畅」筛选后结果刷新', beforeN > 0 && qa('#dmGrid .emu-card').length <= beforeN,
     `${beforeN} → ${qa('#dmGrid .emu-card').length}`);
 
   d1.window.close();
