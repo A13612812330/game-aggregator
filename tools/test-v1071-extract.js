@@ -166,7 +166,12 @@ for (const b of ['build-extract-page.js', 'build-unpack-page.js', 'build-emulato
 chk('C7 闸门检查发生在 writeFileSync 之前（否则废页已经写出去）', (() => {
   const src = rd(path.join(ROOT, 'tools', 'build-extract-page.js'));
   const gate = realCallLine(src, 'assertScriptSyntax(out,');
-  const write = realCallLine(src, 'fs.writeFileSync(OUT, out');
+  /* ★ v10.111：判据从 `fs.writeFileSync(OUT, out` 放宽到 `fs.writeFileSync(OUT,`。
+     原写法把「写出的是什么表达式」也绑死了 —— 本版为了归一换行改成
+     `writeFileSync(OUT, String(out).replace(/\r\n?/g, '\n'), 'utf8')`，字面量对不上就假红。
+     这条要守的是「**顺序**：闸门先、落盘后」，不是「落盘那行怎么拼」。
+     顺序语义没有被放宽：gate 与 write 两次定位到的是**行号**，比较关系原样保留。 */
+  const write = realCallLine(src, 'fs.writeFileSync(OUT,');
   return gate >= 0 && write >= 0 && gate < write;
 })());
 /* 闸门必须能查出**真实产物**的语法错：把 extract.html 抽出来编译一次 */
