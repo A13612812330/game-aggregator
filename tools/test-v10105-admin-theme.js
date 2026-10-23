@@ -46,17 +46,19 @@ function fin() {
   process.exit(bad.length ? 1 : 0);
 }
 
-console.log('-- A. 设计 token：★ v10.108 已从 cream 改白，这里跟的是**当前**口径 --');
-/* ★ 口径变更留痕（v10.108，2026-10-23）：用户口径「页面我需要白色的」。
-   v10.105 的 A1/A3/A4/A5 原本钉的是参考站 cream 三个值（#e8e2d6 / #ebe5d9 / #f7f2e8 / #d6d0c2）。
-   底色改白之后那四条必然红，所以**改的是断言的期望值，不是放宽判据**：
-   仍然是「画布 / 侧栏 / 卡片 / 边框」四个面 + 一个主色，一一对应，一个不少。
-   A2 主色 #e79379 没变 —— 换的只是底色与灰阶，不是品牌色。 */
-ok('A1 画布色 = #ffffff（v10.108 改白；cream 的 #e8e2d6 已废止）', /--canvas:\s*#ffffff/i.test(CSS));
-ok('A2 主色 = #e79379（参考 --primary，v10.108 未动）', /--pri:\s*#e79379/i.test(CSS));
-ok('A3 侧栏底 = #ffffff（v10.108 改白；cream 的 #ebe5d9 已废止）', /--side:\s*#ffffff/i.test(CSS));
-ok('A4 卡片底 = #ffffff（白底靠 1px 边框分层，不靠底色差）', /--card:\s*#ffffff/i.test(CSS));
-ok('A5 边框 = #e6e8ec（v10.108 新灰阶；cream 的 #d6d0c2 已废止）', /--line:\s*#e6e8ec/i.test(CSS));
+console.log('-- A. 设计 token：★ v10.111 已回到初版配色（蓝 + 深侧栏），这里跟的是**当前**口径 --');
+/* ★ 口径变更留痕（v10.111，2026-10-23）：用户口径「管理页面我要最开始的那种颜色样式」。
+   cream（v10.105）与纯白（v10.108）两次都是**颜色**决策，现在整体推翻回 v10.88 初版
+   （`git show 3b4f797^:public/admin.html` 的 :root：浅灰画布 #f4f6f9 / 深灰侧栏 #111827 / 蓝 #2563eb）。
+   ⇒ A 段与 E 段的期望值翻转。判据结构**一个都没少**（画布/侧栏/卡片/边框/主色 五个面），
+     改的只是「哪个值算对」——不是放宽。
+   ⚠️ 骨架没退：.side/.main 的定位与圆角仍是 v10.105/v10.108 的浮动 + 圆角版，
+     B 段原样保留即可证明这一点（用户要的是颜色，不是布局也回退）。 */
+ok('A1 画布色 = #eef1f6（v10.111 回初版浅灰；v10.108 的 #ffffff 已废止）', /--canvas:\s*#eef1f6/i.test(CSS));
+ok('A2 主色 = #2563eb（v10.111 回初版蓝；陶土 #e79379 已废止）', /--pri:\s*#2563eb/i.test(CSS));
+ok('A3 侧栏底 = #111827（v10.111 回初版深灰；白侧栏已废止）', /--side:\s*#111827/i.test(CSS));
+ok('A4 卡片底 = #ffffff（卡片始终是白，不随画布走）', /--card:\s*#ffffff/i.test(CSS));
+ok('A5 边框 = #e3e8ef（v10.111 回初版灰阶；v10.108 的 #e6e8ec 已废止）', /--line:\s*#e3e8ef/i.test(CSS));
 
 console.log('\n-- B. 骨架：浮动侧栏 + 圆角主区 --');
 ok('B1 .side 不再是 position:fixed（改浮动卡片）',
@@ -88,11 +90,16 @@ ok('D5 ★ 环境按 hostname 现判，不写死「线上」',
   && /eb\.textContent = isLocal \? '本机' : '线上'/.test(ADMIN));
 ok('D6 品牌行有 logo 图（参考 .sider-brand__logo 20px）', /class="logo"/.test(ADMIN) && /\.brand \.logo\{[^}]*width:\s*20px/.test(CSS));
 
-console.log('\n-- E. 反向：旧蓝配色必须清干净（剥注释后判） --');
-ok('E1 不再有 #2563eb（旧主蓝）', !/#2563eb/i.test(CSS));
-ok('E2 不再有 #1d4ed8（旧侧栏选中）', !/#1d4ed8/i.test(CSS));
-ok('E3 不再有 rgba(37,99,235（旧 focus 圈）', !/rgba\(37,\s*99,\s*235/i.test(CSS));
-ok('E4 侧栏不再是深色 #111827', !/--side:\s*#111827/i.test(CSS));
+console.log('\n-- E. ★ v10.111 翻转：初版蓝 + 深侧栏必须在位；cream 与纯白侧栏必须清干净（剥注释后判）--');
+ok('E1 主蓝 #2563eb 在位', /#2563eb/i.test(CSS));
+ok('E2 侧栏选中 #1d4ed8 在位', /#1d4ed8/i.test(CSS));
+ok('E3 focus 圈用 rgba(37,99,235', /rgba\(37,\s*99,\s*235/i.test(CSS));
+ok('E4 侧栏是深色 #111827', /--side:\s*#111827/i.test(CSS));
+console.log('   （反向闸：翻转成「旧蓝必须在位」不等于把另外两版配色放回来 —— 这一组是本版新增的）');
+ok('E4b cream 五个值一个不留（#e8e2d6 / #f0ebe1 / #f7f2e8 / #ebe5d9 / #d6d0c2）',
+  !/#e8e2d6|#f0ebe1|#f7f2e8|#ebe5d9|#d6d0c2/i.test(CSS));
+ok('E4c 陶土主色 #e79379 不留', !/#e79379/i.test(CSS));
+ok('E4d 侧栏不再是纯白', !/--side:\s*#ffffff/i.test(CSS));
 console.log('   （阳性对照：E5 检查剥注释这一步没有把样式表整体吃掉）');
 ok('E5 阳性对照 —— 剥注释后剩下的 CSS 仍含 .side 规则且 > 8KB',
   /\.side\{/.test(CSS) && CSS.length > 8000, 'CSS ' + CSS.length + 'B');

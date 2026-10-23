@@ -1,10 +1,14 @@
 /* v10.108 管理台改白（白底 + recapo 的分节母版 + boardui 的组件形态）
  *
+ * ★★ v10.111 已把这套**配色**推翻（用户口径「管理页面我要最开始的那种颜色样式」），
+ *    回到 v10.88 初版的蓝 + 深侧栏。所以下面 A / B5 / G4 的期望值整体翻转。
+ *    ⚠️ 但本套件**没有作废**：它守的另一半——分节母版、页头层级、侧栏矢量图标、
+ *       对比度现算——跟颜色无关，一条都没动。翻转的只有「哪个色值算对」。
+ *
  * 【守什么】这一版**只改视觉**，但「只改样式」的改动最容易在下轮被顺手改回去，
  *   而且改回去之后页面照样能开、功能测试全绿 —— 所以每条都要留形状断言：
- *     · 白底不是「把画布改白」一件事：画布 / 主区 / 卡片 / 侧栏**四个面**都得白，
- *       少一个就会出现「白纸上贴一块米色」的夹生状态；
- *     · 主色在白底上必须重新算对比度（cream 时代那档 #bf6a50 只有 3.89:1）；
+ *     · 画布 / 主区 / 卡片 / 侧栏**四个面**各自独立取色，少一个就会出现夹生状态；
+ *     · 主色必须重新算对比度（cream 时代那档 #bf6a50 只有 3.89:1）；
  *     · 面板改成「分节」后不许再长回卡片框（那是 recapo 那层参考被丢掉的样子）；
  *     · 侧栏图标从 unicode 字符换成了矢量，得同时验「有 svg」和「旧字符清干净」。
  *   ★ 反向断言一律**先剥注释再判**：本文件与 admin.html 里解释「为什么不用某个值」的
@@ -69,16 +73,16 @@ function fin() {
   process.exit(bad.length ? 1 : 0);
 }
 
-console.log('-- A. 白底：四个面都要白，cream 必须清干净（剥注释后判）--');
-ok('A1 画布 = #ffffff', /--canvas:\s*#ffffff/i.test(CSS));
-ok('A2 主区底 = #ffffff', /--bg:\s*#ffffff/i.test(CSS));
-ok('A3 卡片底 = #ffffff（白底靠 1px 边框分层，不靠底色差）', /--card:\s*#ffffff/i.test(CSS));
-ok('A4 侧栏底 = #ffffff', /--side:\s*#ffffff/i.test(CSS));
+console.log('-- A. 四个面各自取色（v10.111 回初版：浅灰画布 + 白卡片 + 深侧栏），cream 必须清干净（剥注释后判）--');
+ok('A1 画布 = #eef1f6（v10.111；v10.108 的 #ffffff 已废止）', /--canvas:\s*#eef1f6/i.test(CSS));
+ok('A2 主区底 = #f4f6f9（v10.111 回初版浅灰）', /--bg:\s*#f4f6f9/i.test(CSS));
+ok('A3 卡片底 = #ffffff（卡片恒白，靠 1px 边框与画布分层）', /--card:\s*#ffffff/i.test(CSS));
+ok('A4 侧栏底 = #111827（v10.111 回初版深灰；白侧栏已废止）', /--side:\s*#111827/i.test(CSS));
 ok('A5 cream 五个值一个不留（#e8e2d6 / #f0ebe1 / #f7f2e8 / #ebe5d9 / #d6d0c2）',
   !/#e8e2d6|#f0ebe1|#f7f2e8|#ebe5d9|#d6d0c2/i.test(CSS));
-ok('A6 新灰阶：边框 #e6e8ec + 发丝线 #f0f1f4',
-  /--line:\s*#e6e8ec/i.test(CSS) && /--hairline:\s*#f0f1f4/i.test(CSS));
-ok('A7 主色没被改掉（换的是底色与灰阶，不是品牌色）', tok('pri') === '#e79379', tok('pri'));
+ok('A6 初版灰阶：边框 #e3e8ef + 发丝线 #eef1f6',
+  /--line:\s*#e3e8ef/i.test(CSS) && /--hairline:\s*#eef1f6/i.test(CSS));
+ok('A7 主色 = #2563eb（v10.111 回初版蓝；陶土 #e79379 已废止）', tok('pri') === '#2563eb', tok('pri'));
 
 console.log('\n-- B. 白底上的对比度：现算，不抄记忆 --');
 const ACC = tok('acc'), TXT = tok('txt'), SUB = tok('sub'), CARD = tok('card');
@@ -90,8 +94,12 @@ const rTxt = TXT ? ratio(TXT, CARD) : 0;
 ok('B3 正文对卡片底 ≥ 7:1（AAA）', rTxt >= 7, rTxt.toFixed(2) + ':1');
 const rSub = SUB ? ratio(SUB, CARD) : 0;
 ok('B4 次要文字 ≥ 4.5:1（它承载「更新时间 / 评分」这类事实值）', rSub >= 4.5, rSub.toFixed(2) + ':1');
-ok('B5 ★ 主色 --pri 只做浅底/描边，不做白字实底（它自己不到 3:1，白字压不住）',
-  (tok('pri') ? ratio(tok('pri'), '#ffffff') : 9) < 3.0 && /--pri-fg:#fff/i.test(CSS));
+/* ★ v10.111 翻转：初版蓝 5.17:1，**可以直接做白字实底** —— 所以这条从
+   「主色不许做实底（< 3.0）」翻成「主色必须够做实底（≥ 4.5）」。
+   判据方向反了，但强度是**升**的：原来只要它「弱到不能当底色」，现在要求它「强到能当底色」。 */
+ok('B5 ★ 主色 --pri 对白字 ≥ 4.5:1（v10.111 蓝 5.17:1，可直接做白字实底）',
+  (tok('pri') ? ratio(tok('pri'), '#ffffff') : 0) >= 4.5 && /--pri-fg:#fff/i.test(CSS),
+  (tok('pri') ? ratio(tok('pri'), '#ffffff').toFixed(2) + ':1' : '取不到 --pri'));
 
 console.log('\n-- C. 页头：小标签在上、大标题在下（recapo 的层级，不是列表头）--');
 ok('C1 面包屑独占一行且排到标题前', /\.top \.crumb\{[^}]*flex-basis:\s*100%/.test(CSS)
@@ -140,8 +148,14 @@ console.log('\n-- G. 细节：白底上最容易露馅的四处 --');
 ok('G1 弹窗遮罩带背景模糊（纯 38% 黑在半透明内容上会糊成一片）', /backdrop-filter:\s*blur/.test(CSS));
 ok('G2 滚动条收成细轨（默认浅灰块在长表格里很扎眼）', /::-webkit-scrollbar-thumb\{[^}]*border-radius/.test(CSS));
 ok('G3 键盘焦点可见', /:focus-visible\{outline:\s*2px solid/.test(CSS));
-ok('G4 输入框焦圈统一成 16%（22% 在白底上是一片粉雾）',
-  !/rgba\(231,\s*147,\s*121,\s*\.22\)/.test(CSS) && /rgba\(231,\s*147,\s*121,\s*\.16\)/.test(CSS));
+/* ★ v10.111：判据收窄到「带 box-shadow 的 :focus 规则」。
+   原来用「CSS 里不许出现 rgba(…,.22)」一把判，会被别处同色系的**背景**误伤
+   （本轮侧栏环境徽标 .live 用了 22% 蓝做底，它不是焦圈，却被判成犯规）。
+   收窄后这条断言反而更贴语义：问的是「每条焦圈是不是 16%」，不是「这个色号出现过几次」。 */
+const focusRings = CSS.match(/[^{}]*:focus[^{}]*\{[^}]*box-shadow:[^};]*/g) || [];
+ok('G4 输入框焦圈统一成 16%（22% 在浅底上是一片雾）',
+  focusRings.length >= 3 && focusRings.every((r) => /rgba\(37,\s*99,\s*235,\s*\.16\)/.test(r)),
+  focusRings.length + ' 条焦圈规则');
 
 console.log('\n-- H. 文档与版本登记 --');
 const DOC = read('docs/versions/v10.108.md');

@@ -33,6 +33,35 @@ function nvc() {
   return { vc, errs };
 }
 
+/* ★ v10.111：等「页面自己说准备好了」，不要猜 1800ms。
+   五张页面（index / emulator / resources / unpack / extract）的 init() 末尾都会
+   `document.documentElement.setAttribute('data-ready','1')` —— 那才是可靠的完成信号。
+   固定 1800ms 有两个方向的错，本版全量跑同时踩到了后一个：
+     · 争抢时 init 还没跑完就开始断言 ⇒ 假红（数据类断言是空的）；
+     · 更糟：断言段落跑完 `home.window.close()` 了，init 的 await 才回来 ⇒
+       `document` 已随窗口销毁 ⇒ `TypeError: ... reading 'documentElement'`，整套 exit=1。
+     日志里那句 `at init (http://127.0.0.1:8123/:5097:12)` 就是它 —— 不是页面坏了。
+   ★ 与 v10.110 修「机型匹配结果已渲染」那条是同一个病（铁律 221），
+     区别只是这次等的是**页面级就绪**，不是**一段数据**。 */
+async function waitReady(dom, limit = 20000) {
+  const t0 = Date.now();
+  for (;;) {
+    let el = null;
+    try {
+      el = dom.window && dom.window.document && dom.window.document.documentElement;
+    } catch {
+      el = null; /* 窗口已被 close()：按超时处理，而不是抛出去 */
+    }
+    if (el && el.getAttribute('data-ready') === '1') {
+      /* ready 之后的收尾渲染（列表 / 榜单 / 卡片）再给一点余量，别把 ready 当「全都画完了」 */
+      await new Promise((r) => setTimeout(r, 250));
+      return Date.now() - t0;
+    }
+    if (Date.now() - t0 >= limit) return -1;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+}
+
 async function makeDom(url) {
   const html = await fetch(url).then((r) => r.text());
   const { vc, errs } = nvc();
@@ -52,19 +81,23 @@ async function makeDom(url) {
       w.requestAnimationFrame = (cb) => setTimeout(() => cb(Date.now()), 0);
     },
   });
-  await new Promise((r) => setTimeout(r, 1800));
-  return { dom, errs };
+  const readyMs = await waitReady(dom);
+  return { dom, errs, readyMs };
 }
 
 async function main() {
   /* ============================================================
    * 一、首页：手机专区必须变成「独立页入口」而不是内联分区
    * ============================================================ */
-  const { dom: home, errs: homeErrs } = await makeDom(BASE + '/');
+  const { dom: home, errs: homeErrs, readyMs: homeReady } = await makeDom(BASE + '/');
   const w = home.window;
   const $ = (s) => w.document.querySelector(s);
   const $$ = (s) => [...w.document.querySelectorAll(s)];
 
+  /* ★ 先证明「它真的初始化完了」，再谈别的：-1 = 20s 内没 ready。
+     这条红了不要顺着往下看别的红 —— 下面全是它的下游。 */
+  ok('首页在 20s 内跑到 data-ready（不是靠猜固定等待）', homeReady >= 0,
+    homeReady >= 0 ? 'ready ' + homeReady + 'ms' : '20s 超时，init 没跑完');
   ok('首页运行无 JS 异常', homeErrs.length === 0, homeErrs[0] || '');
   ok('首页只剩 1 个 <main>（手机三分区已迁出）', $$('main').length === 1, `实际 ${$$('main').length}`);
   ok('首页已无 #phonecfg / #emuguide 内联分区', !$('#phonecfg') && !$('#emuguide'));
@@ -251,9 +284,21 @@ async function main() {
       q('#drawer').classList.contains('show') && !q('#drawerBody .cf-table'));
     ok('这类卡片上另有一颗独立的「社区配置」按钮', !!bothCard.querySelector('.cfg-btn'));
     W.closeDetail(); await sleep(300);
-    click(bothCard.querySelector('.cfg-btn')); await sleep(1100);
+    click(bothCard.querySelector('.cfg-btn'));
+    /* ★ v10.111：原来写死 1100ms。配置面板要现 fetch 社区配置，全量跑 CPU 争抢时不够 ⇒
+       改成有界轮询（上界 12s）；超时仍判红，并把耗时打进详情（轮询不是把失败等成绿）。 */
+    let cfgWait = -1;
+    {
+      const t0 = Date.now();
+      for (;;) {
+        if (q('#drawerBody .cf-table')) { cfgWait = Date.now() - t0; break; }
+        if (Date.now() - t0 >= 12000) break;
+        await sleep(120);
+      }
+    }
     ok('点「📋 社区配置」按钮 → 才打开社区配置面板',
-      q('#drawer').classList.contains('show') && !!q('#drawerBody .cf-table'));
+      q('#drawer').classList.contains('show') && !!q('#drawerBody .cf-table'),
+      cfgWait < 0 ? '12s 未出现 .cf-table' : '面板 ' + cfgWait + 'ms');
     W.closeDetail(); await sleep(250);
   }
 

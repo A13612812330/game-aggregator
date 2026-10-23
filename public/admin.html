@@ -5,31 +5,41 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GameHub 管理后台</title>
 <!-- 内联 favicon：不引外部文件、也不让 /favicon.ico 404 在控制台留一条红 -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23e79379'/%3E%3Ctext x='16' y='22' font-size='17' font-family='Segoe UI,sans-serif' font-weight='700' fill='white' text-anchor='middle'%3EG%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232563eb'/%3E%3Ctext x='16' y='22' font-size='17' font-family='Segoe UI,sans-serif' font-weight='700' fill='white' text-anchor='middle'%3EG%3C/text%3E%3C/svg%3E">
 <style>
 :root{
   /* ═══ 设计 token ═══
-   * ★ v10.108 改白（用户口径：「页面我需要白色的」）。三个参考各借一层，别混为一谈：
-   *   ① recapo.ai/zh/tools/link-to-video —— 借「**排版与分节**」：
-   *      小标签 + 大标题 + 一句导语，分节用发丝线而不是一层层卡片框，留白大。
-   *      ⚠️ 实测它的应用壳是深色（--ui-bg:#050505 / --ui-card:#121212 / --ui-r-card:16px），
-   *         所以「参考 recapo」**不等于**抄它的底色 —— 底色按用户要求用白。
-   *   ② boardui.com/zh-hans/components —— 借「**组件形态**」：
-   *      1px 细边框 + 大圆角（card 16px）+ 语义 token + 克制的柔和阴影。
-   *   ③ designeer.xyz（用户补充）—— 借「**灰阶与呼吸感**」：
-   *      白画布、近黑正文、发丝线分隔、字号级差小、靠留白分层。
-   * ⚠️ 主色沿用 v10.105 的陶土（--pri:#e79379 做浅底/描边，--acc 做可点的文字与实底）。
-   *   白底上把 --acc 压到 #a9553c：实测 5.19:1（原 #bf6a50 是 3.89:1，白底上不够）。
+   * ★ v10.111 配色回滚（用户口径：「管理页面我要最开始的那种颜色样式」）。
+   *   两个「最开始」要先分清，否则会拿错版本：
+   *     · 配色 —— **v10.88 初版**（`f958d5d`）：浅灰画布 #f4f6f9 + 深灰侧栏 #111827
+   *       + 蓝色 #2563eb。v10.105 换 cream、v10.108 改白，两次都只动颜色没动结构。
+   *     · 骨架 —— 保留 v10.105/v10.108 的成果（浮动侧栏、圆角主区、分节母版、
+   *       矢量图标、19px 页标题）。用户说的是「颜色样式」，不是「布局也退回去」，
+   *       所以 .side/.main 的定位与圆角一个不动，只把色板换掉。
+   * ⚠️ 这里没有回滚整个 admin.html：v10.106~v10.109 在这文件上加了真实功能
+   *   （页面管理并入游戏库、资源管理入口、新游检测入口），整文件回退会静默丢功能。
+   *
+   * 深色侧栏的取值不是凭印象调的，是从 `git show 3d58b19^:public/admin.html` 抄的：
+   *   --side:#111827 / --side2:#1f2937 / 导航字 #cbd5e1 / 激活 #1d4ed8 实底 + 白字 /
+   *   角标 #64748b（激活 #c7d7fe）/ 分组标题 #4b5563 / 底栏 #64748b（b 用 #94a3b8）。
+   * 其中两个值**刻意提亮一档**，因为初版那两个在 #111827 上读不出来（现算对比度）：
+   *   角标    #64748b → #8b95a5（4.1:1 → 6.1:1，角标是数字，必须看清）
+   *   分组标题 #4b5563 → #6c7683（2.5:1 → 3.7:1，10px 大写标签仍保持「淡」的层级感）
+   *
+   * 蓝色主色与陶土色的一条关键差别：
+   *   #2563eb 对白字的对比度是 5.17:1（AA 正文级），所以它**可以做实底 + 白字**；
+   *   陶土 #e79379 只有 2.6:1 才必须拆成 --pri(浅底) / --acc(深一档)。这里合回一个值。
+   *
    * ⚠️ 本文件仍是零依赖纯 CSS（没有引 Vue/Element/React），只搬视觉口径，不搬框架。 */
-  --canvas:#ffffff; --bg:#ffffff; --card:#ffffff;
-  --line:#e6e8ec; --hairline:#f0f1f4; --muted:#f7f8fa;
-  --txt:#101114; --sub:#5b6068; --sub2:#959ba4;
-  --pri:#e79379; --pri-fg:#fff; --pri-bg:#fff6f2; --pri-line:#f6d4c8; --acc:#a9553c;
-  --ok:#15803d; --ok-bg:#f1f9f3; --warn:#b45309; --warn-bg:#fff8ed;
-  --dan:#c0392b; --dan-bg:#fdf1ef; --chip:#f2f3f5;
-  --side:#ffffff; --side-fg:#101114; --side-muted:#8a9099; --side-hover:#f5f6f8;
-  --side-active:rgba(231,147,121,.13);
-  --sh:0 1px 2px rgba(16,17,20,.04); --sh2:0 24px 60px -14px rgba(16,17,20,.22);
+  --canvas:#eef1f6; --bg:#f4f6f9; --card:#ffffff;
+  --line:#e3e8ef; --hairline:#eef1f6; --muted:#f1f5f9;
+  --txt:#1c2330; --sub:#5b6675; --sub2:#8b95a3;
+  --pri:#2563eb; --pri-fg:#fff; --pri-bg:#eff6ff; --pri-line:#bfdbfe; --acc:#2563eb;
+  --ok:#16a34a; --ok-bg:#f0fdf4; --warn:#d97706; --warn-bg:#fffbeb;
+  --dan:#dc2626; --dan-bg:#fef2f2; --chip:#f1f5f9;
+  --side:#111827; --side2:#1f2937; --side-fg:#cbd5e1; --side-muted:#8b95a5;
+  --side-hover:#1f2937; --side-active:#1d4ed8;
+  --sh:0 1px 3px rgba(16,24,40,.08); --sh2:0 12px 40px rgba(16,24,40,.18);
   --r-sm:6px; --r:10px; --r-lg:14px; --r-xl:16px; --gap:12px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -41,7 +51,7 @@ body{font-family:"Inter","Public Sans","Segoe UI","Microsoft YaHei",-apple-syste
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:#dcdfe4;border-radius:99px;border:3px solid #fff}
 ::-webkit-scrollbar-thumb:hover{background:#c4c9d0}
-::selection{background:rgba(231,147,121,.24)}
+::selection{background:rgba(37,99,235,.24)}
 :focus-visible{outline:2px solid var(--pri-line);outline-offset:1px}
 a{color:var(--acc);text-decoration:none}
 button{font-family:inherit}
@@ -50,7 +60,7 @@ button{font-family:inherit}
 .shell{display:flex;gap:var(--gap);height:100dvh;padding:var(--gap);overflow:hidden}
 .side{position:relative;flex:none;width:236px;height:calc(100dvh - 2 * var(--gap));
   background:var(--side);color:var(--side-fg);display:flex;flex-direction:column;
-  border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;z-index:40}
+  border:1px solid var(--side2);border-radius:var(--r-lg);overflow:hidden;z-index:40}
 .brand{display:flex;align-items:center;gap:8px;min-height:36px;margin:12px 0 8px;padding:0 12px}
 .brand .logo{width:20px;height:20px;border-radius:var(--r-sm);flex:none;display:block}
 .brand .bwrap{flex:1;min-width:0}
@@ -58,13 +68,15 @@ button{font-family:inherit}
   overflow:hidden;text-overflow:ellipsis;letter-spacing:-.005em}
 .brand span{display:block;color:var(--side-muted);font-size:9.5px;margin-top:3px;letter-spacing:.13em;
   font-weight:600}
-/* 环境徽标：参考 .env-badge（22px / 999 圆角 / 11px 600） */
+/* 环境徽标：参考 .env-badge（22px / 999 圆角 / 11px 600）
+   ★ v10.111：侧栏回深色，徽标不能再吃 --muted（浅灰底 + 深字会变成一块白噪点），
+     改成深底浅字（#1f2937 / #94a3b8），与侧栏同为深色系。 */
 .env-badge{flex:none;height:22px;padding:0 8px;border-radius:999px;display:inline-flex;
   align-items:center;font-size:11px;font-weight:600;letter-spacing:.04em;white-space:nowrap;
-  border:1px solid var(--line);background:var(--muted);color:color-mix(in srgb,var(--txt) 72%,var(--muted))}
-.env-badge.live{border-color:var(--pri-line);background:var(--pri-bg);color:var(--acc)}
+  border:1px solid #334155;background:var(--side2);color:#94a3b8}
+.env-badge.live{border-color:#1d4ed8;background:rgba(37,99,235,.22);color:#c7d7fe}
 .nav{flex:1;overflow-y:auto;padding:0 12px 12px}
-.nav .sec{color:var(--sub2);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+.nav .sec{color:#6c7683;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
   padding:0 8px;margin:16px 0 6px;font-weight:700}
 .nav .sec:first-child{margin-top:2px}
 .nav a{display:flex;align-items:center;gap:9px;height:36px;padding:0 10px;margin-bottom:2px;
@@ -77,17 +89,20 @@ button{font-family:inherit}
    选中态自动变主色。 */
 .nav a svg{width:16px;height:16px;display:block;fill:none;stroke:currentColor;
   stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.nav a:hover{background:var(--side-hover);color:var(--txt)}
+.nav a:hover{background:var(--side-hover);color:#fff}
 .nav a:hover i{opacity:.95}
-.nav a.on{background:var(--pri-bg);color:var(--acc);font-weight:650}
+/* ★ v10.111：激活态回到初版的「蓝实底 + 白字」（#1d4ed8）。
+   注意 hover 的 color 也跟着改成 #fff 了 —— 深底上留 var(--txt)（#1c2330）
+   会变成深底深字，hover 那一下文字直接消失。 */
+.nav a.on{background:var(--side-active);color:#fff;font-weight:650}
 .nav a.on i{opacity:1}
 /* 左栏条目数角标：右对齐、等宽数字。数字全部由 overview 的 domains 现算（不写死） */
 .nav a .n{margin-left:auto;font-size:11px;color:var(--side-muted);
   font-variant-numeric:tabular-nums;font-weight:600}
-.nav a.on .n{color:var(--acc)}
-.side-foot{flex:none;border-top:1px solid var(--hairline);padding:12px 16px;
-  font-size:11px;color:var(--sub2);line-height:1.85;letter-spacing:.01em}
-.side-foot b{color:var(--side-fg);font-weight:600}
+.nav a.on .n{color:#c7d7fe}
+.side-foot{flex:none;border-top:1px solid var(--side2);padding:12px 16px;
+  font-size:11px;color:var(--side-muted);line-height:1.85;letter-spacing:.01em}
+.side-foot b{color:#94a3b8;font-weight:600}
 
 .main{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg);
   border:1px solid var(--line);border-radius:var(--r-xl);overflow-y:auto;overflow-x:hidden}
@@ -128,8 +143,8 @@ button{font-family:inherit}
 .btn:hover{border-color:var(--pri-line);color:var(--acc);background:var(--pri-bg)}
 .btn:active{transform:translateY(.5px)}
 .btn.pri{background:var(--acc);border-color:var(--acc);color:var(--pri-fg);
-  box-shadow:0 1px 2px rgba(169,85,60,.24)}
-.btn.pri:hover{background:#8f452f;border-color:#8f452f;color:var(--pri-fg)}
+  box-shadow:0 1px 2px rgba(37,99,235,.24)}
+.btn.pri:hover{background:#1d4ed8;border-color:#1d4ed8;color:var(--pri-fg)}
 .btn.dan{background:#fff;border-color:#edd6d2;color:var(--dan)}
 .btn.dan:hover{background:var(--dan-bg);border-color:#dfbdb7;color:var(--dan)}
 .btn.sm{height:28px;padding:0 9px;font-size:12px}
@@ -165,7 +180,7 @@ button{font-family:inherit}
 .bar{display:grid;grid-template-columns:150px 1fr 92px;align-items:center;gap:12px;padding:7px 0;font-size:13px}
 .bar .nm{color:var(--txt)}
 .bar .track{height:6px;background:var(--muted);border-radius:999px;overflow:hidden}
-.bar .fill{height:100%;background:linear-gradient(90deg,#efb3a1,#c9705a);border-radius:999px}
+.bar .fill{height:100%;background:linear-gradient(90deg,#93c5fd,#2563eb);border-radius:999px}
 .bar .vv{text-align:right;color:var(--sub);font-variant-numeric:tabular-nums;font-size:12.5px}
 
 /* ═══ 工具行 / 筛选 ═══ */
@@ -174,7 +189,7 @@ button{font-family:inherit}
   border:1px solid var(--line);border-radius:var(--r);font-size:12.5px;outline:none;
   background:var(--card);color:var(--txt);transition:border-color .15s,box-shadow .15s}
 .tools input[type=text]::placeholder{color:var(--sub2)}
-.tools input[type=text]:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(231,147,121,.16)}
+.tools input[type=text]:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(37,99,235,.16)}
 .tools select{height:32px;padding:0 8px;border:1px solid var(--line);border-radius:var(--r);
   font-size:12.5px;background:var(--card);color:var(--txt);cursor:pointer}
 .tools select:hover{border-color:#d9dce2}
@@ -224,7 +239,7 @@ tr.row:hover{background:#fbfbfc;cursor:pointer}
  * ★ 不复用首页 .km-dock —— 那是给访客看的浮层（深色、固定右下），
  *   管理台是表格，硬套会把「下载中」渲染成一块看不清的深色块。 */
 .dlbar{height:6px;background:var(--muted);border-radius:999px;overflow:hidden;min-width:92px}
-.dlbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#eeb3a1,#e79379);
+.dlbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#93c5fd,#2563eb);
   border-radius:999px;transition:width .3s}
 .dlbar.done i{background:linear-gradient(90deg,#8fb98a,#5f8d5a)}
 .dlbar.err i{background:linear-gradient(90deg,#e0a3a1,#c23b3b)}
@@ -237,7 +252,7 @@ tr.row:hover{background:#fbfbfc;cursor:pointer}
 .dlcfg input[type=text],.dlcfg input[type=number]{width:100%;height:32px;padding:0 11px;
   border:1px solid var(--line);border-radius:var(--r);font-size:13px;outline:none;
   font-family:inherit;background:var(--card);color:var(--txt)}
-.dlcfg input:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(231,147,121,.16)}
+.dlcfg input:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(37,99,235,.16)}
 /* 下拉沿用同一套边框/高度：不写这条会掉回浏览器默认的灰白控件，一看就不是同一套皮 */
 .dlcfg select{width:100%;height:32px;padding:0 8px;border:1px solid var(--line);
   border-radius:var(--r);font-size:13px;background:var(--card);color:var(--txt)}
@@ -280,7 +295,7 @@ tr.row:hover{background:#fbfbfc;cursor:pointer}
 .fld label{display:block;font-size:12px;color:var(--sub);margin-bottom:5px;font-weight:600}
 .fld textarea{width:100%;min-height:84px;resize:vertical;padding:9px 11px;border:1px solid var(--line);
   border-radius:var(--r);font:13px/1.6 inherit;outline:none;background:var(--card);color:var(--txt)}
-.fld textarea:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(231,147,121,.16)}
+.fld textarea:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(37,99,235,.16)}
 .fld .hint{font-size:11.5px;color:var(--sub2);margin-top:4px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .seg button{border:0;background:var(--card);height:28px;padding:0 12px;font-size:12.5px;
@@ -400,7 +415,7 @@ tr.row:hover{background:#fbfbfc;cursor:pointer}
 .pgbar input{width:58px;height:28px;padding:0 6px;border:1px solid var(--line);border-radius:var(--r);
   font-size:12.5px;text-align:center;outline:none;font-variant-numeric:tabular-nums;
   background:var(--card);color:var(--txt)}
-.pgbar input:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(231,147,121,.16)}
+.pgbar input:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(37,99,235,.16)}
 .pgn{min-width:29px;height:28px;padding:0 7px;border:1px solid var(--line);background:var(--card);
   border-radius:var(--r);font-size:12.5px;cursor:pointer;color:var(--txt);
   font-variant-numeric:tabular-nums}
@@ -412,7 +427,7 @@ tr.row:hover{background:#fbfbfc;cursor:pointer}
 .fld input[type=text],.fld input[type=number],.fld input[type=date],.fld input[type=password]{
   width:100%;height:32px;padding:0 11px;border:1px solid var(--line);border-radius:var(--r);
   font:13px/1.5 inherit;outline:none;background:var(--card);color:var(--txt)}
-.fld input:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(231,147,121,.16)}
+.fld input:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(37,99,235,.16)}
 .fld .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .fld .ln{display:flex;gap:6px;align-items:center}
 /* 资料完整度计量条：宽 30px、高 3px，条长 = 填了几项 / 7 */
@@ -507,7 +522,7 @@ tr.row:hover{background:#fbfbfc;cursor:pointer}
     <!-- ★ v10.105 视觉对齐参考站（`仪表盘 · GameHub 后台管理`，cream 主题）：
          品牌行 = 20px logo + 标题/副标 + 环境徽标，尺寸取自该站 .sider-brand / .env-badge。 -->
     <div class="brand">
-      <img class="logo" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23e79379'/%3E%3Ctext x='16' y='23' font-size='18' font-family='Segoe UI,sans-serif' font-weight='700' fill='%23fff' text-anchor='middle'%3EG%3C/text%3E%3C/svg%3E">
+      <img class="logo" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232563eb'/%3E%3Ctext x='16' y='23' font-size='18' font-family='Segoe UI,sans-serif' font-weight='700' fill='%23fff' text-anchor='middle'%3EG%3C/text%3E%3C/svg%3E">
       <div class="bwrap">
         <b>GameHub 管理后台</b>
         <span>LIBRARY CONSOLE</span>

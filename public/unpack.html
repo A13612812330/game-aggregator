@@ -1573,6 +1573,15 @@
   .mini-btn{margin-top:10px;width:100%;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:12.5px;font-weight:700;color:var(--c-primary);background:var(--c-primary-soft);border:1px solid rgba(46,107,255,.25);padding:9px 12px;border-radius:10px;transition:.16s}
   .mini-btn:hover{background:var(--c-primary);color:#fff}
   .mini-btn:disabled{opacity:.6;pointer-events:none}
+  /* ★ v10.111：「管理后台」入口。刻意**不复用 .mini-btn** ——
+     setBtnsDisabled() 里是 `$$('#colSide .mini-btn')` 一把抓，
+     复用它会让「增量更新」跑起来时管理入口跟着置灰点不动（那不是它的状态）。
+     视觉上比 Roster 那条重一档：Roster 是白底灰字（浏览向），管理是白底主色字（操作向）。 */
+  .side-admin-link{margin-top:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:7px;
+    font-size:12.5px;font-weight:700;color:var(--c-primary);background:#fff;
+    border:1px solid rgba(46,107,255,.28);padding:9px 12px;border-radius:10px;
+    transition:.16s;text-decoration:none}
+  .side-admin-link:hover{background:var(--c-primary);color:#fff;border-color:var(--c-primary)}
   .idx-bar{height:6px;background:#E4E9F5;border-radius:99px;margin-top:10px;overflow:hidden;display:none}
   .idx-bar i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#2E6BFF,#6366F1);border-radius:99px;transition:width .4s}
   .idx-tip{font-size:11px;color:var(--c-t3);margin-top:6px;min-height:16px}
@@ -3144,6 +3153,7 @@
       <button class="mini-btn" id="jidiBtn" style="background:rgba(230,65,93,.07);border-color:rgba(230,65,93,.3);color:var(--c-jidi)">⇅ 同步机地话题入本地库</button>
       <a class="mini-btn" href="/roster/" target="_blank" rel="noopener"
         style="display:block;text-align:center;background:#fff;color:var(--c-t2);border-color:var(--c-border2);text-decoration:none">📋 完整名单 · Roster（2.1 万款体检表）↗</a>
+      <a class="side-admin-link" href="/admin" target="_blank" rel="noopener">🛠 管理后台 · Admin ↗</a>
       <div class="idx-bar" id="idxBar"><i id="idxBarI"></i></div>
 </div>
 
@@ -3904,8 +3914,7 @@ function bindRankUI() {
   $('#rankPills').addEventListener('click', (e) => {
     const b = e.target.closest('.stage-pill'); if (!b || b.dataset.p === rankPeriod) return;
     rankPeriod = b.dataset.p;
-    $$('#rankPills .stage-pill').forEach(x => x.classList.toggle('on', x === b));
-  /* refreshRank：派生页无热榜分区，跳过 */
+    $$('#rankPills .stage-pill').forEach(x => x.classList.toggle('on', x === b));  /* refreshRank：派生页无热榜分区，跳过 */
   });
   $('#rankRefresh').addEventListener('click', () => { toast('正在刷新榜单…'); refreshRank(true); });
 }
@@ -3939,6 +3948,7 @@ function renderSide() {
       <button class="mini-btn" id="jidiBtn" style="background:rgba(230,65,93,.07);border-color:rgba(230,65,93,.3);color:var(--c-jidi)">⇅ 同步机地话题入本地库</button>
       <a class="mini-btn" href="/roster/" target="_blank" rel="noopener"
         style="display:block;text-align:center;background:#fff;color:var(--c-t2);border-color:var(--c-border2);text-decoration:none">📋 完整名单 · Roster（2.1 万款体检表）↗</a>
+      <a class="side-admin-link" href="/admin" target="_blank" rel="noopener">🛠 管理后台 · Admin ↗</a>
       <div class="idx-bar" id="idxBar"><i id="idxBarI"></i></div>
       <div class="idx-tip" id="idxTip"></div>
     </details>
@@ -8180,11 +8190,7 @@ async function init() {
      `TypeError: Cannot read properties of null (reading '_location')`，
      整个测试进程崩掉。真实场景同理：用户在加载途中跳走，异步回调不该再碰 window。
      ⇒ 提到最前面同步读，异步段之后只用 `sp`，不再碰 `location`。 */
-  const sp = new URLSearchParams(location.search);
-  /* bindRankUI：派生页无榜单 UI，跳过 */
-  /* renderSide：派生页无右栏，跳过 */
-  /* renderCats：派生页无分类行，跳过 */
-  /* renderList：派生页无最新收录列表，跳过 */
+  const sp = new URLSearchParams(location.search);  /* bindRankUI：派生页无榜单 UI，跳过 */  /* renderSide：派生页无右栏，跳过 */  /* renderCats：派生页无分类行，跳过 */  /* renderList：派生页无最新收录列表，跳过 */
   refreshRank(false); // 首页主体：热榜（缓存秒显 / 首次拉取）
   // 手机三个分区（社区配置 / 实测配置 / 指南）已拆到 /emulator.html，
   // 首页只保留入口卡（数字由上面的专区跳转块异步回填），此处不再初始化。
