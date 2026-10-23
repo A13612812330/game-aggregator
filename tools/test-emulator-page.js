@@ -167,6 +167,19 @@ async function main() {
   const qa = (s) => [...W.document.querySelectorAll(s)];
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const click = (el) => el.dispatchEvent(new W.MouseEvent('click', { bubbles: true, cancelable: true }));
+  /* ★ v10.111：有界轮询小工具。全量跑时 CPU 争抢，写死的等待秒数会时灵时不灵 ——
+     v10.110 在这文件里改过两处（机型匹配、社区配置），本版又撞上第三处（点卡片开抽屉）。
+     统一用这个：**有出现就往下走，超时返回 -1 让断言照旧红**，耗时打进详情。 */
+  const waitUntil = async (fn, ms = 12000) => {
+    const t0 = Date.now();
+    for (;;) {
+      let hit = false;
+      try { hit = !!fn(); } catch { hit = false; }
+      if (hit) return Date.now() - t0;
+      if (Date.now() - t0 >= ms) return -1;
+      await sleep(120);
+    }
+  };
 
   ok('独立页运行无 JS 异常', e1.length === 0, e1[0] || '');
   /* v9.3：实测配置已并入手游中心，分区由 4 个减为 3 个 */
@@ -279,23 +292,18 @@ async function main() {
    *   用户反馈为「点了不是游戏详情页」。 */
   const bothCard = qa('#emuGrid .emu-card').find((c) => c.dataset.lib && c.dataset.bhk);
   if (bothCard) {
-    click(bothCard); await sleep(1300);
+    click(bothCard);
+    /* ★ v10.111：原来写死 sleep(1300)。全量跑争抢时抽屉还没 show ⇒ 假红
+       （实测这一条在 85 套串行里红了两次，单跑必绿）。改成等「抽屉真的开了」。 */
+    const dWait = await waitUntil(() => q('#drawer') && q('#drawer').classList.contains('show'));
     ok('「既命中端游库又有社区配置」的卡片点正文 → 进游戏详情（不再被配置面板截走）',
-      q('#drawer').classList.contains('show') && !q('#drawerBody .cf-table'));
+      q('#drawer').classList.contains('show') && !q('#drawerBody .cf-table'),
+      dWait < 0 ? '12s 抽屉未打开' : '抽屉 ' + dWait + 'ms');
     ok('这类卡片上另有一颗独立的「社区配置」按钮', !!bothCard.querySelector('.cfg-btn'));
     W.closeDetail(); await sleep(300);
     click(bothCard.querySelector('.cfg-btn'));
-    /* ★ v10.111：原来写死 1100ms。配置面板要现 fetch 社区配置，全量跑 CPU 争抢时不够 ⇒
-       改成有界轮询（上界 12s）；超时仍判红，并把耗时打进详情（轮询不是把失败等成绿）。 */
-    let cfgWait = -1;
-    {
-      const t0 = Date.now();
-      for (;;) {
-        if (q('#drawerBody .cf-table')) { cfgWait = Date.now() - t0; break; }
-        if (Date.now() - t0 >= 12000) break;
-        await sleep(120);
-      }
-    }
+    /* ★ v10.111：同上，等面板真的渲染出来而不是猜 1100ms。 */
+    const cfgWait = await waitUntil(() => q('#drawerBody .cf-table'));
     ok('点「📋 社区配置」按钮 → 才打开社区配置面板',
       q('#drawer').classList.contains('show') && !!q('#drawerBody .cf-table'),
       cfgWait < 0 ? '12s 未出现 .cf-table' : '面板 ' + cfgWait + 'ms');
