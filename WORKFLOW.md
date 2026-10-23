@@ -171,7 +171,21 @@ GH_TOKEN=$(gh auth token) node tools/_push-via-api.js
 **并且必须用 `git cat-file blob HEAD:<path>` 取入库字节** —— 本仓库 `core.autocrlf=true`，
 磁盘字节 ≠ 入库字节，直接读磁盘会**把错内容推上去**（API 全程 201、`git status` 还干净）。
 
-推送后核对：**只认 `git ls-remote` 的 sha == 本地 HEAD**。
+★★ **落后多笔时不能直接跑**（v10.110 实测）：脚本只处理「HEAD vs HEAD~1」**一笔**，
+且开头就核「远端 main == 本地 HEAD~1」，落后 4 笔时直接 `拒绝执行`。
+正确做法是**逐笔推**，每笔用一个 detached checkout 把 HEAD 挪到那个提交：
+
+```bash
+TOK=$(gh auth token)
+for c in <sha1> <sha2> <sha3> <sha4>; do
+  git -c advice.detachedHead=false checkout -q $c
+  GH_TOKEN=$TOK node tools/_push-via-api.js      # 每笔都会打印「与本地 sha 完全一致」
+done
+git checkout -q <原分支>                          # ★ 别忘了回来
+```
+⚠️ detached 期间工作区会临时回到老版本（8123 正在服务这几个静态文件）⇒ **别在这段时间截图/实拍**。
+
+推送后核对：**只认远端 sha == 本地 HEAD**。
 
 ```bash
 # ★ 别用 `git rev-list --left-right --count main...origin/main`：
