@@ -332,6 +332,8 @@ tr.row:hover{background:rgba(231,147,121,.06);cursor:pointer}
    这里切换的是**同一份数据的不同视角**，不是筛选条件，所以做成下划线页签。 */
   /* v10.106：行尾只有一个「编辑」，它不能被列宽挤成两行（两字竖排看着像坏了） */
   .fxrow td .btn{white-space:nowrap}
+  /* v10.107：模块页操作列里的按钮/链接一律不许折行（折了就成了一坨两行文字） */
+  #rmRows td:last-child{white-space:nowrap}
   /* v10.106：「20 小时前」在 94px 里会被折成两行；相对时间是**一个值**，不该断 */
   .fxrow td.mut{white-space:nowrap}
   .cold-ic{margin-left:5px;font-size:11px;vertical-align:1px}
@@ -345,6 +347,14 @@ tr.row:hover{background:rgba(231,147,121,.06);cursor:pointer}
   .fxrow td{height:56px;padding:4px 10px;overflow:hidden}
 .fxrow .cv{width:64px;height:42px;border-radius:var(--r)}
 .fxrow .tt{max-width:430px}
+/* ★ v10.107：模块页「游戏（主键）」列把 id 直接拼在标题后面 —— 行内 <small> 没有样式，
+   渲染成「使命召唤7/Call of Duty4xd-237」，读起来像标题本身的一部分。
+   id 是**核对用的**：该另起一行、等宽、弱化，但必须看得见。 */
+/* 标题限一行、超出打点（原来长标题折两三行，整张表行高参差）；
+   id 是 <small> 且是 .lnk 的**兄弟节点**（不是子节点）—— 按兄弟选，别再写错层级。 */
+.fxrow .lnk{display:block;max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fxrow td > small{display:block;font-weight:400;font-size:11px;color:var(--sub2);
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;margin-top:1px}
 .idcol{font-family:Consolas,monospace;font-size:11.5px;color:var(--sub);white-space:nowrap}
 
 /* 页码条：可输入跳转 + 附近页 */
@@ -390,6 +400,18 @@ tr.row:hover{background:rgba(231,147,121,.06);cursor:pointer}
 
 /* 模块子源切换条 */
 .mtabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+/* ★ v10.107 一级页签（模块）：比二级（子源）重一档 —— 底色 + 2px 下划线，
+   两级页签长得一样的话，用户不知道自己在切「模块」还是切「源」。 */
+.modtabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;
+  border-bottom:1px solid var(--line);padding-bottom:0}
+.mtab.mod{height:34px;border:0;border-bottom:2px solid transparent;border-radius:0;
+  background:none;padding:0 12px;margin-bottom:-1px;font-size:13px}
+.mtab.mod:hover{background:var(--pri-bg);border-bottom-color:var(--pri-line)}
+.mtab.mod.on{background:none;border-bottom-color:var(--acc);color:var(--fg);font-weight:700}
+.mtab.mod .cnt{font-style:normal;font-weight:600;font-size:11px;margin-left:6px;
+  padding:1px 5px;border-radius:999px;background:var(--pri-bg);color:var(--sub);
+  border:1px solid var(--line)}
+.mtab.mod.on .cnt{background:var(--card);color:var(--acc);border-color:var(--pri-line)}
 .mtab{height:30px;display:inline-flex;align-items:center;padding:0 13px;border-radius:var(--r);
   border:1px solid var(--line);background:var(--card);font-size:12.5px;cursor:pointer;color:var(--sub)}
 .mtab:hover{border-color:var(--pri);color:var(--acc)}
@@ -440,13 +462,18 @@ tr.row:hover{background:rgba(231,147,121,.06);cursor:pointer}
            原来 FitGirl 与 Thunderstore 各占一个侧栏条目 ⇒ 侧栏七条资源 + 两个运维，
            用户口径「页面管理有点乱」。它们本质是**本体**与**MOD**的一个来源，
            收进模块后由页内的「子源」切换条区分（不影响分页语义，见 RM 注释）。 -->
-      <div class="sec">模块 · 以游戏为主键</div>
-      <a data-v="m-base"><i>⛃</i>本体<b class="n" id="nBase">—</b></a>
-      <a data-v="m-mod"><i>◈</i>MOD<b class="n" id="nMod">—</b></a>
-      <a data-v="m-trainer"><i>⚔</i>修改器<b class="n" id="nTrainer">—</b></a>
-      <a data-v="m-save"><i>▣</i>存档<b class="n" id="nSave">—</b></a>
+      <!-- ★ v10.107：四个模块收成**一个「资源管理」入口**。
+           它们本来就共用 `#view-resm` 一个 section、一套渲染器，侧栏四扇门通向同一个房间，
+           换的只是 `rmMod` 一个变量 —— 四扇门是纯重复（用户口径：「参考站的资源是一个
+           资源管理入口，要不要也收成一个」→ 可以）。
+           现在：侧栏一扇门 → 页内一级页签选模块 → 二级页签选子源。
+           ★ 侧栏**不挂数字角标**：四个模块口径不同（帖子数 / 包数 / 存档项），
+             加起来的数没有意义。真实数字挂在各自页签上。
+           ★ 老链接 #m-base / #m-mod / #m-trainer / #m-save 仍有效（HASH_ALIAS 别名）。 -->
+      <div class="sec">内容</div>
+      <a data-v="rm"><i>⛃</i>资源管理</a>
       <div class="sec">运维</div>
-      <a data-v="res"><i>◇</i>资源覆盖</a>
+      <a data-v="res"><i>◇</i>覆盖与缺口</a>
       <a data-v="log"><i>≡</i>操作日志</a>
       <!-- ★ v10.103：磁力下载（Komo-Magnet）管理入口。
            角标是「活动 + 等待」任务数，连不上工具时显示「—」而不是 0 ——
@@ -583,6 +610,9 @@ tr.row:hover{background:rgba(231,147,121,.06);cursor:pointer}
            （MOD 帖按 pv、Thunderstore 按 downloads），合并后只能客户端拼接，
            分页语义会失真（第 2 页的 50 条不是全局第 51–100 条）。宁可不给这一档。 -->
     <section class="view" id="view-resm">
+      <!-- ★ v10.107：两级页签。一级 = 模块（本体/MOD/修改器/存档，带各自条目数），
+           二级 = 该模块下的子源。以前一级在侧栏、二级在页内，切模块要跨两处操作。 -->
+      <div class="modtabs" id="rmModTabs"></div>
       <div class="mtabs" id="rmTabs"></div>
       <div class="tools">
         <input type="text" id="rq" placeholder="搜索条目 / 游戏名 / 包名（回车搜索）">
@@ -975,16 +1005,23 @@ let groupSame = true;
 const VIEWS = {
   dash: ['仪表盘', '总览 / 爬虫与数据健康'],
   games: ['游戏库', '内容 / 收录条目与游戏资料'],
-  /* ★ v10.90：模块只剩四类，骨架共用 `#view-resm` 一份，子源在页内切换（见 RM 注释）。 */
-  'm-base': ['本体', '模块 / FitGirl Repack · 以游戏为主键'],
-  'm-mod': ['MOD', '模块 / 机地 MOD 帖 · Thunderstore'],
-  'm-trainer': ['修改器', '模块 / CE · 风灵月影 · 机地修改器帖'],
-  'm-save': ['存档', '模块 / 存档位置 · 云存档'],
-  res: ['资源覆盖', '运维 / 按模块分类'],
+  /* ★ v10.107：四个模块收成一个视图。标题/面包屑由当前模块现拼（见 modPick），
+     不在这里写死某一种 —— 否则切到 MOD 时顶栏还写着「本体」。
+     老 hash（#m-base 等）走 HASH_ALIAS 别名，仍能直达对应模块。 */
+  rm: ['资源管理', '内容 / 本体 · MOD · 修改器 · 存档'],
+  res: ['覆盖与缺口', '运维 / 按模块分类'],
   log: ['操作日志', '运维 / 留痕'],
   /* ★ v10.103：磁力下载（本机工具 Komo-Magnet 的管理端） */
   dl: ['磁力下载', '运维 / 本机工具 · 任务与设置'],
   set: ['设置', '运维 / 配置与边界'],
+};
+
+/* ★ v10.107：收成一个入口后，老链接不能死 —— #m-mod 这类 hash 曾经是能直接打开的，
+   加了书签 / 发过链接的人再点进来必须还是那一页（而不是回落仪表盘）。
+   别名表只做「旧 hash → 模块 key」，不新增视图。 */
+const HASH_ALIAS = {
+  'm-base': 'base', 'm-mod': 'mod', 'm-trainer': 'trainer', 'm-save': 'save',
+  'rm-base': 'base', 'rm-mod': 'mod', 'rm-trainer': 'trainer', 'rm-save': 'save',
 };
 
 function toast(msg) {
@@ -1206,19 +1243,29 @@ async function api(path, opt) {
 
 /* ═══════════ 视图切换 ═══════════ */
 function go(v) {
-  /* 旧链接（#rm-mod / #rm-ts …）现在没有对应视图 ⇒ 回落仪表盘，
-   * 否则 secId 匹配不到任何 section，整页变成空白（看起来像"后台坏了"）。 */
+  /* ★ v10.107：`#rm-<模块>` / 旧 `#m-<模块>` 都先折成「资源管理 + 该模块」。
+     旧链接（#rm-mod / #rm-ts …）没有对应视图 ⇒ 仍然回落仪表盘，
+     否则 secId 匹配不到任何 section，整页变成空白（看起来像"后台坏了"）。 */
+  let mod = HASH_ALIAS[v] || null;
+  if (!mod && v.indexOf('rm-') === 0 && RM[v.slice(3)]) mod = v.slice(3);
+  if (mod) { rmMod = mod; rmSrc = ''; rmOff = 0; v = 'rm'; }
   if (!VIEWS[v]) v = 'dash';
-  const [t, c] = VIEWS[v] || VIEWS.dash;
+  /* 顶栏跟着**当前模块**走 —— 「资源管理 / MOD」比四个视图各写一条标题更准，
+     也才看得出同一页里现在停在哪一格。 */
+  const [t, c] = (v === 'rm' && RM[rmMod])
+    ? ['资源管理 · ' + RM[rmMod].label, crmOf(rmMod)]
+    : (VIEWS[v] || VIEWS.dash);
   $('vTitle').textContent = t; $('vCrumb').textContent = c;
   /* ★ v10.105：页签条跟着走。判空 —— 老缓存里的 DOM 可能还没这个节点，
      不能因为一个纯视觉节点把整个 go() 打断（断了就整页白）。 */
   const vt = $('vTab'); if (vt) vt.textContent = t;
   document.querySelectorAll('.nav a').forEach((a) => a.classList.toggle('on', a.dataset.v === v));
-  /* 四个模块共用 `#view-resm` 一个 section ⇒ section id 不能直接用视图名 */
-  const secId = 'view-' + (v.indexOf('m-') === 0 ? 'resm' : v);
+  /* 资源管理用的是 `#view-resm`（历史 id，改它要动一堆选择器，不值当） */
+  const secId = 'view-' + (v === 'rm' ? 'resm' : v);
   document.querySelectorAll('.view').forEach((s) => s.classList.toggle('on', s.id === secId));
-  if (location.hash.slice(1) !== v) history.replaceState(null, '', '#' + v);
+  /* hash 带上模块：刷新 / 复制地址后仍停在同一个模块上 */
+  const hv = (v === 'rm') ? 'rm-' + rmMod : v;
+  if (location.hash.slice(1) !== hv) history.replaceState(null, '', '#' + hv);
   /* ★ v10.103：离开下载页就停轮询 —— 否则切到游戏库之后，
      每 2 秒仍有一条本机 RPC 在后台跑，用户看不到任何收益。 */
   if (v !== 'dl') dlLeave();
@@ -1228,21 +1275,29 @@ function go(v) {
   if (v === 'log') { loadLog(); loadSetLog(); }
   if (v === 'set') { loadSetLog(); dlPaintSetState(); }
   if (v === 'dl') dlEnter();
-  if (v.indexOf('m-') === 0) {
-    rmMod = v.slice(2); rmSrc = ''; rmOff = 0;
-    /* 直接以 #m-xxx 进站时仪表盘没跑过 ⇒ 左栏角标还是「—」，补一次 overview（不阻塞表格） */
-    if ($('nBase').textContent === '—') loadStats();
+  if (v === 'rm') {
+    /* 直接以 #rm-mod 进站时仪表盘没跑过 ⇒ 页签上还没有数字，
+       补一次 overview（不阻塞表格：resmReload 先跑） */
+    if (!MOD_CNT) loadStats();
+    /* 页签由 resmReload 每次重绘 —— 这里再画一遍是重复（同一个函数，画两次没有意义） */
     resmReload();
   }
 }
-document.querySelectorAll('.nav a').forEach((a) => a.addEventListener('click', () => go(a.dataset.v)));
+document.querySelectorAll('.nav a').forEach((a) => a.addEventListener('click', () => {
+  /* ★ v10.107：点「资源管理」保留当前模块（不重置）—— 用户在这页切过 MOD，
+     去看了眼仪表盘再回来，该还在 MOD，而不是被弹回本体。 */
+  const v = a.dataset.v;
+  go(v === 'rm' ? 'rm-' + rmMod : v);
+}));
 /* ★ v10.94：地址栏 hash 变化也要切视图。
    原来只在首屏读一次 hash，页面已打开时改 hash（或点别人发来的 `/admin#m-mod` 链接）
    界面纹丝不动 —— 用户会说「点了链接没反应」，而代码里看不出任何错。
    `go()` 内部用 replaceState 回写 hash，不会二次触发 hashchange，所以不会打转。 */
 window.addEventListener('hashchange', () => {
   const v = (location.hash || '#dash').slice(1);
-  if (VIEWS[v]) go(v);
+  /* ★ v10.107：`#rm-mod` 这种带模块的 hash 不在 VIEWS 里 —— 旧判据会**静默忽略**，
+     表现是「点了链接地址变了、界面没动」。所以这里也要认别名。 */
+  if (VIEWS[v] || HASH_ALIAS[v] || (v.indexOf('rm-') === 0 && RM[v.slice(3)])) go(v);
 });
 
 /* ═══════════ 仪表盘（爬虫可视化 · 分模块） ═══════════ */
@@ -1282,11 +1337,16 @@ async function loadStats() {
    * ★ v10.90 四模块合并口径：本体 = FitGirl 条目；MOD = MOD 帖 + Thunderstore 包；
    *   修改器 = CE/风灵月影 + 机地修改器帖；存档 = 存档位置 + 云存档。 */
   const dm = j.domains || {};
+  /* ★ v10.107：数字从「侧栏四个角标」搬到「页内四个模块页签」——
+     侧栏只剩一个入口，挂哪一个数字都是撒谎。 */
+  MOD_CNT = {
+    base: dm.fitgirl || 0,
+    mod: (dm.mod || 0) + (dm.ts || 0),
+    trainer: (dm.modifier || 0) + (dm.modifierExtra || 0),
+    save: (dm.save || 0) + (dm.cloud || 0),
+  };
   $('nGame').textContent = nf((l || {}).total);
-  $('nBase').textContent = nf(dm.fitgirl);
-  $('nMod').textContent = nf((dm.mod || 0) + (dm.ts || 0));
-  $('nTrainer').textContent = nf((dm.modifier || 0) + (dm.modifierExtra || 0));
-  $('nSave').textContent = nf((dm.save || 0) + (dm.cloud || 0));
+  paintModTabs();
   $('dashInfo').textContent = '统计时间 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false });
 
   const pct = (n) => Math.max(1, Math.min(100, (n / (c.total || 1)) * 100));
@@ -1540,7 +1600,12 @@ $('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') applySearch()
  *   点游戏名直接打开那款游戏的管理弹窗。⚠️ 未匹配的行如实写「未匹配」，不假装能跳转。
  */
 const RM_LIMIT = 50;
-let rmMod = 'mod', rmSrc = '', rmOff = 0, rmQ = '', rmTotal = 0;
+/* ★ v10.107：默认进「本体」—— 它是列表第一条，也是用户最先要看的那一类。
+   以前默认 'mod' 是因为 MOD 有数字角标可对照，现在数字在页签上，不需要这个偏置。 */
+let rmMod = 'base', rmSrc = '', rmOff = 0, rmQ = '', rmTotal = 0;
+/* 四个模块各自的条目数（loadStats 现算；null = 还没拿到，页签上就不显示数字，
+   而不是印 0 —— 0 会被读成「这一类一条都没有」） */
+let MOD_CNT = null;
 
 const SRC_DEF = {
   fitgirl: {
@@ -1863,6 +1928,27 @@ async function openGameById(gid, title) {
   openEdit(idx);
 }
 
+/* ★ v10.107：模块页签（一级）。数字取 MOD_CNT，取不到就只显示名字。 */
+function paintModTabs() {
+  const el = $('rmModTabs');
+  if (!el) return;                       /* 老缓存里的 DOM 可能还没这个节点 */
+  el.innerHTML = Object.keys(RM).map((k) =>
+    '<button class="mtab mod' + (k === rmMod ? ' on' : '') + '" onclick="modPick(\'' + k + '\')">'
+    + esc(RM[k].label)
+    + (MOD_CNT && MOD_CNT[k] != null ? '<b class="cnt">' + nf(MOD_CNT[k]) + '</b>' : '')
+    + '</button>').join('');
+}
+/* 切模块 = 换 hash，整条链路（标题 / 面包屑 / section / 表格 / 子源）都走 go()，
+   不另写一套 —— 否则「点菜单」和「点页签」两条路径早晚会不一致。 */
+function modPick(k) {
+  if (!RM[k]) return;
+  go(k === 'base' ? 'rm' : 'rm-' + k);
+}
+function crmOf(k) {
+  const srcs = (RM[k] || {}).srcs || [];
+  return '内容 / ' + ((RM[k] || {}).label || '资源') + (srcs.length ? ' · ' + srcs.map((s) => s[1]).join(' · ') : '');
+}
+
 function resmSearch() { rmOff = 0; rmQ = $('rq').value.trim(); resmReload(); }
 function resmSrcPick(k) { rmSrc = k; rmOff = 0; resmReload(); }
 $('rq').addEventListener('keydown', (e) => { if (e.key === 'Enter') resmSearch(); });
@@ -1874,6 +1960,8 @@ async function resmReload() {
   const def = SRC_DEF[rmSrc];
   if (!def) return;
 
+  /* 一级页签（模块）先对齐 —— 子源页签只在当前模块内变化 */
+  paintModTabs();
   /* 页内子源切换条（替代原来的 <select>：一屏能看全，不用点开才知道有几个源） */
   $('rmTabs').innerHTML = mod.srcs.map(([k, l]) =>
     '<button class="mtab' + (k === rmSrc ? ' on' : '') + '" onclick="resmSrcPick(\'' + k + '\')">' + esc(l) + '</button>').join('');
@@ -1881,7 +1969,9 @@ async function resmReload() {
   const colspan = def.cols.length + 3;
   $('rmHead').innerHTML = '<th>游戏（主键）</th><th>条目</th>'
     + def.cols.map(([n, w]) => '<th' + (w ? ' style="width:' + w + '"' : '') + '>' + esc(n) + '</th>').join('')
-    + '<th style="width:120px">操作</th>';
+    /* ★ v10.107：操作列要同时装「查看」+「Repack 页 ↗」，120px 装不下 ⇒ 每行折成两行、
+       整张表被撑高一倍（看着像行高设错了）。两个按钮并排实测需要 ~168px。 */
+    + '<th style="width:178px">操作</th>';
   $('rmRows').innerHTML = '<tr><td colspan="' + colspan + '" class="mut" style="padding:18px">加载中…</td></tr>';
 
   const j = await api(def.url(rmQ, rmOff));

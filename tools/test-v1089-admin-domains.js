@@ -85,17 +85,26 @@ ok(tsmods.stats().packages === tsPkg, 'A20 tsmods.stats().packages 与 RAW 求�
  *   本段守的三件事没变：① 一套渲染器 ② gameId 第一列且非空才可点 ③ 不重复造端点。 */
 console.log('\n-- B. 前台模块骨架 --');
 const NAV = ADMIN.slice(ADMIN.indexOf('<nav class="nav"'), ADMIN.indexOf('</nav>'));
-['m-base', 'm-mod', 'm-trainer', 'm-save'].forEach((v) => {
-  ok(NAV.includes('data-v="' + v + '"'), 'B1 侧栏有条目 ' + v);
-});
-ok((NAV.match(/data-v="m-/g) || []).length === 4, 'B2 模块恰好四类（本体/MOD/修改器/存档）');
-ok(!/data-v="rm-/.test(NAV), 'B2b 侧栏不再有六个 rm-* 旧条目（已并进模块）');
-ok(/模块 · 以游戏为主键/.test(NAV), 'B3 侧栏有「模块 · 以游戏为主键」分组标题');
+/* ★ v10.107 契约变更：四个模块的**侧栏条目**收成一个「资源管理」入口。
+ *   v10.90 守的核心没变 —— 模块恰好四类、共用一套渲染器；只是「四类」从
+ *   侧栏四扇门变成页内一级页签（RM 里仍然是 4 个 key）。
+ *   ⇒ 侧栏只准有一个 data-v="rm"，一个 m-* / rm-* 都不许再有（有就是合并了一半）。 */
+ok(NAV.includes('data-v="rm"'), 'B1 侧栏有「资源管理」入口');
+ok(!/data-v="m-/.test(NAV) && !/data-v="rm-/.test(NAV),
+  'B1b 侧栏不再按模块拆条目（m-* / rm-* 均应为 0 个）');
+const RM_BLOCK = ADMIN.slice(ADMIN.indexOf('const RM = {'), ADMIN.indexOf('};', ADMIN.indexOf('const RM = {')));
+const rmKeys = [...RM_BLOCK.matchAll(/^\s{2}(\w+):\s*\{ label:/gm)].map((m) => m[1]);
+ok(JSON.stringify(rmKeys) === JSON.stringify(['base', 'mod', 'trainer', 'save']),
+  'B2 模块仍然恰好四类（本体/MOD/修改器/存档）', rmKeys.join(','));
 
 const VIEWS_IDX = ADMIN.indexOf('const VIEWS = {');
 const VIEWS_BODY = ADMIN.slice(VIEWS_IDX, ADMIN.indexOf('};', VIEWS_IDX));
-['m-base', 'm-mod', 'm-trainer', 'm-save'].forEach((v) => {
-  ok(VIEWS_BODY.includes("'" + v + "'"), 'B4 VIEWS 有 ' + v + ' 的标题与面包屑');
+ok(VIEWS_BODY.includes("rm: ["), 'B4 VIEWS 有删掉 m-* 之后剩下的 rm 一条（标题由模块现拼）');
+ok(!/'m-(base|mod|trainer|save)':/.test(VIEWS_BODY), 'B4b VIEWS 里不再有四个 m-* 标题（合并后统一由 RM 拼）');
+/* 老链接必须还能直达 —— 别名表是「合并」这一步的防回归，缺了它书签全废 */
+const ALIAS_BLOCK = ADMIN.slice(ADMIN.indexOf('const HASH_ALIAS = {'), ADMIN.indexOf('};', ADMIN.indexOf('const HASH_ALIAS = {')));
+['m-base', 'm-mod', 'm-trainer', 'm-save'].forEach((k) => {
+  ok(ALIAS_BLOCK.includes("'" + k + "'"), 'B4c 旧 hash #' + k + ' 仍在别名表里（书签不能死）');
 });
 
 ok(/id="view-resm"/.test(ADMIN), 'B5 四个模块共用一个 section（#view-resm）');
@@ -105,12 +114,18 @@ ok(!/id="view-m-/.test(ADMIN), 'B6 没有按模块复制 section（view-m-* 应�
  *   判据仍然守的是「section 数 = 视图数、没有按模块复制」，不是某个数字本身；
  *   新增/合并视图时**同时**改这里与 test-v1090 的侧栏顺序，两处一致才算过。 */
 ok((ADMIN.match(/class="view[^"]*"[^>]*id="view-/g) || []).length === 7,
-  'B6b section 恰好 7 个（dash/games/resm/res/log/dl/set · v10.106 合并页面管理）',
+  'B6b section 恰好 7 个（dash/games/resm/res/log/dl/set · v10.106 并页面管理、v10.107 并四模块）',
   String((ADMIN.match(/class="view[^"]*"[^>]*id="view-/g) || []).length));
-ok(/v\.indexOf\('m-'\) === 0 \? 'resm' : v/.test(ADMIN),
-  'B7 路由把 m-* 映射到 view-resm（否则切过去是空白页）');
-ok(/rmMod = v\.slice\(2\)/.test(ADMIN) && /if \(v\.indexOf\('m-'\) === 0\) \{/.test(ADMIN),
-  'B8 m-* 切换时同步 rmMod（不同步就会一直显示上一个模块）');
+/* ★ v10.107：路由的「模块 → section」映射没变（还是共用一个 view-resm），
+   变的是入口形式：以前是视图名 m-*，现在是 `rm` + 模块变量。
+   判据守的仍是「四个模块不能各自一个 section」与「切换必须落到 rmMod 上」。 */
+ok(/const secId = 'view-' \+ \(v === 'rm' \? 'resm' : v\)/.test(ADMIN),
+  'B7 资源管理四模块共用 view-resm（否则切过去是空白页）');
+ok(/if \(mod\) \{ rmMod = mod; rmSrc = ''/.test(ADMIN)
+  /* ★ 窗口给到 400：`if (v === 'rm') {` 与 `resmReload()` 之间现在夹着两行注释
+     （这个文件**不剥注释**，注释也算距离）。窗口卡太紧，改注释就会误红。 */
+  && /if \(v === 'rm'\) \{[\s\S]{0,400}?resmReload\(\);/.test(ADMIN),
+  'B8 切模块时同步 rmMod 并重载（不同步就会一直显示上一个模块）');
 
 const RM_IDX = ADMIN.indexOf('const RM = {');
 const RM_BODY = ADMIN.slice(RM_IDX, ADMIN.indexOf('\n};', RM_IDX));

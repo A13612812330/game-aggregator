@@ -123,9 +123,13 @@ const NAV = ADMIN.slice(ADMIN.indexOf('<nav class="nav"'), ADMIN.indexOf('</nav>
 const navOrder = [...NAV.matchAll(/data-v="([^"]+)"/g)].map((m) => m[1]);
 /* ★ v10.106：'pages' 并入 'games' —— 侧栏从 11 项收到 10 项。
  *   为什么合并：两个视图查同一个端点（/api/library/browse），只差一个 group 参数
- *   和资料完整度列；用户口径「页面管理跟游戏库应该是一样的，合并成游戏库」。 */
-ok(JSON.stringify(navOrder) === JSON.stringify(['dash', 'games', 'm-base', 'm-mod', 'm-trainer', 'm-save', 'res', 'log', 'dl', 'set']),
-  'B1 侧栏顺序：仪表盘 / 游戏库 / 四模块 / 运维（含磁力下载）', navOrder.join(','));
+ *   和资料完整度列；用户口径「页面管理跟游戏库应该是一样的，合并成游戏库」。
+ * ★ v10.107：四个模块收成一个 'rm' 入口 —— 侧栏 10 → **7** 项。
+ *   用户口径：「参考站的资源是一个资源管理入口，要不要也收成一个」→「可以」。
+ *   判据守的是「侧栏项 = 视图数、没有重复入口」，不是这 7 个字面量本身。 */
+ok(JSON.stringify(navOrder) === JSON.stringify(['dash', 'games', 'rm', 'res', 'log', 'dl', 'set']),
+  'B1 侧栏顺序：仪表盘 / 游戏库 / 资源管理 / 覆盖与缺口 / 日志 / 磁力 / 设置', navOrder.join(','));
+ok(navOrder.length === 7, 'B1b 侧栏恰好 7 项（v10.106 的 10 项再合并四模块）', navOrder.length + ' 项');
 
 /* ★ v10.106：页面管理不再是独立 section —— 这里改成**反向断言**：
  *   旧视图必须彻底消失（否则「合并」只做了一半，侧栏少一项但 DOM 里还留着死页面）。 */
@@ -201,7 +205,19 @@ ok(/id="resChips"/.test(ADMIN) && /id="resCards"/.test(ADMIN), 'B30 资源覆盖
 ok(/class="miss-item"/.test(ADMIN), 'B31 资源覆盖给出缺口清单（能直接安排抓取工作）');
 ok(/function resPick\(k\)/.test(ADMIN), 'B32 可只看某一个模块');
 ok(/if \(!VIEWS\[v\]\) v = 'dash';/.test(ADMIN),
-  'B33 旧 hash（#rm-mod 等）回落仪表盘（否则切过去整页空白）');
+  'B33 认不出来的 hash 回落仪表盘（否则切过去整页空白）');
+/* ★ v10.107：`#rm-mod` 这类**带模块**的 hash 不在 VIEWS 里（视图只有 rm 一个），
+   但它是真地址、发出去过。旧判据 `if (VIEWS[v]) go(v)` 会静默忽略 ⇒ 地址变了界面没动。
+   ⇒ ① go() 里把 rm-* 折成「rm + 该模块」；② hashchange 也要认别名。 */
+ok(/v\.indexOf\('rm-'\) === 0 && RM\[v\.slice\(3\)\]/.test(ADMIN),
+  'B33b #rm-<模块> 折成「资源管理 + 该模块」（不再当成未知 hash 丢掉）');
+ok(/VIEWS\[v\] \|\| HASH_ALIAS\[v\] \|\| \(v\.indexOf\('rm-'\) === 0/.test(ADMIN),
+  'B33c hashchange 认别名（否则手改地址栏没反应）');
+/* 一级页签（模块）必须存在，且数字来自 MOD_CNT —— 侧栏没角标了，数字只能挂这儿 */
+ok(/id="rmModTabs"/.test(ADMIN) && /function paintModTabs\(\)/.test(ADMIN) && /function modPick\(k\)/.test(ADMIN),
+  'B33d 资源管理页有一级模块页签（4 个）+ 切换函数');
+ok(/if \(!MOD_CNT\) loadStats\(\);/.test(ADMIN) && !/\$\('nBase'\)/.test(ADMIN),
+  'B33e 数字改由 MOD_CNT 承载，侧栏不再有 nBase/nMod 之类角标');
 /* ★ v10.91 修的真 bug：六源 stats() 字段名各不相同，统一读 .matched/.total 会让三行印出 NaN% */
 ok(/sv2\.inPcLib/.test(ADMIN) && /gt2\.preMatched/.test(ADMIN) && /ts2\.communities/.test(ADMIN),
   'B34 数据源健康逐源用**真实字段名**（saves.inPcLib / gt.preMatched / tsmods.communities）');

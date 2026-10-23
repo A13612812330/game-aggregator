@@ -119,6 +119,7 @@ const SUITES = [
    * 且反向断言先剥注释再判（解释性注释里就含旧色值，不剥会误判）。 */
   'test-v10105-admin-theme.js',
   'test-v10106-body-and-merge.js',
+  'test-v10107-rm-merge.js',
   'test-saves-match.js',
   /* ★ v10.46 新增：「游侠存档 × 端游库」**名称匹配**层（前缀通道 + 代际护栏口径）。
    * 起因：这条链路此前零覆盖（test-saves-match.js 测的是 Ludusavi 路径匹配，另一条路），
