@@ -107,7 +107,7 @@ node tools/report.js              # 收尾汇报：版本、md5、GitHub 同步�
 | 文件 | 内容 |
 |---|---|
 | `docs/versions/` | 每版变更日志（唯一版本真源）+ 索引表 |
-| `PITFALLS.md` | 225 条踩坑铁律（静默失效、断言假绿、口径陷阱） |
+| `PITFALLS.md` | 226 条踩坑铁律（静默失效、断言假绿、口径陷阱） |
 | `ROADMAP.md` | 功能规划与取舍 |
 | `WORKFLOW.md` | 开发与发布流程、排他约定 |
 | `docs/archive/` | 过期交接文档（HANDOFF / CODEX-* / DESIGN），仅作历史留存 |
