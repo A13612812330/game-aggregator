@@ -117,6 +117,10 @@ ok('E3 侧栏里旧 unicode 图标字符清干净（▦ ▤ ⛃ ◇ ≡ ⇩ ⚙�
   NAV_BLOCK.length > 200 && !/[▦▤⛃◇≡⇩⚙]/.test(NAV_BLOCK), NAV_BLOCK.length + 'B');
 ok('E4 图标跟 currentColor 走（选中时自动变主色）',
   /\.nav a svg\{[^}]*stroke:\s*currentColor/.test(CSS));
+/* 模块卡头部：v10.108 之前直接渲染 `m.icon` 的 unicode 字符，在正文里掉成豆腐块。
+   侧栏换矢量后这里成了唯一还在赌字体的地方 ⇒ 一并守。 */
+ok('E5b 模块卡头部不再渲染 unicode 图标（改走 MOD_ICON 的矢量）',
+  /MOD_ICON\[m\.key\]/.test(ADMIN) && !/>' \+ m\.icon \+/.test(ADMIN));
 const secCount = (ADMIN.match(/<div class="sec">/g) || []).length;
 ok('E5 ★ 分组标题不重复：v10.107 漏删的第二个「内容」已清（3 组：总览 / 内容 / 运维）',
   secCount === 3 && (ADMIN.match(/<div class="sec">内容<\/div>/g) || []).length === 1, secCount + ' 组');
