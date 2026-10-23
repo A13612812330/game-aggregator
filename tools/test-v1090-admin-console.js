@@ -165,8 +165,16 @@ ok(/bindPager\(\$\('gPgBar'\)/.test(ADMIN) && /bindPager\(\$\('rmPgBar'\)/.test(
  *   ② 冷门要看得见（cold=0 把「隐藏冷门」关掉）。
  *   判据从「pqs 里有没有这串」换成「qs 里有没有这串」，不是删断言。 */
 const qsBody = ADMIN.slice(ADMIN.indexOf('function qs()'), ADMIN.indexOf('function qs()') + 900);
-ok(/p\.set\('admin', '1'\)/.test(qsBody) && /p\.set\('cold', '0'\)/.test(qsBody),
-  'B13 游戏库走 admin=1&cold=0（冷门也要看得见）');
+/* ★★ v10.112 翻转 B13：v10.90 这条的原意是「管理端别被冷门规则挡住」，
+ *   但当时的实现是「两个分支都写 cold=0」—— 用一个**死代码**实现了一个隐含默认。
+ *   本版把开关做成真的（默认隐藏冷门，勾选才看全量），于是「冷门要看得见」从
+ *   「无条件」变成「一个可切换的状态」。守的东西没变软：
+ *     · admin=1 必须还在（否则拿到的是前台过滤后的数据）
+ *     · cold 必须由 showCold 决定，**不许再写死**（写死就是死控件，正是本版修的 bug）
+ *     · 两个取值都要出现（只写一个等于只能看一种）
+ *   ⚠️ 别把这条改回「出现 cold=0 就算过」——那会让死控件重新合法。 */
+ok(/p\.set\('admin', '1'\)/.test(qsBody) && /p\.set\('cold', showCold \? '0' : '1'\)/.test(qsBody),
+  'B13 游戏库：admin=1 必带，且 cold 由开关决定（v10.112 起不再写死 cold=0）');
 ok(/function qs\(\)/.test(ADMIN) && !/function pqs\(\)/.test(ADMIN),
   'B14 只剩一份查询串（合并后不再各写一套，条件不会再漂）');
 ok(/if \(groupSame\) p\.set\('group', '1'\)/.test(ADMIN) && /let groupSame = true/.test(ADMIN),

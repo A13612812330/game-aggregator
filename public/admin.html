@@ -1613,7 +1613,12 @@ function qs() {
   p.set('scope', 'pc'); p.set('limit', LIMIT); p.set('offset', offset);
   p.set('admin', '1'); p.set('sort', $('fSort').value || 'updated');
   const q = $('q').value.trim(); if (q) p.set('q', q);
-  if (!showCold) p.set('cold', '0'); else p.set('cold', '0');
+  /* ★★ v10.112 修死控件：改前两个分支都写 `p.set('cold','0')` ——
+   *   勾不勾「🌙 显示冷门」都是全量 19,766 条，而 toggleCold 的 toast 还写着
+   *   「仅切换高亮」，可代码里根本没有切换高亮的逻辑 ⇒ 纯装饰控件（实测确认）。
+   *   现在对齐控件名：不勾 ⇒ cold=1（剔除冷门，12,308 条，与前台口径一致）；
+   *   勾选 ⇒ cold=0（全量 19,766 条）。 */
+  p.set('cold', showCold ? '0' : '1');
   const h = $('fHide').value; if (h) p.set('hidden', h);
   const s = $('fSrc').value; if (s) p.set('asrc', s);
   if (onlyNote) p.set('note', '1');
@@ -2340,7 +2345,15 @@ document.addEventListener('click', (e) => {
 });
 function toggleGroup() { groupSame = !groupSame; $('cGroup').classList.toggle('on', groupSame); offset = 0; reload(); }
 function toggleNote() { onlyNote = !onlyNote; $('cNote').classList.toggle('on', onlyNote); offset = 0; reload(); }
-function toggleCold() { showCold = !showCold; $('cCold').classList.toggle('on', showCold); toast(showCold ? '冷门行已显示（筛选中标注）' : '冷门行仍全部列出，仅切换高亮'); }
+function toggleCold() {
+  /* ★ v10.112：原来是纯装饰 —— 只 toggle 自己的 .on 类，既不改请求（两个分支都发 cold=0），
+     也不 reload，toast 还谎称「仅切换高亮」（代码里没有任何高亮逻辑）。
+     现在与 toggleGroup / toggleNote 同一套：改状态 → 归零页码 → 重新请求。 */
+  showCold = !showCold;
+  $('cCold').classList.toggle('on', showCold);
+  offset = 0; reload();
+  toast(showCold ? '已含冷门行（全量口径）' : '已隐藏冷门行（与前台口径一致）');
+}
 
 /* ═══════════ 资料 / 爬虫字段弹窗 ═══════════
  * 一个弹窗两种形态（由 pfMode 决定显示哪些组）：

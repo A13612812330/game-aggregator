@@ -170,7 +170,7 @@ async function main() {
   /* ★ v10.111：有界轮询小工具。全量跑时 CPU 争抢，写死的等待秒数会时灵时不灵 ——
      v10.110 在这文件里改过两处（机型匹配、社区配置），本版又撞上第三处（点卡片开抽屉）。
      统一用这个：**有出现就往下走，超时返回 -1 让断言照旧红**，耗时打进详情。 */
-  const waitUntil = async (fn, ms = 12000) => {
+  const waitUntil = async (fn, ms = 30000) => {
     const t0 = Date.now();
     for (;;) {
       let hit = false;
@@ -281,8 +281,11 @@ async function main() {
 
   if (emuCov.length) {
     click(emuCov[0].querySelector('.cov-btn'));
-    await sleep(1200);
-    ok('点「查看游戏详情」→ 打开详情抽屉', q('#drawer').classList.contains('show'));
+    /* ★ v10.112：sleep(1200) → 等抽屉真的开且内容到位（全量跑时同一批断言会一起红） */
+    const drawerWait = await waitUntil(() =>
+      q('#drawer').classList.contains('show') && (q('#drawerBody').textContent || '').trim().length > 10);
+    ok('点「查看游戏详情」→ 打开详情抽屉', q('#drawer').classList.contains('show'),
+      `等待 ${drawerWait < 0 ? '超时 30000ms' : drawerWait + 'ms'}`);
     ok('抽屉不空白', (q('#drawerBody').textContent || '').trim().length > 10);
     W.closeDetail(); await sleep(200);
   }
@@ -340,10 +343,11 @@ async function main() {
     ok('切换「有修改器」前后按钮宽度不变（不再顶掉同排其它开关）',
       Math.abs(wTr - wTr2) <= 1, `${wTr.toFixed(1)} → ${wTr2.toFixed(1)}`);
     click(q('#emuToggleSv'));
-    await sleep(1600);
+    /* ★ v10.112：sleep(1600) → 等卡片真的出现（全量跑时这条红成「卡片 0」） */
+    const svWait = await waitUntil(() => qa('#emuGrid .emu-card').length > 0);
     ok('点「💾 有云存档」→ 开关进入活跃态且列表有结果',
       q('#emuToggleSv').classList.contains('on') && qa('#emuGrid .emu-card').length > 0,
-      `卡片 ${qa('#emuGrid .emu-card').length}`);
+      `卡片 ${qa('#emuGrid .emu-card').length}（等待 ${svWait < 0 ? '超时 30000ms' : svWait + 'ms'}）`);
     click(q('#emuToggleSv'));  // 复原
     await sleep(1200);
   }
@@ -370,11 +374,15 @@ async function main() {
 
   /* ---- 直接切「模拟器指南」（第 3 个平级页签，不再经二级） ---- */
   click(q('#emuTabs .emu-tab[data-et="eg"]'));
-  await sleep(1200);
+  /* ★ v10.112：原来固定 sleep(1200)。全量跑时 data-ready 从 128ms 涨到 3863ms，
+     同一批「数据类」断言会一起红（指南 0 层 / 品牌下拉 1 项 / Turnip 0 变体）。
+     改成等目标节点真的出现 —— 等到就往下走，30s 不出现才判红。 */
+  const egWait = await waitUntil(() => qa('#egStack .eg-ly').length === 5);
   ok('切「模拟器指南」→ #emuguide 显示', !q('#emuguide').classList.contains('et-hide'));
   ok('切「模拟器指南」→ #devmatch 同时收起', q('#devmatch').classList.contains('et-hide'));
   ok('切「模拟器指南」→ tab 高亮同步', (q('#emuTabs .emu-tab.on') || {}).dataset?.et === 'eg');
-  ok('指南技术栈 5 层已渲染', qa('#egStack .eg-ly').length === 5, `实际 ${qa('#egStack .eg-ly').length}`);
+  ok('指南技术栈 5 层已渲染', qa('#egStack .eg-ly').length === 5,
+    `实际 ${qa('#egStack .eg-ly').length} 层（等待 ${egWait < 0 ? '超时 30000ms' : egWait + 'ms'}）`);
   ok('子页签数字已回填（非占位 —）', !qa('#emuTabs .emu-tab b').some((b) => b.textContent.trim() === '—'),
     qa('#emuTabs .emu-tab b').map((b) => b.textContent.trim()).join(' / '));
   /* v9.3：机型兼容 tab 回填已索引机型数（v10.44 起它是第 2 个页签） */
@@ -384,11 +392,13 @@ async function main() {
 
   /* ---- 直接切「机型兼容」（第 2 个平级页签，v10.44 起） ---- */
   click(q('#emuTabs .emu-tab[data-et="dm"]'));
-  await sleep(1600);
+  /* ★ v10.112：固定 sleep(1600) → 等品牌下拉真的被填（同 egWait 的理由） */
+  const dmBrandWait = await waitUntil(() => qa('#dmBrand option').length > 3);
   ok('切「机型兼容」→ #devmatch 显示、#emuguide 隐藏',
     !q('#devmatch').classList.contains('et-hide') && q('#emuguide').classList.contains('et-hide'));
   ok('切「机型兼容」→ tab 高亮同步', (q('#emuTabs .emu-tab.on') || {}).dataset?.et === 'dm');
-  ok('品牌下拉已填充', qa('#dmBrand option').length > 3, `实际 ${qa('#dmBrand option').length} 项`);
+  ok('品牌下拉已填充', qa('#dmBrand option').length > 3,
+    `实际 ${qa('#dmBrand option').length} 项（等待 ${dmBrandWait < 0 ? '超时 30000ms' : dmBrandWait + 'ms'}）`);
   ok('Turnip 驱动看板已渲染', qa('#dmTurnip .dm-var').length >= 2, `实际 ${qa('#dmTurnip .dm-var').length} 个变体`);
 
   /* 触发一次匹配查询。
@@ -397,7 +407,12 @@ async function main() {
    *   接口实测 12ms（`/api/device/match?model=SM-S928B&limit=300` ×3），
    *   所以不是接口慢，是**固定等待 + 全量串行时的 CPU 争抢**让回调排到 2.2s 之后。
    *   ⇒ 改「有界轮询」：出现卡片就立即往下走，最多等 12s；超时仍判红。
-   *     轮询不是把失败等成绿 —— 上界到了还是 0 张就照旧报红。 */
+   *     轮询不是把失败等成绿 —— 上界到了还是 0 张就照旧报红。
+   * ★★ v10.112 把上界 12s → **30s**：全量跑 86 套时实测 `data-ready` 从 128ms 涨到
+   *   **3863ms**（30 倍），后续 9 条数据类断言（卡片 0 / 指南 0 层 / 品牌下拉 1 项 /
+   *   Turnip 0 变体 / 机型匹配 0 张）一起红。单跑 101/101 必绿 ⇒ 是**负载**不是功能。
+   *   12s 的目标是「够快报错」，但在被压满的机器上它先于数据到达 —— 30s 才有区分度。
+   *   ⚠️ 仍然不是「等到绿」：30s 到了还是 0 就照旧红，超时值会打进断言详情。 */
   const waitCards = async (ms) => {
     const t0 = Date.now();
     while (Date.now() - t0 < ms) {
@@ -411,11 +426,11 @@ async function main() {
   if (dmInp) {
     dmInp.value = 'SM S928B';
     click(q('#dmGo'));
-    dmWait = await waitCards(12000);
+    dmWait = await waitCards(30000);
   }
   const dmGrid = q('#dmGrid');
   ok('机型匹配结果已渲染', dmGrid && qa('#dmGrid .emu-card').length > 0,
-    `实际 ${dmGrid ? qa('#dmGrid .emu-card').length : 0} 张（等待 ${dmWait < 0 ? '超时 12000' : dmWait}ms）`);
+    `实际 ${dmGrid ? qa('#dmGrid .emu-card').length : 0} 张（等待 ${dmWait < 0 ? '超时 30000' : dmWait}ms）`);
   ok('结果头显示 GPU 与性能档', !!q('#dmInfo') && /Adreno|Mali|PowerVR|Xclipse/i.test(q('#dmInfo').textContent),
     q('#dmInfo') ? q('#dmInfo').textContent.replace(/\s+/g, ' ').slice(0, 60) : '空');
   ok('档位筛选按钮已就绪', qa('.dm-f').length === 4, `实际 ${qa('.dm-f').length}`);

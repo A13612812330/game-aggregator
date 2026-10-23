@@ -20,7 +20,12 @@ const ROOT = path.join(__dirname, '..');
 /* ★★ 工作目录**带 pid**（每次跑唯一）+ **不做递归删除** —— 原因见 PITFALLS 铁律 107：
    WorkBuddy 宿主安全删除守卫按「本 turn 累计删除文件数 > 50」拦 `rmSync`，
    三个 v1071 套件连跑累计 69 ⇒ 全量跑时本套件 exit 1、单独跑却全绿（**防线报假红**）。 */
-const WORK = path.join(ROOT, '_test-out', 'v1071-api-' + process.pid);
+/* ★★ v10.112：目录名在 pid 之后**再加一段随机后缀**。
+   只有 pid 的话，Windows 复用 PID 时会命中上一轮跑剩的目录（同族假红见
+   test-v1071-extractor.js 头部那段实测记录：`-aos` + 旧目录 ⇒ 产出 0 ⇒ 假红）。
+   本套件不靠 `-aos` 语义，但「每次都是干净起点」这个前提同样要保住。 */
+const WORK = path.join(ROOT, '_test-out',
+  'v1071-api-' + process.pid + '-' + Math.random().toString(36).slice(2, 8));
 const PORT = 8899;
 const BASE = 'http://127.0.0.1:' + PORT;
 

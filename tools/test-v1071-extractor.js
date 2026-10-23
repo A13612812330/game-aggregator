@@ -24,7 +24,17 @@ const SEVENZ = EX.resolve7z();
    三个 v1071 套件连跑时累计 69 ⇒ **整套防线里它 exit 1，而单独跑却全绿** ——
    表现是「**防线自己报假红**」，比真红更费时间（会去查根本没坏的代码）。
    代价：`_test-out/` 会留目录（已 gitignore），由人工偶尔清。详见 PITFALLS 铁律 107。 */
-const ROOT = path.join(__dirname, '..', '_test-out', 'v1071-verify-' + process.pid);
+/* ★★★ v10.112 追加一层：目录名**不能只有 pid**，必须带随机后缀。
+   本轮（v10.112）实测到的假红：全量跑 86 个 node 进程快速起落，Windows 会**复用 PID**；
+   一旦新进程拿到「某次用过的 PID」，`v1071-verify-<pid>` 就正好是**上一轮跑剩的目录**。
+   而解压走 `-aos`（跳过已存在文件）⇒ produced=0 ⇒ `reachedDepth=1`
+   ⇒ D3「递归层数 = 2」与 D7「产出里有内层存档目录」双双假红，而**单跑必绿**
+   （单跑撞上旧 PID 的概率低得多）。实测残留已累积 **110 个目录 / 约 1.1GB**。
+   加随机后缀后，PID 怎么复用都撞不上。
+   ⚠️ 仍然**不做递归清理** —— 清理会撞安全删除守卫的「本 turn 累计 > 50」阈值（见上），
+     那样换来的又是 exit 1。代价是残留继续累积，已记进 README 的维护项，定期人工清。 */
+const ROOT = path.join(__dirname, '..', '_test-out',
+  'v1071-verify-' + process.pid + '-' + crypto.randomBytes(3).toString('hex'));
 
 let pass = 0, fail = 0;
 function chk(name, ok, extra) {

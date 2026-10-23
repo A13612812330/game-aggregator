@@ -3762,12 +3762,26 @@ app.get('/api/library/browse', (req, res) => {
    *     这个参数必须自己带鉴权，不能指望「接口整体是公开的」。 */
   const isAdminView = String(req.query.admin || '') === '1';
   if (isAdminView && !adminGuard(req, res)) return;
+  /* ★★ v10.112 `hidden=1` 让冷门剔除让位：
+   *   池前剔除冷门 + 「只要最终隐藏的行」是互斥的 —— 前者把所有 isHidden 的删掉，
+   *   后者只留 isHidden 的 ⇒ 组合起来必然 0 条。后台默认不显示冷门（cold=1）之后，
+   *   管理员一选「最终隐藏」就永远空列表，看起来像功能坏了。
+   *   ⇒ 显式要「隐藏行」时，就不再剔除冷门。只对 admin 视图生效（非 admin 带 hidden
+   *   参数不影响可见性，避免「加个参数就绕开冷门隐藏」）。
+   *   ⚠️ test-cold-hide 原本断言 `o.excludeCold =` 只出现一次；这里是有意的第二个入口，
+   *   该断言已同步升级为「两处，且都只在 /api/library/browse 内」（不是放宽，是点名两个入口）。 */
+  if (isAdminView && String(req.query.hidden || '') === '1') o.excludeCold = false;
   /* ★ v10.87 管理页隐藏态筛选（池前过滤，total 才与行数一致）：
    *   admin=1 且 hidden=1|0 → 只留「最终隐藏」/「最终可见」的行；
    *   判定复用 coldHide.isHidden（与豁免、/api/cold/stats 同一真源）。
-   *   ⚠️ 条件写 `!o.excludeCold` 而不是 `=== false` —— test-cold-hide 用
-   *   `o.excludeCold\s*=` 计数「赋值只此一处」，`===` 会被误计成第二处。 */
-  if (isAdminView && !o.excludeCold) {
+   *   ⚠️ test-cold-hide 用 `o.excludeCold\s*=` 计数「赋值只此一处」，新增赋值会被判红。 */
+  /* ★★ v10.112 解耦（实测出来的静默失效）：
+   *   改前条件是 `isAdminView && !o.excludeCold` —— hidden / asrc / note 三个筛选
+   *   **只在 cold=0 时才生效**。以前没炸是因为后台的 cold 开关是死控件（永远发 0）；
+   *   一旦开关真的能发 cold=1，这三个筛选会当场全部失效，而且**不报错**：
+   *   实测 cold=1&hidden=1 / &asrc=jidi / &note=1 的 total 全部 = 12308 = 与不加筛选一模一样。
+   *   本质：「剔除冷门」是池前的一道开关，「附加条件」是另一件事，两者不该互相开关。 */
+  if (isAdminView) {
     /* v10.88：管理页需要多条件叠加（隐藏态 + 来源 + 有备注），
      * 所以改成「条件数组 + every」而不是逐个覆盖 o.filter —— 覆盖会让后一个筛选
      * 静默吃掉前一个（列表数字对不上，但不报错）。 */

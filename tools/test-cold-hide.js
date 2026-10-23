@@ -43,6 +43,12 @@ coldHide.setResourceProvider(() => {
 const all = gamesDb.all();
 const SRV = read('server.js');
 const GDB = read('data/gamesDb.js');
+/* ★ v10.112：数「赋值出现几处」的断言必须先剥注释 —— 本轮就在 server.js 里写了
+ *   一句解释性的 `o.excludeCold =` 只出现一次，计数当场从 2 变 3 判红。
+ *   这是铁律 201 的同型（注释会咬计数型断言）。判源码数量的断言统一用这个版本。 */
+const SRV_CODE = SRV
+  .replace(/\/\*[\s\S]*?\*\//g, '')   // 块注释
+  .replace(/^\s*\/\/.*$/gm, '');      // 整行行注释（不剥行尾 //：URL 里的 // 会被误伤）
 
 console.log('== ① 口径与现测自证 ==');
 const st = coldHide.stats(all);
@@ -80,7 +86,22 @@ ok('有热度游戏不被隐藏', !!hotGame && !coldHide.isHidden(hotGame), hotG
 console.log('== ② 挂接位置：池前过滤 + 只有列表层开 ==');
 ok('gamesDb.applyOpts 有 excludeCold 钩子', /if \(o\.excludeCold\) out = out\.filter\(\(x\) => !coldHide\.isHidden\(x\)\);/.test(GDB));
 ok('钩子在排序/分页之前（applyOpts 内，browse 后处理）', GDB.indexOf('excludeCold') < GDB.indexOf('function browse'));
-ok('server 只有 /api/library/browse 开 excludeCold', (SRV.match(/o\.excludeCold\s*=/g) || []).length === 1 && /o\.excludeCold = String\(req\.query\.cold/.test(SRV));
+/* ★ v10.112：判据从「赋值只此一处」升级成「点名两个入口」。
+   为什么必须升级：v10.112 修死控件后，后台默认会发 cold=1，而「池前剔除冷门」与
+   「只看最终隐藏的行」互斥（前者删光 isHidden，后者只留 isHidden ⇒ 必然 0 条），
+   所以 hidden=1 必须让冷门剔除让位。这是**有意的第二个入口**，不是暗门。
+   守的东西没变软：入口必须可枚举（正好 2 处），且两处都必须在 /api/library/browse 内。 */
+ok('server 的冷门剔除只有两个显式入口（cold 参数 / hidden=1 让位），没有第三个',
+  (SRV_CODE.match(/o\.excludeCold\s*=/g) || []).length === 2
+  && /o\.excludeCold = String\(req\.query\.cold/.test(SRV_CODE)
+  && /if \(isAdminView && String\(req\.query\.hidden \|\| ''\) === '1'\) o\.excludeCold = false;/.test(SRV_CODE));
+ok('hidden=1 的让位只在 admin 视图内（避免加个参数就绕开冷门隐藏）', (() => {
+  /* 只允许一处 `= false`，且它所在行必须带 isAdminView 守卫。
+     写成「逐行找」而不是正则跨行匹配：跨行的 [\s\S] 会把守卫与赋值拆开判成两份。 */
+  const cnt = (SRV_CODE.match(/o\.excludeCold = false/g) || []).length;
+  const line = SRV_CODE.split(/\r?\n/).find((l) => l.includes('o.excludeCold = false')) || '';
+  return cnt === 1 && /isAdminView/.test(line);
+})());
 ok('有 ?cold=0 逃生口', /req\.query\.cold \|\| ''\) !== '0'/.test(SRV));
 ok('gamesDb.search 调用链不带 excludeCold（搜索可搜到）',
   !/search\([^)]*excludeCold/.test(SRV) && !/libOpts\(req\)\.excludeCold/.test(SRV));

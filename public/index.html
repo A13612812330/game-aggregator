@@ -1451,6 +1451,21 @@
   .cat:hover{border-color:var(--c-primary);color:var(--c-primary)}
   .cat.on{background:var(--c-primary);color:#fff;box-shadow:0 3px 10px rgba(46,107,255,.28)}
   .cat-row .grow{flex:1}
+  /* ★ v10.112 列表内关键词行：与分类行同一个操作台的第二个「输入行」。
+     为什么不做成顶栏那种大搜索：顶栏搜索弹窗是跨四库实时查源站，
+     这里只是「在已经筛出来的结果里再收窄一格」，形态要轻，不能抢主入口的位置。 */
+  .lib-q-row{display:flex;align-items:center;gap:6px;margin-top:9px;padding-top:9px;
+    border-top:1px solid var(--c-border2);flex-wrap:wrap}
+  .lib-q{flex:1;min-width:160px;height:30px;padding:0 10px;font-size:12.5px;
+    color:var(--c-t1);background:#F3F5F9;border:1px solid transparent;border-radius:9px;
+    font-family:inherit;transition:.14s}
+  .lib-q::placeholder{color:var(--c-t3)}
+  .lib-q:focus{outline:none;background:var(--c-surface);border-color:var(--c-primary);
+    box-shadow:0 0 0 3px rgba(46,107,255,.14)}
+  .lib-q-clear{font-size:11.5px;font-weight:700;color:var(--c-primary);background:none;
+    border:0;padding:4px 2px;text-decoration:underline;cursor:pointer}
+  .lib-q-hit{font-size:11.5px;color:var(--c-t3)}
+  .lib-q-hit b{color:var(--c-t1);font-family:var(--font-num)}
   .statline{font-size:11.5px;color:var(--c-t3);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .statline b{color:var(--c-t1);font-family:var(--font-num)}
   .dot{width:6px;height:6px;border-radius:50%;background:#B9C0D2;display:inline-block;margin-right:4px}
@@ -2786,7 +2801,15 @@
 <main class="wrap" id="latest">
   <div class="sec-h" style="margin-top:22px"><span class="sec-no">02</span><span class="bar"></span><h2 id="listTitle">最新收录</h2><span class="en">LATEST LIBRARY</span><span class="more" id="listCount"></span></div>
   <div class="sec-sub">机地 × XDGAME 双源合并入库的最新单品，按更新时间倒序；未收录的也能在搜索里实时查源站。</div>
-  <div class="cat-panel"><div class="cat-row" id="catRow"></div></div>
+  <div class="cat-panel">
+    <div class="cat-row" id="catRow"></div>
+    <div class="lib-q-row">
+      <span class="cat-title">搜索</span>
+      <input class="lib-q" id="libQ" type="text" autocomplete="off" enterkeyhint="search"
+        placeholder="在当前结果里找游戏名（如 巫师3 / 赛博朋克）" aria-label="在当前结果里搜索游戏名">
+      <button class="lib-q-clear" id="libQClear" type="button" hidden>清空</button>
+    </div>
+  </div>
   <div class="grid2" style="margin-top:16px">
     <div id="colMain"></div>
     <aside id="colSide"></aside>
@@ -3081,6 +3104,11 @@ let curFilterOpen = false;
 /* ★ v10.58「库范围」：pc 端游库（19,465）/ mob 手游中心（3,330）/ all 合并（21,110）。
    见 `filterBarHtml` 的「库」行与服务端 `/api/library/browse?scope=` 的整段注释。 */
 let curScope = 'pc';
+/* ★ v10.112 列表内关键词（「在结果里再缩小」）。
+ *   与顶栏搜索弹窗分工：弹窗是**跨四库实时查源站**的入口，这里是**在当前浏览结果上收窄**，
+ *   走 /api/library/browse 的 `q`（服务端 v10.90 就支持，前端一直没发 = 死参数）。
+ *   与分类 / 容量 / 五个开关全部**叠加**而不是互相覆盖。 */
+let curQ = '';
 let offset = 0, total = 0, listEl = null, loading = false;
 
 /** 当前筛选 → 附加查询串（容量区间 + 五个只看开关）
@@ -3193,7 +3221,13 @@ function renderCats() {
 function statlineHtml(st) {
   const j = st.bySource && (st.bySource.jidi || 0);
   const x = st.bySource && (st.bySource.xdgamer || 0);
-  return `库内 <b>${st.total ? st.total.toLocaleString() : '–'}</b> 款 · 机地 <b>${j || 0}</b> · XD <b>${x || 0}</b>`;
+  /* ★ v10.112：这一行的数字是**库内总量**（含默认隐藏的冷门），而列表的「共 N 款」
+   *   是**剔除冷门后**的可见口径 —— 一屏两个数看着像对不上（实测 19,766 vs 12,308）。
+   *   两个数都没错，缺的是一句口径说明。这里只加 title，**不改数字**：
+   *   改数字要动 /api/library/stats 的返回口径与三处断言，风险大于收益，先记进遗留。 */
+  return `<span title="库内总量，含默认隐藏的冷门条目（列表的「共 N 款」是不含冷门的可见口径）">`
+    + `库内 <b>${st.total ? st.total.toLocaleString() : '–'}</b> 款</span>`
+    + ` · 机地 <b>${j || 0}</b> · XD <b>${x || 0}</b>`;
 }
 
 /* ================= 主列表（内容库浏览,参考 XD 行卡） ================= */
@@ -3280,7 +3314,33 @@ async function renderList(reset) {
   const col = $('#colMain');
   if (reset) {
     col.innerHTML = filterBarHtml() + `<div id="libList">${skeletonRows(7)}</div>`;
-    const lt = $('#listTitle'); if (lt) lt.textContent = curCat === '全部' ? '最新收录' : curCat;
+    const lt = $('#listTitle');
+    if (lt) lt.textContent = curQ ? `搜索「${curQ}」` : (curCat === '全部' ? '最新收录' : curCat);
+    /* ★ v10.112 列表内关键词：`oninput` 是**覆盖式**赋值 —— 每次 reset 重设同一个处理函数，
+       天然幂等；用 addEventListener 会在每次筛选变化时叠一层监听（切 5 次就有 5 个 listener）。
+       防抖 320ms：中文输入法 oninput 会在拼字阶段连续触发，不防抖会连发十几个请求。 */
+    const qEl = $('#libQ');
+    if (qEl) {
+      /* 只在值真的不同时才写回：对 input.value 赋值会把光标顶到末尾，
+         用户在第 3 个字中间插字时会被踢到行尾（重渲染后这一行必然执行）。 */
+      if (qEl.value !== curQ) qEl.value = curQ;
+      const qClear = $('#libQClear');
+      const syncClear = () => { if (qClear) qClear.hidden = !qEl.value.trim(); };
+      syncClear();
+      let qt = 0;
+      const fire = () => {
+        clearTimeout(qt);
+        qt = setTimeout(() => {
+          const nv = qEl.value.trim();
+          syncClear();
+          if (nv === curQ) return;
+          curQ = nv; offset = 0; renderList(true);
+        }, 320);
+      };
+      qEl.oninput = fire;
+      qEl.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(qt); const nv = qEl.value.trim(); if (nv !== curQ) { curQ = nv; offset = 0; renderList(true); } else renderList(true); } };
+      if (qClear) qClear.onclick = () => { qEl.value = ''; curQ = ''; offset = 0; renderList(true); };
+    }
   }
   listEl = $('#libList');
   loading = true;
@@ -3334,20 +3394,29 @@ async function renderList(reset) {
   }
   try {
     const g = curCat === '全部' ? '' : curCat;
-    const url = api('/api/library/browse?g=' + encodeURIComponent(g) + '&sort=' + curSort + '&limit=40&offset=' + offset + filterQuery());
+    /* ★ v10.112：`q` 一直由服务端支持（v10.90 起），但前端从没发过 —— 本版接上。
+       与分类 / 排序 / 容量 / 五个开关**叠加**，不是二选一。 */
+    const url = api('/api/library/browse?g=' + encodeURIComponent(g) + '&sort=' + curSort + '&limit=40&offset=' + offset + filterQuery()
+      + (curQ ? '&q=' + encodeURIComponent(curQ) : ''));
     const j = await fetch(url).then(r => r.json());
     if (!j.ok) throw new Error(j.error || '加载失败');
     total = j.total || 0;
     const items = j.items || [];
     // 默认「全部 × 最新更新」视图按日期分组（今日/昨日/日期），其余视图平铺
-    const grouped = (curCat === '全部' && curSort === 'updated');
+    // ★ v10.112：搜索态不按日期分组 —— 命中集合是「散落在各天」的，分日期只会打散结果
+    const grouped = (curCat === '全部' && curSort === 'updated' && !curQ);
     const renderBatch = () => grouped ? groupByDate(items) : items.map(rowCard).join('');
     if (reset) {
       lastDateShown = null;
       const c = $('#listCount'); if (c) c.textContent = `共 ${total.toLocaleString()} 款`;
       const fc = $('#filterCount'); if (fc) fc.textContent = filterCountText(total);
-      /* ★ v10.53：空态提示不再逐个点名开关（开关从 4 个涨到 5 个，点名单会越长越假）。 */
-      listEl.innerHTML = items.length ? renderBatch() : `<div class="empty"><div class="big">📂</div>当前筛选下暂无收录<br><span class="note" style="font-size:12px">试试放宽容量区间，或关掉「筛选」行里的任一开关</span></div>`;
+      /* ★ v10.53：空态提示不再逐个点名开关（开关从 4 个涨到 5 个，点名单会越长越假）。
+         ★ v10.112：搜索态必须给**不一样的**空态 —— 「暂无收录」在搜索语境下是假话，
+         而且用户要知道自己搜的是哪个词、以及怎么办。 */
+      listEl.innerHTML = items.length ? renderBatch()
+        : (curQ
+          ? `<div class="empty"><div class="big">🔍</div>没有找到「${esc(curQ)}」<br><span class="note" style="font-size:12px">已按当前分类与筛选条件收窄；试试清空搜索，或换到「合并」库范围</span></div>`
+          : `<div class="empty"><div class="big">📂</div>当前筛选下暂无收录<br><span class="note" style="font-size:12px">试试放宽容量区间，或关掉「筛选」行里的任一开关</span></div>`);
       offset = items.length;
     } else {
       listEl.insertAdjacentHTML('beforeend', renderBatch());
