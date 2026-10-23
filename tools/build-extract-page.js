@@ -370,5 +370,7 @@ if (out.indexOf('.ex-env.ok') < 0 || out.indexOf('.ex-pw-it input') < 0) {
  *   放在落盘前 —— 编译不过就根本不产出，避免废页被服务读走。 */
 A.assertScriptSyntax(out, 'extract.html');
 
-fs.writeFileSync(OUT, out, 'utf8');
+/* ★ v10.111：写出前统一成 LF（同 build-unpack-page.js 的说明：
+   混交换行 ⇒ git 判 binary ⇒ autocrlf 不归一 ⇒ 整文件重写）。 */
+fs.writeFileSync(OUT, String(out).replace(/\r\n?/g, '\n'), 'utf8');
 console.log('[build-extract-page] 已生成 public/extract.html（' + (out.length / 1024).toFixed(1) + ' KB）');

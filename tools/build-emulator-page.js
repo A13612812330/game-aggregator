@@ -26,8 +26,19 @@ const PUB = path.join(__dirname, '..', 'public');
 const INDEX = path.join(PUB, 'index.html');
 const EMU = path.join(PUB, 'emulator.html');
 
-const idx = fs.readFileSync(INDEX, 'utf8');
-const emu = fs.readFileSync(EMU, 'utf8');
+/* ★ v10.111：读入即**归一换行**。
+   为什么必须做：`public/index.html` 在工作区是 CRLF（core.autocrlf=true 的 checkout 结果），
+   readFileSync 拿到的字符串带 `\r`，拼进输出就变成「混交换行」。
+   两个后果，第二个更阴：
+     ① 派生页整体被判 binary（`git ls-files --eol` 显示 `i/-text`）⇒ autocrlf 不再归一
+        ⇒ 下次提交每行都「变了」。v10.111 实测：真实改动 700 行，提交成 39713+/39128-。
+     ② 本文件后面一堆 `.replace(/^\s*xxx.*$/m, …)` —— `.*` 吃不掉行尾的 `\r`，
+        替换后会留下**孤立的 \r**，肉眼看不出来、行数也对得上，但文件已经脏了。
+   ⇒ 读入归一，写出（文件末尾）再兜一次。 */
+const normalizeEol = (s) => String(s).replace(/\r\n?/g, '\n');
+
+const idx = normalizeEol(fs.readFileSync(INDEX, 'utf8'));
+const emu = normalizeEol(fs.readFileSync(EMU, 'utf8'));
 
 const linesOf = (t) => t.split('\n');
 const idxLines = linesOf(idx);
@@ -713,7 +724,7 @@ const out = [
 /* ★★ 语法闸门：编译不过就不落盘（防「结构全绿、整页脚本不跑」）。 */
 assertScriptSyntax(out, 'emulator.html');
 
-fs.writeFileSync(EMU, out, 'utf8');
+fs.writeFileSync(EMU, normalizeEol(out), 'utf8');
 console.log(`✅ 已同步共享资产到 public/emulator.html`);
 console.log(`   CSS ${CSS.length}B ｜ 顶栏 ${TOPBAR.length}B ｜ 抽屉+tabbar ${OVERLAY.length}B ｜ 脚本 ${JS.length}B`);
 console.log(`   保留独立页自己的两分区 ${SECTIONS.length}B ＋ 机型兼容 ${DEVMATCH_HTML.length}B 与 3 页签切换条`);

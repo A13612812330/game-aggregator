@@ -3976,7 +3976,8 @@ function bindRankUI() {
   $('#rankPills').addEventListener('click', (e) => {
     const b = e.target.closest('.stage-pill'); if (!b || b.dataset.p === rankPeriod) return;
     rankPeriod = b.dataset.p;
-    $$('#rankPills .stage-pill').forEach(x => x.classList.toggle('on', x === b));  /* refreshRank：独立页无热榜分区，跳过 */
+    $$('#rankPills .stage-pill').forEach(x => x.classList.toggle('on', x === b));
+  /* refreshRank：独立页无热榜分区，跳过 */
   });
   $('#rankRefresh').addEventListener('click', () => { toast('正在刷新榜单…'); refreshRank(true); });
 }
@@ -9206,7 +9207,11 @@ async function init() {
      `TypeError: Cannot read properties of null (reading '_location')`，
      整个测试进程崩掉。真实场景同理：用户在加载途中跳走，异步回调不该再碰 window。
      ⇒ 提到最前面同步读，异步段之后只用 `sp`，不再碰 `location`。 */
-  const sp = new URLSearchParams(location.search);  /* bindRankUI：独立页无榜单 UI，跳过 */  /* renderSide：独立页无右栏，跳过 */  /* renderCats：独立页无分类行，跳过 */  /* renderList：独立页无最新收录列表，跳过 */
+  const sp = new URLSearchParams(location.search);
+  /* bindRankUI：独立页无榜单 UI，跳过 */
+  /* renderSide：独立页无右栏，跳过 */
+  /* renderCats：独立页无分类行，跳过 */
+  /* renderList：独立页无最新收录列表，跳过 */
   refreshRank(false); // 首页主体：热榜（缓存秒显 / 首次拉取）
   // 手机三个分区（社区配置 / 实测配置 / 指南）已拆到 /emulator.html，
   // 首页只保留入口卡（数字由上面的专区跳转块异步回填），此处不再初始化。

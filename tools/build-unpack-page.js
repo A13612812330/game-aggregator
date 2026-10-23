@@ -305,5 +305,7 @@ if (out.indexOf('<style>') < 0 || out.indexOf('</style>') < 0) throw new Error('
 /* ★★ 语法闸门：结构自检验不出语法错。见 page-assets.js 的 assertScriptSyntax 注释。 */
 A.assertScriptSyntax(out, 'unpack.html');
 
-fs.writeFileSync(OUT, out, 'utf8');
+/* ★ v10.111：写出前统一成 LF。派生页一旦出现「混交换行」会被 git 判 binary（-text）⇒
+   autocrlf 不再归一 ⇒ 下次提交整文件重写（v10.111 实测 39713+/39128-，真实改动只有 700 行）。 */
+fs.writeFileSync(OUT, String(out).replace(/\r\n?/g, '\n'), 'utf8');
 console.log('[build-unpack-page] 已生成 public/unpack.html（' + (out.length / 1024).toFixed(1) + ' KB）');

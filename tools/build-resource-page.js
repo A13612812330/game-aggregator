@@ -28,7 +28,12 @@ const PUB = path.join(__dirname, '..', 'public');
 const INDEX = path.join(PUB, 'index.html');
 const RES = path.join(PUB, 'resources.html');
 
-const idx = fs.readFileSync(INDEX, 'utf8');
+/* ★ v10.111：读入即归一换行（同 build-emulator-page.js 的说明）。
+   `public/index.html` 在工作区是 CRLF，直接拼会得到「混交换行」的派生页 ⇒
+   git 判 binary ⇒ autocrlf 不归一 ⇒ 每行都算改动（一次提交 4 万行噪音）。 */
+const normalizeEol = (s) => String(s).replace(/\r\n?/g, '\n');
+
+const idx = normalizeEol(fs.readFileSync(INDEX, 'utf8'));
 const idxLines = idx.split('\n');
 
 /** 取 text 中匹配 re 的首行行号（1-based） */
@@ -532,7 +537,7 @@ const out = [
 /* ★★ 语法闸门：编译不过就不落盘（防「结构全绿、整页脚本不跑」）。 */
 assertScriptSyntax(out, 'resources.html');
 
-fs.writeFileSync(RES, out, 'utf8');
+fs.writeFileSync(RES, normalizeEol(out), 'utf8');
 console.log(`✅ 已生成 public/resources.html`);
 console.log(`   CSS ${CSS.length}B ｜ 顶栏 ${TOPBAR.length}B ｜ 抽屉+tabbar ${OVERLAY.length}B ｜ 脚本 ${JS.length}B`);
 console.log(`   四分区 本体 ${BODY_HTML.length}B ＋ MOD ${MODS_HTML.length}B ＋ 存档 ${SAVES_HTML.length}B ＋ 修改器 ${TRAINERS_HTML.length}B 与 4 页签切换条`);
