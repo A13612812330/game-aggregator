@@ -4,9 +4,17 @@
   "private": true,
   "type": "commonjs",
   "description": "机地 + XDGAME 聚合站(详情+更新,无下载)",
+  "engines": {
+    "node": ">=20.18.1"
+  },
   "scripts": {
     "start": "node server.js",
-    "probe": "node probe.js"
+    "probe": "node probe.js",
+    "doctor": "node tools/setup-check.js",
+    "test": "node tools/run-all.js",
+    "test:browser": "node tools/run-all.js --browser",
+    "test:sync": "node tools/test-pages-sync.js",
+    "admin:init": "node tools/set-admin-account.js"
   },
   "dependencies": {
     "cheerio": "^1.0.0",

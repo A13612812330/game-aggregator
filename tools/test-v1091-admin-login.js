@@ -3,7 +3,7 @@
  * test-v1091-admin-login.js — v10.91「管理员账号（用户名 + 密码）」
  *
  * 用户口径（2026-10-20）：「为什么要令牌，不如直接给我一个管理员账号，
- *   设置成 liyou，密码为 Ly123321」。
+ *   设置成 liyou，密码为 ******」。
  *
  * 本套件守的不变量（不是"有没有这段代码"）：
  *   ① **口令只在服务端比对**——public/ 里不许出现任何明文口令常量。
@@ -110,8 +110,15 @@ console.log('\n-- C. 前端（public/admin.html）--');
 ok(/id="acctName"/.test(ADMIN) && /id="acctBtn"/.test(ADMIN), 'C1 顶栏是账号条（名字 + 登录/退出按钮）');
 ok(/id="lgUser"/.test(ADMIN) && /id="lgPass"/.test(ADMIN), 'C2 登录弹窗有用户名 / 密码输入');
 ok(/fetch\('\/api\/admin\/login'/.test(ADMIN), 'C3 登录请求发往服务端（不是前端比对）');
-ok(!/Ly123321/.test(ADMIN) && !/Ly123321/.test(SERVER),
-  'C4 ★ public/ 与 server.js 里都没有明文口令（口令只在派生值里）');
+/* ★ C4 判据是「结构」而不是「某个特定字符串」：
+ *   v10.112 之前的写法是「反斜杠 + 具体口令 + 反斜杠」的正则字面量，有两个毛病：
+ *     ① 口令一改，这条就恒绿（守着一个已经不存在的值）
+ *     ② 脱敏把口令换成六个星号后，正则里会出现「星号紧跟斜杠」的组合，
+ *        而这个组合正是块注释的结束符 ⇒ 整个文件语法错误（本轮实际踩到）
+ *   改成查「明文口令直比」这种**写法**是否存在：前端/服务端都不许出现 p === '字面量'。
+ *   真正的防线在 A 段（A2 查 scryptSync、A5 查明文不落盘），这条只兜「前端比对」这一种退路。 */
+ok(!/\bp\s*===\s*'[^']{6,}'/.test(ADMIN) && !/\bp\s*===\s*'[^']{6,}'/.test(SERVER),
+  'C4 ★ public/ 与 server.js 里都没有「明文口令直比」（口令只在派生值里）');
 ok(/const SKEY = 'gh_admin_sid'/.test(ADMIN), 'C5 会话键名集中一处');
 ok(/if \(!fallback && s\) h\['X-Admin-Session'\] = s/.test(ADMIN), 'C6 正常路径走 X-Admin-Session 头');
 ok(/sid=' \+ encodeURIComponent\(s\)/.test(ADMIN), 'C7 403 才降级到 ?sid=（不把会话写进 URL 的常规路径）');

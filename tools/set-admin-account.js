@@ -3,8 +3,8 @@
 /**
  * 设置 / 修改管理员账号（v10.91）
  *
- *   node tools/set-admin-account.js                 # 看当前账号状态（不打印口令）
- *   node tools/set-admin-account.js liyou Ly123321  # 设置用户名与密码
+ *   node tools/set-admin-account.js                    # 看当前账号状态（不打印口令）
+ *   node tools/set-admin-account.js <用户名> <密码>    # 设置用户名与密码（密码至少 6 位）
  *
  * ★ 改密码后**不用重启**：server.js 每次登录现读 data/admin-account.json。
  * ★ 已登录的会话不受影响（会话在内存里，按需 `POST /api/admin/logout` 或等 30 天过期）。

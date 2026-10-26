@@ -23,13 +23,19 @@ const path = require('path');
 const http = require('http');
 const { spawn, execFileSync } = require('child_process');
 
+/* 候选浏览器路径：
+ *   · GAMEHUB_BROWSER 环境变量优先（装在非标准位置时用它指定）
+ *   · 用户级安装按当前用户的 LOCALAPPDATA 拼 —— 不写死某一台机器的用户名
+ *     （原来写死 C:/Users/<某个人>/... ⇒ 换机器必失败，交接时会直接卡住）
+ *   · 最后是全局安装的固定位置（Chrome 优先，Edge 兜底） */
 const CANDIDATES = [
-  'C:/Users/komo/AppData/Local/Google/Chrome/Application/chrome.exe',
+  process.env.GAMEHUB_BROWSER,
+  process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'Google', 'Chrome', 'Application', 'chrome.exe'),
   'C:/Program Files/Google/Chrome/Application/chrome.exe',
   'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
   'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
   'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-];
+].filter(Boolean);
 const DEFAULT_PORT = 9222;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
