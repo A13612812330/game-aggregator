@@ -171,6 +171,7 @@ configs/Anger_Foot/Anger_Foot-ayn-Odin3-Adreno__TM__830-1776874148.json
 configs/Anger_Foot/Anger_Foot-ayn-Odin3-Adreno__TM__830-1779202021.json
 configs/Anger_Foot/Anger_Foot-samsung-SM-X130-Mali-G57_MC2-1790310411.json
 configs/Anger_Foot/Anger_Foot-samsung-SM-X130-Mali-G57_MC2-1790400044.json
+configs/Aniimo/Aniimo-Xiaomi-22111317PG-Adreno__TM__619-1793160259.json
 configs/Anno_1404_-_History_Edition/Anno_1404_-_History_Edition-OnePlus-PLQ110-Adreno__TM__830-1792859239.json
 configs/Anno_1404_-_History_Edition/Anno_1404_-_History_Edition-OnePlus-PLQ110-Adreno__TM__830-1792859278.json
 configs/Anomaly_Agent/Anomaly_Agent-Moorechip-Retroid_Pocket_Flip2-Adreno__TM__650-1790100354.json
@@ -2672,6 +2673,7 @@ configs/ENDER_MAGNOLIA__Bloom_in_the_Mist/ENDER_MAGNOLIA__Bloom_in_the_Mist-nubi
 configs/EOS_Installer/EOS_Installer-realme-ums9230_latte_Natv-Mali-G57-1775704394.json
 configs/ETS-2________1_50_--_Europa_Mario_Map/ETS-2________1_50_--_Europa_Mario_Map-Xiaomi-23122PCD1G-Adreno__TM__710-1777768403.json
 configs/EVERSPACE_/EVERSPACE_-samsung-SM-S928B-Adreno__TM__750-1775389134.json
+configs/EVERSPACE__2/EVERSPACE__2-nubia-NX809J-Adreno__TM__840-1793219659.json
 configs/EXE_-_Step_3_-_Setup_Install_Game/EXE_-_Step_3_-_Setup_Install_Game-OPPO-CPH2665-Mali-G57_MC2-1776599369.json
 configs/Eastward/Eastward-vivo-V2342-Adreno__TM__610-1777723899.json
 configs/EasyAntiCheat_Launcher/EasyAntiCheat_Launcher-HONOR-BRP-NX1-Adreno__TM__710-1791354554.json
@@ -2814,6 +2816,7 @@ configs/Euro_Truck_Simulator_2/Euro_Truck_Simulator_2-TECNO-TECNO_LI9-Mali-G57_M
 configs/Euro_Truck_Simulator_2/Euro_Truck_Simulator_2-TECNO-TECNO_LI9-Mali-G57_MC2-1790328320.json
 configs/Euro_Truck_Simulator_2/Euro_Truck_Simulator_2-TECNO-TECNO_LI9-Mali-G57_MC2-1793113688.json
 configs/Euro_Truck_Simulator_2/Euro_Truck_Simulator_2-TECNO-TECNO_LI9-Mali-G57_MC2-1793113716.json
+configs/Euro_Truck_Simulator_2/Euro_Truck_Simulator_2-TECNO-TECNO_LI9-Mali-G57_MC2-1793184118.json
 configs/Euro_Truck_Simulator_2/Euro_Truck_Simulator_2-TECNO-TECNO_LJ9-Mali-G615_MC6-1788312444.json
 configs/Euro_Truck_Simulator_2/Euro_Truck_Simulator_2-TECNO-TECNO_LJ9-Mali-G615_MC6-1791198263.json
 configs/Euro_Truck_Simulator_2/Euro_Truck_Simulator_2-TECNO-TECNO_LJ9-Mali-G615_MC6-1791201988.json
@@ -3428,6 +3431,8 @@ configs/Far_Cry_3/Far_Cry_3-Xiaomi-2311DRK48G-Mali-G615_MC6-1788629772.json
 configs/Far_Cry_3/Far_Cry_3-Xiaomi-2311DRK48G-Mali-G615_MC6-1789725651.json
 configs/Far_Cry_3/Far_Cry_3-Xiaomi-2311DRK48G-Mali-G615_MC6-1792693588.json
 configs/Far_Cry_3/Far_Cry_3-Xiaomi-2311DRK48G-Mali-G615_MC6-1793134602.json
+configs/Far_Cry_3/Far_Cry_3-Xiaomi-23124RN87G-Mali-G57_MC2-1793236964.json
+configs/Far_Cry_3/Far_Cry_3-Xiaomi-23124RN87G-Mali-G57_MC2-1793236968.json
 configs/Far_Cry_3/Far_Cry_3-Xiaomi-2312FPCA6G-Mali-G57_MC2-1779709281.json
 configs/Far_Cry_3/Far_Cry_3-Xiaomi-2312FPCA6G-Mali-G57_MC2-1779709284.json
 configs/Far_Cry_3/Far_Cry_3-Xiaomi-2312FPCA6G-Mali-G57_MC2-1779736942.json
@@ -3640,7 +3645,6 @@ configs/Fields_of_Mistria/Fields_of_Mistria-AYN-AYN_Thor-Adreno__TM__740-1789531
 configs/Fields_of_Mistria/Fields_of_Mistria-HUAWEI-BTK-W09-Adreno__TM__644-1789446534.json
 configs/Fields_of_Mistria/Fields_of_Mistria-Moorechip-Retroid_Pocket_5-Adreno__TM__650-1790559155.json
 configs/Fields_of_Mistria/Fields_of_Mistria-samsung-SM-A075M-Mali-G57_MC2-1782425970.json
-configs/Fields_of_Mistria/Fields_of_Mistria-samsung-SM-A075M-Mali-G57_MC2-1785946679.json
 configs/Fifa12_i68Regenerator_2_1_0/Fifa12_i68Regenerator_2_1_0-Xiaomi-2311DRK48G-Mali-G615_MC6-1776978912.json
 configs/Fight_N_Rage/Fight_N_Rage-AYANEO-Pocket_FIT-Adreno__TM__750-1777819770.json
 configs/Fight_N_Rage/Fight_N_Rage-asus-ASUS_AI2401_A-Adreno__TM__750-1775482560.json
@@ -4111,6 +4115,8 @@ configs/God_of_War_Ragnar_k/God_of_War_Ragnar_k-motorola-moto_g35_5G-Mali-G57-17
 configs/God_of_War_Ragnar_k/God_of_War_Ragnar_k-motorola-moto_g35_5G-Mali-G57-1786133035.json
 configs/God_of_War_Ragnar_k/God_of_War_Ragnar_k-nubia-NP05J-Adreno__TM__830-1775401116.json
 configs/God_of_War_Ragnar_k/God_of_War_Ragnar_k-nubia-NX741J-Adreno__TM__840-1782388816.json
+configs/God_of_War_Ragnar_k/God_of_War_Ragnar_k-realme-RMX2020-Mali-G52_MC2-1793193350.json
+configs/God_of_War_Ragnar_k/God_of_War_Ragnar_k-realme-RMX2020-Mali-G52_MC2-1793193357.json
 configs/God_of_War_Ragnar_k/God_of_War_Ragnar_k-realme-RMX3939-Mali-G57-1790509360.json
 configs/God_of_War_Ragnar_k/God_of_War_Ragnar_k-realme-RMX3939-Mali-G57-1791683776.json
 configs/God_of_War_Ragnar_k/God_of_War_Ragnar_k-realme-RMX3939-Mali-G57-1791683913.json
@@ -4287,6 +4293,7 @@ configs/Grand_Theft_Auto_IV__The_Complete_Edition/Grand_Theft_Auto_IV__The_Compl
 configs/Grand_Theft_Auto_IV__The_Complete_Edition/Grand_Theft_Auto_IV__The_Complete_Edition-TECNO-TECNO_LJ6-Mali-G57_MC2-1779869666.json
 configs/Grand_Theft_Auto_IV__The_Complete_Edition/Grand_Theft_Auto_IV__The_Complete_Edition-TECNO-TECNO_LJ6-Mali-G57_MC2-1781348833.json
 configs/Grand_Theft_Auto_IV__The_Complete_Edition/Grand_Theft_Auto_IV__The_Complete_Edition-TECNO-TECNO_LJ7-Mali-G615_MC2-1791318640.json
+configs/Grand_Theft_Auto_IV__The_Complete_Edition/Grand_Theft_Auto_IV__The_Complete_Edition-Teclast-T65_EEA-Mali-G57-1793167106.json
 configs/Grand_Theft_Auto_IV__The_Complete_Edition/Grand_Theft_Auto_IV__The_Complete_Edition-Xiaomi-2109119DG-Adreno__TM__642L-1785594676.json
 configs/Grand_Theft_Auto_IV__The_Complete_Edition/Grand_Theft_Auto_IV__The_Complete_Edition-Xiaomi-2201116SG-Adreno__TM__619-1776712139.json
 configs/Grand_Theft_Auto_IV__The_Complete_Edition/Grand_Theft_Auto_IV__The_Complete_Edition-Xiaomi-220333QPG-Mali-G52-1784922649.json
@@ -4800,6 +4807,7 @@ configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-HONOR-HEY3-W00-Adren
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-HONOR-HEY3-W00-Adreno__TM__720-1792951958.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-HONOR-HEY3-W00-Adreno__TM__720-1792953202.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-HONOR-HEY3-W00-Adreno__TM__720-1793008802.json
+configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-HONOR-JDY-LX2-Mali-G52_MC2-1793198702.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-HONOR-LGN-LX2-Adreno__TM__610-1781213360.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-HONOR-LGN-LX2-Adreno__TM__610-1782078607.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-HONOR-LGN-LX2-Adreno__TM__610-1785150275.json
@@ -4821,6 +4829,8 @@ configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-HONOR-MTN-NX1-Adreno
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-HONOR-MTN-NX1-Adreno__TM__810-1792039044.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-HONOR-MTN-NX1-Adreno__TM__810-1792051084.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-HONOR-MTN-NX1-Adreno__TM__810-1792051130.json
+configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-HONOR-MTN-NX1-Adreno__TM__810-1793184825.json
+configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-HONOR-MTN-NX1-Adreno__TM__810-1793184888.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-HONOR-NDL-W09-Adreno__TM__610-1782571438.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-HONOR-NDL-W09-Adreno__TM__610-1782571476.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-HONOR-NDL-W09-Adreno__TM__610-1783950961.json
@@ -4876,6 +4886,7 @@ configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-INFINIX-Infinix_X672
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-INFINIX-Infinix_X6728-MT6769-1775399773.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-INFINIX-Infinix_X6728-Mali-G52_MC2-1788707565.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-INFINIX-Infinix_X6728-Mali-G52_MC2-1789752453.json
+configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-INFINIX-Infinix_X6728-Mali-G52_MC2-1793183314.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-INFINIX-Infinix_X6731B-Mali-G57_MC2-1792805069.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-INFINIX-Infinix_X6739-Mali-G77_MC9-1776154184.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-INFINIX-Infinix_X6739-Mali-G77_MC9-1776154241.json
@@ -5083,6 +5094,7 @@ configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-OPPO-CPH2527-Adreno_
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-OPPO-CPH2577-Mali-G52_MC2-1788551075.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-OPPO-CPH2579-Mali-G52_MC2-1784990132.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-OPPO-CPH2591-Mali-G52_MC2-1792106839.json
+configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-OPPO-CPH2603-Mali-G68_MC4-1793220483.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-OPPO-CPH2631-Adreno__TM__610-1789559801.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-OPPO-CPH2631-Adreno__TM__610-1789560058.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-OPPO-CPH2639-Mali-G57_MC2-1776618349.json
@@ -5144,6 +5156,7 @@ configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-TECNO-TECNO_CK8n-Mal
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-TECNO-TECNO_CL6-Mali-G57_MC2-1789729810.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-TECNO-TECNO_CL6-Mali-G57_MC2-1789729813.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-TECNO-TECNO_CL6-Mali-G57_MC2-1789834407.json
+configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-TECNO-TECNO_CL6-Mali-G57_MC2-1793200575.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-TECNO-TECNO_CL8-Mali-G610_MC6-1793019429.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-TECNO-TECNO_CM7-Mali-G615_MC2-1783022223.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-TECNO-TECNO_CM7-Mali-G615_MC2-1784762576.json
@@ -5667,6 +5680,7 @@ configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-Xiaomi-2412DPC0AG-Ma
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-Xiaomi-2412DPC0AG-Mali-G720_MC7-1792612453.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-Xiaomi-2412DPC0AG-Mali-G720_MC7-1792824181.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-Xiaomi-2412DPC0AG-Mali-G720_MC7-1792933306.json
+configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-Xiaomi-2412DPC0AG-Mali-G720_MC7-1793207067.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-Xiaomi-2412DPC0AI-Mali-G720_MC7-1777142871.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-Xiaomi-2412DPC0AI-Mali-G720_MC7-1777647593.json
 configs/Grand_Theft_Auto_V_Legacy/Grand_Theft_Auto_V_Legacy-Xiaomi-2412DPC0AI-Mali-G720_MC7-1778680209.json
@@ -6457,6 +6471,11 @@ configs/Grand_Theft_Auto_V____/Grand_Theft_Auto_V____-HONOR-VKP-NX9-Adreno__TM__
 configs/Grand_Theft_Auto_V__________________________________________/Grand_Theft_Auto_V__________________________________________-HONOR-ROD2-W09-Adreno__TM__735-1785294185.json
 configs/Grand_Theft_Auto_V__________________________________________/Grand_Theft_Auto_V__________________________________________-INFINIX-Infinix_X6880-Mali-G57_MC2-1783250735.json
 configs/Grand_Theft_Auto_V__________________________________________/Grand_Theft_Auto_V__________________________________________-OPPO-CPH2799-Mali-G57_MC2-1775826329.json
+configs/Grand_Theft_Auto_V__________________________________________/Grand_Theft_Auto_V__________________________________________-OPPO-CPH2825-Adreno__TM__722-1793184062.json
+configs/Grand_Theft_Auto_V__________________________________________/Grand_Theft_Auto_V__________________________________________-OPPO-CPH2825-Adreno__TM__722-1793184269.json
+configs/Grand_Theft_Auto_V__________________________________________/Grand_Theft_Auto_V__________________________________________-OPPO-CPH2825-Adreno__TM__722-1793184402.json
+configs/Grand_Theft_Auto_V__________________________________________/Grand_Theft_Auto_V__________________________________________-OPPO-CPH2825-Adreno__TM__722-1793185014.json
+configs/Grand_Theft_Auto_V__________________________________________/Grand_Theft_Auto_V__________________________________________-OPPO-CPH2825-Adreno__TM__722-1793185031.json
 configs/Grand_Theft_Auto_V__________________________________________/Grand_Theft_Auto_V__________________________________________-Xiaomi-21051182G-Adreno__TM__640-1780598934.json
 configs/Grand_Theft_Auto_V__________________________________________/Grand_Theft_Auto_V__________________________________________-Xiaomi-2602BPC18G-Mali-G925-Immortalis_MC11-1788810912.json
 configs/Grand_Theft_Auto_V__________________________________________/Grand_Theft_Auto_V__________________________________________-realme-RMX3941-Mali-G52_MC2-1776967674.json
@@ -7615,6 +7634,7 @@ configs/Mafia_II__Classic_/Mafia_II__Classic_-samsung-SM-M536B-Mali-G68_MC4-1776
 configs/Mafia_II__Classic_/Mafia_II__Classic_-samsung-SM-M536B-Mali-G68_MC4-1776781626.json
 configs/Mafia_II__Classic_/Mafia_II__Classic_-samsung-SM-S928B-Adreno__TM__750-1776027183.json
 configs/Mafia_II__Classic_/Mafia_II__Classic_-samsung-SM-S928B-Adreno__TM__A32-1786278728.json
+configs/Mafia_II__Classic_/Mafia_II__Classic_-vivo-I2219-Adreno__TM__710-1793154119.json
 configs/Mafia_II__Classic_/Mafia_II__Classic_-vivo-V2344-Mali-G57-1781128241.json
 configs/Mafia_II__Classic_/Mafia_II__Classic_-vivo-V2453A-Adreno__TM__825-1778497907.json
 configs/Mafia_II__Definitive_Edition/Mafia_II__Definitive_Edition-Moorechip-Retroid_Pocket_Flip2__D1100_-Mali-G77_MC9-1783336372.json
@@ -7806,8 +7826,7 @@ configs/Metro_2033_Redux/Metro_2033_Redux-vivo-I2508-Adreno__TM__829-1793139250.
 configs/Metro_2033_Redux____________________________________________/Metro_2033_Redux____________________________________________-nubia-NX809J-Adreno__TM__840-1776797926.json
 configs/Metro_2033_Redux____________________________________________/Metro_2033_Redux____________________________________________-samsung-SM-S928B-Adreno__TM__750-1782434404.json
 configs/Metro_Exodus/Metro_Exodus-OnePlus-CPH2649-Adreno__TM__830-1784363983.json
-configs/Metro_Exodus/Metro_Exodus-vivo-I2405-Adreno__TM__825-1790622045.json
-configs/Metro_Exodus/Metro_Exodus-vivo-I2405-Adreno__TM__825-1790622048.json
+configs/Metro_Exodus/Metro_Exodus-vivo-I2405-Adreno__TM__825-1793208799.json
 configs/Metro__Last_Light_Redux/Metro__Last_Light_Redux-motorola-motorola_edge_30_ultra-Adreno__TM__730-1777666146.json
 configs/Mewgenics/Mewgenics-AYN-AYN_Thor-Adreno__TM__740-1778619491.json
 configs/Mewgenics/Mewgenics-Moorechip-Retroid_Pocket_5-Adreno__TM__650-1790511757.json
@@ -8057,6 +8076,7 @@ configs/Mortal_Kombat_X/Mortal_Kombat_X-Xiaomi-25053PC47G-Adreno__TM__825-178608
 configs/Mortal_Kombat_X/Mortal_Kombat_X-Xiaomi-25053PC47G-Adreno__TM__825-1787597859.json
 configs/Mortal_Kombat_X/Mortal_Kombat_X-Xiaomi-25053PC47G-Adreno__TM__825-1788586487.json
 configs/Mortal_Kombat_X/Mortal_Kombat_X-Xiaomi-25079RPDCG-Mali-G925-Immortalis_MC12-1791107623.json
+configs/Mortal_Kombat_X/Mortal_Kombat_X-Xiaomi-25079RPDCG-Mali-G925-Immortalis_MC12-1793205535.json
 configs/Mortal_Kombat_X/Mortal_Kombat_X-Xiaomi-2510DPC44G-Adreno__TM__830-1792260086.json
 configs/Mortal_Kombat_X/Mortal_Kombat_X-motorola-motorola_edge_30_ultra-Adreno__TM__730-1776935895.json
 configs/Mortal_Kombat_X/Mortal_Kombat_X-motorola-motorola_edge_50_neo-Mali-G615_MC2-1776638297.json
@@ -8111,6 +8131,7 @@ configs/MotoGP_26/MotoGP_26-AYANEO-Pocket_FIT-Adreno__TM__750-1781989407.json
 configs/MotoGP_26/MotoGP_26-LENOVO-TB321FU-Adreno__TM__750-1789991739.json
 configs/MotoGP_26/MotoGP_26-Xiaomi-25053PC47G-Adreno__TM__825-1780076843.json
 configs/MotoGP_26/MotoGP_26-Xiaomi-25091RP04G-Adreno__TM__830-1786717577.json
+configs/MotoGP_26/MotoGP_26-realme-RMX3710-Mali-G52_MC2-1793209485.json
 configs/MotoGP_26___/MotoGP_26___-realme-RMX3710-Mali-G52_MC2-1793088487.json
 configs/MotoGP_26___/MotoGP_26___-realme-RMX3710-Mali-G52_MC2-1793126263.json
 configs/Motogp25/Motogp25-samsung-SM-A175F-Mali-G57_MC2-1792665086.json
@@ -8507,6 +8528,7 @@ configs/Need_for_Speed_9/Need_for_Speed_9-INFINIX_MOBILITY_LIMITED-Infinix_X697-
 configs/Need_for_Speed_9/Need_for_Speed_9-INFINIX_MOBILITY_LIMITED-Infinix_X697-Mali-G57_MC2-1786857392.json
 configs/Need_for_Speed_9/Need_for_Speed_9-ITEL-itel_P661N-Mali-G57_MC2-1780072899.json
 configs/Need_for_Speed_9/Need_for_Speed_9-ITEL-itel_P661N-Mali-G57_MC2-1780121630.json
+configs/Need_for_Speed_9/Need_for_Speed_9-ITEL-itel_P661N-Mali-G57_MC2-1793152789.json
 configs/Need_for_Speed_9/Need_for_Speed_9-ITEL-itel_S666LN-Mali-G57_MC2-1777258375.json
 configs/Need_for_Speed_9/Need_for_Speed_9-LENOVO-TB321FU-Adreno__TM__750-1786730333.json
 configs/Need_for_Speed_9/Need_for_Speed_9-LENOVO-TB710FU-Adreno__TM__750-1778778804.json
@@ -8585,6 +8607,9 @@ configs/Need_for_Speed_9/Need_for_Speed_9-motorola-moto_g_30_-Adreno__TM__610-17
 configs/Need_for_Speed_9/Need_for_Speed_9-motorola-motorola_edge_50_ultra-Adreno__TM__735-1781637191.json
 configs/Need_for_Speed_9/Need_for_Speed_9-realme-RMX3474-Adreno__TM__619-1789911013.json
 configs/Need_for_Speed_9/Need_for_Speed_9-realme-RMX3474-Adreno__TM__619-1790888250.json
+configs/Need_for_Speed_9/Need_for_Speed_9-realme-RMX3760-Mali-G57-1793186113.json
+configs/Need_for_Speed_9/Need_for_Speed_9-realme-RMX3760-Mali-G57-1793186226.json
+configs/Need_for_Speed_9/Need_for_Speed_9-realme-RMX3760-Mali-G57-1793186984.json
 configs/Need_for_Speed_9/Need_for_Speed_9-samsung-SM-A035F-Mali-G57-1781890695.json
 configs/Need_for_Speed_9/Need_for_Speed_9-samsung-SM-A055F-Mali-G52_MC2-1779823609.json
 configs/Need_for_Speed_9/Need_for_Speed_9-samsung-SM-A055F-Mali-G52_MC2-1779823734.json
@@ -9951,6 +9976,7 @@ configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-Xiaomi-23021RAAEG-Ad
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-Xiaomi-23021RAAEG-Adreno__TM__610-1786131708.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-Xiaomi-23021RAAEG-Adreno__TM__610-1786383013.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-Xiaomi-23021RAAEG-Adreno__TM__610-1792285106.json
+configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-Xiaomi-23021RAAEG-Adreno__TM__610-1793202448.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-Xiaomi-23028RA60L-Adreno__TM__610-1777517640.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-Xiaomi-23028RA60L-Adreno__TM__610-1778499971.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-Xiaomi-23028RA60L-Adreno__TM__610-1778969603.json
@@ -10868,6 +10894,7 @@ configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-moto_g22-Po
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-moto_g22-PowerVR_Rogue_GE8320-1787084144.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-moto_g22-PowerVR_Rogue_GE8320-1787087839.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-moto_g22-PowerVR_Rogue_GE8320-1792221280.json
+configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-moto_g22-PowerVR_Rogue_GE8320-1793219700.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-moto_g23-Mali-G52_MC2-1781780373.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-moto_g23-Mali-G52_MC2-1782875463.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-moto_g24-Mali-G52_MC2-1777417586.json
@@ -10956,6 +10983,7 @@ configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-moto_g35_5G
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-moto_g35_5G-Mali-G57-1789914297.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-moto_g35_5G-Mali-G57-1790031453.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-moto_g35_5G-Mali-G57-1791045852.json
+configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-moto_g35_5G-Mali-G57-1793190489.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-moto_g42-Adreno__TM__610-1781966152.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-moto_g42-Adreno__TM__610-1781970427.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-moto_g42-Adreno__TM__610-1781979160.json
@@ -11156,6 +11184,8 @@ configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-motorola_ed
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-motorola_edge_20-Adreno__TM__642L-1787906210.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-motorola_edge_20-Adreno__TM__642L-1787945893.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-motorola_edge_20-Adreno__TM__642L-1788008116.json
+configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-motorola_edge_20-Adreno__TM__642L-1793185284.json
+configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-motorola_edge_20-Adreno__TM__642L-1793185290.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-motorola_edge_20_pro-Adreno__TM__650-1786575780.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-motorola_edge_30-Adreno__TM__642L-1777128208.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-motorola-motorola_edge_30-Adreno__TM__642L-1777428575.json
@@ -11833,6 +11863,7 @@ configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A145M-Mal
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A145M-Mali-G52-1790713075.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A145M-Mali-G52-1793036565.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A145M-Mali-G52-1793046638.json
+configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A145M-Mali-G52-1793228583.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A145MB-Mali-G52-1788564222.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A145MB-Mali-G52-1788565739.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A146M-Mali-G68-1778435850.json
@@ -11956,6 +11987,8 @@ configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A155M-Mal
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A155M-Mali-G57_MC2-1791865852.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A155M-Mali-G57_MC2-1791865874.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A155M-Mali-G57_MC2-1792989379.json
+configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A155M-Mali-G57_MC2-1793219719.json
+configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A155M-Mali-G57_MC2-1793221091.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A156M-Mali-G57_MC2-1778611324.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A156M-Mali-G57_MC2-1778611447.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A156M-Mali-G57_MC2-1778768844.json
@@ -12322,6 +12355,7 @@ configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A546E-Mal
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A546E-Mali-G68-1790118921.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A546E-Mali-G68-1790632727.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A546E-Mali-G68-1791237176.json
+configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A546E-Mali-G68-1793225934.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A556E-ANGLE__Samsung_Xclipse_530__on_Vulkan_1_3_231-1787188513.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A556E-ANGLE__Samsung_Xclipse_530__on_Vulkan_1_3_231-1787194785.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-A556E-ANGLE__Samsung_Xclipse_530__on_Vulkan_1_3_231-1787195656.json
@@ -12448,6 +12482,8 @@ configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-G996N-Mal
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-G996U-Adreno__TM__660-1783444491.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-G996U-Adreno__TM__660-1783444507.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-G996U-Adreno__TM__660-1783539267.json
+configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-G998U-Adreno__TM__660-1793176555.json
+configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-G998U-Adreno__TM__660-1793217959.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-M127F-Mali-G52-1779085870.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-M127F-Mali-G52-1779121097.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-M127F-Mali-G52-1792026320.json
@@ -12620,6 +12656,9 @@ configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-X400-Mali
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-samsung-SM-X920-Mali-G720-Immortalis_MC12-1784138874.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-vivo-I2218-Adreno__TM__720-1780334356.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-vivo-I2218-Adreno__TM__720-1783383609.json
+configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-vivo-I2221-Adreno__TM__735-1793213883.json
+configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-vivo-I2221-Adreno__TM__735-1793215158.json
+configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-vivo-I2221-Adreno__TM__735-1793215183.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-vivo-V2027-Adreno__TM__610-1791556209.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-vivo-V2027-Adreno__TM__610-1791557828.json
 configs/Pro_Evolution_Soccer_2013/Pro_Evolution_Soccer_2013-vivo-V2027-Adreno__TM__610-1791649204.json
@@ -12962,6 +13001,7 @@ configs/Project_CARS_3/Project_CARS_3-Xiaomi-25053PC47G-SM8735-1776782122.json
 configs/Project_Castaway/Project_Castaway-Xiaomi-23129RA5FL-Adreno__TM__610-1780870325.json
 configs/Project_IGI_1-__Www_ApunKaGames_Biz_/Project_IGI_1-__Www_ApunKaGames_Biz_-HUAWEI-STK-L22-Mali-G51-1776483111.json
 configs/Project_Lightning___________________________________________/Project_Lightning___________________________________________-INFINIX_MOBILITY_LIMITED-Infinix_X6816-PowerVR_Rogue_GE8320-1789159012.json
+configs/Project_Reignition/Project_Reignition-AYN-AYN_Thor-Adreno__TM__740-1793187990.json
 configs/Project_Zomboid/Project_Zomboid-Moorechip-Retroid_Pocket_G2-Adreno__TM__22-1779830213.json
 configs/Project_biscuits/Project_biscuits-OPPO-CPH2371-Mali-G68_MC4-1785031737.json
 configs/Project_biscuits/Project_biscuits-samsung-SM-A075F-Mali-G57_MC2-1790330600.json
@@ -13663,6 +13703,8 @@ configs/Resident_Evil_5/Resident_Evil_5-Xiaomi-2412DPC0AG-Mali-G720_MC7-17823304
 configs/Resident_Evil_5/Resident_Evil_5-Xiaomi-2412DPC0AG-Mali-G720_MC7-1782449139.json
 configs/Resident_Evil_5/Resident_Evil_5-Xiaomi-2412DPC0AG-Mali-G720_MC7-1782453784.json
 configs/Resident_Evil_5/Resident_Evil_5-Xiaomi-2412DPC0AG-Mali-G720_MC7-1786155413.json
+configs/Resident_Evil_5/Resident_Evil_5-Xiaomi-2412DPC0AG-Mali-G720_MC7-1793231855.json
+configs/Resident_Evil_5/Resident_Evil_5-Xiaomi-2412DPC0AG-Mali-G720_MC7-1793231887.json
 configs/Resident_Evil_5/Resident_Evil_5-Xiaomi-2412DPC0AI-Mali-G720_MC7-1790639720.json
 configs/Resident_Evil_5/Resident_Evil_5-Xiaomi-25053PC47G-Adreno__TM__825-1778020984.json
 configs/Resident_Evil_5/Resident_Evil_5-Xiaomi-25053PC47G-Adreno__TM__825-1778285690.json
@@ -14207,6 +14249,7 @@ configs/Saint_s_row_2/Saint_s_row_2-ayn-Odin3-Adreno__TM__830-1779202069.json
 configs/Saints_Row_2/Saints_Row_2-Xiaomi-25118PC98G-Adreno__TM__710-1790395770.json
 configs/Saints_Row_IV__Re-Elected/Saints_Row_IV__Re-Elected-Xiaomi-M2102J20SG-Adreno__TM__640-1777046491.json
 configs/Saints_Row_IV__Re-Elected/Saints_Row_IV__Re-Elected-Xiaomi-Redmi_Note_9S-Adreno__TM__618-1779233601.json
+configs/Saints_Row__Gat_Out_Of_Hell/Saints_Row__Gat_Out_Of_Hell-nubia-Z2575-Mali-G57-1793204790.json
 configs/Saints_Row__The_Third/Saints_Row__The_Third-AYN-Odin2_Portal-Adreno__TM__740-1778449616.json
 configs/Saints_Row__The_Third/Saints_Row__The_Third-AYN-Odin2_Portal-Adreno__TM__740-1778971220.json
 configs/Saints_Row__The_Third/Saints_Row__The_Third-HONOR-CMA-LX3-Adreno__TM__610-1787812639.json
@@ -14310,6 +14353,8 @@ configs/Sekiro___Shadows_Die_Twice_-_GOTY_Edition/Sekiro___Shadows_Die_Twice_-_G
 configs/Sekiro___Shadows_Die_Twice_-_GOTY_Edition/Sekiro___Shadows_Die_Twice_-_GOTY_Edition-nubia-NX809J-Adreno__TM__840-1793080913.json
 configs/Sekiro___Shadows_Die_Twice_-_GOTY_Edition/Sekiro___Shadows_Die_Twice_-_GOTY_Edition-nubia-NX809J-Adreno__TM__840-1793081111.json
 configs/Sekiro___Shadows_Die_Twice_-_GOTY_Edition/Sekiro___Shadows_Die_Twice_-_GOTY_Edition-nubia-NX809J-Adreno__TM__840-1793089333.json
+configs/Sekiro___Shadows_Die_Twice_-_GOTY_Edition/Sekiro___Shadows_Die_Twice_-_GOTY_Edition-nubia-NX809J-Adreno__TM__840-1793179019.json
+configs/Sekiro___Shadows_Die_Twice_-_GOTY_Edition/Sekiro___Shadows_Die_Twice_-_GOTY_Edition-nubia-NX809J-Adreno__TM__840-1793181919.json
 configs/Sekiro___Shadows_Die_Twice_-_GOTY_Edition/Sekiro___Shadows_Die_Twice_-_GOTY_Edition-samsung-SM-A075M-Mali-G57_MC2-1787409455.json
 configs/Sekiro___Shadows_Die_Twice_-_GOTY_Edition/Sekiro___Shadows_Die_Twice_-_GOTY_Edition-samsung-SM-M346B-Mali-G68-1784992313.json
 configs/Sekiro___Shadows_Die_Twice_-_GOTY_Edition/Sekiro___Shadows_Die_Twice_-_GOTY_Edition-samsung-SM-M536B-Mali-G68_MC4-1776027040.json
@@ -14961,6 +15006,7 @@ configs/Tales_of_Berseria_/Tales_of_Berseria_-samsung-SM-A525M-Adreno__TM__618-1
 configs/Tales_of_Berseria_/Tales_of_Berseria_-vivo-I2213-Adreno__TM__642L-1783583329.json
 configs/Tales_of_Zestiria/Tales_of_Zestiria-Moorechip-Retroid_Pocket_Nova-Adreno__TM__740-1786830979.json
 configs/Tanki_Online/Tanki_Online-samsung-SM-S928B-Adreno__TM__750-1776063161.json
+configs/Tape_to_Tape/Tape_to_Tape-Anbernic-RG_406H-Mali-G57-1793215556.json
 configs/Tattletail/Tattletail-Xiaomi-23043RP34G-1775266032.json
 configs/Tattletail/Tattletail-Xiaomi-23043RP34G-Adreno__TM__650-1775747243.json
 configs/Team_Fortress_2/Team_Fortress_2-AYANEO-Pocket_FIT-Adreno__TM__750-1777163640.json
@@ -15697,6 +15743,7 @@ configs/UNCHARTED___Legacy_of_Thieves_Collection/UNCHARTED___Legacy_of_Thieves_C
 configs/UNCHARTED___Legacy_of_Thieves_Collection/UNCHARTED___Legacy_of_Thieves_Collection-vivo-I2401-Adreno__TM__830-1778689863.json
 configs/UNCHARTED___Legacy_of_Thieves_Collection/UNCHARTED___Legacy_of_Thieves_Collection-vivo-I2501-Adreno__TM__840-1780761249.json
 configs/UltimateTheaterSimulator/UltimateTheaterSimulator-Xiaomi-24117RN76L-Mali-G57_MC2-1778774508.json
+configs/Ultimate_Spiderman/Ultimate_Spiderman-Xiaomi-2311DRK48G-Mali-G615_MC6-1793208838.json
 configs/Ultimate_Spiderman/Ultimate_Spiderman-Xiaomi-23129RAA4G-Adreno__TM__610-1778850028.json
 configs/Ultimate_Spiderman/Ultimate_Spiderman-vivo-V2420-Mali-G57_MC2-1783512101.json
 configs/Ultimate_Zombie_Defense/Ultimate_Zombie_Defense-AYANEO-Pocket_FIT-Adreno__TM__750-1783897772.json
@@ -16302,6 +16349,7 @@ configs/bio2_1_10/bio2_1_10-nubia-NX769J-Adreno__TM__750-1777140901.json
 configs/bla/bla-ZTE-25010PN30G-Mali-G57-1785419363.json
 configs/black/black-Xiaomi-2412DPC0AG-Mali-G720_MC7-1792871996.json
 configs/bssh/bssh-realme-RMX5101-Adreno__TM__722-1790046575.json
+configs/cdztool/cdztool-TECNO-TECNO_LJ7-Mali-G615_MC2-1793182782.json
 configs/ch5_pro/ch5_pro-Cat-S62-Adreno__TM__512-1783885720.json
 configs/ch5_pro/ch5_pro-HONOR-ELN-W09-Adreno__TM__610-1775819459.json
 configs/ch5_pro/ch5_pro-HONOR-ELN-W09-Adreno__TM__610-1775819850.json
@@ -16430,6 +16478,7 @@ configs/eFootball_PES_2021_SEASON_UPDATE/eFootball_PES_2021_SEASON_UPDATE-samsun
 configs/eFootball_PES_2021_SEASON_UPDATE/eFootball_PES_2021_SEASON_UPDATE-samsung-SM-S948B-Adreno__TM__840-1783101227.json
 configs/eFootball_PES_2021_SEASON_UPDATE/eFootball_PES_2021_SEASON_UPDATE-samsung-SM-S948B-Adreno__TM__840-1787095877.json
 configs/eFootball_PES_2021_SEASON_UPDATE/eFootball_PES_2021_SEASON_UPDATE-vivo-V2425A-Adreno__TM__750-1782181328.json
+configs/eFootball_PES_2021_SEASON_UPDATE/eFootball_PES_2021_SEASON_UPDATE-vivo-V2453A-Adreno__TM__825-1793210372.json
 configs/eFootball__PES_2020/eFootball__PES_2020-INFINIX-Infinix_X6873-Mali-G615_MC6-1780807090.json
 configs/eFootball__PES_2020/eFootball__PES_2020-INFINIX-Infinix_X6873-Mali-G615_MC6-1781055332.json
 configs/eFootball__PES_2020/eFootball__PES_2020-motorola-moto_e13-Mali-G57-1780733789.json
@@ -16751,6 +16800,7 @@ configs/prototype2/prototype2-INFINIX-Infinix_X6873-Mali-G615_MC6-1786338010.jso
 configs/proxy_sa/proxy_sa-samsung-SM-S928B-Adreno__TM__750-1781144453.json
 configs/pse/pse-TCL-T612B-Mali-G52_MC2-1781397991.json
 configs/psxfin/psxfin-HONOR-NIC-LX2-Mali-G52_MC2-1775507355.json
+configs/psxfin/psxfin-TECNO-TECNO_LJ7-Mali-G615_MC2-1793182813.json
 configs/pun/pun-Xiaomi-2410FPCC5G-Mali-G52_MC2-1781229665.json
 configs/rFactor/rFactor-INFINIX-Infinix_X6857-MT6878-1775577218.json
 configs/ravenfield/ravenfield-Xiaomi-2201116TG-Mali-G57_MC2-1778852576.json
@@ -16821,6 +16871,7 @@ configs/setup_mount_and_blade_warband_2_068/setup_mount_and_blade_warband_2_068-
 configs/setup_prodeus_1_0_2__59327_/setup_prodeus_1_0_2__59327_-HONOR-TFY-LX3-Adreno__TM__610-1791789561.json
 configs/setup_rayman_3_-_hoodlum_havoc_1_0_0__22189_/setup_rayman_3_-_hoodlum_havoc_1_0_0__22189_-motorola-moto_e13-Mali-G57-1780147200.json
 configs/setup_sw_republic_commando_2_0_0_6/setup_sw_republic_commando_2_0_0_6-OPPO-CPH3669-Adreno__TM__610-1785754512.json
+configs/setup_the_king_of_fighters_2002_unlimited_match_1_0_hotfix1__21471_/setup_the_king_of_fighters_2002_unlimited_match_1_0_hotfix1__21471_-motorola-motorola_edge_30_neo-Adreno__TM__619-1793211417.json
 configs/sgre_steam/sgre_steam-samsung-SM-X900-Adreno__TM__730-1787415431.json
 configs/sgre_steam/sgre_steam-samsung-SM-X900-Adreno__TM__730-1789057520.json
 configs/sh2pc/sh2pc-Xiaomi-23129RA5FL-Adreno__TM__610-1776863000.json
